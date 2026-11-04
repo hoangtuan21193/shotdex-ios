@@ -216,6 +216,8 @@ final class AppDependencies {
     /// Whether Photos items are on the server sources (FS-19.07), checked
     /// while the app is in front.
     let onServerCheck: OnServerCheck
+    /// Which Photos items have every original on this device (FS-06.10).
+    let originalPresenceCheck: OriginalPresenceCheck
     /// Every Photos deletion that relies on a server copy asks it first
     /// (FS-19.07 §9).
     let photoDeletionGate: PhotoDeletionGate
@@ -603,6 +605,9 @@ final class AppDependencies {
             indexShare: indexShare,
             listingChanged: { await sources.serverListingChanged() }
         ))
+        let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: indexInteractionGate))
+        self.originalPresenceCheck = originalPresenceCheck
+        photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
         // The grid's "on server" glyph follows each batch of the check.
         let presence = OnServerProgressQueries(database: database)
         let uploadIndex = serverUploadIndex

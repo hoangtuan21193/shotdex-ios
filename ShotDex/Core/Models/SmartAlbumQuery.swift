@@ -499,3 +499,9 @@ extension SmartAlbumQuery {
         rules.first { $0.field == .source && $0.op == .isExactly && !$0.text.isEmpty }?.text
     }
 }
+
+extension SmartAlbumQuery {
+    /// Whether a condition reads the original-on-device check (FS-06.10):
+    /// a screen showing it keeps the check going while it is open.
+    var usesOriginal: Bool { rules.contains { $0.field == .original } }
+}

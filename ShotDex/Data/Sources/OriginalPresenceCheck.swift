@@ -99,9 +99,15 @@ final class OriginalPresenceCheck {
         openScreens = max(0, openScreens - 1)
     }
 
-    /// PhotoKit said these items changed (AC-8): back to unchecked, first
-    /// in line for the next batch.
-    func assetsChanged(_ photoKitIds: Set<String>) async {
+    /// PhotoKit said these items were edited (AC-8): back to unchecked,
+    /// first in line for the next batch. `nil` — PhotoKit could not say what
+    /// changed — starts a fresh pass over everything.
+    func assetsChanged(_ photoKitIds: Set<String>?) async {
+        guard let photoKitIds else {
+            beginPass()
+            if isInFront { start() }
+            return
+        }
         guard !photoKitIds.isEmpty else { return }
         let store = environment.store
         try? await Self.offMain { try store.markForRecheck(photoKitIds) }

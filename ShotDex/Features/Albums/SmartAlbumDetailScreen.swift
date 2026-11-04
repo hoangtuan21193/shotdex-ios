@@ -16,6 +16,8 @@ struct SmartAlbumDetailScreen: View {
     @Environment(AppNavigation.self) private var navigation
 
     let album: SmartAlbum
+    /// When the original check last reloaded the grid (throttle, FS-06.10).
+    @State private var lastOriginalReload = Date.distantPast
 
     @State private var model: SmartAlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
@@ -83,10 +85,13 @@ struct SmartAlbumDetailScreen: View {
         }
         .onAppear {
             if isSelecting { navigation.selectionBar = selectionBarModel() }
+            // An album on the Original rule asks for fresh answers (FS-06.10 §4).
+            if album.query.usesOriginal { dependencies.originalPresenceCheck.screenOpened() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
             if isSelecting { navigation.selectionBar = nil }
+            if album.query.usesOriginal { dependencies.originalPresenceCheck.screenClosed() }
         }
         .safeAreaInset(edge: .top) {
             topAccessories
@@ -110,6 +115,18 @@ struct SmartAlbumDetailScreen: View {
             guard let model else { return }
             await model.refreshOnServer(dependencies.onServerCheck, isLimited: photoLibrary.authorizationState == .limited)
             if !model.onServerLines.isEmpty, !isSelecting { await model.load() }
+        }
+        // Each batch of the original check can move photos in or out of an
+        // `Original is …` album (FS-06.10 §3). At most one reload every 3 s:
+        // a pass runs ~275 batches, and a grid reloading on each one
+        // flickers. Other albums never read the check's generation.
+        .task(id: "\(album.query.usesOriginal ? dependencies.originalPresenceCheck.generation : 0)-\(model != nil)-\(isSelecting)") {
+            guard album.query.usesOriginal, let model, !isSelecting else { return }
+            let wait = 3 - Date().timeIntervalSince(lastOriginalReload)
+            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+            guard !Task.isCancelled else { return }
+            lastOriginalReload = Date()
+            await model.load()
         }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {

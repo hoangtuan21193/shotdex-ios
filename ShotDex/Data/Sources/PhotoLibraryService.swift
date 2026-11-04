@@ -157,6 +157,19 @@ final class PhotoLibraryService: NSObject {
     private var pendingStructuralChange = false
     @ObservationIgnored
     private var pendingCollectionChange = false
+    /// Assets PhotoKit reported edited since the last debounced bump.
+    @ObservationIgnored private var pendingChangedAssetIds: Set<String> = []
+    /// PhotoKit gave no diff, or too many changes to list one by one.
+    @ObservationIgnored private var pendingEverythingChanged = false
+    /// Past this many changed assets in one window, a fresh pass is cheaper
+    /// than marking each.
+    private static let changedAssetsCap = 5_000
+
+    /// What changed in the library for the original-on-device check
+    /// (FS-06.10 AC-8), once per debounced bump: the ids of assets edited
+    /// (their render may not be here yet), or `nil` when PhotoKit could not
+    /// say what changed — then everything is due again.
+    @ObservationIgnored var onAssetsChanged: (@MainActor (Set<String>?) -> Void)?
     /// Baseline for classifying changes as structural vs content-only. Must be
     /// seeded before the first notification arrives (see `startObservingChanges`)
     /// — without it every change looks structural.
@@ -1252,10 +1265,12 @@ final class PhotoLibraryService: NSObject {
 extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         Task { @MainActor in
-            self.pendingStructuralChange =
-                self.pendingStructuralChange || self.isStructural(changeInstance)
-            self.pendingCollectionChange =
-                self.pendingCollectionChange || self.didAlbumsChange(changeInstance)
+            // Both always run: each advances its baseline, and a later
+            // change read against a stale one is lost.
+            let structural = self.isStructural(changeInstance)
+            let collections = self.didAlbumsChange(changeInstance)
+            self.pendingStructuralChange = self.pendingStructuralChange || structural
+            self.pendingCollectionChange = self.pendingCollectionChange || collections
             // Both tokens share one trailing-edge debounce: iCloud downloads
             // during an index run fire a change per asset, and a full-library
             // reload per photo is what made the grid flicker and the device
@@ -1270,6 +1285,13 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled else { return }
                 self.libraryChangeToken += 1
+                if self.pendingEverythingChanged {
+                    self.onAssetsChanged?(nil)
+                } else if !self.pendingChangedAssetIds.isEmpty {
+                    self.onAssetsChanged?(self.pendingChangedAssetIds)
+                }
+                self.pendingEverythingChanged = false
+                self.pendingChangedAssetIds = []
                 // PhotoKit also reports content-only changes when an
                 // iCloud/local rendition is downloaded or cached, or a
                 // favorite is toggled. Those must not reload the grid or
@@ -1290,15 +1312,40 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
     private func isStructural(_ changeInstance: PHChange) -> Bool {
         // No baseline (authorization not yet granted when observation started):
         // can't classify, so assume the list moved.
-        guard let current = allPhotosFetchResult else { return true }
+        guard let current = allPhotosFetchResult else {
+            pendingEverythingChanged = true
+            return true
+        }
         // Nil details = this change didn't touch the all-photos fetch result.
         guard let details = changeInstance.changeDetails(for: current) else { return false }
         allPhotosFetchResult = details.fetchResultAfterChanges
         // PhotoKit couldn't compute a diff — treat as "reload everything".
-        guard details.hasIncrementalChanges else { return true }
+        guard details.hasIncrementalChanges else {
+            pendingEverythingChanged = true
+            return true
+        }
+        collectEditedAssets(details, in: changeInstance)
         return details.insertedIndexes?.isEmpty == false
             || details.removedIndexes?.isEmpty == false
             || details.hasMoves
+    }
+
+    /// Changed assets whose photo or video content changed — an edit,
+    /// a revert — which decides which originals an asset has. A favorite or
+    /// a hide alone leaves the answer alone. Evictions PhotoKit does not
+    /// report at all, which is why the check also runs on each foreground
+    /// and a full pass once a day (FS-06.10 §4).
+    private func collectEditedAssets(_ details: PHFetchResultChangeDetails<PHAsset>, in changeInstance: PHChange) {
+        guard onAssetsChanged != nil, !pendingEverythingChanged else { return }
+        let changed = details.changedObjects
+        guard !changed.isEmpty else { return }
+        guard pendingChangedAssetIds.count + changed.count <= Self.changedAssetsCap else {
+            pendingEverythingChanged = true
+            return
+        }
+        for asset in changed where changeInstance.changeDetails(for: asset)?.assetContentChanged ?? true {
+            pendingChangedAssetIds.insert(asset.localIdentifier)
+        }
     }
 
     /// Whether a change touched the album list — one created, removed, moved,

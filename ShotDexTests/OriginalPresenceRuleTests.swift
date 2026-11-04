@@ -6,7 +6,7 @@ import Testing
 /// table; an unchecked photo is in neither value.
 @MainActor
 struct OriginalPresenceRuleTests {
-    private static func rule(_ op: RuleOperator, _ value: OriginalPresence) -> SmartAlbumRule {
+    static func rule(_ op: RuleOperator, _ value: OriginalPresence) -> SmartAlbumRule {
         SmartAlbumRule(field: .original, op: op, text: value.rawValue)
     }
 
@@ -111,5 +111,14 @@ struct OriginalPresenceRuleTests {
 
     @Test func offeredInTheFieldMenu() {
         #expect(RuleField.selectableCases(extendedMetadata: false).contains(.original))
+    }
+}
+
+extension OriginalPresenceRuleTests {
+    /// AC-8's trigger: only an album with an Original condition keeps the
+    /// check going while it is open.
+    @Test func usesOriginalOnlyWithTheField() {
+        #expect(SmartAlbumQuery(matchMode: .all, rules: [Self.rule(.isExactly, .onDevice)]).usesOriginal)
+        #expect(!SmartAlbumQuery(matchMode: .all, rules: [SmartAlbumRule(field: .source, op: .isExactly, text: "S1")]).usesOriginal)
     }
 }

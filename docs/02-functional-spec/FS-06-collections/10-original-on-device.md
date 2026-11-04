@@ -53,8 +53,11 @@ Không đoán thay cho ảnh chưa kiểm.
   render đầy đủ. Vì: xem hay xuất khi không có mạng cần đủ những phần đó.
 - Lượt kiểm tra **không bao giờ dùng mạng** và không tải gì về. Nó chạy ngoài main thread, kiểm theo lô, nhường khi
   người dùng đang thao tác, dừng theo nhiệt độ máy, và chạy tiếp được từ chỗ dừng ([NF-01 §1.5](../../04-non-functional-design/NF-01-performance.md)).
-- **Lúc chạy:** khi app vào trước mặt, và khi mở một album hay bộ lọc có dùng trường này. Ảnh nào PhotoKit báo
-  đổi thì về lại *chưa kiểm*.
+- **Lúc chạy:** khi app vào trước mặt (kể cả lần đầu: cả thư viện), và khi mở một album hay bộ lọc có dùng trường
+  này. Chạy song song với index, ngoài main thread; chỉ nghỉ khi người dùng đang cuộn hoặc máy nóng, để app không lag
+  (người dùng chốt 2026-11-04). Album dùng trường này tải lại tối đa một lần mỗi 3 giây trong lúc kiểm.
+  - Ảnh PhotoKit báo **đổi nội dung** (sửa, hoàn tác) thì về lại *chưa kiểm*. Đổi Favorite hay ẩn thì không.
+  - PhotoKit không đưa được danh sách thay đổi, hoặc quá 5.000 ảnh đổi một lúc: bắt đầu lượt kiểm mới cho tất cả.
 - Photos tự gỡ bản gốc khi máy hết chỗ, mà **không** báo thay đổi. Kết quả vì vậy có thể cũ, nên màn luôn ghi
   *checked … ago*.
   - **Quét lại toàn bộ** chỉ khi có album hoặc bộ lọc dùng trường này đang mở, và lần quét trước đã quá 24 giờ
@@ -102,7 +105,7 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-5 | máy tắt mạng, 1.000 ảnh chưa kiểm | lượt kiểm chạy hết | không có request mạng nào; 1.000 dòng trạng thái được ghi | ✅ `OriginalPresenceCheckTests.passChecksEverythingInBatches` (lượt + tuỳ chọn mạng tắt; máy thật ở T1) |
 | AC-6 | lượt kiểm tới 30.000 / 55.000 | app bị đóng hẳn, rồi mở lại | lượt kiểm chạy tiếp từ 30.000, không kiểm lại từ 0 | ⚠️ một phần — `OriginalPresenceStoreTests.passSurvivesReopeningTheDatabaseFile`, `passCarriesOnAfterTheAppIsKilled` (store; lượt chạy ở T6) |
 | AC-7 | 55k ảnh đã kiểm | index lại toàn bộ thư viện | trạng thái của mọi ảnh vẫn còn (không về *chưa kiểm*) | ✅ `OriginalPresenceStoreTests.reindexKeepsTheAnswers` |
-| AC-8 | ảnh A *có trên máy*; PhotoKit báo A đổi | lần mở album kế | A thành *chưa kiểm* rồi được kiểm lại; dòng tiến độ đếm A | ⚠️ chưa có |
+| AC-8 | ảnh A *có trên máy*; PhotoKit báo A đổi | lần mở album kế | A thành *chưa kiểm* rồi được kiểm lại; dòng tiến độ đếm A | ✅ `OriginalPresenceCheckTests.changedAssetRechecked`, `unknownChangeStartsAFreshPass` (lượt); nối `changedObjects` → `assetContentChanged` chưa đo trên máy thật |
 | AC-9 | quyền `.limited`, cho app 40 ảnh | mở album có trường này | dòng tiến độ ghi *of 40*; không có ảnh ngoài 40 ảnh đó | ⚠️ một phần — `OriginalPresenceCheckTests.limitedAccessCountsOnlySharedItems` (tổng theo index; `.limited` thật chưa chụp) |
 | AC-10 | album *Source is NAS Home* VÀ *Original is iCloud Only* | mở album | chỉ ra ảnh có trên NAS mà bản gốc không có trên máy; chip ghi đủ hai điều kiện | ✅ `OriginalPresenceRuleTests.combinesWithSourceOnServer` + `compactChips` |
 | AC-11 | Library 100 ảnh, 60 có trên máy, iOS 26.5 và 18.6 | menu Filter › bật *Original on This iPhone* | lưới còn 60; thanh chip có chip tương ứng; đang có truy vấn nâng cao thì truy vấn đó bị xoá | ⚠️ chưa có — `Tools/ui-drive` + ảnh cả hai nhánh |

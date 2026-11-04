@@ -231,4 +231,18 @@ struct OriginalPresenceCheckTests {
         #expect(check.pass?.finishedAt != nil)
         check.screenClosed()
     }
+
+    /// PhotoKit could not say what changed: a fresh pass over everything.
+    @Test func unknownChangeStartsAFreshPass() async throws {
+        let (database, _) = try Self.library(4)
+        let probe = Probe()
+        let clock = Clock()
+        let check = Self.check(database, probe, clock: clock)
+        await check.run()
+        clock.seconds += 60
+        await check.assetsChanged(nil)
+        #expect(check.pass?.finishedAt == nil && check.progress.checked == 0)
+        await check.run()
+        #expect(probe.asked.joined().count == 8)
+    }
 }
