@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **chưa làm** (2026-11-04) — plan [2026-11-04-mac-settings-panes](../_plans/2026-11-04-mac-settings-panes.md) chờ duyệt, 13 task |
+| Tiến độ | **đang làm** (2026-11-04) — task 1/13 (S0 board), 0/14 AC xanh |
 | Nguồn | phản hồi người dùng (cài bản Debug lên Mac, 2026-11-04) |
 | Spec sinh ra từ đây | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 

@@ -1,0 +1,44 @@
+# Settings Mac loop (FS-18.04 §3) — trạng thái
+
+Loop tự chạy (`/loop`, 2026-11-04), làm hết S0–S13 của [plan](2026-11-04-mac-settings-panes.md). File này là trí nhớ
+của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
+
+## Luật mỗi vòng
+
+1. Làm **một** task, theo thứ tự trong plan mục 5:
+   - task UI: vẽ board trước. Đọc lại file từ canvas Mac (<https://claude.ai/artifact/HEj8sG21jAEWd7Mgvuyxgj>, `read`
+     theo url rồi theo `path`) trước khi sửa, sửa trong `docs/design/mac/project/`, publish lên canvas;
+   - code. Logic vào Domain/Data dùng chung, view Mac mỏng. File mới dưới `ShotDexMac/` → `Tools/mac-membership`;
+   - build iOS (`-destination 'id=6E3CE306-B474-4EBD-953B-E7D807BB25BC' -derivedDataPath build/sim`) và `ShotDexMac`
+     (`-destination 'platform=macOS,arch=arm64' -derivedDataPath build/DerivedData`). `build/sim` bị khoá = phiên khác
+     đang build: chờ, đừng chạy chen;
+   - chạy test liên quan bằng `-only-testing` (không chạy cả bộ, không `Tools/gate`);
+   - **review 2 lần**: 2 lượt reviewer độc lập (code + UI/UX), sửa hết những gì chúng tìm ra rồi mới qua;
+   - **chụp ảnh UI** sáng + tối (`-ShotDexDemoLibrary`, `-ShotDexAppearance dark`, `-ShotDexSettingsPane <tên>`,
+     `Tools/mac-shot`, mẹo mở lại cửa sổ), xem từng ảnh, so board (`Tools/design-board render` + compare khi có dump).
+     **Không bao giờ chụp thư viện thật**;
+   - task chạm server: e2e trên SMB ảo `127.0.0.1:4450` (share `photos`, `tester` / `secret`).
+2. Cập nhật FS-18.06 (cột "Chứng minh bằng"), plan (trạng thái), dòng Tiến độ của intent, dòng task dưới đây; commit chỉ
+   file mình đổi (`/usr/bin/git commit -- <paths>`; zsh: mảng).
+3. Không đụng file phiên khác đang sửa khi chúng còn thay đổi chưa commit: `project.pbxproj`, `MacSidebar.swift`,
+   `Localizable.xcstrings`, `LiquidGlassTabBar.swift`, `RuleBuilderSections.swift`. Task cần một file trong đó mà nó
+   còn bẩn → làm phần khác của task, ghi lại, quay lại sau.
+4. Không dùng ảnh có mặt người. Hỏi người dùng bằng AskUserQuestion có lựa chọn. Hết task thì dừng loop.
+
+## Task
+
+| Task | Trạng thái | Commit | Ghi chú |
+|---|---|---|---|
+| S0 | xong | (commit này) | 8 board, canvas v109. Hàng chưa có tính năng: nhãn `label3`, control 0.45 và ở trạng thái tắt, chữ phụ "Available in a later version" giữ độ tương phản (review design: mờ cả hàng thì chữ lý do chỉ ~1.5:1); AI, Editing mờ cả pane + một dòng chú thích. Sources: bỏ `.xmp`, header ghi "Indexing 22%" (review UX: tiến độ phải thấy không cần cuộn), tweak `indexing`, `battery` (paused/none). Servers: bỏ limit riêng, tweak `localNetworkOff`. `MAC_SourceIndexing`: chân sidebar xếp chồng index trên Common photos, tweak `indexing` cho trạng thái xong; bỏ sao/cờ và chữ "cull, rate" (cull đã bỏ). Giữ "Common photos" (chữ thường) như chuỗi app và board Activity. Board Mac khác (Main, Cull…) còn vẽ sao/cờ: ngoài task này |
+| S1 | chưa | | |
+| S2 | chưa | | |
+| S3 | chưa | | |
+| S4 | chưa | | |
+| S5 | chưa | | |
+| S7 | chưa | | |
+| S8 | chưa | | |
+| S9 | chưa | | |
+| S10 | chưa | | |
+| S11 | chưa | | |
+| S12 | chưa | | |
+| S13 | chưa | | |

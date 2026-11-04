@@ -28,7 +28,7 @@ input{font-family:inherit}
 <span style="width:28px;height:28px;flex:none;border-radius:8px;background:{{t.fill}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01"></path></svg></span>
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
 <span style="font-size:13px;font-weight:600">T7 RAW Archive is offline</span>
-<span style="font-size:12px;color:{{t.label2}}">Its 26,107 photos stay in your library. You can still cull, rate, keyword and sort them; connect the drive to open originals, edit or export.</span>
+<span style="font-size:12px;color:{{t.label2}}">Its 26,107 photos stay in your library. You can still browse, search and sort them; connect the drive to open originals.</span>
 </div>
 <button aria-label="Locate T7 RAW Archive" style="height:28px;border-radius:8px;border:none;font-size:13px;padding:0 12px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;background:{{t.fill}};color:{{t.label}};">Locate…</button><button style="height:28px;border-radius:8px;border:none;font-size:13px;padding:0 12px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;background:{{t.fill}};color:{{t.label}};">Remove Source…</button>
 </div></sc-if>
@@ -108,15 +108,17 @@ input{font-family:inherit}
 </sc-for>
 </div>
 <!-- Sidebar foot: idle status; progress only on boards about a running task -->
-<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:16px;height:28px;display:flex;align-items:center;gap:6px;font-size:11px;color:{{t.label2}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
-<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box">
+<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:{{foot.idleBottom}};height:28px;display:flex;align-items:center;gap:6px;font-size:11px;color:{{t.label2}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
+<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:{{foot.bottom}};height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box">
 <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">{{foot.pct}}</span></div>
 <div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
 </div></sc-if>
+<!-- FS-18.04 §3 AC-71: a Common Photos run left half done sits under the index line, never over it -->
+<sc-if value="{{common}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Common photos</span><span style="color:{{t.orangeText}};white-space:nowrap">Paused</span></div><div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:43%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div></div></sc-if>
 </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"commonPhotos":{"editor":"boolean","default":true},"indexing":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":900}}'>
 // v2 tokens (MAC_STYLE v2 rules): accentFill/onAccentFill for every filled control with text, opaque menu,
 // one sheet grey, scrim drawn above sidebar and toolbar, rowAlt zebra, field = content + 1px sep.
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
@@ -174,10 +176,9 @@ const I = {
   sliders:'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M14 5v4 M8 15v4',
   photo:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01'
 };
-// Rating / flag / favorite per photo (FS-01.12 §7). Deterministic from the tile seed; o.marks overrides by index.
-const RATES=[0,0,3,0,0,4,0,2,0,0,5,0,1,0,3,0,0];
+// Favorite per photo; stars and flags left with culling (2026-11-04). o.marks overrides by index.
 function markFor(k, isVideo){
-  return { r: RATES[k%RATES.length], f: isVideo?'':((k%7)===3?'p':((k%11)===8?'x':'')), fav: (k%9)===5 };
+  return { r: 0, f: '', fav: (k%9)===5 };
 }
 function tiles(n, seed, o){
   o=o||{}; const out=[];
@@ -229,6 +230,9 @@ function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,25
 class Component extends DCLogic {
   renderVals() {
     const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const common = this.props.commonPhotos !== false;
+    // AC-71 end state: tweak `indexing` off leaves the Up to date line over the Common Photos box.
+    const indexing = this.props.indexing !== false;
     const groups=sidebar(t,{sel:'All Photos', offline:true, newFolder:true, allCount:'56,471'});
     const none={r:0,f:'',fav:false};
     const fresh=[];for(let i=0;i<14;i++) fresh.push(none);
@@ -237,7 +241,8 @@ class Component extends DCLogic {
       {title:'Sunday, September 27', place:'Nara · T7 RAW Archive', count:'112 photos', offlineNote:true, tiles:tiles(14,14,{offline:true,noVideo:true})}
     ];
     const e=edges(dark);
-    return { t, groups, sections, edge:e.edge, edgeClear:e.edgeClear, foot:{idle:false, busy:true, label:'Adding Client Shoots 2026', pct:'33%'} };
+    return { t, groups, sections, edge:e.edge, edgeClear:e.edgeClear, foot:{idle:!indexing, busy:indexing, label: indexing ? 'Indexing 1,240 of 3,812' : 'Up to date · indexed 2 min ago', pct:'33%',
+      bottom: common ? '60px' : '8px', idleBottom: common ? '60px' : '16px'}, common };
   }
 }
 </script>

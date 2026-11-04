@@ -40,6 +40,7 @@ input{font-family:inherit}
 <sc-if value="{{r.status}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:5px;font-size:11px;line-height:14px;color:{{r.statusColor}};white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums"><span style="flex:none;width:7px;height:7px;border-radius:4px;background:{{r.statusDot}}"></span>{{r.status}}</span></sc-if>
 <sc-if value="{{r.bar}}" hint-placeholder-val="{{false}}"><div style="height:4px;border-radius:2px;background:{{t.track}};margin-top:3px;width:240px"><div style="width:{{r.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
 </div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;opacity:{{r.ctlOp}}">
 <sc-if value="{{r.value}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:13px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{r.value}}</span></sc-if>
 <sc-if value="{{r.checks}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:grid;grid-template-columns:repeat(3, auto);gap:6px 16px"><sc-for list="{{r.checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:6px;font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap"><input type="checkbox" checked="{{c.on}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{c.bg}};border:{{c.border}};display:flex;align-items:center;justify-content:center;color:{{t.onAccentFill}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{c.label}}</label></sc-for></div></sc-if>
 <sc-if value="{{r.field}}" hint-placeholder-val="{{false}}"><input value="{{r.field}}" aria-label="{{r.label}}" style="flex:none;width:{{r.fieldW}};height:28px;border-radius:8px;border:1px solid {{t.sep}};background:{{S.fieldBg}};padding:0 8px;box-sizing:border-box;font-size:13px;color:{{t.label}};outline:none"></sc-if>
@@ -47,6 +48,7 @@ input{font-family:inherit}
 <sc-if value="{{r.popup}}" hint-placeholder-val="{{false}}"><button aria-label="{{r.label}}" style="flex:none;min-width:{{r.popupW}};height:28px;border-radius:8px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 10px;box-sizing:border-box;font-size:13px;color:{{t.label}};white-space:nowrap"><span style="display:flex;align-items:center;gap:6px"><sc-if value="{{r.swatch}}" hint-placeholder-val="{{false}}"><span style="width:12px;height:12px;border-radius:6px;background:{{r.swatch}}"></span></sc-if>{{r.popup}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button></sc-if>
 <sc-if value="{{r.btns}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:flex;gap:8px"><sc-for list="{{r.btns}}" as="b" hint-placeholder-count="1"><button aria-label="{{b.aria}}" disabled="{{b.disabled}}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-size:13px;font-weight:{{b.weight}};white-space:nowrap">{{b.label}}</button></sc-for></div></sc-if>
 <sc-if value="{{r.sw}}" hint-placeholder-val="{{false}}"><label style="flex:none;position:relative;width:32px;height:18px;border-radius:9px;background:{{r.swBg}}"><input type="checkbox" role="switch" checked="{{r.on}}" aria-label="{{r.label}}" style="position:absolute;inset:0;opacity:0;margin:0"><span style="position:absolute;top:2px;left:{{r.knob}};width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></label></sc-if>
+</div>
 </div>
 </sc-for>
 </div>
@@ -66,6 +68,7 @@ input{font-family:inherit}
 <sc-if value="{{r.status}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:5px;font-size:11px;line-height:14px;color:{{r.statusColor}};white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums"><span style="flex:none;width:7px;height:7px;border-radius:4px;background:{{r.statusDot}}"></span>{{r.status}}</span></sc-if>
 <sc-if value="{{r.bar}}" hint-placeholder-val="{{false}}"><div style="height:4px;border-radius:2px;background:{{t.track}};margin-top:3px;width:240px"><div style="width:{{r.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
 </div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;opacity:{{r.ctlOp}}">
 <sc-if value="{{r.value}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:13px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{r.value}}</span></sc-if>
 <sc-if value="{{r.checks}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:grid;grid-template-columns:repeat(3, auto);gap:6px 16px"><sc-for list="{{r.checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:6px;font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap"><input type="checkbox" checked="{{c.on}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{c.bg}};border:{{c.border}};display:flex;align-items:center;justify-content:center;color:{{t.onAccentFill}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{c.label}}</label></sc-for></div></sc-if>
 <sc-if value="{{r.field}}" hint-placeholder-val="{{false}}"><input value="{{r.field}}" aria-label="{{r.label}}" style="flex:none;width:{{r.fieldW}};height:28px;border-radius:8px;border:1px solid {{t.sep}};background:{{S.fieldBg}};padding:0 8px;box-sizing:border-box;font-size:13px;color:{{t.label}};outline:none"></sc-if>
@@ -73,6 +76,7 @@ input{font-family:inherit}
 <sc-if value="{{r.popup}}" hint-placeholder-val="{{false}}"><button aria-label="{{r.label}}" style="flex:none;min-width:{{r.popupW}};height:28px;border-radius:8px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 10px;box-sizing:border-box;font-size:13px;color:{{t.label}};white-space:nowrap"><span style="display:flex;align-items:center;gap:6px"><sc-if value="{{r.swatch}}" hint-placeholder-val="{{false}}"><span style="width:12px;height:12px;border-radius:6px;background:{{r.swatch}}"></span></sc-if>{{r.popup}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button></sc-if>
 <sc-if value="{{r.btns}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:flex;gap:8px"><sc-for list="{{r.btns}}" as="b" hint-placeholder-count="1"><button aria-label="{{b.aria}}" disabled="{{b.disabled}}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-size:13px;font-weight:{{b.weight}};white-space:nowrap">{{b.label}}</button></sc-for></div></sc-if>
 <sc-if value="{{r.sw}}" hint-placeholder-val="{{false}}"><label style="flex:none;position:relative;width:32px;height:18px;border-radius:9px;background:{{r.swBg}}"><input type="checkbox" role="switch" checked="{{r.on}}" aria-label="{{r.label}}" style="position:absolute;inset:0;opacity:0;margin:0"><span style="position:absolute;top:2px;left:{{r.knob}};width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></label></sc-if>
+</div>
 </div>
 </sc-for>
 </div>
@@ -92,6 +96,7 @@ input{font-family:inherit}
 <sc-if value="{{r.status}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:5px;font-size:11px;line-height:14px;color:{{r.statusColor}};white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums"><span style="flex:none;width:7px;height:7px;border-radius:4px;background:{{r.statusDot}}"></span>{{r.status}}</span></sc-if>
 <sc-if value="{{r.bar}}" hint-placeholder-val="{{false}}"><div style="height:4px;border-radius:2px;background:{{t.track}};margin-top:3px;width:240px"><div style="width:{{r.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
 </div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;opacity:{{r.ctlOp}}">
 <sc-if value="{{r.value}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:13px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{r.value}}</span></sc-if>
 <sc-if value="{{r.checks}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:grid;grid-template-columns:repeat(3, auto);gap:6px 16px"><sc-for list="{{r.checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:6px;font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap"><input type="checkbox" checked="{{c.on}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{c.bg}};border:{{c.border}};display:flex;align-items:center;justify-content:center;color:{{t.onAccentFill}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{c.label}}</label></sc-for></div></sc-if>
 <sc-if value="{{r.field}}" hint-placeholder-val="{{false}}"><input value="{{r.field}}" aria-label="{{r.label}}" style="flex:none;width:{{r.fieldW}};height:28px;border-radius:8px;border:1px solid {{t.sep}};background:{{S.fieldBg}};padding:0 8px;box-sizing:border-box;font-size:13px;color:{{t.label}};outline:none"></sc-if>
@@ -99,6 +104,7 @@ input{font-family:inherit}
 <sc-if value="{{r.popup}}" hint-placeholder-val="{{false}}"><button aria-label="{{r.label}}" style="flex:none;min-width:{{r.popupW}};height:28px;border-radius:8px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 10px;box-sizing:border-box;font-size:13px;color:{{t.label}};white-space:nowrap"><span style="display:flex;align-items:center;gap:6px"><sc-if value="{{r.swatch}}" hint-placeholder-val="{{false}}"><span style="width:12px;height:12px;border-radius:6px;background:{{r.swatch}}"></span></sc-if>{{r.popup}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button></sc-if>
 <sc-if value="{{r.btns}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:flex;gap:8px"><sc-for list="{{r.btns}}" as="b" hint-placeholder-count="1"><button aria-label="{{b.aria}}" disabled="{{b.disabled}}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-size:13px;font-weight:{{b.weight}};white-space:nowrap">{{b.label}}</button></sc-for></div></sc-if>
 <sc-if value="{{r.sw}}" hint-placeholder-val="{{false}}"><label style="flex:none;position:relative;width:32px;height:18px;border-radius:9px;background:{{r.swBg}}"><input type="checkbox" role="switch" checked="{{r.on}}" aria-label="{{r.label}}" style="position:absolute;inset:0;opacity:0;margin:0"><span style="position:absolute;top:2px;left:{{r.knob}};width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></label></sc-if>
+</div>
 </div>
 </sc-for>
 </div>
@@ -110,7 +116,7 @@ input{font-family:inherit}
 <div aria-hidden="true" style="position:absolute;right:3px;top:88px;width:7px;height:282px;border-radius:4px;background:{{S.scroller}}"></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":720,"height":640}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"indexing":{"editor":"boolean","default":false},"battery":{"editor":"select","options":["charging","paused","none"],"default":"charging"},"$preview":{"width":720,"height":640}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -297,7 +303,7 @@ function ui(dark){
       icon:null, iconBg:TILE.blue, iconFg:'#FFFFFF', iconSize:'28px', iconRadius:'8px', glyph:'16',
       sw:false, on:false, swBg:t.track, knob:'2px', popup:null, popupW:'auto', seg:null, btns:null, checks:null,
       field:null, fieldW:'160px', bar:null, tag:null, tagBg:t.fill, tagFg:t.label2, labelColor:t.label,
-      weight:'400', h:'34px', sepTop:false, swatch:null }, o);
+      weight:'400', h:'34px', sepTop:false, swatch:null, ctlOp:'1' }, o);
   const sections = (list) => list.map(s => Object.assign({ title:null, aside:null, foot:null }, s,
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
@@ -311,6 +317,11 @@ function panes(t, active){
 class Component extends DCLogic {
   renderVals() {
     const dark = !!this.props.dark;
+    const indexing = !!this.props.indexing;
+    const battery = this.props.battery || 'charging';
+    // Not on the Mac yet: label and control dimmed, the reason at full contrast (FS-18.04 §3).
+    const dim = (r) => Object.assign(r, { ctlOp:'0.45', labelColor:t.label3, sub:'Available in a later version',
+      swBg:t.track, knob:'2px', on:false, field:null, h: r.h === '34px' ? '44px' : r.h });
     const k = ui(dark); const t = k.t; const S = k.S;
     const { seg, btn, chk, sw, status, row, sections } = k;
 
@@ -318,7 +329,7 @@ class Component extends DCLogic {
     const ri = (n, dis) => btn('Re-index', 'bordered', {aria:'Re-index ' + n, disabled:!!dis});
     const rm = (n) => btn('Remove…', 'bordered', {aria:'Remove ' + n});
     const folders = sections([
-      { title:'Photo Sources', aside:'55,231 items', rows:[
+      { title:'Photo Sources', aside: indexing ? '55,231 items · Indexing 22%' : battery === 'paused' ? '55,231 items · Paused on battery' : '55,231 items', rows:[
         src({ label:'Photos Library', tag:'Photos', icon:I.library, iconBg:TILE.pink,
               sub:'System Photo Library · 23,904 items', btns:[btn('Manage Access…')] }, status('ok', 'Full Access')),
         src({ label:'2026 Japan', tag:'This Mac', icon:I.folder, iconBg:TILE.blue,
@@ -335,30 +346,36 @@ class Component extends DCLogic {
               btns:[btn('Grant Access…', 'default', {aria:'Grant Access to Client Shoots 2026'}), rm('Client Shoots 2026')] },
               status('err', 'ShotDex needs permission to read this folder.')),
         row({ label:'Drop a folder here or onto the sidebar', labelColor:t.label2, h:'44px', btns:[btn('Add Folder…'), btn('Connect to Server…')] })
-      ], foot:'Folders, drives and servers are indexed in place. ShotDex never edits file contents; ratings and keywords go to .xmp sidecars.' }
+      ], foot:'Folders, drives and servers are indexed in place. ShotDex never changes your files.' }
     ]);
     const behaviour = sections([
-      { title:'Metadata', rows:[
-        row(Object.assign({ label:'Read and Write .xmp Sidecars', sub:'Ratings, flags, keywords, title and caption live in a .xmp file next to each photo' }, sw(true), { h:'44px' }))
-      ], foot:'Lightroom, Capture One and Bridge read the same sidecars. Photos Library items keep their metadata in Photos.' },
+      // No .xmp sidecar row on the Mac: culling is gone (FS-18.04 §3, 2026-11-04).
       { title:'Drives and Indexing', rows:[
         row({ label:'When a Drive Is Disconnected', popup:'Keep Photos, Marked Offline', popupW:'230px' }),
-        row({ label:'Index New and Changed Files', popup:'Automatically', popupW:'230px' }),
-        row(Object.assign({ label:'Pause Indexing on Battery Power', sub:'Indexing always pauses in Low Power Mode' }, sw(true), { h:'44px' })),
+        dim(row({ label:'Index New and Changed Files', popup:'Automatically', popupW:'230px' })),
+        // AC-75: a Mac with no battery has nothing to pause on (tweak `battery` = none).
+        battery === 'none'
+          ? row(Object.assign({ label:'Pause Indexing on Battery Power', labelColor:t.label3, sub:'This Mac has no battery', ctlOp:'0.45' }, sw(false), { h:'44px' }))
+          : row(Object.assign({ label:'Pause Indexing on Battery Power', sub:'Indexing always pauses in Low Power Mode' }, sw(true), { h:'44px' })),
         row(Object.assign({ label:'Prevent Sleep While Indexing' }, sw(false))),
         row(Object.assign({ label:'Look Up Place Names', sub:'Once per place, then remembered · the only step that leaves this Mac' }, sw(true), { h:'44px' })),
         row(Object.assign({ label:'Scan for People and Pets', sub:'41,870 of 55,231 items scanned', bar:'76%' }, sw(true), { h:'52px' }))
       ]},
       { title:'Previews', rows:[
-        row({ label:'Preview Cache', sub:'18.4 GB on Macintosh HD · thumbnails and full-size previews', h:'44px', btns:[btn('Clear Cache…', 'bordered', {aria:'Clear Cache'}), btn('Change Location…')] }),
+        row({ label:'Preview Cache', sub:'18.4 GB on Macintosh HD · thumbnails and full-size previews', h:'44px', btns:[btn('Clear Cache…', 'bordered', {aria:'Clear Cache'}), btn('Change Location…', 'bordered', {disabled:true, aria:'Change Location, available in a later version'})] }),
         row({ label:'Cache Size Limit', sub:'Over the limit, the oldest full-size previews go first, then thumbnails', popup:'25 GB', popupW:'230px', h:'44px' }),
-        row({ label:'Keep Full-Size Previews', popup:'For 30 Days', popupW:'230px' }),
-        row(Object.assign({ label:'Keep Previews of Disconnected Drives', sub:'Browse, cull and rate a drive’s photos in full color while it is unplugged' }, sw(true), { h:'44px' }))
-      ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups. Limit: 2, 5, 10, 25 or 50 GB.' }
+        dim(row({ label:'Keep Full-Size Previews', popup:'For 30 Days', popupW:'230px' })),
+        dim(row(Object.assign({ label:'Keep Previews of Disconnected Drives' }, sw(true))))
+      ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups. Limit: 2, 5, 10, 25 or 50 GB. Change Location is available in a later version.' }
     ]);
     const library = sections([
       { title:'Index', rows:[
-        row({ label:'55,231 items · 54,027 photos · 1,204 videos', sub:'412.6 GB · up to date · indexed 2 min ago', h:'44px', btns:[btn('Re-index Library')] }),
+        // FS-18.04 §3 AC-70: while a run is going the row says how far it is (tweak `indexing`).
+        indexing
+          ? row({ label:'Indexing 12,400 of 55,231', sub:'55,231 items · 54,027 photos · 1,204 videos', bar:'22%', h:'60px', btns:[btn('Re-index Library', 'bordered', {disabled:true})] })
+          : battery === 'paused'
+          ? row(Object.assign({ label:'Paused on battery · 12,400 of 55,231', sub:'Indexing goes on when this Mac is plugged in', bar:'22%', h:'60px', btns:[btn('Re-index Library', 'bordered', {disabled:true})] }))
+          : row({ label:'55,231 items · 54,027 photos · 1,204 videos', sub:'412.6 GB · up to date · indexed 2 min ago', h:'44px', btns:[btn('Re-index Library')] }),
         row({ label:'Camera Database', sub:'6 cameras need a sensor format', h:'44px', btns:[btn('Review…', 'bordered', {aria:'Review Unknown Cameras'})] }),
         row({ label:'Clear Local Metadata Index', sub:'Your photos and files are not affected', h:'44px', btns:[btn('Clear…', 'destructive', {aria:'Clear Local Metadata Index'})] })
       ]}

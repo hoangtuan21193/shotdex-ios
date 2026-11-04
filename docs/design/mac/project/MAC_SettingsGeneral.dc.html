@@ -25,8 +25,7 @@ input{font-family:inherit}
 </div>
 <!-- PANE (scrolls; overlay scroller at the right edge shows position) -->
 <div style="position:absolute;left:0;right:0;top:85px;bottom:0;overflow:hidden">
-<!-- shown scrolled to the end: content 672pt in a 555pt pane, offset 117pt -->
-<div data-pane-content style="margin-top:-117px;padding:18px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<div data-pane-content style="padding:18px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
 <sc-for list="{{general}}" as="s" hint-placeholder-count="3">
 <div style="display:flex;flex-direction:column;gap:6px">
 <sc-if value="{{s.title}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px"><span style="font-size:13px;font-weight:600;line-height:16px;color:{{t.label}}">{{s.title}}</span><sc-if value="{{s.aside}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.aside}}</span></sc-if></div></sc-if>
@@ -41,6 +40,7 @@ input{font-family:inherit}
 <sc-if value="{{r.status}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:5px;font-size:11px;line-height:14px;color:{{r.statusColor}};white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums"><span style="flex:none;width:7px;height:7px;border-radius:4px;background:{{r.statusDot}}"></span>{{r.status}}</span></sc-if>
 <sc-if value="{{r.bar}}" hint-placeholder-val="{{false}}"><div style="height:4px;border-radius:2px;background:{{t.track}};margin-top:3px;width:240px"><div style="width:{{r.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
 </div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;opacity:{{r.ctlOp}}">
 <sc-if value="{{r.value}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:13px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{r.value}}</span></sc-if>
 <sc-if value="{{r.checks}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:grid;grid-template-columns:repeat(3, auto);gap:6px 16px"><sc-for list="{{r.checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:6px;font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap"><input type="checkbox" checked="{{c.on}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{c.bg}};border:{{c.border}};display:flex;align-items:center;justify-content:center;color:{{t.onAccentFill}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{c.label}}</label></sc-for></div></sc-if>
 <sc-if value="{{r.field}}" hint-placeholder-val="{{false}}"><input value="{{r.field}}" aria-label="{{r.label}}" style="flex:none;width:{{r.fieldW}};height:28px;border-radius:8px;border:1px solid {{t.sep}};background:{{S.fieldBg}};padding:0 8px;box-sizing:border-box;font-size:13px;color:{{t.label}};outline:none"></sc-if>
@@ -49,6 +49,7 @@ input{font-family:inherit}
 <sc-if value="{{r.btns}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:flex;gap:8px"><sc-for list="{{r.btns}}" as="b" hint-placeholder-count="1"><button aria-label="{{b.aria}}" disabled="{{b.disabled}}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-size:13px;font-weight:{{b.weight}};white-space:nowrap">{{b.label}}</button></sc-for></div></sc-if>
 <sc-if value="{{r.sw}}" hint-placeholder-val="{{false}}"><label style="flex:none;position:relative;width:32px;height:18px;border-radius:9px;background:{{r.swBg}}"><input type="checkbox" role="switch" checked="{{r.on}}" aria-label="{{r.label}}" style="position:absolute;inset:0;opacity:0;margin:0"><span style="position:absolute;top:2px;left:{{r.knob}};width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></label></sc-if>
 </div>
+</div>
 </sc-for>
 </div>
 <sc-if value="{{s.foot}}" hint-placeholder-val="{{false}}"><div style="font-size:11px;line-height:14px;color:{{t.label2}};padding:0 4px">{{s.foot}}</div></sc-if>
@@ -56,7 +57,6 @@ input{font-family:inherit}
 </sc-for>
 </div>
 </div>
-<div aria-hidden="true" style="position:absolute;right:3px;top:184px;width:7px;height:453px;border-radius:4px;background:{{S.scroller}}"></div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"needsApproval":{"editor":"boolean","default":false},"$preview":{"width":720,"height":920}}'>
@@ -246,7 +246,7 @@ function ui(dark){
       icon:null, iconBg:TILE.blue, iconFg:'#FFFFFF', iconSize:'28px', iconRadius:'8px', glyph:'16',
       sw:false, on:false, swBg:t.track, knob:'2px', popup:null, popupW:'auto', seg:null, btns:null, checks:null,
       field:null, fieldW:'160px', bar:null, tag:null, tagBg:t.fill, tagFg:t.label2, labelColor:t.label,
-      weight:'400', h:'34px', sepTop:false, swatch:null }, o);
+      weight:'400', h:'34px', sepTop:false, swatch:null, ctlOp:'1' }, o);
   const sections = (list) => list.map(s => Object.assign({ title:null, aside:null, foot:null }, s,
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
@@ -263,23 +263,23 @@ class Component extends DCLogic {
     const k = ui(dark); const t = k.t; const S = k.S;
     const { seg, btn, chk, sw, status, row, sections } = k;
     const approval = !!this.props.needsApproval;
+    // Not on the Mac yet: label and control dimmed, the reason at full contrast (FS-18.04 §3).
+    const dim = (r) => Object.assign(r, { ctlOp:'0.45', labelColor:t.label3, sub:'Available in a later version',
+      swBg:t.track, knob:'2px', on:false, field:null, h: r.h === '34px' ? '44px' : r.h });
 
     const general = sections([
-      { title:'Library', rows:[
-        row({ label:'Group Photos By', popup:'Day', popupW:'170px' }),
-        row({ label:'Open Photos', seg: seg(['In the Same Window','In a New Window'], 0) })
-      ], foot:'Thumbnail size: View › Zoom In and Zoom Out (⌘+ and ⌘−), or pinch on the trackpad.' },
       { title:'Thumbnails', rows:[
         row(Object.assign({ label:'File Type Badge', sub:'RAW, HEIC, JPG in the corner of each thumbnail' }, sw(false), { h:'44px' })),
         row({ label:'Info on Thumbnails', h:'82px', checks:[chk('File Name',true),chk('Capture Time',false),chk('ISO',true),
               chk('Aperture',true),chk('Shutter Speed',false),chk('Focal Length',true),chk('Megapixels',false),chk('File Size',false)] }),
         row({ label:'Focal Length', seg: seg(['Actual','Full-Frame Equivalent'], 0) })
-      ]},
+      ], foot:'Thumbnail size: View › Zoom In and Zoom Out (⌘+ and ⌘−), or pinch on the trackpad.' },
+      // FS-18.04 §3 (2026-11-04): the Mac has no viewer, Statistics screen or reminder yet — dimmed, in place.
       { title:'Viewing and Reminders', rows:[
-        row(Object.assign({ label:'View Full HDR', sub:'Brighter highlights on XDR and HDR displays' }, sw(false), { h:'44px' })),
-        row(Object.assign({ label:'Autoplay Videos' }, sw(true))),
-        row(Object.assign({ label:'Show Insights in Statistics' }, sw(true))),
-        row(Object.assign({ label:'On This Day Reminder', sub:'A notification each day with photos from this date', field:'9:00 AM', fieldW:'84px' }, sw(true), { h:'44px' }))
+        dim(row(Object.assign({ label:'View Full HDR' }, sw(false)))),
+        dim(row(Object.assign({ label:'Autoplay Videos' }, sw(true)))),
+        dim(row(Object.assign({ label:'Show Insights in Statistics' }, sw(true)))),
+        dim(row(Object.assign({ label:'On This Day Reminder', field:'9:00 AM', fieldW:'84px' }, sw(true))))
       ]},
       // Intents 2026-11-02-mac-local-only-index + -icloud-shared-index: read only originals on this Mac,
       // share results over iCloud, and let the Mac index for iPhone and iPad (they read only local originals).
