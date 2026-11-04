@@ -97,8 +97,8 @@ Không đoán thay cho ảnh chưa kiểm.
 |---|---|---|---|---|
 | AC-1 | (spike) máy thật, 55k ảnh, Optimize Storage bật | chạy lượt kiểm theo cách (a) rồi (b) | có số: thời gian, CPU, bộ nhớ đỉnh của mỗi cách; hai cách khớp nhau trên ≥ 99,9% ảnh; ghi vào `docs/_intents` | ⚠️ chưa có — spike |
 | AC-2 | 100 ảnh: 60 có đủ bản gốc, 30 chỉ bản xem trước, 10 chưa kiểm | album *Original is On This iPhone* | *Matches 60 photos*; *is not* ra 30; 10 ảnh chưa kiểm không vào bên nào | ⚠️ chưa có — `OriginalPresenceRuleTests` |
-| AC-3 | Live Photo có ảnh trên máy, phần video chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ⚠️ chưa có — test với resource giả |
-| AC-4 | ảnh đã sửa, bản gốc có trên máy, bản render chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ⚠️ chưa có |
+| AC-3 | Live Photo có ảnh trên máy, phần video chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.livePhotoWithMovieInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
+| AC-4 | ảnh đã sửa, bản gốc có trên máy, bản render chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.editedPhotoWithRenderInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
 | AC-5 | máy tắt mạng, 1.000 ảnh chưa kiểm | lượt kiểm chạy hết | không có request mạng nào; 1.000 dòng trạng thái được ghi | ⚠️ chưa có — test có đếm request |
 | AC-6 | lượt kiểm tới 30.000 / 55.000 | app bị đóng hẳn, rồi mở lại | lượt kiểm chạy tiếp từ 30.000, không kiểm lại từ 0 | ⚠️ chưa có |
 | AC-7 | 55k ảnh đã kiểm | index lại toàn bộ thư viện | trạng thái của mọi ảnh vẫn còn (không về *chưa kiểm*) | ⚠️ chưa có — test có upsert metadata |
