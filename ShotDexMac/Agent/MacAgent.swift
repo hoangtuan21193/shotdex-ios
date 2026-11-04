@@ -28,7 +28,7 @@ final class MacAgent {
     private let notices = MacCommonPhotosNotices()
 
     private init() {
-        dependencies = MacDependencies.live()
+        dependencies = MacDependencies.live(inHelper: true)
     }
 
     static func run() -> Never {

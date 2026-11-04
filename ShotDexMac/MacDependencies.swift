@@ -65,7 +65,10 @@ final class MacDependencies: LibraryServices {
     /// that opens it.
     var commonPhotosCompare: MacCommonPhotosCompareModel?
 
-    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
+    /// `originalCheck`: the demo library's stand-in for the PhotoKit probe;
+    /// nil everywhere else.
+    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false,
+         originalCheck: OriginalPresenceCheck.Environment? = nil, watchesOriginals: Bool = true) {
         self.database = database
         self.photoLibrary = photoLibrary
         metadataStore = MetadataStore(database: database)
@@ -127,9 +130,13 @@ final class MacDependencies: LibraryServices {
         #if DEBUG
         OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
         #endif
-        let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: nil))
+        let originalPresenceCheck = OriginalPresenceCheck(environment: originalCheck ?? .live(database: database, gate: nil))
         self.originalPresenceCheck = originalPresenceCheck
-        photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
+        // The app's own: the login-item helper never runs the check, so it
+        // must not write its tables behind the app's back either.
+        if watchesOriginals {
+            photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
+        }
         photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in
@@ -218,7 +225,9 @@ final class MacDependencies: LibraryServices {
         )
     }
 
-    static func live() -> MacDependencies {
+    /// `inHelper`: the login-item helper's copy, which leaves the
+    /// original check alone (FS-06.10).
+    static func live(inHelper: Bool = false) -> MacDependencies {
         let database: AppDatabase
         do {
             database = try AppDatabase.makeShared()
@@ -226,7 +235,8 @@ final class MacDependencies: LibraryServices {
             assertionFailure("Failed to open database: \(error)")
             database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         }
-        return MacDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true)
+        return MacDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true,
+                               watchesOriginals: !inHelper)
     }
 }
 

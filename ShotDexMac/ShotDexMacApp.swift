@@ -45,6 +45,15 @@ struct ShotDexMacApp: App {
                 .onAppear {
                     appDelegate.runs = dependencies.commonPhotos
                     dependencies.startGatheringInApp()
+                    // Which originals are on this Mac (FS-06.10 §4): a
+                    // window on screen is the app in front.
+                    dependencies.originalPresenceCheck.appBecameActive()
+                }
+                // The check runs in the app only — the helper never shows
+                // this window — and keeps going behind other apps: it is off
+                // the main thread and does not slow the UI (user 2026-11-04).
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    dependencies.originalPresenceCheck.appBecameActive()
                 }
                 .frame(minWidth: MacWindowMetrics.minimumSize.width, minHeight: MacWindowMetrics.minimumSize.height)
         }

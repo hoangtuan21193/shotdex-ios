@@ -262,4 +262,21 @@ struct OriginalPresenceCheckTests {
         #expect(check.pass?.finishedAt == 4_600)
         #expect(check.progress == .init(checked: 1, total: 1))
     }
+
+    /// An edit reported while its batch is being checked is not overwritten
+    /// by that batch's older answer: the item is checked again.
+    @Test func changeDuringABatchIsCheckedAgain() async throws {
+        let (database, _) = try Self.library(3)
+        let probe = Probe()
+        probe.delay = .milliseconds(300)
+        let check = Self.check(database, probe)
+        check.appBecameActive()
+        try await Task.sleep(for: .milliseconds(100))
+        await check.assetsChanged(["p0001"])
+        probe.delay = .zero
+        await check.waitUntilIdle()
+        #expect(probe.asked.count == 2)
+        #expect(probe.asked.last == ["p0001"])
+        #expect(try OriginalPresenceStore(database: database).state(of: "p0001") == .onDevice)
+    }
 }

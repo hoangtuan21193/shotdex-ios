@@ -52,6 +52,10 @@ final class OriginalPresenceCheck {
     private var taskToken = 0
     /// Work arrived while a pass was running: loop again before finishing.
     private var hasMoreWork = false
+    /// Ids PhotoKit said changed while a batch was being checked: its
+    /// answer for them is older than the change, so they are marked again
+    /// after it is written.
+    private var changedDuringBatch: Set<String> = []
     private var isInFront = false
     /// Screens open right now that use the Original rule.
     private var openScreens = 0
@@ -113,6 +117,7 @@ final class OriginalPresenceCheck {
             return
         }
         guard !photoKitIds.isEmpty else { return }
+        if task != nil { changedDuringBatch.formUnion(photoKitIds) }
         let store = environment.store
         try? await Self.offMain { try store.markForRecheck(photoKitIds) }
         await refreshProgress()
@@ -196,6 +201,9 @@ final class OriginalPresenceCheck {
             let answers = gathered
             let now = Int64(environment.now().timeIntervalSince1970)
             try? await Self.offMain { try store.record(answers, at: now) }
+            let stale = changedDuringBatch.intersection(answers.keys)
+            changedDuringBatch.subtract(answers.keys)
+            if !stale.isEmpty { try? await Self.offMain { try store.markForRecheck(stale) } }
             didCheck = true
             await refreshProgress()
             generation &+= 1

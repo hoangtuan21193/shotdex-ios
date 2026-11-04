@@ -216,6 +216,13 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         if MacDemoLibrary.section == "settings" { openSettings() }
+        // With `-ShotDexOriginalCheck`: the album on the Original rule, or its editor.
+        if MacDemoLibrary.section == "originalAlbum" { selection = .smartAlbum(MacDemoLibrary.originalAlbumId) }
+        if MacDemoLibrary.section == "editOriginalAlbum" {
+            selection = .smartAlbum(MacDemoLibrary.originalAlbumId)
+            smartAlbumForm = MacSmartAlbumFormRequest(editing: (try? dependencies.smartAlbums.fetchAllOrdered())?
+                .first { $0.id == MacDemoLibrary.originalAlbumId })
+        }
         if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
         // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
         if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {

@@ -19,6 +19,8 @@ struct MacSmartAlbumScreen: View {
     @State private var deleteError: String?
     /// The first load has finished; until then an empty list means "not yet".
     @State private var hasLoaded = false
+    /// When an `Original is …` album last read again for the check.
+    @State private var lastOriginalReload = Date.distantPast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -82,6 +84,29 @@ struct MacSmartAlbumScreen: View {
             onServer = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
             if dependencies.onServerCheck.generation > 0 { await model.load() }
         }
+        // An album on the Original rule asks for fresh answers (FS-06.10 §4)
+        // for as long as it is open — keyed by album, because the sidebar
+        // swaps albums in this same view without a disappear.
+        .task(id: album) {
+            guard album.query.usesOriginal else { return }
+            let check = dependencies.originalPresenceCheck
+            check.screenOpened()
+            while !Task.isCancelled { try? await Task.sleep(for: .seconds(3600)) }
+            check.screenClosed()
+        }
+        // Each batch of the original check can move photos in or out (§3).
+        // At most one reload every 3 s: a pass runs ~275 batches, and a grid
+        // reloading on each one flickers. Other albums never read it.
+        .task(id: "\(album.query.usesOriginal ? dependencies.originalPresenceCheck.generation : 0)-\(model != nil)") {
+            guard album.query.usesOriginal, let model else { return }
+            let wait = 3 - Date().timeIntervalSince(lastOriginalReload)
+            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+            guard !Task.isCancelled else { return }
+            lastOriginalReload = Date()
+            // Not tied to this task: the next batch re-keys it, and a load
+            // cut off half-way would drop the rows it had not read yet.
+            Task { await model.load() }
+        }
     }
 
     /// No photo matches (board `MAC_SmartAlbum`, `empty` tweak): say so in
@@ -118,23 +143,72 @@ struct MacSmartAlbumScreen: View {
                 .monospacedDigit()
                 .padding(.vertical, 4)
             Spacer(minLength: 12)
-            if !model.onServerLines.isEmpty {
+            if !model.onServerLines.isEmpty || originalCheck != nil {
                 VStack(alignment: .trailing, spacing: 2) {
                     // The counts keep to one line; the sentences after them
                     // (a hash mismatch names a device, FS-19.07 §12.4) wrap.
-                    ForEach(Array(model.onServerLines.enumerated()), id: \.offset) { index, line in
-                        Text(line).lineLimit(index == 0 ? 1 : nil).multilineTextAlignment(.trailing)
+                    if let first = model.onServerLines.first {
+                        Text(first).lineLimit(1)
+                            .accessibilityAddTraits(.updatesFrequently)
+                    }
+                    // The originals check, under the On Server counts
+                    // (FS-06.10 §3): its own element, the two tick apart.
+                    if let originalCheck {
+                        HStack(spacing: 6) {
+                            originalGlyph(originalCheck)
+                            Text(originalCheck.line).lineLimit(1)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(originalCheck.line.replacingOccurrences(of: " · ", with: ", "))
+                        .accessibilityAddTraits(.updatesFrequently)
+                    }
+                    ForEach(Array(model.onServerLines.dropFirst().enumerated()), id: \.offset) { _, line in
+                        Text(line).multilineTextAlignment(.trailing)
                     }
                 }
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityElement(children: .contain)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    /// The original check's line and how far it is, for an album on the
+    /// Original rule (FS-06.10 §3).
+    private var originalCheck: (line: String, fraction: Double?)? {
+        guard album.query.usesOriginal else { return nil }
+        let check = dependencies.originalPresenceCheck
+        let finishedAt = check.pass?.finishedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+        let line = OriginalPresenceProgressLine.text(checked: check.progress.checked, total: check.progress.total,
+                                                     finishedAt: finishedAt)
+        let isDone = finishedAt != nil && check.progress.checked >= check.progress.total
+        let fraction = check.progress.total > 0 ? min(1, Double(check.progress.checked) / Double(check.progress.total)) : 0
+        return (line, isDone ? nil : fraction)
+    }
+
+    /// A ring while the check runs, a check mark once it is through (board
+    /// `MAC_SmartAlbum`, `original` tweak).
+    @ViewBuilder
+    private func originalGlyph(_ check: (line: String, fraction: Double?)) -> some View {
+        if let fraction = check.fraction {
+            ZStack {
+                Circle().stroke(MacTheme.fill2, lineWidth: 1.5)
+                Circle().trim(from: 0, to: fraction)
+                    .stroke(MacTheme.accent, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 12, height: 12)
+            .accessibilityHidden(true)
+        } else {
+            // The ring's 12 pt box, so the text does not move when it turns.
+            Image(systemName: "checkmark")
+                .font(.system(size: 9, weight: .semibold))
+                .frame(width: 12, height: 12)
+                .accessibilityHidden(true)
+        }
     }
 
     /// Delete through the gate (FS-19.07 §9): photos that rely on a server

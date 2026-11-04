@@ -41,6 +41,12 @@ struct MacSmartAlbumEditorSheet: View {
     private var isDuplicateName: Bool { !trimmedName.isEmpty && takenNames.contains(trimmedName.lowercased()) }
     private var canSave: Bool { !trimmedName.isEmpty && !query.isEmpty && !isDuplicateName }
 
+    /// An Original condition while the check has photos left.
+    private var uncheckedOriginals: Bool {
+        let progress = dependencies.originalPresenceCheck.progress
+        return query.usesOriginal && progress.checked < progress.total
+    }
+
     private var visibleRules: [Binding<SmartAlbumRule>] {
         Array($query.rules).filter { $0.wrappedValue.field != .mediaType }
     }
@@ -83,7 +89,14 @@ struct MacSmartAlbumEditorSheet: View {
                     Text("Conditions", comment: "Smart album: rules section")
                 } footer: {
                     if let matchCount {
-                        Text("Matches \(matchCount) photos.", comment: "Smart album: live count of matching photos").monospacedDigit()
+                        // Unchecked photos match neither value (FS-06.10 §3):
+                        // the count grows as the check goes on. Two keys, so
+                        // the count keeps its plural forms.
+                        (Text("Matches \(matchCount) photos.", comment: "Smart album: live count of matching photos").monospacedDigit()
+                            + (uncheckedOriginals
+                                ? Text(" ") + Text("Photos not checked yet aren’t counted.",
+                                                     comment: "Smart album editor: the originals check has photos left, which no Original condition matches yet")
+                                : Text("")))
                     }
                 }
             }

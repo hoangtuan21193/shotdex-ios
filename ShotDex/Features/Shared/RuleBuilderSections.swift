@@ -150,13 +150,11 @@ struct RuleBuilderSections: View {
             Text("Conditions")
         } footer: {
             if let matchCount {
-                if uncheckedOriginals {
-                    // Unchecked photos match neither value (FS-06.10 §3):
-                    // the count grows as the check goes on.
-                    Text("Matches \(matchCount) photo. Photos not checked yet aren't counted.")
-                } else {
-                    Text("Matches \(matchCount) photo.")
-                }
+                // Unchecked photos match neither value (FS-06.10 §3): the
+                // count grows as the check goes on. Two keys, so the count
+                // keeps its plural forms.
+                Text("Matches \(matchCount) photo.")
+                    + (uncheckedOriginals ? Text(" ") + Text("Photos not checked yet aren’t counted.") : Text(""))
             }
         }
         .task {

@@ -126,7 +126,9 @@ struct SmartAlbumDetailScreen: View {
             if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
             guard !Task.isCancelled else { return }
             lastOriginalReload = Date()
-            await model.load()
+            // Not tied to this task: the next batch re-keys it, and a load
+            // cut off half-way would drop the rows it had not read yet.
+            Task { await model.load() }
         }
         // The Filter menu's "Original on This iPhone" on an album whose own
         // query does not already use the rule (that case is handled above).

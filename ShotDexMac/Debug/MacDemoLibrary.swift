@@ -41,7 +41,9 @@ enum MacDemoLibrary {
         let isNewFile = file.map { !FileManager.default.fileExists(atPath: $0) } ?? true
         let database = file.flatMap { try? AppDatabase(DatabasePool(path: $0)) }
             ?? (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
-        let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService())
+        if isNewFile, let state = originalCheckState { seedOriginalCheck(database, state: state) }
+        let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService(),
+                                           originalCheck: originalCheckState.map { _ in originalCheckEnvironment(database) })
         // A database file kept from an earlier launch is seeded once.
         guard isNewFile else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
@@ -56,7 +58,50 @@ enum MacDemoLibrary {
             id: "demo-empty", name: "ISO 100000+",
             query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .iso, op: .greaterThan, number: 99_999)]),
             createdAt: 2))
+        if originalCheckState != nil {
+            // Board `MAC_SmartAlbum`'s `original` tweak (FS-06.10 §3).
+            try? dependencies.smartAlbums.upsert(SmartAlbum(
+                id: originalAlbumId, name: "Originals in iCloud",
+                query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .original, op: .isExactly, text: OriginalPresence.iCloudOnly.rawValue)]),
+                createdAt: 3))
+        }
         return dependencies
+    }
+
+    static let originalAlbumId = "demo-original"
+
+    /// `-ShotDexOriginalCheck checking|checked`: the originals check part
+    /// way through, or done 3 minutes ago, with every third photo in iCloud
+    /// only — the demo's ids are not in Photos, so the real probe would
+    /// only ever answer "can't tell".
+    static var originalCheckState: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexOriginalCheck"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
+    /// Answers nothing, ever: the seeded state stays on screen.
+    private static func originalCheckEnvironment(_ database: AppDatabase) -> OriginalPresenceCheck.Environment {
+        OriginalPresenceCheck.Environment(store: OriginalPresenceStore(database: database), check: { _ in
+            try? await Task.sleep(for: .seconds(3600))
+            return [:]
+        })
+    }
+
+    private static func seedOriginalCheck(_ database: AppDatabase, state: String) {
+        let now = Int64(Date().timeIntervalSince1970)
+        let isDone = state == "checked"
+        let ids = rows().map(\.assetId)
+        // 12,400 of 55,000 is 22.5 %, as the board draws it.
+        let checked = isDone ? ids : Array(ids.prefix(ids.count * 225 / 1000))
+        try? database.writer.write { db in
+            try db.execute(sql: "INSERT OR REPLACE INTO original_presence_pass (id, startedAt, finishedAt) VALUES (1, ?, ?)",
+                           arguments: [now - 600, isDone ? now - 180 : nil])
+            for (index, id) in checked.enumerated() {
+                try db.execute(sql: "INSERT OR REPLACE INTO original_presence (photoKitId, state, checkedAt) VALUES (?, ?, ?)",
+                               arguments: [id, (index % 3 == 0 ? OriginalPresence.iCloudOnly : .onDevice).rawValue, now - 300])
+            }
+        }
     }
 
     /// Two jobs as on board `MAC_Backup`: one up to date, one whose server
