@@ -238,10 +238,14 @@ actor IndexShareService: SharedIndexSource {
     // MARK: Push
 
     /// Uploads what is queued in the outbox, 400 records at a time, at most
-    /// `batches` of them; stops between batches when cancelled.
+    /// `batches` of them; stops between batches when cancelled, and when
+    /// CloudKit refuses a batch (iCloud full, throttled, offline). What was
+    /// refused stays queued for the next push.
     func push(batches: Int = .max) async {
         guard let database = await database() else { return }
         let deviceName = await DeviceDisplayName.current()
+        var savedCount = 0
+        var stop: PushStop?
         do {
             try await ensureZone(in: database)
             for _ in 0..<batches {
@@ -255,16 +259,81 @@ actor IndexShareService: SharedIndexSource {
                 let (saveResults, _) = try await database.modifyRecords(
                     saving: records, deleting: [], savePolicy: .allKeys, atomically: false
                 )
-                let saved = Set(saveResults.compactMap { id, result in (try? result.get()) != nil ? id.recordName : nil })
+                var saved: Set<String> = []
+                var errors: [any Error] = []
+                for (id, result) in saveResults {
+                    switch result {
+                    case .success: saved.insert(id.recordName)
+                    case .failure(let error): errors.append(error)
+                    }
+                }
+                savedCount += saved.count
                 // Rows that vanished locally (no record built) leave the queue too.
                 let built = Set(records.map(\.recordID.recordName))
                 try store.removeFromOutbox(items.filter { saved.contains($0.recordName) || !built.contains($0.recordName) })
-                if saved.isEmpty && !built.isEmpty { break }
+                stop = Self.stop(after: errors, savedCount: saved.count, builtCount: built.count)
+                if stop != nil { break }
             }
-            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: SettingsKeys.sharedIndexLastSync)
+        } catch is CancellationError {
+        } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
+            // Zone gone: the next push makes it again.
+            hasZone = false
+            UserDefaults.standard.set(false, forKey: SettingsKeys.sharedIndexZoneCreated)
+            stop = .retryLater
         } catch {
+            stop = Self.stop(after: [error], savedCount: 0, builtCount: 1) ?? .failed
             Self.logger.error("push: \(error.localizedDescription, privacy: .public)")
         }
+        // Full until a push gets to the end of the queue; an offline or
+        // throttled push says nothing either way.
+        switch stop {
+        case .iCloudFull:
+            UserDefaults.standard.set(true, forKey: SettingsKeys.sharedIndexICloudFull)
+        case nil:
+            UserDefaults.standard.removeObject(forKey: SettingsKeys.sharedIndexICloudFull)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: SettingsKeys.sharedIndexLastSync)
+        case .retryLater, .failed:
+            break
+        }
+        let left = (try? store.outboxCount()) ?? -1
+        Self.logger.log("push: \(savedCount) saved, \(left) still queued, stop: \(stop.map { "\($0)" } ?? "none", privacy: .public)")
+    }
+
+    /// Why a push stops before the outbox is empty.
+    enum PushStop: Equatable, CustomStringConvertible {
+        /// The user's iCloud storage has no room: nothing goes up until it has.
+        case iCloudFull
+        /// Throttled, busy or offline: the next push tries again.
+        case retryLater
+        /// Every record of a batch was refused for another reason.
+        case failed
+
+        var description: String {
+            switch self {
+            case .iCloudFull: "iCloudFull"
+            case .retryLater: "retryLater"
+            case .failed: "failed"
+            }
+        }
+    }
+
+    /// The verdict on one batch from its per-record errors. A full iCloud
+    /// stops the push even when some records fitted, so the next 400 are not
+    /// sent only to be refused; anything else stops only a batch that saved
+    /// nothing.
+    nonisolated static func stop(after errors: [any Error], savedCount: Int, builtCount: Int) -> PushStop? {
+        let codes = errors.flatMap { error -> [CKError.Code] in
+            guard let error = error as? CKError else { return [] }
+            if error.code == .partialFailure, let partial = error.partialErrorsByItemID {
+                return partial.values.compactMap { ($0 as? CKError)?.code }
+            }
+            return [error.code]
+        }
+        if codes.contains(.quotaExceeded) { return .iCloudFull }
+        guard savedCount == 0, builtCount > 0, !errors.isEmpty else { return nil }
+        let transient: Set<CKError.Code> = [.requestRateLimited, .zoneBusy, .serviceUnavailable,
+                                            .networkUnavailable, .networkFailure, .notAuthenticated]
+        return codes.contains(where: transient.contains) ? .retryLater : .failed
     }
 
     private func makeRecords(for items: [SharedIndexStore.OutboxItem], deviceName: String?) throws -> [CKRecord] {

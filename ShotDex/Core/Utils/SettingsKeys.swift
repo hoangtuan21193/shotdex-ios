@@ -77,6 +77,10 @@ enum SettingsKeys {
     static let sharedIndexChangeToken = "index.share.changeToken"
     /// Seconds since 1970 of the last successful pull or push.
     static let sharedIndexLastSync = "index.share.lastSync"
+    /// Set while iCloud refuses this device's results for lack of space
+    /// (`IndexShareService.PushStop.iCloudFull`); cleared by the next push
+    /// that gets anything up. Settings says so instead of "Last synced".
+    static let sharedIndexICloudFull = "index.share.iCloudFull"
     /// Mac: index only photos whose original is on this Mac — no iCloud
     /// download, no derivative. Defaults to false.
     static let indexesOriginalsOnly = "index.originalsOnly"

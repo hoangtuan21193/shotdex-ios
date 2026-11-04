@@ -72,6 +72,13 @@ không có simulator.
 - `cloudIdentifierMappings` theo lô lớn: tốc độ, và ảnh Shared Library hay ảnh chưa upload xong thì sao.
 - `PHAsset.modificationDate` của cùng một ảnh có khớp giữa Mac và iPhone không. Nếu không khớp thì AC-3 không bao
   giờ xảy ra, và phải đổi khoá so sánh (ví dụ hash của các trường EXIF).
-- Quota và throttle của CloudKit khi đẩy lần đầu 50–100 nghìn record.
+- Quota và throttle của CloudKit khi đẩy lần đầu 50–100 nghìn record. **Đo 5/11 trên Mac thật:** iCloud của
+  người dùng đầy, mọi record bị từ chối `quotaExceeded` (35.526 record nằm lại hàng đợi), pull vẫn nhận 13.600 ảnh
+  từ máy khác. Cách xử lý đã làm: push dừng ngay ở lô đầu bị `quotaExceeded`, record giữ trong outbox, cờ
+  `index.share.iCloudFull` bật và footer General › Indexing trên Mac nói iCloud đầy thay cho "Last synced"; push
+  tới hết hàng đợi thì tắt cờ. Throttle/mất mạng (`requestRateLimited`, `zoneBusy`, `networkUnavailable`…) dừng
+  push và để lượt sau thử lại; zone mất thì tạo lại ở lượt sau. Chưa đo: throttle khi iCloud còn chỗ.
+- Record `PhotoExif` lưu ngày sửa của ảnh ở khoá `assetModified`: `modificationDate` là trường hệ thống của
+  CKRecord, gán vào là CloudKit ném exception và app chết (crash 4–5/11).
 - Schema CloudKit được tạo tự động ở môi trường Development. Trước khi phát hành phải **Deploy Schema Changes**
   sang Production trong CloudKit Console.

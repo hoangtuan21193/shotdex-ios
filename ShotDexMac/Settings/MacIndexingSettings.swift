@@ -10,6 +10,7 @@ struct MacIndexingSettings: View {
     @AppStorage(SettingsKeys.macIndexesForAll) private var indexesForAll = false
     @AppStorage(SettingsKeys.sharesIndex) private var sharesIndex = true
     @AppStorage(SettingsKeys.sharedIndexLastSync) private var lastSync: Double = 0
+    @AppStorage(SettingsKeys.sharedIndexICloudFull) private var iCloudIsFull = false
     @State private var missingCount = 0
 
     var body: some View {
@@ -67,6 +68,9 @@ struct MacIndexingSettings: View {
         }
         guard sharesIndex else {
             return String(localized: "Each device reads every photo itself.", comment: "Mac Settings: sharing is off")
+        }
+        if iCloudIsFull {
+            return String(localized: "Your iCloud storage is full, so results from this Mac are not reaching your other devices. They go up once there is room; indexing on this Mac is not affected.", comment: "Mac Settings: sharing footer when iCloud has no space")
         }
         guard lastSync > 0 else {
             return String(localized: "Results go to your own iCloud account only.", comment: "Mac Settings: sharing on, never synced")

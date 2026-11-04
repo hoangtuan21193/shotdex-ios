@@ -27,6 +27,27 @@ struct SharedIndexStoreTests {
         #expect(record[IndexShareService.exifModifiedKey] as? Int64 == 1_700_000_000)
     }
 
+    /// A full iCloud stops the push even when part of the batch fitted, and
+    /// says so; a refused batch for any other reason stops it quietly.
+    @Test func aPushStopsOnAFullICloud() {
+        let full = CKError(.quotaExceeded)
+        #expect(IndexShareService.stop(after: [full], savedCount: 0, builtCount: 400) == .iCloudFull)
+        #expect(IndexShareService.stop(after: [full], savedCount: 399, builtCount: 400) == .iCloudFull)
+        let partial = CKError(.partialFailure, userInfo: [CKPartialErrorsByItemIDKey: [CKRecord.ID(recordName: "A"): full]])
+        #expect(IndexShareService.stop(after: [partial], savedCount: 0, builtCount: 1) == .iCloudFull)
+    }
+
+    @Test func aThrottledOrOfflinePushTriesAgainLater() {
+        #expect(IndexShareService.stop(after: [CKError(.requestRateLimited)], savedCount: 0, builtCount: 400) == .retryLater)
+        #expect(IndexShareService.stop(after: [CKError(.networkUnavailable)], savedCount: 0, builtCount: 400) == .retryLater)
+        #expect(IndexShareService.stop(after: [CKError(.invalidArguments)], savedCount: 0, builtCount: 400) == .failed)
+    }
+
+    @Test func aBatchThatMostlySavedKeepsGoing() {
+        #expect(IndexShareService.stop(after: [], savedCount: 400, builtCount: 400) == nil)
+        #expect(IndexShareService.stop(after: [CKError(.serverRecordChanged)], savedCount: 399, builtCount: 400) == nil)
+    }
+
     @Test func rawExifRoundTripsThroughJSON() throws {
         let data = try JSONEncoder().encode(canon)
         #expect(try JSONDecoder().decode(RawExif.self, from: data) == canon)
