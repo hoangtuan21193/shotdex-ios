@@ -132,6 +132,8 @@ input{font-family:inherit}
 <sc-for list="{{action}}" as="s" hint-placeholder-count="2"><button role="radio" aria-checked="{{s.pressed}}" style="width:64px;height:24px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
 </div>
 </div>
+<!-- Move: what it does, under the row (the server has no Trash) -->
+<sc-if value="{{moveNote}}" hint-placeholder-val="{{false}}"><div style="padding:6px 0 0 72px;font-size:12px;color:{{t.label2}};flex:none">Moved photos are removed from every folder above. The server has no Trash.</div></sc-if>
 <div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
 <!-- Result after Scan -->
 <sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:28px;flex:none">
@@ -491,6 +493,7 @@ class Component extends DCLogic {
       scrollTop: '4px',
       again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', sameN,
       scanned: !waiting, waiting, listing,
+      moveNote: move,
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
       waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',

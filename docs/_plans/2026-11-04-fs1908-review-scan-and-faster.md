@@ -6,7 +6,7 @@
 | Intent | [2026-11-04-common-photos-compare-before-run](../_intents/2026-11-04-common-photos-compare-before-run.md) |
 | Commit spec | `eb90a39c` (intent `2bc06c36`) |
 | Ngày | 2026-11-04 |
-| Trạng thái | đang làm — R1–R11 xong (loop: [FS1908_REVIEW_LOOP.md](FS1908_REVIEW_LOOP.md)) |
+| Trạng thái | gần xong — R1–R12 xong, verify 2026-11-04 (mục 9) (loop: [FS1908_REVIEW_LOOP.md](FS1908_REVIEW_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -140,3 +140,34 @@ Một task một commit. Sau mỗi task: build iOS + ShotDexMac, test liên quan
   - Compare ở 4 trạng thái: ảnh, video, đang tải, lỗi;
   - cửa sổ log ready có ô chọn.
 - Tài liệu: cột "Chứng minh bằng" của 08b; 08 nếu lệch; dòng Tiến độ intent.
+
+## 9. Verify 2026-11-04 (R12)
+
+Test theo lớp, không chạy cả bộ, không `Tools/gate`: 15 suite, **158 test xanh** (`CommonPhotosScanModelTests`,
+`CommonPhotosDestinationPlanTests`, `CommonPhotosReviewTests`, `CommonPhotosSMBTests`, `CommonPhotosCompareTests`,
+`CommonPhotosVideoSyncTests`, `CommonPhotosCompareLoaderTests`, `CompareFileCacheTests`, `ConnectionLockTests`,
+`CommonPhotosLeftOutTests`, `CommonPhotosGatherTests`, `CommonPhotosWebDAVTests`, `CommonPhotosRunnerTests`,
+`WebDAVFileClientTests`, `CommonPhotosIncrementalTests`), gồm e2e SMB ảo và e2e WebDAV cục bộ (1.00× / 3.00×).
+
+| AC | Kết quả |
+|---|---|
+| AC-174…191 | ✅ cả 18, chứng minh ghi ở cột cuối 08b |
+
+`design-parity` (3 board Mac, so ảnh R3–R10 với board render):
+
+- Đã sửa: board `MAC_CommonPhotos` thêm câu "Moved photos are removed… no Trash" khi Move (app có, board thiếu);
+  board `MAC_CommonPhotosRun` bỏ mũi tên sort ở cột Name (app không sort); chân sheet Copy trong app thành
+  "Space to compare · unchecked photos stay out of this set." như board (`build/design/shots/R12/sheet_copy.png`).
+  Canvas v106.
+- Để nguyên (control gốc macOS, board vẽ phỏng): nút Cancel/Include tô màu accent, segment chọn tô accent, toolbar kính
+  của Compare cao 52pt so với 45pt trên board, nút Play lớn hơn, hàng zebra trống trong bảng.
+- Chưa có ảnh để so: trạng thái `again` (dòng "Last gathered… · Scan Everything"), beforeScan/listing, nothingNew,
+  Compare đang tải/chờ/không preview/lỗi/3 folder, sheet tối.
+
+Còn mở (không phải AC):
+
+- `Tools/gate` chưa chạy (chỉ khi người dùng bảo).
+- Cách chép (COPY hay đường dài) chỉ ở log hệ thống, chưa vào CSV.
+- NAS thật: % chậm của Scan khi Compare tải, video dài/4K, `COPY` trên Synology/QNAP chưa đo.
+- Compare 100%: hai bên chưa cuộn theo nhau; dòng Activity "Ready to move N" còn đếm ảnh bỏ ra.
+

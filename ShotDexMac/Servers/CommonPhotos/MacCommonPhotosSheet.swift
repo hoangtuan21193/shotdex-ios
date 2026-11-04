@@ -792,7 +792,7 @@ private struct MacCommonPhotosSheetContent: View {
             return String(localized: "Nothing selected. Check a photo to include it.", comment: "Mac common photos sheet: footer, every row unchecked")
         }
         guard model.action == .move else {
-            return String(localized: "Unchecked photos stay out of this set.", comment: "Mac common photos sheet: footer, Copy")
+            return String(localized: "Space to compare · unchecked photos stay out of this set.", comment: "Mac common photos sheet: footer, Copy")
         }
         let names = model.folders.map(ServerUploadPath.lastComponent(of:))
         let destination = model.destination.map(ServerUploadPath.lastComponent(of:)) ?? ""

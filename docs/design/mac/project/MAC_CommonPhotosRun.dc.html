@@ -408,7 +408,8 @@ class Component extends DCLogic {
     const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', state === 'readyToMove' ? 'Moved' : 'Copied', 'Skipped', 'Failed'], 0);
     const C = [['Status',172],['Name',116],['From',180],['To',178],['SHA-256',76],['Reason',0]];
     const cols = C.map((c, i) => ({ label:c[0], aria:'Sort by ' + c[0], w: c[1] ? c[1] + 'px' : 'auto', flex: c[1] ? 'none' : '1',
-      edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', sorted: c[0] === 'Name', sort: c[0] === 'Name' ? 'ascending' : 'none' }));
+      edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', // No column sorts (the app's run table is in run order).
+      sorted: false, sort: 'none' }));
     const OK = 'M5 12.5l4.5 4.5L19 7.5', SKIP = 'M12 3a9 9 0 1 0 0.01 0z M8 12h8', FAIL = 'M12 4l9 16H3z M12 10v4 M12 17h.01';
     const L = [
       ['ok', 'DSC04388.ARW', 'Tuấn/Da Lat · Vợ/Da Lat', 'Shared/DSC04388.ARW', '3f9a…c21e', ''],
