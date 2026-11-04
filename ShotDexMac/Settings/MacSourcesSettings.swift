@@ -99,6 +99,7 @@ struct MacIndexSettingsSection: View {
             }
             LabeledContent {
                 Button(String(localized: "Review…", comment: "Mac Settings › Index: open the camera list")) {
+                    MacCamerasSettings.opensOnNeedsFormat = true
                     NotificationCenter.default.post(name: .macSettingsShowPane, object: MacSettingsPane.cameras.rawValue)
                 }
                 .disabled(unknownCameras == 0)

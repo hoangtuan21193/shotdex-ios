@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **đang làm** (2026-11-05) — task 11/13, 10/14 AC xanh (AC-78 một phần, cần máy thật) |
+| Tiến độ | **đang làm** (2026-11-05) — task 12/13, 11/14 AC xanh (AC-71 chờ `MacSidebar.swift`, AC-78 cần máy thật, AC-74 gỡ) |
 | Nguồn | phản hồi người dùng (cài bản Debug lên Mac, 2026-11-04) |
 | Spec sinh ra từ đây | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 

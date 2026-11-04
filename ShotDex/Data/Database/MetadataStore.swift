@@ -730,6 +730,22 @@ struct MetadataStore: Sendable {
         }
     }
 
+    /// Reset Custom Mappings (Mac Settings › Cameras, FS-18.04 §3 AC-79):
+    /// the formats picked by hand are forgotten, and their cameras' photos go
+    /// back to what the bundled database says — Unknown with no equivalent
+    /// when it knows nothing — in the same write, so no photo keeps a
+    /// hand-picked format the list no longer shows.
+    func resetCustomMappings(to bundled: SensorLookup) throws {
+        try database.writer.write { db in
+            let models = try String.fetchAll(db, sql: "SELECT normalizedCameraModel FROM custom_camera_mappings")
+            _ = try CustomCameraMapping.deleteAll(db)
+            for model in models {
+                let info = bundled.lookup(normalizedModel: model)
+                try Self.rewriteRows(db, model: model, format: info.sensorFormat.rawValue, crop: info.cropFactor)
+            }
+        }
+    }
+
     func saveCustomMapping(_ mapping: CustomCameraMapping) throws {
         try database.writer.write { db in
             try mapping.upsert(db)
