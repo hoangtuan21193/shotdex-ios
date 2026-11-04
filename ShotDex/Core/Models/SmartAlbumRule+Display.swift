@@ -51,6 +51,12 @@ extension SmartAlbumRule {
         case .choice:
             let value = displayValue
             guard !value.isEmpty else { return compactFieldName }
+            // "Original on This iPhone" — the Filter toggle's own words
+            // (FS-06.10 §4); *is not* reads as the other answer.
+            if field == .original, let state = OriginalPresence(rawValue: text) {
+                let shown = op == .isNot ? (state == .onDevice ? OriginalPresence.iCloudOnly : .onDevice) : state
+                return shown.chipTitle
+            }
             // "Video" already names itself, the way a place name does.
             if field == .mediaType {
                 return op == .isNot ? "≠ \(value)" : value
@@ -168,6 +174,7 @@ extension SmartAlbumRule {
         case .caption: "caption"
         case .anyText: "text"
         case .source: "source"
+        case .original: "original"
         }
     }
 
@@ -199,6 +206,9 @@ extension SmartAlbumRule {
             }
             if field == .flag {
                 return SmartAlbumFlagValue(rawValue: text)?.label ?? text
+            }
+            if field == .original {
+                return OriginalPresence(rawValue: text)?.label ?? text
             }
             return text // sensor-format rawValue is already its display name
         case .number:

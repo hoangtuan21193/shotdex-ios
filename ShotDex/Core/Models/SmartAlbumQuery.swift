@@ -68,6 +68,9 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Statistics card that names one keeps it whatever the screen's Source
     /// popup says (FS-18 04 §2).
     case source
+    /// Whether every original file is on this device (FS-06.10): read from
+    /// the offline check's table, so an unchecked photo matches neither value.
+    case original
 
     var id: String { rawValue }
 
@@ -92,6 +95,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .keyword: String(localized: "Keyword", table: KeywordCopy.table, comment: "Rule field: a Photos keyword")
         case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
         case .source: String(localized: "Source", comment: "Rule field: the photo library, folder, drive or server a copy lives in")
+        case .original: String(localized: "Original", comment: "Rule field: whether the photo's original files are on this device or only in iCloud")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         }
     }
@@ -99,7 +103,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
-        case .sensorFormat, .fileType, .mediaType, .flag, .source: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -129,6 +133,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
         case .flag:
             SmartAlbumFlagValue.allCases.map { ($0.rawValue, $0.label) }
+        case .original:
+            OriginalPresence.allCases.map { ($0.rawValue, $0.label) }
         default:
             []
         }
