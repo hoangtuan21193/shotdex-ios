@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **đang làm** (2026-11-05) — task 9/13, 9/14 AC xanh (AC-67…70, AC-72, AC-73, AC-75, AC-76, AC-80) |
+| Tiến độ | **đang làm** (2026-11-05) — task 10/13, 10/14 AC xanh (AC-67…70, AC-72, AC-73, AC-75…77, AC-80) |
 | Nguồn | phản hồi người dùng (cài bản Debug lên Mac, 2026-11-04) |
 | Spec sinh ra từ đây | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 

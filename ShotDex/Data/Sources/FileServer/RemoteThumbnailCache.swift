@@ -57,12 +57,11 @@ final class RemoteThumbnailCache: @unchecked Sendable {
     }
 
     /// Inside the shared preview cache (FS-19 01b §3), held to its limit.
-    static var standard: RemoteThumbnailCache {
-        RemoteThumbnailCache(
-            directory: PreviewCacheLocation.standard.appendingPathComponent(PreviewCachePolicy.serverFolderName, isDirectory: true),
-            limitProvider: { PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()) }
-        )
-    }
+    /// One instance for the app, so its lock covers every writer and Clear.
+    static let standard = RemoteThumbnailCache(
+        directory: PreviewCacheLocation.standard.appendingPathComponent(PreviewCachePolicy.serverFolderName, isDirectory: true),
+        limitProvider: { PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()) }
+    )
 
     func entry(for key: Key) -> Entry? {
         lock.withLock {
@@ -130,7 +129,8 @@ final class RemoteThumbnailCache: @unchecked Sendable {
     func removeAll() {
         lock.withLock {
             try? FileManager.default.removeItem(at: directory)
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            // Back empty and still out of backups.
+            PreviewCacheLocation.prepare(directory)
         }
     }
 

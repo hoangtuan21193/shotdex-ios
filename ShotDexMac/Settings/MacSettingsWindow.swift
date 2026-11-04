@@ -58,8 +58,9 @@ enum MacSettingsPane: String, CaseIterable, Identifiable {
         case .ai: MacAISettings()
         case .editing: MacEditingSettings()
         case .sources: MacSourcesSettings()
-        // Filled by their own tasks (plan 2026-11-04-mac-settings-panes, S10–S12).
-        case .servers, .cameras: Form {}.formStyle(.grouped)
+        case .servers: MacServersSettings()
+        // Filled by its own task (plan 2026-11-04-mac-settings-panes, S12).
+        case .cameras: Form {}.formStyle(.grouped)
         }
     }
 

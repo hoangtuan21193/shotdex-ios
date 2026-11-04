@@ -296,8 +296,8 @@ class Component extends DCLogic {
       return { name, host, proto, folder, d, status: statusText, sc: st.statusColor, dot: st.statusDot,
         sel: sel ? 'true' : 'false', bg: sel ? t.rowSel : (i % 2 ? t.rowAlt : 'transparent') }; };
     const servers = [
-      C('NAS Home', 'nas-home.local', 'SMB', 'Photos/2026', 'ok', 'Connected · indexed', X.nas, true),
-      C('Studio iMac', 'studio-imac.local', 'SMB', 'Pictures/Exports', 'ok', 'Upload only', X.desktop, false),
+      C('NAS Home', 'nas-home.local', 'SMB', 'Photos/2026', 'ok', 'Source · indexed', X.nas, true),
+      C('Studio iMac', 'studio-imac.local', 'SMB', 'Pictures/Exports', 'idle', 'Upload only', X.desktop, false),
       C('MacBook Pro', 'macbook-pro.local', 'SFTP', 'Pictures/ShotDex', 'idle', 'Not reachable', X.laptop, false),
       C('Nextcloud', 'cloud.example.net', 'WebDAV', 'Photos', 'err', 'Password rejected', X.globe, false) ];
     const serverPrefs = sections([
