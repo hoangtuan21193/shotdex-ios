@@ -366,7 +366,7 @@ class Component extends DCLogic {
         row({ label:'Cache Size Limit', sub:'Over the limit, the oldest full-size previews go first, then thumbnails', popup:'25 GB', popupW:'230px', h:'44px' }),
         dim(row({ label:'Keep Full-Size Previews', popup:'For 30 Days', popupW:'230px' })),
         dim(row(Object.assign({ label:'Keep Previews of Disconnected Drives' }, sw(true))))
-      ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups. Limit: 2, 5, 10, 25 or 50 GB. Change Location is available in a later version.' }
+      ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups.' }
     ]);
     const library = sections([
       { title:'Index', rows:[

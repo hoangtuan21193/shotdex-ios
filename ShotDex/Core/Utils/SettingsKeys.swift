@@ -62,6 +62,11 @@ enum SettingsKeys {
     /// the switch also sets every drive there is. Defaults to keepPhotos.
     static let whenDriveUnplugged = "sources.whenDriveUnplugged"
 
+    /// Mac Settings › Sources › Previews › Cache Size Limit, in gigabytes
+    /// (one of `PreviewCachePolicy.limitChoices`); read through
+    /// `PreviewCachePolicy.limit(from:)`.
+    static let previewCacheLimitGB = "previews.limitGB"
+
     /// Share index results with the other devices on this iCloud account
     /// through CloudKit (intent 2026-11-02-icloud-shared-index). Defaults to
     /// **true**, read through an `object(forKey:)` nil check.

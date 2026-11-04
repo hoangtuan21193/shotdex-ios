@@ -6,12 +6,24 @@ import SwiftUI
 /// 2026-11-04-mac-settings-panes).
 struct MacSourcesSettings: View {
     var body: some View {
-        Form {
-            MacPhotoSourcesSection()
-            MacDrivesIndexingSection()
-            MacIndexSettingsSection()
+        ScrollViewReader { proxy in
+            Form {
+                MacPhotoSourcesSection().id("sources")
+                MacDrivesIndexingSection().id("drives")
+                MacPreviewsSection().id("previews")
+                MacIndexSettingsSection().id("index")
+            }
+            .formStyle(.grouped)
+            #if DEBUG
+            // `-ShotDexSettingsScroll previews`: a group below the fold, for screenshots.
+            .task {
+                let arguments = ProcessInfo.processInfo.arguments
+                guard let index = arguments.firstIndex(of: "-ShotDexSettingsScroll"), index + 1 < arguments.count else { return }
+                try? await Task.sleep(for: .seconds(2))
+                proxy.scrollTo(arguments[index + 1], anchor: .top)
+            }
+            #endif
         }
-        .formStyle(.grouped)
     }
 }
 

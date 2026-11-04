@@ -41,12 +41,18 @@ final class RemoteThumbnailCache: @unchecked Sendable {
     }
 
     let directory: URL
-    let limit: Int64
+    /// Read at each trim, so a new Cache Size Limit counts without a relaunch.
+    private let limitProvider: @Sendable () -> Int64
+    var limit: Int64 { limitProvider() }
     private let lock = NSLock()
 
-    init(directory: URL, limit: Int64 = 500 * 1024 * 1024) {
+    convenience init(directory: URL, limit: Int64 = 500 * 1024 * 1024) {
+        self.init(directory: directory, limitProvider: { limit })
+    }
+
+    init(directory: URL, limitProvider: @escaping @Sendable () -> Int64) {
         self.directory = directory
-        self.limit = limit
+        self.limitProvider = limitProvider
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -54,7 +60,7 @@ final class RemoteThumbnailCache: @unchecked Sendable {
     static var standard: RemoteThumbnailCache {
         RemoteThumbnailCache(
             directory: PreviewCacheLocation.standard.appendingPathComponent(PreviewCachePolicy.serverFolderName, isDirectory: true),
-            limit: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.defaultLimit)
+            limitProvider: { PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()) }
         )
     }
 
@@ -68,6 +74,9 @@ final class RemoteThumbnailCache: @unchecked Sendable {
                     image = CGImageSourceCreateImageAtIndex(source, 0, nil)
                 }
                 touch(url)
+                // The picture went (trimmed, or cleared) while its record stayed:
+                // not cached, so the browser asks the server again.
+                if image == nil { return nil }
             }
             touch(metaURL(key))
             return Entry(image: image, hasThumbnailResult: meta.hasThumbnailResult,
@@ -111,16 +120,10 @@ final class RemoteThumbnailCache: @unchecked Sendable {
     /// capture date, so this is least recently used first.
     func trim() {
         lock.withLock {
-            let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
-            guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys) else { return }
-            let items = files.compactMap { url -> PreviewCacheEviction.Item? in
-                guard let values = try? url.resourceValues(forKeys: Set(keys)) else { return nil }
-                return PreviewCacheEviction.Item(url: url, kind: .thumbnail, size: Int64(values.fileSize ?? 0),
-                                                 lastUsed: values.contentModificationDate ?? .distantPast)
-            }
-            for victim in PreviewCacheEviction.victims(items, limit: limit) {
-                try? FileManager.default.removeItem(at: victim.url)
-            }
+            guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: PreviewCacheStore.keys)
+            else { return }
+            // A picture and its record go together (`PreviewCacheStore.groups`).
+            PreviewCacheStore.evict(PreviewCacheStore.groups(files) { _ in .thumbnail }, limit: limit)
         }
     }
 
