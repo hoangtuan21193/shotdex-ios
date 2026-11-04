@@ -91,7 +91,7 @@ final class MacCommonPhotosCompareModel {
     static let previewPixels = FolderThumbnails.longEdge
     /// A downloaded copy is drawn at most this big: enough for 100% on a
     /// 1180-point window side, without decoding a 60-megapixel RAW whole.
-    static let downloadedPixels = 4_096
+    nonisolated static let downloadedPixels = 4_096
 
     init(scan: CommonPhotosScanModel, database: AppDatabase,
          sources: [(source: SourceStore.Source, connection: FileServer)], client: (any RemoteFileClient)? = nil,

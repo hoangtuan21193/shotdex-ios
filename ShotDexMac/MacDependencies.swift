@@ -25,6 +25,9 @@ final class MacDependencies: LibraryServices {
     /// Index results shared over iCloud; nil in the demo library.
     let indexShare: IndexShareService?
     let sources: SourceStore
+    /// The Library window's model, for Settings › Sources › Index to read
+    /// progress from; nil until the window has opened.
+    var library: LibraryModel?
     let fileServers: FileServerStore
     let folderRoots: FolderSourceRoots
     /// One server call at a time per connection for Backup and the On Server
@@ -45,6 +48,9 @@ final class MacDependencies: LibraryServices {
     /// Whether each Photos item has a byte-identical copy on a server
     /// source (FS-19.07, §11 for the Mac).
     let onServerCheck: OnServerCheck
+    /// Which Photos items have every original on this Mac (FS-06.10). The
+    /// app runs it while it is in front; the helper never starts it.
+    let originalPresenceCheck: OriginalPresenceCheck
     /// Asks the server again before a Photos item that relies on it is
     /// deleted (FS-19.07 §9).
     let photoDeletionGate: PhotoDeletionGate
@@ -121,6 +127,9 @@ final class MacDependencies: LibraryServices {
         #if DEBUG
         OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
         #endif
+        let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: nil))
+        self.originalPresenceCheck = originalPresenceCheck
+        photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
         photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in

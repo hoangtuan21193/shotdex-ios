@@ -203,7 +203,10 @@ struct MacRootWindow: View {
     }
 
     private func start() async {
-        if library == nil { library = LibraryModel(dependencies: dependencies) }
+        // One model for every Library window, so a window reopened during a
+        // run shows that run and Settings reads the same progress.
+        if library == nil { library = dependencies.library ?? LibraryModel(dependencies: dependencies) }
+        dependencies.library = library
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
