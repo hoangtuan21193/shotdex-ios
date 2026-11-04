@@ -135,6 +135,11 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         try check(response, path: path, allow: [200])
         try? FileManager.default.removeItem(at: localURL)
         try FileManager.default.moveItem(at: location, to: localURL)
+        // The task's last write callback does not always come before the
+        // reply: the file on disk is what was read. Callers check this
+        // count against the listed size (the Common Photos verifier skips a
+        // file read short as changed), so it must end at the whole file.
+        if let size = try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize { progress(Int64(size)) }
         return try FileChecksum.sha256(of: localURL)
     }
 
@@ -177,6 +182,26 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         move.setValue("F", forHTTPHeaderField: "Overwrite")
         let (_, response) = try await send(move)
         try check(response, path: destination, allow: [201, 204])
+    }
+
+    /// RFC 4918 §9.8. 201 or 204: copied. A wrong password or a full disk
+    /// stops the run as any write would; every other answer (405, 501, 403,
+    /// 423, 502, a proxy's 400…) is a no, and the photo goes the long way —
+    /// falling back costs time, failing would cost the photo.
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        var copy = request("COPY", url(source))
+        copy.setValue(url(destination).absoluteString, forHTTPHeaderField: "Destination")
+        copy.setValue("T", forHTTPHeaderField: "Overwrite")
+        copy.setValue("0", forHTTPHeaderField: "Depth")
+        // The reply comes only when the NAS has copied the whole file: a
+        // 4 GB video on one disk takes minutes, not the 30 s of a request.
+        copy.timeoutInterval = 3600
+        let (_, response) = try await send(copy)
+        switch (response as? HTTPURLResponse)?.statusCode {
+        case 201, 204: return true
+        case 401, 507, nil: try check(response, path: destination, allow: []); return false
+        default: return false
+        }
     }
 
     func remove(_ path: String) async throws {

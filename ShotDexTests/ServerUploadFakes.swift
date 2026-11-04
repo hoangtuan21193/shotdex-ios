@@ -319,6 +319,25 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         if failsAfter { throw RemoteFileError.connectionLost }
     }
 
+    /// Answers `copyOnServer` the way a WebDAV server with `COPY` does;
+    /// off, the way SMB and SFTP do (false, nothing written).
+    var copiesOnServer = false
+    /// How many times `copyOnServer` was asked, refused or not.
+    private(set) var copyAsks = 0
+
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        lock.withLock { copyAsks += 1 }
+        guard copiesOnServer else { return false }
+        log("copy \(source) → \(destination)")
+        let failsAfter = try countWrite()
+        try lock.withLock {
+            guard let bytes = storage[source] else { throw RemoteFileError.folderMissing(source) }
+            storage[destination] = bytes
+        }
+        if failsAfter { throw RemoteFileError.connectionLost }
+        return true
+    }
+
     /// Deletes a file behind the client's back, without logging it.
     func drop(_ path: String) {
         lock.withLock { _ = storage.removeValue(forKey: path) }

@@ -557,6 +557,11 @@ private final class MacDebugRunClient: RemoteFileClient, @unchecked Sendable {
         if !destination.hasSuffix(".csv") { try await write() }
         try await base.move(source, to: destination)
     }
+
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        try await write()
+        return try await base.copyOnServer(source, to: destination)
+    }
     func remove(_ path: String) async throws { try await base.remove(path) }
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }

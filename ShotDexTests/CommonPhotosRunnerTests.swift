@@ -97,6 +97,135 @@ import Testing
         #expect(fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }.count == 10)
     }
 
+    /// AC-191: a server that copies by itself (WebDAV COPY) — no photo is
+    /// downloaded or uploaded; each part is read back once and moved in.
+    @Test func serverCopyThenReadBack() async throws {
+        let fixture = try Fixture(count: 4)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+
+        try await fixture.runner.run("R1")
+
+        for (name, bytes) in fixture.photos { #expect(fixture.destinationFiles["C/\(name)"] == bytes) }
+        #expect(fixture.destinationFiles.count == 4)
+        let commands = fixture.nas.commands
+        #expect(!commands.contains { $0.hasPrefix("download ") })
+        #expect(fixture.photoUploads == 0)
+        #expect(commands.filter { $0.hasPrefix("copy A/") }.count == 4)
+        #expect(Set(fixture.nas.sha256Paths.filter { $0.hasPrefix("C/") && !$0.contains(".csv") })
+                == Set((1...4).map { "C/IMG_\($0).JPG.shotdex-part" }))
+        #expect(try fixture.items().map(\.status) == Array(repeating: .copied, count: 4))
+    }
+
+    /// AC-191: the server's copy reads back wrong — caught like an upload
+    /// gone bad: nothing under the name, Failed "Checksum mismatch".
+    @Test func serverCopyMismatchLeavesNothing() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+        fixture.nas.corruptReadBack = ["C/IMG_2.JPG.shotdex-part"]
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files["C/IMG_2.JPG"] == nil)
+        #expect(fixture.nas.files["C/IMG_2.JPG.shotdex-part"] == nil)
+        let items = try fixture.items()
+        #expect(items.map(\.status) == [.copied, .failed, .copied])
+        #expect(items[1].failure?.reason == .checksumMismatch)
+        #expect(fixture.nas.commands.contains("copy A/IMG_2.JPG → C/IMG_2.JPG.shotdex-part"))
+        #expect(!fixture.nas.commands.contains { $0.hasPrefix("download A/") })
+    }
+
+    /// The Mac app's runner talks through the connection lock: the server's
+    /// copy must reach the server through it, not stop at the default.
+    @Test func serverCopyPassesTheLock() async throws {
+        let fixture = try Fixture(count: 2)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+        let locked = LockedRemoteFileClient(fixture.nas, lock: ConnectionLock(), connectionId: "S1", priority: .normal)
+
+        try await CommonPhotosRunner(client: locked, store: fixture.store, workDirectory: fixture.work).run("R1")
+
+        #expect(fixture.nas.commands.filter { $0.hasPrefix("copy A/") }.count == 2)
+        #expect(!fixture.nas.commands.contains { $0.hasPrefix("download A/") })
+    }
+
+    /// AC-191: a server that will not copy (SMB, SFTP, a WebDAV that says
+    /// 405) — every photo goes the long way and is Copied all the same.
+    @Test func refusedCopyFallsBack() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        #expect(!fixture.nas.commands.contains { $0.hasPrefix("copy ") })
+        #expect(fixture.nas.commands.filter { $0.hasPrefix("download A/") }.count == 3)
+        #expect(fixture.photoUploads == 3)
+        #expect(try fixture.items().map(\.status) == Array(repeating: .copied, count: 3))
+    }
+
+    /// A source gone since the scan: the server's copy answers "missing" —
+    /// that photo fails, the run goes on.
+    @Test func serverCopyOfAGoneSourceFailsOnePhoto() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+        fixture.nas.drop("A/IMG_2.JPG")
+
+        try await fixture.runner.run("R1")
+
+        let items = try fixture.items()
+        #expect(items.map(\.status) == [.copied, .failed, .copied])
+        #expect(fixture.nas.files["C/IMG_2.JPG"] == nil)
+        #expect(try fixture.store.run(id: "R1")?.state == .finished)
+    }
+
+    /// A source rewritten on the NAS after the scan: the server copies the
+    /// new bytes, the read-back differs, and the photo says the source
+    /// changed — as the long way does — not "Checksum mismatch".
+    @Test func serverCopyOfAChangedSource() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+        fixture.nas.put("A/IMG_2.JPG", Data(repeating: 7, count: 1_002))
+
+        try await fixture.runner.run("R1")
+
+        let items = try fixture.items()
+        #expect(items.map(\.status) == [.copied, .failed, .copied])
+        #expect(items[1].failure?.reason == .changedOnServer)
+        #expect(fixture.nas.files["C/IMG_2.JPG.shotdex-part"] == nil)
+    }
+
+    /// The server copied the first photo and the reply was lost: the run
+    /// pauses, the part goes, and Resume copies it again.
+    @Test func serverCopyReplyLostResumes() async throws {
+        let fixture = try Fixture(count: 2)
+        try await fixture.start()
+        fixture.nas.copiesOnServer = true
+        fixture.nas.failOnWrite = (1, true)
+
+        await #expect(throws: (any Error).self) { try await fixture.runner.run("R1") }
+        #expect(try fixture.store.run(id: "R1")?.state == .paused)
+        #expect(!fixture.nas.files.keys.contains { $0.hasSuffix(".shotdex-part") })
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.copied, .copied])
+        for (name, bytes) in fixture.photos { #expect(fixture.destinationFiles["C/\(name)"] == bytes) }
+    }
+
+    /// A server that refuses COPY is asked once per run, not once a photo.
+    @Test func refusedCopyIsAskedOnce() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.copyAsks == 1)
+        #expect(try fixture.items().map(\.status) == Array(repeating: .copied, count: 3))
+    }
+
     /// A source rewritten since the scan is not copied.
     @Test func changedSourceIsNotCopied() async throws {
         let fixture = try Fixture(count: 2)

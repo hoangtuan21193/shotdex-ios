@@ -131,6 +131,9 @@ final class LockedRemoteFileClient: RemoteFileClient {
     }
 
     func move(_ source: String, to destination: String) async throws { try await locked { try await $0.move(source, to: destination) } }
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        try await locked { try await $0.copyOnServer(source, to: destination) }
+    }
     func remove(_ path: String) async throws { try await locked { try await $0.remove(path) } }
     func removeEmptyDirectory(_ path: String) async throws { try await locked { try await $0.removeEmptyDirectory(path) } }
     func removeFolderTree(_ path: String) async throws { try await locked { try await $0.removeFolderTree(path) } }

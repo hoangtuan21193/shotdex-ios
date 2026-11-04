@@ -134,6 +134,10 @@ struct CommonPhotosRunner: Sendable {
         let folder: String
         var sizes: [String: Int64]
         var spelled: [String: String]
+        /// Whether the server copies files itself (§6d): nil until the first
+        /// photo asks, then the answer for the rest of the run, so a server
+        /// that refuses is asked once.
+        var copiesOnServer: Bool?
 
         init(folder: String, entries: [RemoteEntry]) {
             self.folder = folder
@@ -206,6 +210,8 @@ struct CommonPhotosRunner: Sendable {
         active.withLock { $0.contains(RunKey(database: ObjectIdentifier(database), runId: runId)) }
             || CommonPhotosClaims(database: database).isClaimedElsewhere(.run, id: runId)
     }
+
+    private static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "commonPhotos")
 
     /// Runs every photo not done yet. Returns when all are done; throws when
     /// the server went away, the Mac ran out of room or the task was
@@ -368,24 +374,52 @@ struct CommonPhotosRunner: Sendable {
         let local = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
         defer { try? FileManager.default.removeItem(at: local) }
         let size = Double(max(1, item.size))
-        var step = Progress.Step.downloading
+        var step = Progress.Step.uploading
         do {
-            report(.downloading, 0)
-            let downloaded = try await client.download(source.path, to: local, progress: { report(.downloading, Double($0) / size / 3) })
-            guard downloaded == item.sha256 else {
-                destination.sizes[freeName.lowercased()] = nil
-                try finish(&item, .failed, reason: .changedOnServer)
-                return
+            // The server copies it itself when it can (WebDAV COPY, §6d): the
+            // read-back below is then the only time the bytes cross the
+            // network. Refused, it goes the long way. A server known to copy
+            // shows the step while it does; one that has not answered yet
+            // shows nothing for the ask, so a refusal leaves the steps as before.
+            var copiedOnServer = false
+            if destination.copiesOnServer != false {
+                if destination.copiesOnServer == true { report(.uploading, 0) }
+                do {
+                    copiedOnServer = try await client.copyOnServer(source.path, to: ServerUploadPath.partPath(for: target))
+                    destination.copiesOnServer = copiedOnServer
+                } catch let error as RemoteFileError where Self.leavesTheLongWayOpen(error) {
+                    // Missing (404 the source, 409 a parent) or an answer the
+                    // server gives to COPY alone: the long way says which.
+                    copiedOnServer = false
+                }
             }
-            try Task.checkCancellation()
-            step = .uploading
-            try await write.uploadPart(local, for: target, progress: { report(.uploading, (1 + Double($0) / size) / 3) })
+            if copiedOnServer {
+                report(.uploading, 2.0 / 3)
+            } else {
+                step = .downloading
+                report(.downloading, 0)
+                let downloaded = try await client.download(source.path, to: local, progress: { report(.downloading, Double($0) / size / 3) })
+                guard downloaded == item.sha256 else {
+                    destination.sizes[freeName.lowercased()] = nil
+                    try finish(&item, .failed, reason: .changedOnServer)
+                    return
+                }
+                try Task.checkCancellation()
+                step = .uploading
+                try await write.uploadPart(local, for: target, progress: { report(.uploading, (1 + Double($0) / size) / 3) })
+            }
+            Self.log.info("common photos \(copiedOnServer ? "copied on the server" : "downloaded and uploaded", privacy: .public): \(name, privacy: .private)")
             step = .readingBack
             let readBack = try await write.readBackSHA256(for: target, progress: { report(.readingBack, (2 + Double($0) / size) / 3) })
             guard readBack == item.sha256 else {
                 destination.sizes[freeName.lowercased()] = nil
                 try await discard(&item, target: target)
-                try finish(&item, .failed, reason: .checksumMismatch)
+                // The server copied what the source holds now: a source
+                // rewritten since the scan is said as such, as the long way
+                // says it.
+                let changed = copiedOnServer
+                    ? try await client.sha256(of: source.path, progress: { _ in }) != item.sha256 : false
+                try finish(&item, .failed, reason: changed ? .changedOnServer : .checksumMismatch)
                 return
             }
             step = .moving
@@ -771,6 +805,14 @@ struct CommonPhotosRunner: Sendable {
     /// `IMG_2 (2).JPG.xmp` for a full-name sidecar.
     private static func sidecarTarget(_ sidecar: String, photoPath: String, photoName: String, folder: String) -> String {
         CommonPhotosServerChecks.sidecarTarget(sidecar, photoPath: photoPath, photoName: photoName, folder: folder)
+    }
+
+    /// A COPY failure the long way may still get past.
+    private static func leavesTheLongWayOpen(_ error: RemoteFileError) -> Bool {
+        switch error {
+        case .folderMissing, .other: true
+        default: false
+        }
     }
 
     private static func refusesEveryWrite(_ error: RemoteFileError) -> Bool {

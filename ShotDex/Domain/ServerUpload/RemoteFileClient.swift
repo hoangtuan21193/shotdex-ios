@@ -42,6 +42,13 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// Renames a file or folder within the server. The destination must not
     /// exist.
     func move(_ source: String, to destination: String) async throws
+    /// Copies a file within the server, its bytes never leaving it (FS-19.08
+    /// §6d) — WebDAV `COPY`. Replaces what is at `destination`, so it is only
+    /// ever given a part path. False when the server will not (no such
+    /// command, refused, another share); the caller then downloads and
+    /// uploads. SMB and SFTP say false. A client that wraps another must
+    /// forward it: the default here would quietly send every photo the long way.
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool
     /// Deletes a file; a missing one is not an error.
     func remove(_ path: String) async throws
     /// Deletes a folder that has nothing in it; a missing one is not an
@@ -64,6 +71,7 @@ protocol RemoteFileClient: AnyObject, Sendable {
 }
 
 extension RemoteFileClient {
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool { false }
     func storageSpace(at path: String) async throws -> StorageSpace? { nil }
     var peeksWithSystemThumbnails: Bool { false }
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage? { nil }

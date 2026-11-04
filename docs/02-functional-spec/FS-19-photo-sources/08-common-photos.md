@@ -341,7 +341,13 @@ SHA đã nhớ (§6c).
    | WebDAV | `COPY` (RFC 4918) | client mới có `MOVE` |
    | SFTP | không có trong giao thức (chỉ vài server có `copy-data`) | — |
 
-   Server không làm được (lệnh bị từ chối, khác share) → lùi về tải + đẩy như hôm nay, không báo lỗi. Log ghi cách đã chép.
+   Server không làm được (lệnh bị từ chối, khác share) → lùi về tải + đẩy như hôm nay, không báo lỗi. Log hệ thống
+   (`commonPhotos`) ghi cách đã chép từng ảnh; CSV của lượt chưa có cột này.
+
+   WebDAV: 201/204 là đã chép; 401 (sai mật khẩu) và 507 (đầy) dừng lượt như mọi lần ghi; mọi trả lời khác (403, 405,
+   423, 501, 502, 400 của proxy…) là "không", ảnh đi đường dài. Lượt nhớ câu trả lời đầu: server đã từ chối thì không
+   hỏi lại từng ảnh. Lệnh `COPY` chờ tới 1 giờ (NAS trả lời khi chép xong cả file). Bản ở đích đọc lại sai mà nguồn đã
+   khác bản Scan → ảnh báo "nguồn đã đổi", như đường dài.
 
    Đã chốt (người dùng 2026-11-04): **không vá `SMBClient`**. SMB vẫn tải + đẩy như hôm nay; xét lại khi thư viện tự có
    copychunk. Chỉ WebDAV `COPY` được thêm, vì nó không cần đụng thư viện.

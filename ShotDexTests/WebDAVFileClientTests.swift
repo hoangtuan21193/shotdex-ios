@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -13,9 +14,11 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var ignoresRange = false
     /// The Range header of every GET, in order (nil = none).
     nonisolated(unsafe) static var rangesAsked: [String?] = []
+    /// What COPY answers: 201 when nil (it copies), else this status.
+    nonisolated(unsafe) static var copyStatus: Int?
 
     static func reset() {
-        lock.withLock { files = [:]; folders = [""]; ignoresRange = false; rangesAsked = [] }
+        lock.withLock { files = [:]; folders = [""]; ignoresRange = false; rangesAsked = []; copyStatus = nil }
     }
 
     override class func canInit(with request: URLRequest) -> Bool { request.url?.host == "dav.test" }
@@ -83,6 +86,16 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
                 Self.files[target] = data
                 Self.files[key] = nil
                 status = 201
+            case "COPY":
+                if let refused = Self.copyStatus { status = refused; break }
+                guard let destination = request.value(forHTTPHeaderField: "Destination").flatMap(URL.init(string:)),
+                      let data = Self.files[key] else { status = 404; break }
+                let target = Self.key(destination)
+                guard Self.folders.contains(ServerUploadPath.parent(of: target)) else { status = 409; break }
+                let existed = Self.files[target] != nil
+                if existed, request.value(forHTTPHeaderField: "Overwrite") == "F" { status = 412; break }
+                Self.files[target] = data
+                status = existed ? 204 : 201
             case "DELETE":
                 status = Self.files.removeValue(forKey: key) == nil ? 404 : 204
             default:
@@ -189,6 +202,48 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
         #expect(entries.filter { !$0.isDirectory }.map(\.name) == ["IMG 1.CR3", "Ảnh.JPG", "a.png", "b.heic", "c.txt"])
         #expect(entries.first { $0.name == "IMG 1.CR3" }?.size == 31_900_000)
         #expect(entries.first { $0.name == "IMG 1.CR3" }?.modified == Date(timeIntervalSince1970: 1_790_416_800))
+    }
+
+    /// FS-19.08 AC-191: COPY puts the bytes beside the source, encoded
+    /// names included, and nothing comes down; a server that says 405, 501,
+    /// 403 or 502 gets false and nothing is written.
+    @Test func copyOnServer() async throws {
+        let dav = client()
+        try await dav.createDirectory("A")
+        try await dav.createDirectory("Shared photos")
+        let bytes = Data((0..<50_000).map { UInt8(truncatingIfNeeded: $0) })
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["A/Ảnh 1.JPG"] = bytes }
+
+        #expect(try await dav.copyOnServer("A/Ảnh 1.JPG", to: "Shared photos/Ảnh 1.JPG.shotdex-part"))
+        let stored = StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files }
+        #expect(stored["Shared photos/Ảnh 1.JPG.shotdex-part"] == bytes)
+        #expect(stored["A/Ảnh 1.JPG"] == bytes)
+        #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.rangesAsked.isEmpty })
+
+        for refused in [403, 405, 501, 502] {
+            StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.copyStatus = refused }
+            #expect(try await !dav.copyOnServer("A/Ảnh 1.JPG", to: "Shared photos/b.shotdex-part"))
+        }
+        #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["Shared photos/b.shotdex-part"] } == nil)
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.copyStatus = 507 }
+        await #expect(throws: RemoteFileError.serverFull) { try await dav.copyOnServer("A/Ảnh 1.JPG", to: "Shared photos/c.shotdex-part") }
+    }
+
+    /// A download's progress ends at the whole file, whatever the task's
+    /// write callbacks did: the Common Photos verifier skips a file whose
+    /// count falls short as changed, which made a WebDAV scan find nothing.
+    @Test func downloadProgressEndsAtTheWholeFile() async throws {
+        let dav = client()
+        try await dav.createDirectory("A")
+        let bytes = Data((0..<300_000).map { UInt8(truncatingIfNeeded: $0 &* 7) })
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["A/x.JPG"] = bytes }
+        let reached = OSAllocatedUnfairLock(initialState: Int64(0))
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent("dav-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: local) }
+
+        _ = try await dav.download("A/x.JPG", to: local, progress: { bytes in reached.withLock { $0 = max($0, bytes) } })
+
+        #expect(reached.withLock { $0 } == 300_000)
     }
 
     @Test func moveRefusesToOverwrite() async throws {
