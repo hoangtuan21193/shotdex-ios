@@ -21,6 +21,10 @@ actor IndexShareService: SharedIndexSource {
     static let settingsRecordName = "IndexSettings"
     /// CloudKit refuses more than 400 records in one modify operation.
     static let pushBatchSize = 400
+    /// The photo's modification date on a `PhotoExif` record. Not
+    /// `modificationDate`: that name is CloudKit's own system field, and
+    /// setting it throws an Objective-C exception that kills the app.
+    static let exifModifiedKey = "assetModified"
 
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "IndexShare")
 
@@ -271,7 +275,7 @@ actor IndexShareService: SharedIndexSource {
         for row in try store.exif(cloudIdentifiers: exifIds).values {
             let record = CKRecord(recordType: SharedIndexStore.photoExifType,
                                   recordID: CKRecord.ID(recordName: row.cloudIdentifier, zoneID: zoneID))
-            record["modificationDate"] = row.modificationDate.map { Int64($0) }
+            record[Self.exifModifiedKey] = row.modificationDate.map { Int64($0) }
             record["exif"] = try encoder.encode(row.exif)
             records.append(record)
         }
@@ -346,7 +350,7 @@ actor IndexShareService: SharedIndexSource {
         else { return nil }
         return SharedExifRecord(
             cloudIdentifier: record.recordID.recordName,
-            modificationDate: (record["modificationDate"] as? Int64).map { Int($0) },
+            modificationDate: (record[exifModifiedKey] as? Int64).map { Int($0) },
             exif: exif
         )
     }

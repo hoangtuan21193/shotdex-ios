@@ -1,3 +1,4 @@
+import CloudKit
 import Foundation
 import GRDB
 import Testing
@@ -17,6 +18,14 @@ struct SharedIndexStoreTests {
 
     private let canon = RawExif(make: "Canon", model: "Canon EOS R6", lensModel: "RF85mm F1.2 L USM",
                                 iso: 3200, fNumber: 1.2, exposureTimeSeconds: 1.0 / 250, focalLength: 85)
+
+    /// CloudKit throws (and the app dies) on a system field name such as
+    /// `modificationDate`; the key the push writes must be settable.
+    @Test func theExifModifiedKeyIsNotACloudKitSystemField() {
+        let record = CKRecord(recordType: SharedIndexStore.photoExifType)
+        record[IndexShareService.exifModifiedKey] = Int64(1_700_000_000)
+        #expect(record[IndexShareService.exifModifiedKey] as? Int64 == 1_700_000_000)
+    }
 
     @Test func rawExifRoundTripsThroughJSON() throws {
         let data = try JSONEncoder().encode(canon)
