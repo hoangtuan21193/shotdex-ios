@@ -5,7 +5,7 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **đang làm** (2026-11-04) — task 4/12, 7/18 AC xanh; plan [2026-11-04-fs1908-review-scan-and-faster](../_plans/2026-11-04-fs1908-review-scan-and-faster.md) |
+| Tiến độ | **đang làm** (2026-11-04) — task 5/12, 8/18 AC xanh; plan [2026-11-04-fs1908-review-scan-and-faster](../_plans/2026-11-04-fs1908-review-scan-and-faster.md) |
 | Nguồn | phản hồi người dùng 2026-11-04: "có thể check trước khi copy hay move không, nghĩa là có chỗ để compare thật sự 2 ảnh giống nhau hay video giống nhau trước khi click move hay copy không" · "tôi chỉ cần same, k cần likely, dùng SHA thôi là đủ … làm sao để cải tiến tốc độ nữa … khi scan sẽ tổng hợp list các ảnh và video giống nhau, có sẵn thông tin sẽ move hay copy ảnh nào về đâu, rồi khi ấn move hay copy sẽ làm dựa trên kết quả scan, k băm lấy SHA lại" |
 | Spec sinh ra từ đây | [FS-19.08 §6d](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-174…191 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 

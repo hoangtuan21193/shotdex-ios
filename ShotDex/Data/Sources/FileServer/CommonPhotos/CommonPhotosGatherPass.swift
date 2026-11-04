@@ -121,8 +121,9 @@ struct CommonPhotosGatherPass {
         // Stopped by the user while it scanned: nothing more.
         guard (try? store.isOn(id: watch.id)) == true else { return .off }
         record { try store.checked(id: watch.id, at: now, waiting: nil) }
-        guard !scan.photos.isEmpty else { return .nothingNew }
-        let count = scan.photos.count
+        // What the user left out of the set (§6d) is not found again.
+        guard !scan.includedPhotos.isEmpty else { return .nothingNew }
+        let count = scan.includedPhotos.count
         await onFound(scan)
         return .found(count)
     }

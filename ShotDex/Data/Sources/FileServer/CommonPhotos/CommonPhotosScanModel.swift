@@ -47,6 +47,9 @@ final class CommonPhotosScanModel {
         let landing: CommonPhotosDestinationPlan.Landing?
         /// Every copy in the source folders — what a Move removes.
         let copies: Int
+        let sha256: String
+        /// Checked: the run takes it (§6d). Unchecked: left out.
+        let isIncluded: Bool
         /// The first folder's copy, for its thumbnail.
         let serverPath: String
     }
@@ -194,8 +197,23 @@ final class CommonPhotosScanModel {
     /// A destination is set and Same photos are found: Copy N / Move N.
     /// Never a Move on a scan that took earlier hashes on trust.
     var canRun: Bool {
-        phase == .done && !isCutting && problem == nil && !photos.isEmpty && !(action == .move && scannedTrustingCache)
+        // Rows already in the destination still run on a Copy (recorded as
+        // there, a missing sidecar added — §6), though the button leaves them
+        // out of its count.
+        phase == .done && !isCutting && problem == nil && !includedPhotos.isEmpty && !(action == .move && scannedTrustingCache)
     }
+
+    /// Photos the user left out, by SHA-256 (§6d): the run never touches them.
+    private(set) var leftOut: Set<String> = []
+
+    /// Checks or unchecks rows; ids from `rows`.
+    func setIncluded(_ included: Bool, rows ids: Set<String>) {
+        let shas = Set(rows.filter { ids.contains($0.id) }.map(\.sha256))
+        if included { leftOut.subtract(shas) } else { leftOut.formUnion(shas) }
+    }
+
+    /// The Same photos the run takes.
+    var includedPhotos: [CommonPhoto] { photos.filter { !leftOut.contains($0.sha256) } }
 
     /// Whether some source shows what lands in the destination.
     var isDestinationIndexed: Bool {
@@ -219,7 +237,21 @@ final class CommonPhotosScanModel {
 
     /// What the run button counts (§6d): a Copy skips the photos already in
     /// the destination; a Move still takes every copy out of the folders.
-    var runCount: Int { action == .copy ? sameCount - alreadyThereCount : sameCount }
+    var runCount: Int { runnable.filter { !leftOut.contains($0.sha256) }.count }
+
+    /// Rows the user can check or uncheck: a Copy skips what is already in
+    /// the destination, so those rows are not choices on a Copy.
+    var selectableCount: Int { runnable.count }
+
+    /// Bytes of what the run writes or moves.
+    var runBytes: Int64 { runnable.filter { !leftOut.contains($0.sha256) }.reduce(Int64(0)) { $0 + $1.size } }
+
+    private var runnable: [CommonPhoto] {
+        guard action == .copy else { return photos }
+        return photos.filter { photo in
+            if case .alreadyThere? = landings[Self.rowId(photo.files[0][0])] { false } else { true }
+        }
+    }
 
     /// Same photos whose bytes the destination already holds (§6d).
     var alreadyThereCount: Int {
@@ -230,13 +262,13 @@ final class CommonPhotosScanModel {
     var rows: [Row] {
         guard preview != nil else { return [] }
         return photos.map { photo in
-            row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count)
+            row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count, sha256: photo.sha256)
         }
     }
 
     private static func rowId(_ first: CommonPhotosFile) -> String { "\(first.folder)/\(first.relativePath)" }
 
-    private func row(_ files: [CommonPhotosFile], size: Int64, copies: Int) -> Row {
+    private func row(_ files: [CommonPhotosFile], size: Int64, copies: Int, sha256: String) -> Row {
         let first = files[0]
         let paths = files.map { file -> String in
             var place = ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[file.folder]), file.subfolder)
@@ -247,6 +279,7 @@ final class CommonPhotosScanModel {
         let id = Self.rowId(first)
         return Row(id: id, name: first.name, paths: paths.joined(separator: " · "),
                    fullPaths: fullPaths.joined(separator: "\n"), size: size, landing: landings[id], copies: copies,
+                   sha256: sha256, isIncluded: !leftOut.contains(sha256),
                    serverPath: ServerUploadPath.join(folders[first.folder], first.relativePath))
     }
 
@@ -718,7 +751,7 @@ final class CommonPhotosScanModel {
     func makeRun() -> (run: CommonPhotosRun, items: [CommonPhotosItem])? {
         guard canRun, let destination, let listing else { return nil }
         let run = CommonPhotosRun(connectionId: connectionId, folders: folders, destination: destination, action: action)
-        let items = CommonPhotosRunner.items(for: photos, runId: run.id, folders: folders,
+        let items = CommonPhotosRunner.items(for: includedPhotos, runId: run.id, folders: folders,
                                              files: listing.files, sidecars: listing.sidecars)
         return (run, items)
     }

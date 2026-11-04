@@ -174,6 +174,12 @@ private struct MacCommonPhotosSheetContent: View {
         // `-ShotDexCommonPhotosRunAtOnce`: the run starts as the scan ends,
         // for screenshots of a set that gathered before.
         .onChange(of: model.phase) {
+            // `-ShotDexCommonPhotosLeaveOut IMG_0003.JPG,IMG_0005.JPG`: those rows unchecked (§6d), for screenshots.
+            if model.phase == .done, let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-ShotDexCommonPhotosLeaveOut"),
+               index + 1 < ProcessInfo.processInfo.arguments.count {
+                let names = Set(ProcessInfo.processInfo.arguments[index + 1].split(separator: ",").map(String.init))
+                model.setIncluded(false, rows: Set(model.rows.filter { names.contains($0.name) }.map(\.id)))
+            }
             // `-ShotDexCommonPhotosKeepGathering`: the box ticked, for an end-to-end run of Keep gathering.
             if model.phase == .done, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosKeepGathering") { keepsGathering = true }
             if model.phase == .done, model.canRun, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAtOnce") { start() }
@@ -397,7 +403,8 @@ private struct MacCommonPhotosSheetContent: View {
                 } else {
                     List(model.rows) { row in
                         MacCommonPhotosRow(row: row, destination: model.destination.map(ServerUploadPath.lastComponent(of:)),
-                                           action: model.action, database: dependencies.database, sources: sources)
+                                           action: model.action, database: dependencies.database, sources: sources,
+                                           setIncluded: { model.setIncluded($0, rows: [row.id]) })
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 12))
                     }
                     .listStyle(.bordered)
@@ -509,6 +516,13 @@ private struct MacCommonPhotosSheetContent: View {
         }
         let count = model.sameCount
         let bytes = model.sameBytes.formatted(.byteCount(style: .file))
+        // §6d: some rows unchecked — the headline counts what the run takes,
+        // the number the button shows.
+        if model.runCount < model.selectableCount {
+            let selected = String(localized: "\(model.runCount.formatted()) of \(count.formatted()) selected",
+                                  comment: "Mac common photos sheet: headline, rows the run takes out of all Same rows")
+            return selected + " · " + model.runBytes.formatted(.byteCount(style: .file)) + alreadyThereSuffix
+        }
         // §6c: a set that gathered before lists only what is new.
         if model.lastGathered != nil, !model.scansEverything {
             let new = count == 1 ? String(localized: "1 new photo", comment: "Mac common photos sheet: headline count, only new photos")
@@ -641,11 +655,26 @@ private struct MacCommonPhotosSheetContent: View {
             Text("Choose where to save the common photos.", comment: "Mac common photos sheet: no destination yet")
                 .font(.callout).foregroundStyle(.secondary)
         } else if model.isScanning || (model.phase == .done && model.sameCount > 0) {
-            Text(model.action == .move
-                 ? String(localized: "Only photos marked Same are moved.", comment: "Mac common photos sheet: footer")
-                 : String(localized: "Only photos marked Same are copied.", comment: "Mac common photos sheet: footer"))
-                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+            Text(footerText).font(.callout).foregroundStyle(.secondary).lineLimit(1)
         }
+    }
+
+    /// §6d: what happens to the checked rows, and to the others.
+    private var footerText: String {
+        guard model.phase == .done else {
+            return String(localized: "Only Same photos are listed.", comment: "Mac common photos sheet: footer while scanning")
+        }
+        if model.runCount == 0, model.selectableCount > 0 {
+            return String(localized: "Nothing selected. Check a photo to include it.", comment: "Mac common photos sheet: footer, every row unchecked")
+        }
+        guard model.action == .move else {
+            return String(localized: "Unchecked photos are not copied.", comment: "Mac common photos sheet: footer, Copy")
+        }
+        let names = model.folders.map(ServerUploadPath.lastComponent(of:))
+        let destination = model.destination.map(ServerUploadPath.lastComponent(of:)) ?? ""
+        return names.count == 2
+            ? String(localized: "Verified in \(destination), then removed from \(names[0]) and \(names[1]).", comment: "Mac common photos sheet: footer, Move, two folders")
+            : String(localized: "Verified in \(destination), then removed from every folder above.", comment: "Mac common photos sheet: footer, Move, three or more folders")
     }
 
     private func problemText(_ problem: CommonPhotosSelection.Problem) -> String {
@@ -669,7 +698,7 @@ private struct MacCommonPhotosSheetContent: View {
         }
         let count = model.runCount.formatted()
         return model.action == .move
-            ? String(localized: "Move \(count)", comment: "Mac common photos sheet: run button")
+            ? String(localized: "Move \(count)…", comment: "Mac common photos sheet: run button, a confirmation follows")
             : String(localized: "Copy \(count)", comment: "Mac common photos sheet: run button")
     }
 
@@ -678,9 +707,9 @@ private struct MacCommonPhotosSheetContent: View {
     /// "Move 280 photos to “Shared”?" (FS-19.08 §4).
     private var moveTitle: String {
         let destination = model.destination.map { ServerUploadPath.lastComponent(of: $0) } ?? ""
-        return model.sameCount == 1
+        return model.runCount == 1
             ? String(localized: "Move 1 photo to “\(destination)”?", comment: "Mac common photos: Move confirmation title")
-            : String(localized: "Move \(model.sameCount.formatted()) photos to “\(destination)”?", comment: "Mac common photos: Move confirmation title")
+            : String(localized: "Move \(model.runCount.formatted()) photos to “\(destination)”?", comment: "Mac common photos: Move confirmation title")
     }
 
     /// "Each photo is copied to “Shared” and verified, then removed from
@@ -721,10 +750,24 @@ private struct MacCommonPhotosRow: View {
     let action: CommonPhotosRun.Action
     let database: AppDatabase
     let sources: [(source: SourceStore.Source, connection: FileServer)]
+    /// Checks or unchecks the row (§6d).
+    let setIncluded: (Bool) -> Void
     @State private var thumbnail: CGImage?
 
     var body: some View {
         HStack(spacing: 10) {
+            // A Copy skips what is already there: nothing to choose on that row.
+            if isAlreadyThere, action == .copy {
+                Color.clear.frame(width: 14, height: 14)
+            } else {
+                Toggle(isOn: Binding(get: { row.isIncluded }, set: setIncluded)) { EmptyView() }
+                    .toggleStyle(.checkbox)
+                    .labelsHidden()
+                    .accessibilityLabel(row.name)
+                    .accessibilityValue(row.isIncluded
+                        ? String(localized: "Included", comment: "Mac common photos sheet: row checkbox, VoiceOver value")
+                        : String(localized: "Left out", comment: "Mac common photos sheet: row checkbox, VoiceOver value"))
+            }
             MacTheme.fill2
                 .frame(width: 28, height: 28)
                 .overlay {
@@ -742,6 +785,7 @@ private struct MacCommonPhotosRow: View {
                 .font(.subheadline).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
             .help(row.fullPaths + (landingText.map { "\n" + $0 } ?? ""))
             Text(row.size.formatted(.byteCount(style: .file)))
                 .font(.callout).monospacedDigit().foregroundStyle(.secondary)
@@ -750,7 +794,6 @@ private struct MacCommonPhotosRow: View {
                 .frame(width: 124, alignment: .leading)
         }
         .frame(height: 40)
-        .accessibilityElement(children: .combine)
         .task(id: row.serverPath) { thumbnail = await loadThumbnail() }
     }
 
@@ -771,8 +814,11 @@ private struct MacCommonPhotosRow: View {
     }
 
     /// Already there (Copy skips it), or on a Move the copies it takes out of
-    /// the folders — already there or not.
+    /// the folders — already there or not; unchecked, that it stays out.
     private var note: String? {
+        if !row.isIncluded, !(isAlreadyThere && action == .copy) {
+            return String(localized: "Left out", comment: "Mac common photos sheet: row, unchecked")
+        }
         if isAlreadyThere, action == .copy {
             return String(localized: "Already in \(destination ?? "")", comment: "Mac common photos sheet: row, the destination holds these bytes")
         }

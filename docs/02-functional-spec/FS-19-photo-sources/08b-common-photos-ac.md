@@ -98,7 +98,7 @@ số byte qua mạng.
 | AC-183 | Compare đang tải; server ngắt | — | khung ghi câu lỗi FS-15.01 §3 + **Try Again**; sheet giữ nguyên kết quả Scan, nút Copy vẫn bấm được | ⚠️ chưa có |
 | AC-184 | Scan đang chạy | mở Compare một hàng Same chưa index | khung ghi "Waiting for the scan…"; Scan không chậm hơn quá 5 % so với không mở Compare (đếm lệnh: lệnh Compare chỉ chạy khi Scan không có lệnh chờ) | ⚠️ chưa có |
 | AC-185 | hàng Same là video 10 s ở cả hai bản | **Play** rồi tua tới 6 s | hai bên cùng chạy; sau tua, chênh thời điểm hai bên ≤ 1 khung hình; tiếng chỉ bên trái | ⚠️ chưa có |
-| AC-186 | 280 hàng Same | bỏ chọn 2 hàng | nút "Copy 278"; chạy xong 278 Copied, 2 hàng kia không có lệnh nào tới server | ⚠️ chưa có |
+| AC-186 | 280 hàng Same | bỏ chọn 2 hàng | nút "Copy 278"; chạy xong 278 Copied, 2 hàng kia không có lệnh nào tới server | ✅ `CommonPhotosScanModelTests.runsOnlySelected` (bỏ 1/3: nút 2, chạy 2, không lệnh nào chạm ảnh bỏ ra), `runCountLeavesOutWhatIsThere`; ảnh Mac `build/design/shots/R5/` (sáng/tối, Copy/Move, 2 hàng bỏ chọn) |
 | AC-187 | bộ đã bỏ ra 2 ảnh (AC-186) | quét lại / Run Again / lượt tự gom | 2 ảnh không ở Same, nằm trong **Left Out (2)**; lượt tự gom không chép chúng | ⚠️ chưa có |
 | AC-188 | **Left Out (2)** | **Include** một ảnh rồi Scan | ảnh đó lại ở Same, được chọn; ảnh còn lại vẫn Left Out | ⚠️ chưa có |
 | AC-189 | bộ có 2 ảnh bỏ ra | Clear Local Metadata Index; sau đó xoá bộ (Remove from List) | sau Clear: vẫn 2 ảnh Left Out; sau xoá bộ: bảng Ảnh bỏ ra không còn hàng nào của bộ | ⚠️ chưa có |

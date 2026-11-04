@@ -118,6 +118,13 @@ import Testing
         #expect(sheet.runCount == 3)
         sheet.action = .copy
         #expect(sheet.runCount == 2)
+        #expect(sheet.selectableCount == 2)
+        // Both choices unchecked: only the row already there is left — the
+        // button counts nothing; the run would only record it (and add a
+        // missing sidecar).
+        sheet.setIncluded(false, rows: Set(sheet.rows.filter { $0.name != "IMG_1.JPG" }.map(\.id)))
+        #expect(sheet.runCount == 0)
+        #expect(sheet.makeRun()?.items.count == 1)
         await sheet.close()
     }
 
@@ -142,6 +149,38 @@ import Testing
             #expect(sheet.rows.first?.landing == (destination == "C" ? .alreadyThere("IMG_1.JPG") : .name("IMG_1.JPG")))
         }
         #expect(nas.sha256Paths.filter { $0 == "C/IMG_1.JPG" }.count == 1)
+        await sheet.close()
+    }
+
+    /// AC-186: one of three rows unchecked — the button counts two, the run
+    /// takes two, and no command reaches the one left out.
+    @Test func runsOnlySelected() async throws {
+        let (sheet, nas, _) = try await planned()
+        sheet.action = .copy
+        sheet.destination = "D"
+        for _ in 0..<300 where sheet.isCutting || sheet.isPlanning || sheet.landings.isEmpty {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let out = try #require(sheet.rows.first { $0.name == "IMG_3.JPG" })
+        sheet.setIncluded(false, rows: [out.id])
+        #expect(sheet.rows.first { $0.id == out.id }?.isIncluded == false)
+        #expect(sheet.runCount == 2)
+        let made = try #require(sheet.makeRun())
+        #expect(made.items.count == 2)
+        let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+        try store.start(made.run, items: made.items)
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosScanModelTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: work) }
+        let before = nas.commands.count
+
+        try await CommonPhotosRunner(client: nas, store: store, workDirectory: work).run(made.run.id)
+
+        #expect(!nas.commands.dropFirst(before).contains { $0.contains("IMG_3") })
+        #expect(nas.files["D/IMG_3.JPG"] == nil)
+        #expect(try store.items(runId: made.run.id).map(\.status) == [.copied, .copied])
+        // Checked again, it is back in the count.
+        sheet.setIncluded(true, rows: [out.id])
+        #expect(sheet.runCount == 3)
         await sheet.close()
     }
 
