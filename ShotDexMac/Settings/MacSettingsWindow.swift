@@ -1,17 +1,73 @@
 import ServiceManagement
 import SwiftUI
 
-/// ShotDex › Settings… ⌘, (board `MAC_SettingsGeneral`). The General pane
-/// has its Indexing and Background groups so far (FS-22.06 §5.4); the board's
-/// other panes and groups come with the features they set.
+/// ShotDex › Settings… ⌘, (FS-18.04 §3, boards `MAC_Settings*`): six panes,
+/// 720 wide and at most 640 tall, the body scrolling; changes apply at once.
 struct MacSettingsWindow: View {
+    @State private var pane = MacSettingsPane.initial
+
     var body: some View {
-        TabView {
-            Tab(String(localized: "General", comment: "Mac Settings pane"), systemImage: "gearshape") {
-                MacGeneralSettings()
+        TabView(selection: $pane) {
+            ForEach(MacSettingsPane.allCases) { pane in
+                Tab(pane.title, systemImage: pane.systemImage, value: pane) {
+                    pane.content
+                        .frame(width: MacSettingsPane.size.width, height: MacSettingsPane.size.height)
+                }
             }
         }
-        .frame(width: 720)
+    }
+}
+
+enum MacSettingsPane: String, CaseIterable, Identifiable {
+    case general, ai, sources, editing, servers, cameras
+
+    static let size = CGSize(width: 720, height: 640)
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .general: String(localized: "General", comment: "Mac Settings pane")
+        case .ai: String(localized: "AI", comment: "Mac Settings pane")
+        case .sources: String(localized: "Sources", comment: "Mac Settings pane")
+        case .editing: String(localized: "Editing", comment: "Mac Settings pane")
+        case .servers: String(localized: "Servers", comment: "Mac Settings pane")
+        case .cameras: String(localized: "Cameras", comment: "Mac Settings pane")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: "gearshape"
+        case .ai: "sparkles"
+        case .sources: "rectangle.on.rectangle"
+        case .editing: "slider.horizontal.3"
+        case .servers: "server.rack"
+        case .cameras: "camera"
+        }
+    }
+
+    @MainActor @ViewBuilder
+    var content: some View {
+        switch self {
+        case .general: MacGeneralSettings()
+        case .ai: MacAISettings()
+        case .editing: MacEditingSettings()
+        // Filled by their own tasks (plan 2026-11-04-mac-settings-panes, S4–S12).
+        case .sources, .servers, .cameras: Form {}.formStyle(.grouped)
+        }
+    }
+
+    /// General, or `-ShotDexSettingsPane <name>` in a Debug build, for screenshots.
+    static var initial: MacSettingsPane {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-ShotDexSettingsPane"), index + 1 < arguments.count,
+           let pane = MacSettingsPane(rawValue: arguments[index + 1]) {
+            return pane
+        }
+        #endif
+        return .general
     }
 }
 
@@ -28,6 +84,15 @@ struct MacGeneralSettings: View {
 
     var body: some View {
         Form {
+            // The Mac has no viewer, Statistics screen or reminder yet (FS-18.04 §3).
+            Section {
+                MacLaterSettingsRow(switchTitle: String(localized: "View Full HDR", comment: "Mac Settings row"))
+                MacLaterSettingsRow(switchTitle: String(localized: "Autoplay Videos", comment: "Mac Settings row"))
+                MacLaterSettingsRow(switchTitle: String(localized: "Show Insights in Statistics", comment: "Mac Settings row"))
+                MacLaterSettingsRow(switchTitle: String(localized: "On This Day Reminder", comment: "Mac Settings row"))
+            } header: {
+                Text("Viewing and Reminders", comment: "Mac Settings group")
+            }
             MacIndexingSettings()
             Section {
                 LabeledContent {
@@ -63,8 +128,6 @@ struct MacGeneralSettings: View {
             }
         }
         .formStyle(.grouped)
-        .scrollDisabled(true)
-        .fixedSize(horizontal: false, vertical: true)
         .onChange(of: keepsWorking) { _, on in control.setKeepsWorkingAfterQuit(on) }
         .onChange(of: keepAwake) { _, value in MacKeepAwake.current = value }
         // The user may have flipped the switch in System Settings meanwhile.

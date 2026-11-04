@@ -10,7 +10,7 @@ của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
      theo url rồi theo `path`) trước khi sửa, sửa trong `docs/design/mac/project/`, publish lên canvas;
    - code. Logic vào Domain/Data dùng chung, view Mac mỏng. File mới dưới `ShotDexMac/` → `Tools/mac-membership`;
    - build iOS (`-destination 'id=6E3CE306-B474-4EBD-953B-E7D807BB25BC' -derivedDataPath build/sim`) và `ShotDexMac`
-     (`-destination 'platform=macOS,arch=arm64' -derivedDataPath build/DerivedData`). `build/sim` bị khoá = phiên khác
+     (`-destination 'platform=macOS,arch=arm64' -derivedDataPath build/mac` — `Tools/mac-shot` tìm app ở `build/mac`). `build/sim` bị khoá = phiên khác
      đang build: chờ, đừng chạy chen;
    - chạy test liên quan bằng `-only-testing` (không chạy cả bộ, không `Tools/gate`);
    - **review 2 lần**: 2 lượt reviewer độc lập (code + UI/UX), sửa hết những gì chúng tìm ra rồi mới qua;
@@ -30,7 +30,7 @@ của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
 | S0 | xong | (commit này) | 8 board, canvas v109. Hàng chưa có tính năng: nhãn `label3`, control 0.45 và ở trạng thái tắt, chữ phụ "Available in a later version" giữ độ tương phản (review design: mờ cả hàng thì chữ lý do chỉ ~1.5:1); AI, Editing mờ cả pane + một dòng chú thích. Sources: bỏ `.xmp`, header ghi "Indexing 22%" (review UX: tiến độ phải thấy không cần cuộn), tweak `indexing`, `battery` (paused/none). Servers: bỏ limit riêng, tweak `localNetworkOff`. `MAC_SourceIndexing`: chân sidebar xếp chồng index trên Common photos, tweak `indexing` cho trạng thái xong; bỏ sao/cờ và chữ "cull, rate" (cull đã bỏ). Giữ "Common photos" (chữ thường) như chuỗi app và board Activity. Board Mac khác (Main, Cull…) còn vẽ sao/cờ: ngoài task này |
-| S1 | chưa | | |
+| S1 | xong | (commit này) | `MacSettingsPane` (6 tab, 720 × 640, thân cuộn, DEBUG `-ShotDexSettingsPane <tên>` cùng `-ShotDexSection settings`); `MacLaterSettingsRow` (tiêu đề `.secondary`, lý do caption, switch tắt, disabled) cho 4 hàng General; `MacLaterPane` cho AI, Editing (một dòng chú thích, control disabled không có giá trị chọn — review: giá trị mẫu trong control trơ dễ bị hiểu là cài đặt thật —, `accessibilityHidden`, chữ giữ độ tương phản). AC-69 sửa theo board (AI/Editing một dòng chú thích, không chữ phụ từng hàng), AC-59 ghi rõ 640 là thân pane. Tab đang chọn xanh là chrome macOS (không đổi được bằng `.tint`). Nền Settings trắng thay vì xám board: chrome macOS. Sources/Servers/Cameras còn trống tới S4–S12; ảnh `build/design/shots/S1/` |
 | S2 | chưa | | |
 | S3 | chưa | | |
 | S4 | chưa | | |
