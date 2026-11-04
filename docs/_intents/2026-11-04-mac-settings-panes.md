@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **chưa làm** (2026-11-04) — spec FS-18.04 §3, 14 AC (AC-67…AC-80) |
+| Tiến độ | **chưa làm** (2026-11-04) — plan [2026-11-04-mac-settings-panes](../_plans/2026-11-04-mac-settings-panes.md) chờ duyệt, 13 task |
 | Nguồn | phản hồi người dùng (cài bản Debug lên Mac, 2026-11-04) |
 | Spec sinh ra từ đây | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 
@@ -16,7 +16,7 @@ Mở ShotDex › Settings… trên Mac chỉ thấy một pane General với hai
 
 - thấy và quản lý nguồn ảnh (Re-index, Remove, Grant Access, thêm folder) ngoài sidebar;
 - xem thư viện đã index tới đâu — chân sidebar chỉ ghi "Indexing…", không có số, và bị khung Common Photos che mất;
-- bật/tắt `.xmp` sidecar, tra tên địa điểm, quét People and Pets, chặn ngủ khi index, xoá cache;
+- tra tên địa điểm, quét People and Pets, chặn ngủ khi index, xoá cache;
 - xem, xoá kết nối server; chọn thông tin hiện trên ô ảnh; sửa định dạng cảm biến của máy ảnh.
 
 Phần lớn những thứ này đã có trong code dùng chung (agent dò 2026-11-04: ~25 hàng chỉ cần nối), nhưng chưa có chỗ trên
