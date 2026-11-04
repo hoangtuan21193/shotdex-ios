@@ -109,14 +109,13 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-12 | Mac bật Download Originals, 200 ảnh | lượt kiểm xong | *is On This Mac* ra 200; trường vẫn có trong menu trường | ⚠️ chưa có — Mac |
 | AC-13 | mọi trường của bộ dựng | mở menu phép của *Original* | chỉ có *is* và *is not*; không có *is missing* | ⚠️ chưa có — test lặp qua mọi trường (FS-06.08 AC-6) |
 | AC-14 | iPhone, Duo trong, iPad, Mac | mở sheet editor và màn album có dòng tiến độ | khớp board từng máy, lệch ≤ 2pt | ⚠️ chưa có — `design-parity` |
-| AC-15 | chọn 3 ảnh *On This iPhone* | Delete | hộp ShotDex có câu *"They're also deleted from your other devices."* trước hộp hệ thống; chọn 3 ảnh *iCloud Only* thì không có câu đó | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1…AC-15 (spec mới, chưa có code).
+**Chưa chứng minh được:** AC-1…AC-14 (spec mới, chưa có code).
 
 ## 8. Rủi ro đã biết
 
 | Rủi ro | Xử lý |
 |---|---|
-| Người dùng lọc *On This iPhone* để lấy chỗ, rồi xoá, tưởng chỉ xoá trên máy | hộp xoá đã ghi *Recently Deleted* và iCloud ([FS-19.07 §9](../FS-19-photo-sources/07-on-server-check.md)). Lựa chọn có ảnh *On This iPhone* thì hộp ShotDex thêm câu *"They're also deleted from your other devices."* (AC-15) |
+| Người dùng lọc *On This iPhone* để lấy chỗ, rồi xoá, tưởng chỉ xoá trên máy | hộp xoá giữ như hôm nay: hộp hệ thống, cộng câu *Recently Deleted* / iCloud khi ảnh có trên NAS ([FS-19.07 §9](../FS-19-photo-sources/07-on-server-check.md)). Không thêm hộp (người dùng chốt 2026-11-04) |
 | Photos gỡ bản gốc mà không báo thay đổi, nên kết quả cũ | luôn ghi *checked … ago*; quét lại theo luật §4 |
 | Cờ chưa công khai bị đổi hoặc bị App Review từ chối | chỉ dùng sau khi người dùng chốt ở §4; (a) luôn là đường dự phòng |

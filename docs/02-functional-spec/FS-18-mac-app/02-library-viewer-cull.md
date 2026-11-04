@@ -50,7 +50,7 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
 ## 5. Filter and Sort
 
 - Nút toolbar mở **popover 360×480**, mũi tên 12 trỏ vào nút. Bên trong: Sort By + chiều · Show (All · Photos · Videos)
-  · Marks (Favorites · Picks · Rejected) · Rating · Camera · Lens · Focal (Actual · Full-Frame Equivalent) · ISO · Aperture.
+  · Marks (Favorites · Picks · Rejected) · **Original on This Mac** ([FS-06.10](../FS-06-collections/10-original-on-device.md)) · Rating · Camera · Lens · Focal (Actual · Full-Frame Equivalent) · ISO · Aperture.
 - Đáy popover: **Advanced Filter…** (mở sheet ≤ 640×560, cùng sheet với Advanced Search…) · **Save as Smart Album…**;
   góc trên: Reset.
 - Điều kiện đang bật nằm trên **thanh lọc** dưới toolbar (View › Show Filter Bar): chip "Canon EOS R6 Mark II ×".
