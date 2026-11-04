@@ -12,6 +12,9 @@ struct MacServersSettings: View {
     @State private var failure: String?
     @State private var form: FormRequest?
     @State private var thumbnailBytes: Int64?
+    /// Bonjour only, no subnet sweep: enough to learn whether Local Network
+    /// access is on. Made once, when the pane first shows.
+    @State private var discovery: ServerDiscoveryModel?
 
     enum TestState: Equatable {
         case running
@@ -47,12 +50,26 @@ struct MacServersSettings: View {
                      comment: "Mac Settings › Servers footer")
                     .foregroundStyle(.secondary)
             }
+            localNetworkSection
             thumbnailsSection
         }
         .formStyle(.grouped)
         .task {
             reload()
+            if discovery == nil {
+                let model = ServerDiscoveryModel(browser: BonjourServerBrowser())
+                discovery = model
+                model.start()
+            }
             await measureThumbnails()
+        }
+        .onDisappear {
+            discovery?.stop()
+            discovery = nil
+        }
+        // The prompt closed, or the user is back from System Settings: a refusal is looked at again.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            discovery?.appBecameActive()
         }
         .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reload() }
         .onChange(of: dependencies.sourcesModel.readCount) { _, _ in reload() }
@@ -141,6 +158,36 @@ struct MacServersSettings: View {
                 }
                 .disabled(selected == nil)
             }
+        }
+    }
+
+    /// AC-78: whether macOS lets ShotDex see the network, and where to change it.
+    private var localNetworkSection: some View {
+        let line = discovery.map {
+            LocalNetworkAccessLine.from(isSearching: $0.state == .searching, isDenied: $0.state == .denied,
+                                        refusedBeforePrompt: $0.deniedWhilePrompting)
+        } ?? .checking
+        let open = Button(String(localized: "Open Privacy Settings…", comment: "Mac Settings › Servers: open Local Network privacy")) {
+            NSWorkspace.shared.open(LocalNetworkAccessLine.privacySettingsURL)
+        }
+        return Section {
+            LabeledContent {
+                // Prominent only when it is the way out; quiet otherwise (the only way to revoke).
+                if line == .off {
+                    open.buttonStyle(.borderedProminent).tint(MacTheme.accent)
+                } else {
+                    open.disabled(line == .checking)
+                }
+            } label: {
+                Text("Local Network Access", comment: "Mac Settings › Servers row")
+                HStack(spacing: 5) {
+                    Circle().fill(line == .off ? Color.orange : line == .allowed ? .green : .gray)
+                        .frame(width: 7, height: 7).accessibilityHidden(true)
+                    Text(line.text).foregroundStyle(line == .off ? Color.orange : .secondary)
+                }
+            }
+        } header: {
+            Text("On This Network", comment: "Mac Settings › Servers group")
         }
     }
 

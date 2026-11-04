@@ -305,7 +305,7 @@ class Component extends DCLogic {
         // AC-78: tweak `localNetworkOff` — macOS has the switch off; the button opens Privacy & Security › Local Network.
         row(Object.assign({ label:'Local Network Access', h:'44px', btns:[btn('Open Privacy Settings…', lnOff ? 'default' : 'bordered')] },
               lnOff ? status('warn', 'Off · ShotDex cannot find the computers and NAS drives near this Mac')
-                    : status('ok', 'Allowed · lets Add Connection list the computers and NAS drives near this Mac')))
+                    : status('ok', 'Allowed · ShotDex can find computers and NAS drives on this network')))
       ]},
       // Keep Mac Awake While Uploading moved to General › Background as Keep Mac Awake While Copying (FS-22.06 §4, FS-18.04).
       { title:'Server Thumbnails', rows:[

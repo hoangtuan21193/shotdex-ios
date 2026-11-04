@@ -106,7 +106,9 @@ final class ServerDiscoveryModel {
         start()
     }
 
-    private var deniedWhilePrompting = false
+    /// Refused before any prompt was seen to close: the system asking right
+    /// now, or an answer given long ago (Settings › Servers reads it).
+    private(set) var deniedWhilePrompting = false
 
     private func handle(_ event: LocalServerBrowserEvent) {
         switch event {
