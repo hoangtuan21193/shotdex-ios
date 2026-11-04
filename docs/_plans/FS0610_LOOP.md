@@ -37,7 +37,7 @@ là trí nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi lại s
 | T1 | chưa | | harness DEBUG đo (a) probe offline mọi resource và (b) KVC; **số đo cần iPhone thật của người dùng** — harness làm trong loop, đo thì chờ người dùng |
 | T2 | chưa | | test phép theo mọi trường (AC-13) |
 | T3 | xong | (commit này) | `OriginalPresence` (onDevice/iCloudOnly) + `Resource` + `required(among:)` (bỏ `other`, khử trùng) + `judge` (một iCloud là đủ; unknown → chưa kiểm). Review test-coverage: thêm ca thứ tự; ánh xạ `PHAssetResourceType` → `Resource` chưa có (T6) |
-| T4 | chưa | | v58 + `OriginalPresenceStore` (AC-6, AC-7) |
+| T4 | xong | (commit này) | v58 `original_presence` (photoKitId PK, state NULL = chưa kiểm, checkedAt + index) + `original_presence_pass` (1 dòng). Store: `nextBatch` 3 query hẹp (đánh dấu kiểm lại → chưa có dòng → cũ nhất; chỉ ảnh lưới thấy), `record` 1 transaction, `markForRecheck`, `progress`. `deleteAssets` xoá dòng. Review data-migration + test-coverage: tách nextBatch (khỏi sort cả thư viện mỗi lô), prune, test file DB mở lại, ẩn/đã xoá/NAS, biên `checkedAt == since`. Clear Index giữ bảng (như subject_scan). Lưu ý: DEBUG xoá DB sim khi thêm v58 |
 | T5 | chưa | | trường Original + SQL + chip + `migrating` (AC-2, AC-10, AC-13) |
 | T6 | chưa | | lượt kiểm nền, cách (a) mặc định theo spec; đổi sang (b) nếu T1 đo > 2 giờ (AC-5, AC-9) |
 | T7 | chưa | | kích hoạt + luật 24 giờ + `changedObjects` (AC-8) |

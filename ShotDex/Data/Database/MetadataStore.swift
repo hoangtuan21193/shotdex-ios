@@ -157,6 +157,13 @@ struct MetadataStore: Sendable {
                 sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
                 arguments: StatementArguments(ids)
             )
+            // The original-on-device answer belongs to the Photos copy that
+            // just went (FS-06.10 §5); a PhotoKit id that comes back is
+            // checked afresh.
+            try db.execute(
+                sql: "DELETE FROM original_presence WHERE photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
+                arguments: StatementArguments(ids)
+            )
             // A photo with a copy elsewhere — a NAS file it was uploaded to —
             // stays in the library with its row (FS-19.03 §8).
             let kept = Set(try String.fetchAll(db, sql: """

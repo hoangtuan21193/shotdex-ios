@@ -100,8 +100,8 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-3 | Live Photo có ảnh trên máy, phần video chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.livePhotoWithMovieInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
 | AC-4 | ảnh đã sửa, bản gốc có trên máy, bản render chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.editedPhotoWithRenderInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
 | AC-5 | máy tắt mạng, 1.000 ảnh chưa kiểm | lượt kiểm chạy hết | không có request mạng nào; 1.000 dòng trạng thái được ghi | ⚠️ chưa có — test có đếm request |
-| AC-6 | lượt kiểm tới 30.000 / 55.000 | app bị đóng hẳn, rồi mở lại | lượt kiểm chạy tiếp từ 30.000, không kiểm lại từ 0 | ⚠️ chưa có |
-| AC-7 | 55k ảnh đã kiểm | index lại toàn bộ thư viện | trạng thái của mọi ảnh vẫn còn (không về *chưa kiểm*) | ⚠️ chưa có — test có upsert metadata |
+| AC-6 | lượt kiểm tới 30.000 / 55.000 | app bị đóng hẳn, rồi mở lại | lượt kiểm chạy tiếp từ 30.000, không kiểm lại từ 0 | ⚠️ một phần — `OriginalPresenceStoreTests.passSurvivesReopeningTheDatabaseFile`, `passCarriesOnAfterTheAppIsKilled` (store; lượt chạy ở T6) |
+| AC-7 | 55k ảnh đã kiểm | index lại toàn bộ thư viện | trạng thái của mọi ảnh vẫn còn (không về *chưa kiểm*) | ✅ `OriginalPresenceStoreTests.reindexKeepsTheAnswers` |
 | AC-8 | ảnh A *có trên máy*; PhotoKit báo A đổi | lần mở album kế | A thành *chưa kiểm* rồi được kiểm lại; dòng tiến độ đếm A | ⚠️ chưa có |
 | AC-9 | quyền `.limited`, cho app 40 ảnh | mở album có trường này | dòng tiến độ ghi *of 40*; không có ảnh ngoài 40 ảnh đó | ⚠️ chưa có |
 | AC-10 | album *Source is NAS Home* VÀ *Original is iCloud Only* | mở album | chỉ ra ảnh có trên NAS mà bản gốc không có trên máy; chip ghi đủ hai điều kiện | ⚠️ chưa có — `SmartAlbumSQLBuilder` test |
