@@ -99,11 +99,11 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-2 | 100 ảnh: 60 có đủ bản gốc, 30 chỉ bản xem trước, 10 chưa kiểm | album *Original is On This iPhone* | *Matches 60 photos*; *is not* ra 30; 10 ảnh chưa kiểm không vào bên nào | ✅ `OriginalPresenceRuleTests.isAndIsNotLeaveUncheckedOut` |
 | AC-3 | Live Photo có ảnh trên máy, phần video chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.livePhotoWithMovieInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
 | AC-4 | ảnh đã sửa, bản gốc có trên máy, bản render chỉ trên iCloud | kiểm ảnh đó | trạng thái *không có* | ✅ `OriginalPresenceTests.editedPhotoWithRenderInCloudIsICloudOnly` (luật; ánh xạ PhotoKit ở T6) |
-| AC-5 | máy tắt mạng, 1.000 ảnh chưa kiểm | lượt kiểm chạy hết | không có request mạng nào; 1.000 dòng trạng thái được ghi | ⚠️ chưa có — test có đếm request |
+| AC-5 | máy tắt mạng, 1.000 ảnh chưa kiểm | lượt kiểm chạy hết | không có request mạng nào; 1.000 dòng trạng thái được ghi | ✅ `OriginalPresenceCheckTests.passChecksEverythingInBatches` (lượt + tuỳ chọn mạng tắt; máy thật ở T1) |
 | AC-6 | lượt kiểm tới 30.000 / 55.000 | app bị đóng hẳn, rồi mở lại | lượt kiểm chạy tiếp từ 30.000, không kiểm lại từ 0 | ⚠️ một phần — `OriginalPresenceStoreTests.passSurvivesReopeningTheDatabaseFile`, `passCarriesOnAfterTheAppIsKilled` (store; lượt chạy ở T6) |
 | AC-7 | 55k ảnh đã kiểm | index lại toàn bộ thư viện | trạng thái của mọi ảnh vẫn còn (không về *chưa kiểm*) | ✅ `OriginalPresenceStoreTests.reindexKeepsTheAnswers` |
 | AC-8 | ảnh A *có trên máy*; PhotoKit báo A đổi | lần mở album kế | A thành *chưa kiểm* rồi được kiểm lại; dòng tiến độ đếm A | ⚠️ chưa có |
-| AC-9 | quyền `.limited`, cho app 40 ảnh | mở album có trường này | dòng tiến độ ghi *of 40*; không có ảnh ngoài 40 ảnh đó | ⚠️ chưa có |
+| AC-9 | quyền `.limited`, cho app 40 ảnh | mở album có trường này | dòng tiến độ ghi *of 40*; không có ảnh ngoài 40 ảnh đó | ⚠️ một phần — `OriginalPresenceCheckTests.limitedAccessCountsOnlySharedItems` (tổng theo index; `.limited` thật chưa chụp) |
 | AC-10 | album *Source is NAS Home* VÀ *Original is iCloud Only* | mở album | chỉ ra ảnh có trên NAS mà bản gốc không có trên máy; chip ghi đủ hai điều kiện | ✅ `OriginalPresenceRuleTests.combinesWithSourceOnServer` + `compactChips` |
 | AC-11 | Library 100 ảnh, 60 có trên máy, iOS 26.5 và 18.6 | menu Filter › bật *Original on This iPhone* | lưới còn 60; thanh chip có chip tương ứng; đang có truy vấn nâng cao thì truy vấn đó bị xoá | ⚠️ chưa có — `Tools/ui-drive` + ảnh cả hai nhánh |
 | AC-12 | Mac bật Download Originals, 200 ảnh | lượt kiểm xong | *is On This Mac* ra 200; trường vẫn có trong menu trường | ⚠️ chưa có — Mac |
