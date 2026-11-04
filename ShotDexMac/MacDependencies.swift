@@ -248,7 +248,11 @@ final class MacIndexActivity: IndexRunAssertion {
 
     func beginRunAssertion(onExpiry: @escaping @MainActor () -> Void) {
         guard activity == nil else { return }
-        activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled],
+        // App Nap never throttles a run; the Mac stays awake for it only when
+        // Settings › Sources › Prevent Sleep While Indexing is on.
+        // On unless turned off (an overnight index of a whole library should finish).
+        let preventsSleep = UserDefaults.standard.object(forKey: SettingsKeys.preventsSleepWhileIndexing) as? Bool ?? true
+        activity = ProcessInfo.processInfo.beginActivity(options: preventsSleep ? .userInitiated : .userInitiatedAllowingIdleSystemSleep,
                                                          reason: "Indexing the photo library")
     }
 

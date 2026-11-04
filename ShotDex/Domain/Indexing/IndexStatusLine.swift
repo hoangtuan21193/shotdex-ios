@@ -9,6 +9,9 @@ enum IndexStatusLine {
         /// history): it is running, not up to date.
         case preparing
         case indexing(processed: Int, total: Int)
+        /// Photos are waiting to be read, and the Mac is on battery with
+        /// Pause Indexing on Battery Power on (AC-75).
+        case pausedOnBattery(waiting: Int)
         case upToDate(lastIndexed: Date?)
     }
 
@@ -32,6 +35,9 @@ enum IndexStatusLine {
         case .indexing(let processed, let total):
             String(localized: "Indexing \(processed, format: .number) of \(total, format: .number)",
                    comment: "Mac index status: a run is going; processed and total items")
+        case .pausedOnBattery(let waiting):
+            String(localized: "Paused on battery · \(waiting, format: .number) waiting",
+                   comment: "Mac index status: automatic indexing waits for the power adapter; items still to read")
         case .upToDate(let lastIndexed):
             counts.isEmpty && lastIndexed == nil
                 ? String(localized: "Not indexed yet", comment: "Mac index status: nothing has been read")
@@ -43,6 +49,9 @@ enum IndexStatusLine {
     /// and when the last run ended. Nil when there is nothing true to say.
     static func detail(_ state: State, counts: Counts, now: Date = Date()) -> String? {
         switch state {
+        case .pausedOnBattery:
+            return String(localized: "Indexing goes on when this Mac is plugged in, or turn off Pause Indexing on Battery Power.",
+                          comment: "Mac index status: under Paused on battery")
         case .preparing, .indexing:
             guard !counts.isEmpty else { return nil }
             return String(localized: "\(countsLine(counts)) read so far",

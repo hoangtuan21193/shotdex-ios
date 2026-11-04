@@ -107,7 +107,30 @@ final class SourcesModel {
                                     comment: "Sources: adding a folder failed"))
             return
         }
+        // A drive starts with what When a Drive Is Disconnected says (Mac Settings).
+        if drivesWhenUnplugged == .hidePhotos,
+           (try? SourceStore(database: database).sources())?.first(where: { $0.id == id })?.kind == "drive" {
+            try? SourceStore(database: database).setWhenUnplugged(.hidePhotos, sourceId: id)
+        }
         await read(sourceId: id)
+    }
+
+    /// Mac Settings › Sources › When a Drive Is Disconnected (FS-19.01 §1):
+    /// keep an unplugged drive's photos, marked offline, or hide them until it is back.
+    var drivesWhenUnplugged: SourceStore.WhenUnplugged {
+        UserDefaults.standard.string(forKey: SettingsKeys.whenDriveUnplugged).flatMap(SourceStore.WhenUnplugged.init(rawValue:))
+            ?? .keepPhotos
+    }
+
+    /// Sets it for every drive there is and for drives added later.
+    func setDrivesWhenUnplugged(_ choice: SourceStore.WhenUnplugged) {
+        UserDefaults.standard.set(choice.rawValue, forKey: SettingsKeys.whenDriveUnplugged)
+        let store = SourceStore(database: database)
+        for source in (try? store.sources()) ?? [] where source.kind == "drive" {
+            try? store.setWhenUnplugged(choice, sourceId: source.id)
+        }
+        readCount += 1
+        load()
     }
 
     func read(sourceId: String) async {

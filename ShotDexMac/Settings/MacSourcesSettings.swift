@@ -8,6 +8,7 @@ struct MacSourcesSettings: View {
     var body: some View {
         Form {
             MacPhotoSourcesSection()
+            MacDrivesIndexingSection()
             MacIndexSettingsSection()
         }
         .formStyle(.grouped)
@@ -20,6 +21,8 @@ struct MacIndexSettingsSection: View {
     @Environment(MacDependencies.self) private var dependencies
     @State private var counts = IndexStatusLine.Counts(photos: 0, videos: 0)
     @State private var lastIndexed: Date?
+    /// Photos not read yet, for Paused on battery.
+    @State private var waiting = 0
 
     private var library: LibraryModel? { dependencies.library }
 
@@ -32,6 +35,7 @@ struct MacIndexSettingsSection: View {
             if parts.count == 2 { return .indexing(processed: parts[0], total: parts[1]) }
         }
         #endif
+        if let library, !library.isIndexing, library.powerHold == .battery, waiting > 0 { return .pausedOnBattery(waiting: waiting) }
         guard let library, library.isIndexing else { return .upToDate(lastIndexed: lastIndexed) }
         // A run that has not counted its work yet is still a run.
         guard let progress = library.indexProgress, progress.total > 0 else { return .preparing }
@@ -40,7 +44,7 @@ struct MacIndexSettingsSection: View {
 
     /// Counts move every 500 reads and when a run starts or ends, not every tick.
     private var refreshKey: String {
-        "\(library?.isIndexing ?? false)-\((library?.indexProgress?.processed ?? 0) / 500)"
+        "\(library?.isIndexing ?? false)-\(library?.powerHold == .battery)-\((library?.indexProgress?.processed ?? 0) / 500)"
     }
 
     var body: some View {
@@ -78,6 +82,7 @@ struct MacIndexSettingsSection: View {
         if let counts = try? await dependencies.libraryQueries.indexSummaryCounts() { self.counts = counts }
         let store = dependencies.metadataStore
         let seconds = await Task.detached { (try? store.indexState())?.lastIndexedAt }.value
+        waiting = await Task.detached { (try? store.unfinishedCount()) ?? 0 }.value
         lastIndexed = seconds.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }
 }

@@ -155,6 +155,10 @@ final class LibraryModel {
     /// Whether the system is in Low Power Mode. Drives keep-awake suppression
     /// and the automatic-indexing guard.
     private(set) var isLowPowerMode = false
+    /// Why automatic indexing is waiting for power, if it is (Low Power Mode,
+    /// or a Mac on battery with Pause Indexing on Battery Power on, AC-75).
+    private(set) var powerHold = IndexPowerPolicy.Hold.none
+    @ObservationIgnored private var isOnAdapter = true
     /// True while the current run was started by an explicit user action
     /// (Settings re-index / retry). Automatic runs (library change, resume,
     /// charger auto-start) leave it false. In Low Power Mode only a manual run
@@ -254,6 +258,10 @@ final class LibraryModel {
         self.powerStatus = dependencies.powerStatus
         self.indexTraffic = dependencies.indexTraffic
         self.isLowPowerMode = dependencies.powerStatus.isLowPowerMode
+        self.isOnAdapter = dependencies.powerStatus.isCharging
+        self.powerHold = IndexPowerPolicy.hold(lowPower: dependencies.powerStatus.isLowPowerMode,
+                                               onAdapter: dependencies.powerStatus.isCharging,
+                                               pausesOnBattery: IndexPowerPolicy.pausesOnBattery())
         self.wasCharging = dependencies.powerStatus.isCharging
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
@@ -485,6 +493,26 @@ final class LibraryModel {
             return try await photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
         }
         return anchorSlice + rows.dropFirst(anchorSlice.count)
+    }
+
+    /// How many items the grid shows with nothing narrowing it — the M of
+    /// the Mac's "212 of 55,231 photos" (FS-18.02 §5) — read from the same
+    /// source the unfiltered grid would use: PhotoKit's browsable assets, or
+    /// the index plus its cloud-only files.
+    func unfilteredCount() async -> Int? {
+        let queries = libraryQueries
+        let photoKitPath = !readsGridFromIndex && sort.photoKitSortKey != nil
+            && !((try? queries.hasPhotosOutsidePhotos()) ?? false)
+        if photoKitPath {
+            let sort = self.sort
+            return await Task.detached(priority: .utility) {
+                PHAsset.fetchAssets(with: Self.browsableFetchOptions(sort: sort)).count
+            }.value
+        }
+        guard let indexed = try? await Task.detached(priority: .utility, operation: { try queries.count(matching: .empty) }).value
+        else { return nil }
+        let cloud = (try? await queries.cloudPlaceholderItems().count) ?? 0
+        return indexed + cloud
     }
 
     /// Every browsable-asset fetch in this type uses these: same predicate and
@@ -768,7 +796,7 @@ final class LibraryModel {
         // No automatic indexing in Low Power Mode. The user can still start it
         // by hand (`manual`), and a charger connecting resumes it through
         // `resumeIndexingForCharger` (which drives `runPipeline` directly).
-        guard manual || !isLowPowerMode else { return }
+        guard manual || powerHold == .none else { return }
         let allowNetwork = allowNetworkForIndexing
         runPipeline(
             allowsNetwork: allowNetwork,
@@ -793,7 +821,7 @@ final class LibraryModel {
             if manual { enqueueManualRun(.incomplete) }
             return
         }
-        guard manual || !isLowPowerMode else { return }
+        guard manual || powerHold == .none else { return }
         runPipeline(
             allowsNetwork: { true },
             manual: manual,
@@ -1468,15 +1496,32 @@ final class LibraryModel {
     /// entering LPM stops any running index; connecting a charger while in LPM
     /// auto-resumes it. The user may always start indexing by hand in LPM.
     private func handlePowerChange(lowPower: Bool, charging: Bool) {
-        let enteredLowPower = lowPower && !isLowPowerMode
         let pluggedIn = charging && !wasCharging
         isLowPowerMode = lowPower
         wasCharging = charging
-
-        if enteredLowPower, isIndexRunActive {
-            cancelIndexing()
-        } else if pluggedIn, lowPower, !isIndexRunActive {
+        isOnAdapter = charging
+        applyPowerHold()
+        // A charger in Low Power Mode lets one run go, as before.
+        if pluggedIn, lowPower, !isIndexRunActive {
             resumeIndexingForCharger()
+        }
+    }
+
+    /// Mac Settings changed Pause Indexing on Battery Power.
+    func powerSettingsChanged() {
+        applyPowerHold()
+    }
+
+    /// Entering a hold stops an automatic run; leaving the battery hold
+    /// picks indexing up again (AC-75).
+    private func applyPowerHold() {
+        let previous = powerHold
+        powerHold = IndexPowerPolicy.hold(lowPower: isLowPowerMode, onAdapter: isOnAdapter,
+                                          pausesOnBattery: IndexPowerPolicy.pausesOnBattery())
+        switch IndexPowerPolicy.step(from: previous, to: powerHold, isRunActive: isIndexRunActive, isManualRun: isManualIndexRun) {
+        case .cancel: cancelIndexing()
+        case .resume: resumeIndexingForCharger()
+        case .none: break
         }
     }
 

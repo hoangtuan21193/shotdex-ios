@@ -47,6 +47,21 @@ enum SettingsKeys {
     /// only part of indexing that talks to a server about where the user has been.
     static let lookUpPlaces = "index.lookUpPlaces"
 
+    /// Mac Settings › Sources › Pause Indexing on Battery Power (FS-18.04 §3
+    /// AC-75): automatic indexing waits while the Mac runs on its battery.
+    /// Defaults to true; read through `IndexPowerPolicy.pausesOnBattery`.
+    static let pausesIndexingOnBattery = "index.pauseOnBattery"
+
+    /// Mac Settings › Sources › Prevent Sleep While Indexing: an index run
+    /// keeps the Mac from idle sleep. Defaults to true (an overnight index
+    /// finishes); on battery, Pause Indexing on Battery Power stops it first.
+    static let preventsSleepWhileIndexing = "index.preventSleep"
+
+    /// Mac Settings › Sources › When a Drive Is Disconnected: what a drive
+    /// added from now on starts with (`SourceStore.WhenUnplugged` raw value);
+    /// the switch also sets every drive there is. Defaults to keepPhotos.
+    static let whenDriveUnplugged = "sources.whenDriveUnplugged"
+
     /// Share index results with the other devices on this iCloud account
     /// through CloudKit (intent 2026-11-02-icloud-shared-index). Defaults to
     /// **true**, read through an `object(forKey:)` nil check.

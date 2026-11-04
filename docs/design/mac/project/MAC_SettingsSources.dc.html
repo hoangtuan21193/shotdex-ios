@@ -351,14 +351,14 @@ class Component extends DCLogic {
     const behaviour = sections([
       // No .xmp sidecar row on the Mac: culling is gone (FS-18.04 §3, 2026-11-04).
       { title:'Drives and Indexing', rows:[
-        row({ label:'When a Drive Is Disconnected', popup:'Keep Photos, Marked Offline', popupW:'230px' }),
+        row({ label:'When a Drive Is Disconnected', sub:'Applies to every drive, including ones you add later', popup:'Keep Photos, Marked Offline', popupW:'230px', h:'44px' }),
         dim(row({ label:'Index New and Changed Files', popup:'Automatically', popupW:'230px' })),
         // AC-75: a Mac with no battery has nothing to pause on (tweak `battery` = none).
         battery === 'none'
           ? row(Object.assign({ label:'Pause Indexing on Battery Power', labelColor:t.label3, sub:'This Mac has no battery', ctlOp:'0.45' }, sw(false), { h:'44px' }))
           : row(Object.assign({ label:'Pause Indexing on Battery Power', sub:'Indexing always pauses in Low Power Mode' }, sw(true), { h:'44px' })),
-        row(Object.assign({ label:'Prevent Sleep While Indexing' }, sw(false))),
-        row(Object.assign({ label:'Look Up Place Names', sub:'Once per place, then remembered · the only step that leaves this Mac' }, sw(true), { h:'44px' })),
+        row(Object.assign({ label:'Prevent Sleep While Indexing', sub:'Off, indexing waits while this Mac sleeps' }, sw(true), { h:'44px' })),
+        row(Object.assign({ label:'Look Up Place Names', sub:'Looked up once per place, then remembered' }, sw(true), { h:'44px' })),
         row(Object.assign({ label:'Scan for People and Pets', sub:'41,870 of 55,231 items scanned', bar:'76%' }, sw(true), { h:'52px' }))
       ]},
       { title:'Previews', rows:[
