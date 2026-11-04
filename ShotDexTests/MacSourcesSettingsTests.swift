@@ -27,6 +27,65 @@ import Testing
         for (url, data) in folder.files { #expect(try Data(contentsOf: url) == data) }
     }
 
+    /// AC-73: a folder added twice (Add Folder… then a drop) gives one source;
+    /// a folder inside it is refused too, each time with the reason.
+    @MainActor
+    @Test func addFolderOnce() async throws {
+        let folder = try Self.folder(photos: 2)
+        defer { try? FileManager.default.removeItem(at: folder.url) }
+        let inner = folder.url.appendingPathComponent("Selects", isDirectory: true)
+        try FileManager.default.createDirectory(at: inner, withIntermediateDirectories: true)
+        let database = try AppDatabase.makeEmpty()
+        let model = Self.model(database)
+
+        await model.addFolder(folder.url, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(model.failure == nil)
+        await model.addFolder(folder.url, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(model.failure?.message == "Already part of “\(folder.url.lastPathComponent)”.")
+        model.failure = nil
+        await model.addFolder(inner, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(model.failure?.message == "Already part of “\(folder.url.lastPathComponent)”.")
+
+        #expect(try SourceStore(database: database).sources().filter { $0.kind != "photos" }.count == 1)
+        #expect(model.rows.first { $0.name == folder.url.lastPathComponent }?.text.count == 2)
+    }
+
+    /// A folder around a source is refused too, by the model, with the reason.
+    @MainActor
+    @Test func addFolderAroundASourceIsRefused() async throws {
+        let parent = try Self.folder(photos: 0)
+        defer { try? FileManager.default.removeItem(at: parent.url) }
+        let inner = parent.url.appendingPathComponent("Selects", isDirectory: true)
+        try FileManager.default.createDirectory(at: inner, withIntermediateDirectories: true)
+        let model = Self.model(try AppDatabase.makeEmpty())
+        await model.addFolder(inner, includesSubfolders: true, pairsRawAndJpeg: true)
+        await model.addFolder(parent.url, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(model.failure?.message == "Contains “Selects”. Remove that source first to add this folder.")
+        #expect(model.failure?.title == "Can’t Add This Folder")
+    }
+
+    /// A symlink to a source's folder is the same folder.
+    @Test func overlapFollowsLinks() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Link-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let real = base.appendingPathComponent("Japan", isDirectory: true)
+        try FileManager.default.createDirectory(at: real, withIntermediateDirectories: true)
+        let link = base.appendingPathComponent("Alias")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        #expect(SourceOverlap.check(link.path, against: [.init(name: "Japan", path: real.path)]) == .inside(sourceName: "Japan"))
+    }
+
+    /// A drop is one folder, not a file, not while a read goes.
+    @Test func dropRefusals() throws {
+        let folder = try Self.folder(photos: 1)
+        defer { try? FileManager.default.removeItem(at: folder.url) }
+        let file = try #require(folder.files.keys.first)
+        #expect(SourcesModel.dropRefusal([folder.url], isReading: false) == nil)
+        #expect(SourcesModel.dropRefusal([folder.url, folder.url], isReading: false) == "Drop one folder at a time.")
+        #expect(SourcesModel.dropRefusal([file], isReading: false) == "“\(file.lastPathComponent)” is a file. Drop the folder that holds it.")
+        #expect(SourcesModel.dropRefusal([folder.url], isReading: true)?.hasPrefix("Wait for the current read") == true)
+    }
+
     /// Grant Access… on a source that lost its folder: the new bookmark and
     /// name are kept, and the folder is read back to its photos.
     @MainActor

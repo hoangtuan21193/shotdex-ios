@@ -18,8 +18,18 @@ final class SourcesModel {
     private(set) var readingSourceId: String?
     /// Bumped after every read, so the grid and the tabs reload what changed.
     private(set) var readCount = 0
-    /// Remove… or Grant Access… did not go through; Settings says so.
-    var failure: String?
+    /// Add, Remove… or Grant Access… did not go through; Settings says why.
+    struct Failure: Equatable {
+        var title: String
+        var message: String
+
+        static func error(_ message: String) -> Failure {
+            Failure(title: String(localized: "Something Went Wrong", comment: "Sources: a step failed"), message: message)
+        }
+    }
+
+    var failure: Failure?
+    @ObservationIgnored private var isAdding = false
 
     @ObservationIgnored private let database: AppDatabase
     @ObservationIgnored private let runner: FolderSourceRunner
@@ -72,7 +82,31 @@ final class SourcesModel {
     /// Add Folder or Drive: the folder Files handed back is kept and read
     /// at once; its row shows the read going.
     func addFolder(_ url: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool) async {
-        guard let id = try? await runner.add(folder: url, includesSubfolders: includesSubfolders, pairsRawAndJpeg: pairsRawAndJpeg) else { return }
+        // One add or read at a time: two adds racing past the overlap check
+        // would both insert, and a read refused would leave a row never read.
+        guard readingSourceId == nil, !isAdding else {
+            failure = Failure(title: String(localized: "Can’t Add This Folder", comment: "Sources: the folder overlaps a source"),
+                              message: String(localized: "Wait for the current read to finish, then add the folder again.",
+                                              comment: "Sources: add while a read runs"))
+            return
+        }
+        isAdding = true
+        defer { isAdding = false }
+        // The same folder again, or one inside or around a source, is refused
+        // (FS-19.01 §1, FS-18.04 §3 AC-73): every file would count twice.
+        if let refusal = overlap(url) {
+            failure = Failure(title: String(localized: "Can’t Add This Folder", comment: "Sources: the folder overlaps a source"),
+                              message: refusal)
+            return
+        }
+        let id: String
+        do {
+            id = try await runner.add(folder: url, includesSubfolders: includesSubfolders, pairsRawAndJpeg: pairsRawAndJpeg)
+        } catch {
+            failure = .error(String(localized: "ShotDex couldn’t read “\(url.lastPathComponent)”: \(error.localizedDescription)",
+                                    comment: "Sources: adding a folder failed"))
+            return
+        }
         await read(sourceId: id)
     }
 
@@ -117,8 +151,8 @@ final class SourcesModel {
             // Marks every copy missing: off the main actor for a 50,000-photo source.
             try await Task.detached { try SourceStore(database: database).remove(sourceId: sourceId) }.value
         } catch {
-            failure = String(localized: "ShotDex could not remove the source: \(error.localizedDescription)",
-                             comment: "Sources: Remove failed")
+            failure = .error(String(localized: "ShotDex could not remove the source: \(error.localizedDescription)",
+                                    comment: "Sources: Remove failed"))
         }
         readCount += 1
         load()
@@ -130,20 +164,50 @@ final class SourcesModel {
         do {
             try FolderSourceAccess(database: database).grant(sourceId: sourceId, folder: folder)
         } catch {
-            failure = String(localized: "ShotDex could not keep access to “\(folder.lastPathComponent)”: \(error.localizedDescription)",
-                             comment: "Sources: Grant Access failed")
+            failure = .error(String(localized: "ShotDex could not keep access to “\(folder.lastPathComponent)”: \(error.localizedDescription)",
+                                    comment: "Sources: Grant Access failed"))
             load()
             return
         }
         await read(sourceId: sourceId)
     }
 
+    /// Why a drop on Settings › Sources is not taken: one folder at a time,
+    /// not a file, not while a read goes (FS-18.04 §3 AC-73).
+    nonisolated static func dropRefusal(_ urls: [URL], isReading: Bool) -> String? {
+        if isReading {
+            return String(localized: "Wait for the current read to finish, then drop the folder again.", comment: "Sources: drop while reading")
+        }
+        guard urls.count == 1, let url = urls.first else {
+            return String(localized: "Drop one folder at a time.", comment: "Sources: several items dropped")
+        }
+        guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
+            return String(localized: "“\(url.lastPathComponent)” is a file. Drop the folder that holds it.", comment: "Sources: a file dropped")
+        }
+        return nil
+    }
+
+    /// Why `folder` cannot be added — it is a source already, or inside or
+    /// around one — or nil when it can.
+    func overlap(_ folder: URL) -> String? {
+        // A folder that lost access keeps the path it had; a new folder there
+        // is not that source.
+        let lost = Set(rows.filter { $0.text.status == .needsAccess }.map(\.id))
+        let existing = ((try? SourceStore(database: database).sources()) ?? []).filter { !lost.contains($0.id) }.compactMap { source in
+            Self.path(of: source.bookmark).map { SourceOverlap.Existing(name: source.name, path: $0.path) }
+        }
+        return SourceOverlap.check(folder.path, against: existing).message
+    }
+
     /// Where a folder source was last seen, from its bookmark, for Grant
     /// Access…'s panel to open next to it; nil when the bookmark says nothing.
     func lastKnownPath(sourceId: String) -> URL? {
-        guard let source = (try? SourceStore(database: database).sources())?.first(where: { $0.id == sourceId }),
-              let bookmark = source.bookmark,
-              let values = URL.resourceValues(forKeys: [.pathKey], fromBookmarkData: bookmark), let path = values.path else { return nil }
+        Self.path(of: (try? SourceStore(database: database).sources())?.first { $0.id == sourceId }?.bookmark)
+    }
+
+    /// The path a bookmark records, read without opening it (no scope needed).
+    private static func path(of bookmark: Data?) -> URL? {
+        guard let bookmark, let path = URL.resourceValues(forKeys: [.pathKey], fromBookmarkData: bookmark)?.path else { return nil }
         return URL(fileURLWithPath: path, isDirectory: true)
     }
 

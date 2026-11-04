@@ -7,7 +7,9 @@ import SwiftUI
 /// Access… when a folder can no longer be opened.
 struct MacPhotoSourcesSection: View {
     @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.openWindow) private var openWindow
     @State private var removing: SourcesModel.Row?
+    @State private var isDropTargeted = false
 
     private var model: SourcesModel { dependencies.sourcesModel }
 
@@ -17,6 +19,25 @@ struct MacPhotoSourcesSection: View {
                 MacSourceRow(row: row, isReading: model.readingSourceId == row.id, isAnyReading: model.readingSourceId != nil,
                              reindex: { reindex(row) }, grantAccess: { grantAccess(row) }, remove: { removing = row })
             }
+            HStack(spacing: 8) {
+                Text(isDropTargeted ? String(localized: "Release to add", comment: "Mac Settings › Sources: a folder is over the drop row")
+                                    : String(localized: "Drop a folder here", comment: "Mac Settings › Sources: the row that takes a dropped folder"))
+                    .foregroundStyle(isDropTargeted ? MacTheme.accent : .secondary)
+                Spacer()
+                Button(String(localized: "Add Folder…", comment: "Mac Settings › Sources: add a folder source"), action: addFolder)
+                    .disabled(model.readingSourceId != nil)
+                Button(String(localized: "Connect to Server…", comment: "Mac Settings › Sources: add a server connection")) {
+                    // The form is a sheet on the Library window: bring it forward first.
+                    MacMainWindow.bringForward(openWindow)
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        NotificationCenter.default.post(name: .macAddServer, object: nil)
+                    }
+                }
+                .help(String(localized: "Opens in the Library window", comment: "Mac Settings › Sources: where Connect to Server opens"))
+            }
+            .padding(.vertical, 4)
+            .listRowBackground(isDropTargeted ? MacTheme.accentSoft : nil)
         } header: {
             HStack(alignment: .firstTextBaseline) {
                 Text("Photo Sources", comment: "Mac Settings › Sources group")
@@ -28,6 +49,17 @@ struct MacPhotoSourcesSection: View {
                  comment: "Mac Settings › Sources footer")
                 .foregroundStyle(.secondary)
         }
+        // A folder dropped anywhere on the group is added (AC-73); files and
+        // anything but one folder are not taken.
+        .dropDestination(for: URL.self) { urls, _ in
+            if let refusal = SourcesModel.dropRefusal(urls, isReading: model.readingSourceId != nil) {
+                model.failure = SourcesModel.Failure(title: String(localized: "Can’t Add This", comment: "Mac Settings › Sources: a drop was refused"),
+                                                     message: refusal)
+                return false
+            }
+            add(urls[0])
+            return true
+        } isTargeted: { isDropTargeted = $0 }
         .task {
             #if DEBUG
             await MacDemoSources.seedIfAsked(dependencies)
@@ -46,11 +78,11 @@ struct MacPhotoSourcesSection: View {
         } message: { row in
             Text(row.text.removeMessage)
         }
-        .alert(String(localized: "Something Went Wrong", comment: "Mac Settings › Sources: Remove or Grant Access failed"),
+        .alert(model.failure?.title ?? "",
                isPresented: Binding(get: { model.failure != nil }, set: { if !$0 { model.failure = nil } })) {
             Button(String(localized: "OK", comment: "Mac Settings › Sources: dismiss an error")) {}
         } message: {
-            Text(model.failure ?? "")
+            Text(model.failure?.message ?? "")
         }
     }
 
@@ -67,6 +99,26 @@ struct MacPhotoSourcesSection: View {
     private var removeTitle: String {
         guard let removing else { return "" }
         return String(localized: "Remove “\(removing.name)”?", comment: "Mac Settings › Sources: Remove Source dialog title")
+    }
+
+    private func addFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = String(localized: "Add Folder", comment: "Mac Sources: the open panel's button")
+        panel.message = String(localized: "Choose a folder or drive of photos. ShotDex reads it in place and never changes its files.",
+                               comment: "Mac Sources: Add Folder panel message")
+        let picked: (NSApplication.ModalResponse) -> Void = { response in
+            guard response == .OK, let folder = panel.url else { return }
+            add(folder)
+        }
+        if let window = NSApp.keyWindow { panel.beginSheetModal(for: window, completionHandler: picked) } else { panel.begin(completionHandler: picked) }
+    }
+
+    /// Subfolders in, RAW + JPEG as pairs: the defaults Add Source uses on iOS.
+    private func add(_ folder: URL) {
+        Task { await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true) }
     }
 
     private func reindex(_ row: SourcesModel.Row) {
