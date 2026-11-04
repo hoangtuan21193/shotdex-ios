@@ -684,3 +684,8 @@ Outside the acceptance criteria of plan `docs/_plans/2026-10-03-vs-wide-and-duo-
 
 - [ ] 08 §6 high-resolution rule is not in code: 2-Up frames load a screen-sized image, so `100%` on a 24 MP original is an upscale of that, not the original's pixels. Load a ≤ 3000px rendition for at most two frames past Fit and release it at Fit (NF-02) _(FS-01.08 §6, FS-01.08c AC-4)_
 - [ ] iPad Compare has no 100pt filmstrip and no Edit in the toolbar, so `IP_Compare` frames come out taller than the board's 832 — both belong to the FS-21 viewer toolbar (plan K5) _(FS-01.08c §2)_
+
+## FS-06.10 loop — seen in passing (2026-11-05)
+
+- [ ] Mac sidebar All Photos count shows the filtered grid's count (`MacSidebar.swift:21`, `library?.items.count`), not the library total the subtitle's "N of M" uses — pass the unfiltered count in _(FS-18.02 §5; file belonged to another session during T11)_
+- [ ] `SmartAlbumQuery.migrating` saves a one-sided range as strict `>`/`<`, while the quick filter is inclusive — an album misses photos exactly on the bound; needs `≥`/`≤` operators (or inclusive `greaterThan` semantics) _(FS-06.08, found in T11 review)_

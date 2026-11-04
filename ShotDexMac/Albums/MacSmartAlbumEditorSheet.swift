@@ -4,8 +4,13 @@ import SwiftUI
 /// FS-18.04 §1, FS-19.07 §7): a 640×560 sheet — name, media type, Match
 /// all/any, the conditions, a live count. A Source condition on a server
 /// source gets the Folder row; Choose… browses that server.
+///
+/// The same sheet is the Library's **Advanced Filter…** (FS-18.02 §5): with
+/// `applyFilter` set it has no name, and OK runs the conditions on the grid
+/// instead of saving an album.
 struct MacSmartAlbumEditorSheet: View {
     var existing: SmartAlbum?
+    var applyFilter: ((SmartAlbumQuery) -> Void)?
     var onSaved: (SmartAlbum) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(MacDependencies.self) private var dependencies
@@ -28,18 +33,25 @@ struct MacSmartAlbumEditorSheet: View {
         let password: String
     }
 
-    init(existing: SmartAlbum? = nil, onSaved: @escaping (SmartAlbum) -> Void) {
+    /// - Parameters:
+    ///   - initialQuery: a new album's (or the filter's) starting
+    ///     conditions — Save as Smart Album… hands over the Library's.
+    ///   - applyFilter: set for Advanced Filter…; nil for an album.
+    init(existing: SmartAlbum? = nil, initialQuery: SmartAlbumQuery? = nil,
+         applyFilter: ((SmartAlbumQuery) -> Void)? = nil, onSaved: @escaping (SmartAlbum) -> Void = { _ in }) {
         self.existing = existing
+        self.applyFilter = applyFilter
         self.onSaved = onSaved
         _name = State(initialValue: existing?.name ?? "")
-        var initial = existing?.query ?? .empty
+        var initial = existing?.query ?? initialQuery ?? .empty
         if initial.rules.isEmpty { initial.rules = [SmartAlbumRule()] }
         _query = State(initialValue: initial)
     }
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var isDuplicateName: Bool { !trimmedName.isEmpty && takenNames.contains(trimmedName.lowercased()) }
-    private var canSave: Bool { !trimmedName.isEmpty && !query.isEmpty && !isDuplicateName }
+    private var isFilter: Bool { applyFilter != nil }
+    private var canSave: Bool { isFilter ? !query.isEmpty : !trimmedName.isEmpty && !query.isEmpty && !isDuplicateName }
 
     /// An Original condition while the check has photos left.
     private var uncheckedOriginals: Bool {
@@ -53,15 +65,18 @@ struct MacSmartAlbumEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(existing == nil ? String(localized: "New Smart Album", comment: "Mac smart album sheet title")
+            Text(isFilter ? String(localized: "Advanced Filter", comment: "Mac Library: the rule sheet that filters the grid")
+                 : existing == nil ? String(localized: "New Smart Album", comment: "Mac smart album sheet title")
                                  : String(localized: "Edit Smart Album", comment: "Mac smart album sheet title: editing"))
                 .font(.headline)
                 .padding([.horizontal, .top], 24)
             Form {
                 Section {
-                    TextField(String(localized: "Name:", comment: "Mac smart album sheet row"), text: $name,
-                              prompt: Text("Smart Album Name", comment: "Mac smart album sheet: name placeholder"))
-                    if isDuplicateName {
+                    if !isFilter {
+                        TextField(String(localized: "Name:", comment: "Mac smart album sheet row"), text: $name,
+                                  prompt: Text("Smart Album Name", comment: "Mac smart album sheet: name placeholder"))
+                    }
+                    if isDuplicateName, !isFilter {
                         Text("A smart album named “\(trimmedName)” already exists.", comment: "Smart album: duplicate name")
                             .foregroundStyle(.red)
                     }
@@ -105,7 +120,8 @@ struct MacSmartAlbumEditorSheet: View {
                 Spacer()
                 Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(String(localized: "OK", comment: "Mac smart album sheet: save")) { save() }
+                Button(isFilter ? String(localized: "Filter", comment: "Mac Advanced Filter sheet: run the conditions on the grid")
+                                : String(localized: "OK", comment: "Mac smart album sheet: save")) { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
@@ -164,6 +180,11 @@ struct MacSmartAlbumEditorSheet: View {
 
     private func save() {
         guard canSave else { return }
+        if let applyFilter {
+            applyFilter(SmartAlbumQuery(matchMode: query.matchMode, rules: query.validRules))
+            dismiss()
+            return
+        }
         let album = SmartAlbum(
             id: existing?.id ?? UUID().uuidString,
             name: trimmedName,

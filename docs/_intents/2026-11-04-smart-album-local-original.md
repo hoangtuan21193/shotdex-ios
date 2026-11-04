@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04, người dùng chốt các câu hỏi qua lựa chọn trong phiên) |
-| Tiến độ | **đang làm** (2026-11-04) — task 12/13, 8/14 AC xanh; loop [FS0610_LOOP](../_plans/FS0610_LOOP.md) |
+| Tiến độ | **đang làm** (2026-11-04) — task 13/13, 8/14 AC xanh; loop [FS0610_LOOP](../_plans/FS0610_LOOP.md) |
 | Nguồn | phản hồi người dùng (2026-11-04, trong phiên kiểm luồng xoá của smart album "có trên NAS") |
 | Spec sinh ra từ đây | [FS-06.10](../02-functional-spec/FS-06-collections/10-original-on-device.md) |
 

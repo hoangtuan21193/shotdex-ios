@@ -63,6 +63,7 @@ struct ShotDexMacApp: App {
             MacBackupCommands()
             MacCommonPhotosCommands()
             MacActivityCommands()
+            MacFilterCommands()
         }
         // One window per common-photos run (FS-19.08 §7): not modal, and
         // closing it leaves the run going.
