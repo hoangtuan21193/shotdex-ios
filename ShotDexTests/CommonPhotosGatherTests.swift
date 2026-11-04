@@ -450,6 +450,64 @@ import Testing
         #expect(next.outcome == .nothingNew && notices.count == 2)
     }
 
+    /// AC-190: a Move set's ready list of 3, one left out in the window —
+    /// Move takes the other 2; the third stays in both folders, and no later
+    /// pass lists it again.
+    @Test func readyLeavesOneOut() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database, action: .move)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let runId = try #require(await gather.gather(watch, now: day).runId)
+        let store = CommonPhotosStore(database: database)
+        let items = try store.items(runId: runId)
+        #expect(items.count == 3)
+        let out = items[1]
+        let setKey = CommonPhotosIncremental.setKey(connectionId: watch.connectionId, folders: watch.folders, destination: watch.destination)
+        try CommonPhotosLeftOutStore(database: database).leaveOut(
+            [.init(sha256: out.sha256, name: ServerUploadPath.lastComponent(of: out.sources[0].path), size: out.size)],
+            setKey: setKey, connectionId: watch.connectionId)
+        let asOf = try #require(try store.run(id: runId)?.updatedAt)
+        let checked = Set(items.filter { $0.sha256 != out.sha256 }.map(\.sha256))
+        #expect(try store.waitingCount(runId: runId) == 2)
+
+        // The dialog said 3 (left out since, elsewhere): asked again, nothing moves.
+        #expect(try store.confirmReady(runId: runId, asOf: asOf, moving: Set(items.map(\.sha256))) == false)
+        #expect(try store.run(id: runId)?.state == .ready)
+        // It said 2: those two move.
+        #expect(try store.confirmReady(runId: runId, asOf: asOf, moving: checked))
+        try await Self.run(runId, client, database)
+
+        let after = try store.items(runId: runId)
+        #expect(after.map(\.status) == [.moved, .moved])
+        #expect(!after.contains { $0.sha256 == out.sha256 })
+        for source in out.sources { #expect(client.files[source.path] != nil) }
+        #expect(!client.removed.contains { removed in out.sources.contains { removed.hasPrefix($0.path) } })
+        // Still in the set's Left Out list.
+        #expect(try CommonPhotosLeftOutStore(database: database).entries(setKey: setKey).map(\.sha256) == [out.sha256])
+        let next = await gather.gather(watch, now: day.addingTimeInterval(900))
+        #expect(next.outcome == .nothingNew)
+    }
+
+    /// Every photo of the ready list left out: Move has nothing to move —
+    /// the yes fails, the run stays ready.
+    @Test func readyAllLeftOut() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database, action: .move)
+        let runId = try #require(await Self.autoGather(client, database).gather(watch, now: Date(timeIntervalSince1970: 1_793_700_000)).runId)
+        let store = CommonPhotosStore(database: database)
+        let setKey = CommonPhotosIncremental.setKey(connectionId: watch.connectionId, folders: watch.folders, destination: watch.destination)
+        try CommonPhotosLeftOutStore(database: database).leaveOut(try store.items(runId: runId).map {
+            .init(sha256: $0.sha256, name: ServerUploadPath.lastComponent(of: $0.sources[0].path), size: $0.size)
+        }, setKey: setKey, connectionId: watch.connectionId)
+
+        #expect(try store.waitingCount(runId: runId) == 0)
+        #expect(try store.confirmReady(runId: runId) == false)
+        #expect(try store.run(id: runId)?.state == .ready)
+    }
+
     /// Move N… moves only the list the user saw: a pass that changed it
     /// since makes the yes fail, and the window asks again.
     @Test func confirmNeedsTheListTheUserSaw() async throws {

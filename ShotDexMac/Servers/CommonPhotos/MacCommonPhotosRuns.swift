@@ -119,7 +119,7 @@ final class MacCommonPhotosRuns {
     /// becomes a run, started as a resumed one. What would stop it from
     /// starting is checked first, so a refusal leaves it ready.
     @discardableResult
-    func moveReady(runId: String, asOf: Int) -> MoveReadyOutcome {
+    func moveReady(runId: String, asOf: Int, moving: Set<String>? = nil) -> MoveReadyOutcome {
         guard let run = (try? store.run(id: runId)) ?? nil, run.state == .ready else { return .listChanged }
         var problem: String?
         if let server = (try? servers.fetch(id: run.connectionId)) ?? nil {
@@ -133,7 +133,7 @@ final class MacCommonPhotosRuns {
             entries[runId] = entry
             return .refused
         }
-        guard (try? store.confirmReady(runId: runId, asOf: asOf)) == true else { return .listChanged }
+        guard (try? store.confirmReady(runId: runId, asOf: asOf, moving: moving)) == true else { return .listChanged }
         resume(runId: runId)
         return .started
     }

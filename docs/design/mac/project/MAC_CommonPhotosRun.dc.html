@@ -427,20 +427,21 @@ class Component extends DCLogic {
     const UNDO = 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
     // Finished: the busy row is done. An undo lists only the rows it takes back (Copied ones); one whose
     // copy in Shared was edited since is Not undone.
-    // Ready to move (§6d): what the last pass found, nothing placed or removed yet. Each row has its checkbox
-    // and its planned name in Shared; IMG_4204.MOV is left out — Move 3…, and the set never gathers it again.
+    // Ready to move (§6d): what the last pass found, nothing placed or removed yet — To is blank until the
+    // run names each photo in Shared. Each row has its checkbox; IMG_4204.MOV is left out from now on — Move 3…,
+    // and the set never gathers it again.
     const READY = [
-      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4201.HEIC', '1c3e…8a02', ''],
-      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4203.HEIC', '7d41…e915', ''],
-      ['leftOut', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4204.MOV', 'a0b7…34cc', 'left out of this set'],
-      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4210 (2).HEIC', '55e2…f07d', '']
+      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '1c3e…8a02', ''],
+      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '7d41…e915', ''],
+      ['leftOut', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', '', 'a0b7…34cc', ''],
+      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '55e2…f07d', '']
     ];
     const rows = state === 'readyToMove' ? READY : state === 'running' ? L
       : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', ''] : r)
       : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared']
           : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], ''] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '']
           : ['undone', r[1], r[2], r[3], r[4], '']);
-    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', leftOut:'Left out', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
+    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', leftOut:'Left out from now on', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
     const log = rows.map((r, i) => ({ status: word[r[0]],
       icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : (r[0]==='fail' || r[0]==='not') ? FAIL : r[0]==='undone' ? UNDO : null,
       busy: r[0]==='busy' || r[0]==='undoBusy',
@@ -470,7 +471,7 @@ class Component extends DCLogic {
         footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] },
       readyToMove: { winTitle:'Common Photos — Tuấn + Vợ → Shared · Nov 3', head:'4 photos ready to move · 3 checked',
         detail:'Keep gathering found them. Nothing has been moved yet.', pct:'0%',
-        summary:'Space to compare · each checked photo is verified in “Shared”, then removed from Tuấn and Vợ.',
+        summary:'Unchecked photos stay out of this set. Check one again to include it.',
         footBtns:[ fb('Show in Browser'), fb('Not Now'), fb('Move 3…', 'default') ] }
     }[state];
     const ready = state === 'readyToMove';

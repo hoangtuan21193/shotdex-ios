@@ -146,7 +146,8 @@ struct MacActivityWindow: View {
                 let gathered = watch.isOn && watch.action == .copy
                     ? ((try? store.gathered(connectionId: watch.connectionId, folders: watch.folders, destination: watch.destination))?.photoCount ?? 0)
                     : 0
-                let waiting = ready[watch.id].map { runs in runs.reduce(0) { $0 + ((try? store.items(runId: $1.id)) ?? []).filter { $0.status == .pending }.count } } ?? 0
+                // Not left out (§6d): what Move would take.
+                let waiting = ready[watch.id].map { runs in runs.reduce(0) { $0 + ((try? store.waitingCount(runId: $1.id)) ?? 0) } } ?? 0
                 return CommonPhotosWatchRow.make(watch, connectionName: name, gathered: gathered, readyToMove: waiting)
             }
         }.value

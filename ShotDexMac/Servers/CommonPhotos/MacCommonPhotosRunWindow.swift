@@ -87,6 +87,11 @@ final class MacCommonPhotosLogModel {
     var undoneCount: Int { isUndo ? counts.done : counts.undone }
     /// The store's items as last read — the Move wording counts them.
     private(set) var items: [CommonPhotosItem] = []
+    /// §6d: SHA-256 of the photos the user left out of the run's set — a
+    /// ready run's rows show them unchecked, and Move leaves them.
+    private(set) var leftOut: Set<String> = []
+    /// The run's set, for Left Out.
+    private(set) var setKey: String?
     var filter = Filter.all { didSet { reshow() } }
     var sortOrder = [KeyPathComparator(\Row.id)] { didSet { reshow() } }
     var selection: Set<Int> = []
@@ -97,6 +102,28 @@ final class MacCommonPhotosLogModel {
     private(set) var runUpdatedAt = 0
 
     @ObservationIgnored private let store: CommonPhotosStore
+    private var connectionId = ""
+    @ObservationIgnored private var readGeneration = 0
+
+    /// §6d: checks or unchecks a photo of a ready run. Stored for the set
+    /// at once; Move leaves what is unchecked, and no later pass lists it.
+    func setLeftOut(_ isLeftOut: Bool, row: Row) {
+        guard let setKey, let item = items.first(where: { $0.position == row.id }) else { return }
+        // The box and the counts move at once; the read confirms.
+        if isLeftOut { leftOut.insert(item.sha256) } else { leftOut.remove(item.sha256) }
+        let leftOutStore = CommonPhotosLeftOutStore(database: store.database)
+        do {
+            if isLeftOut {
+                try leftOutStore.leaveOut([.init(sha256: item.sha256, name: row.name, size: item.size)],
+                                          setKey: setKey, connectionId: connectionId)
+            } else {
+                try leftOutStore.include([item.sha256], setKey: setKey)
+            }
+        } catch {
+            CommonPhotosScanModel.logger.error("left out not stored: \(error.localizedDescription, privacy: .public)")
+        }
+        read()
+    }
     @ObservationIgnored private var lastRead = ContinuousClock.now - .seconds(10)
     @ObservationIgnored private var pendingRead: Task<Void, Never>?
 
@@ -148,14 +175,23 @@ final class MacCommonPhotosLogModel {
 
     func readNow() async {
         lastRead = .now
+        // Reads finish out of order: only the latest one lands.
+        readGeneration += 1
+        let generation = readGeneration
         let store = store
         let runId = runId
-        let read: (CommonPhotosRun, [CommonPhotosItem], [Row])? = await Task.detached(priority: .userInitiated) {
+        let read: (CommonPhotosRun, [CommonPhotosItem], [Row], Set<String>)? = await Task.detached(priority: .userInitiated) {
             guard let run = (try? store.run(id: runId)) ?? nil else { return nil }
             let items = (try? store.items(runId: runId)) ?? []
-            return (run, items, items.map { Self.row($0, run: run) })
+            let setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
+            let leftOut = run.state == .ready
+                ? Set(((try? CommonPhotosLeftOutStore(database: store.database).entries(setKey: setKey)) ?? []).map(\.sha256)) : []
+            return (run, items, items.map { Self.row($0, run: run, leftOut: leftOut) }, leftOut)
         }.value
-        guard let (run, items, rows) = read else { return }
+        guard let (run, items, rows, leftOut) = read, generation == readGeneration else { return }
+        self.leftOut = leftOut
+        setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
+        connectionId = run.connectionId
         csvName = run.csvPath.map { ServerUploadPath.lastComponent(of: $0) }
         runUpdatedAt = run.updatedAt
         isUndo = run.isUndo
@@ -177,13 +213,16 @@ final class MacCommonPhotosLogModel {
         }).joined(separator: "\n")
     }
 
-    nonisolated private static func row(_ item: CommonPhotosItem, run: CommonPhotosRun) -> Row {
+    nonisolated private static func row(_ item: CommonPhotosItem, run: CommonPhotosRun, leftOut: Set<String> = []) -> Row {
         let name = item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? ""
         var status = CommonPhotosLog.status(item.status)
         if run.isUndo, item.status == .failed {
             status = String(localized: "Not undone", comment: "Common photos undo log status: the photo was not taken back")
         } else if run.isUndo, [.copying, .moving, .placed].contains(item.status) {
             status = String(localized: "Undoing…", comment: "Common photos undo log status: the photo being taken back")
+        } else if run.state == .ready, item.status == .pending, leftOut.contains(item.sha256) {
+            // §6d: unchecked — stored for the set, Move leaves it.
+            status = String(localized: "Left out from now on", comment: "Common photos log status: a photo the user left out of a ready run")
         } else if run.state == .ready, item.status == .pending {
             status = String(localized: "Ready to move", comment: "Common photos log status: found by Keep gathering, not moved yet")
         } else if item.status == .skipped, item.failure?.0 == .alreadyThere {
@@ -269,7 +308,9 @@ private struct MacCommonPhotosRunContent: View {
         .alert(moveTitle, isPresented: $confirmsMove) {
             Button(String(localized: "Move", comment: "Mac common photos: confirm the move"), role: .destructive) {
                 // Refused: it stays ready, and the header says why.
-                guard runs.moveReady(runId: run.id, asOf: log.runUpdatedAt) == .listChanged else { return }
+                // What the alert counted: a choice made elsewhere since asks again.
+                let moving = Set(log.items.filter { $0.status == .pending && !log.leftOut.contains($0.sha256) }.map(\.sha256))
+                guard runs.moveReady(runId: run.id, asOf: log.runUpdatedAt, moving: moving) == .listChanged else { return }
                 // A pass changed the list meanwhile: show it and ask again.
                 Task {
                     await log.readNow()
@@ -279,7 +320,10 @@ private struct MacCommonPhotosRunContent: View {
             Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
                 .keyboardShortcut(.defaultAction)
         } message: {
-            Text(MacCommonPhotosWords.moveMessage(folders: run.folders, destination: destinationName))
+            let leftOutCount = log.items.filter { $0.status == .pending }.count - readyCount
+            Text(MacCommonPhotosWords.moveMessage(folders: run.folders, destination: destinationName)
+                 + (leftOutCount > 0 ? " " + String(localized: "\(leftOutCount.formatted()) left out stay where they are.",
+                                                    comment: "Common photos: Move confirmation, photos left out of the ready list") : ""))
         }
         .onChange(of: entry.state) { log.read() }
         .onChange(of: entry.isRunning) { log.read() }
@@ -287,6 +331,13 @@ private struct MacCommonPhotosRunContent: View {
         .onChange(of: runs.generation) { log.read() }
         .task(id: "\(entry.state.rawValue)-\(entry.isRunning)-\(log.rows.count)-\(log.undoneCount)-\(runs.generation)") { refreshCanUndo() }
         #if DEBUG
+        // `-ShotDexCommonPhotosReadyLeaveOut IMG_0002.JPG`: that ready row unchecked (§6d), for screenshots.
+        .task(id: "\(entry.isReady)-\(log.rows.count)") {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard entry.isReady, let index = arguments.firstIndex(of: "-ShotDexCommonPhotosReadyLeaveOut"), index + 1 < arguments.count,
+                  let row = log.rows.first(where: { $0.name.hasSuffix(arguments[index + 1]) }), !log.leftOut.contains(row.sha256) else { return }
+            log.setLeftOut(true, row: row)
+        }
         // `-ShotDexCommonPhotosAskUndo`: the Undo question once the run is done;
         // `-ShotDexCommonPhotosUndoAfterRun`: undo it at once, for screenshots.
         .task(id: "\(entry.state.rawValue)-\(log.rows.count)") {
@@ -431,9 +482,13 @@ private struct MacCommonPhotosRunContent: View {
     private var headline: String {
         if entry.isFinished { return summary }
         if entry.isReady {
-            return readyCount == 1
+            let waiting = log.items.filter { $0.status == .pending }.count
+            let found = waiting == 1
                 ? String(localized: "1 photo ready to move", comment: "Common photos window: Keep gathering found one photo for a Move set")
-                : String(localized: "\(readyCount.formatted()) photos ready to move", comment: "Common photos window: Keep gathering found photos for a Move set")
+                : String(localized: "\(waiting.formatted()) photos ready to move", comment: "Common photos window: Keep gathering found photos for a Move set")
+            // §6d: some left out — how many Move takes.
+            guard readyCount < waiting else { return found }
+            return found + " · " + String(localized: "\(readyCount.formatted()) checked", comment: "Common photos window: ready photos still checked")
         }
         if entry.isStopped { return String(localized: "Stopped at \(ofTotal)", comment: "Common photos window: the user stopped the run") }
         if entry.isRunning && entry.isFinishing {
@@ -613,7 +668,22 @@ private struct MacCommonPhotosRunContent: View {
     @ViewBuilder
     private func statusCell(_ row: MacCommonPhotosLogModel.Row) -> some View {
         let inFlight = [.copying, .moving, .placed].contains(row.status)
-        if inFlight, !entry.isRunning {
+        if entry.isReady, row.status == .pending {
+            // §6d: a photo waiting to move — checked, or left out of the set.
+            let isLeftOut = log.leftOut.contains(row.sha256)
+            HStack(spacing: 6) {
+                Toggle(isOn: Binding(get: { !isLeftOut }, set: { log.setLeftOut(!$0, row: row) })) { EmptyView() }
+                    .toggleStyle(.checkbox)
+                    .labelsHidden()
+                    .accessibilityLabel(row.name)
+                    .help(String(localized: "Unchecked: left out of this set from now on. Check it again to include it.",
+                                 comment: "Common photos log: ready row checkbox tooltip"))
+                    .accessibilityValue(isLeftOut
+                        ? String(localized: "Left out", comment: "Common photos log: ready row checkbox, VoiceOver value")
+                        : String(localized: "Included", comment: "Common photos log: ready row checkbox, VoiceOver value"))
+                Text(row.statusText).lineLimit(1).foregroundStyle(.secondary)
+            }
+        } else if inFlight, !entry.isRunning {
             // Not going: a photo left mid-step is unfinished, not busy.
             Text("Unfinished", comment: "Common photos log status: a photo left mid-step while the run is not going")
                 .foregroundStyle(.orange).lineLimit(1)
@@ -662,7 +732,8 @@ private struct MacCommonPhotosRunContent: View {
     }
 
     /// The photos a ready run still lists.
-    private var readyCount: Int { log.items.filter { $0.status == .pending }.count }
+    /// What Move N… moves: the waiting photos the user did not leave out.
+    private var readyCount: Int { log.items.filter { $0.status == .pending && !log.leftOut.contains($0.sha256) }.count }
 
     /// "Tuấn and Vợ".
     private var folderList: String {
@@ -685,6 +756,9 @@ private struct MacCommonPhotosRunContent: View {
             Group {
                 if let csv = log.csvName, entry.isFinished {
                     Text("Log saved in \(destinationName) as “\(csv)”", comment: "Common photos window: where the CSV is")
+                } else if entry.isReady, readyCount < log.items.filter({ $0.status == .pending }).count {
+                    Text("Unchecked photos stay out of this set. Check one again to include it.",
+                         comment: "Common photos window: a ready run with photos left out")
                 } else if entry.isReady {
                     Text(String(localized: "Moving copies each photo to “\(destinationName)”, checks it, then removes it from \(folderList).",
                                 comment: "Common photos window: what Move does, on a ready run"))

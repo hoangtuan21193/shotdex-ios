@@ -379,13 +379,44 @@ extension CommonPhotosStore {
     /// was not ready any more (moved, discarded), or — `asOf`, the
     /// `updatedAt` the user's list was read at — a pass changed the list
     /// since: nothing changes then, and the user is asked again.
-    func confirmReady(runId: String, asOf: Int? = nil, now: Int = Int(Date().timeIntervalSince1970)) throws -> Bool {
+    ///
+    /// `moving`, the SHA-256 of the photos the user was asked to move (§6d):
+    /// the waiting photos not left out must be exactly those — a photo left
+    /// out or included elsewhere since (the sheet) makes the yes fail too,
+    /// and so does a list with nothing left to move.
+    func confirmReady(runId: String, asOf: Int? = nil, moving: Set<String>? = nil,
+                      now: Int = Int(Date().timeIntervalSince1970)) throws -> Bool {
         try database.writer.write { db in
+            guard let run = try CommonPhotosRun.fetchOne(db, key: runId), run.state == .ready,
+                  asOf == nil || run.updatedAt == asOf else { return false }
+            let setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
+            let waiting = try String.fetchAll(db, sql: """
+                SELECT sha256 FROM common_photo_items WHERE runId = ? AND status = ?
+                AND sha256 NOT IN (SELECT sha256 FROM common_photo_left_out WHERE setKey = ?)
+                """, arguments: [runId, CommonPhotosItem.Status.pending.rawValue, setKey])
+            guard !waiting.isEmpty else { return false }
+            if let moving, Set(waiting) != moving { return false }
+            // The photos the user left out of the list are not moved: they
+            // leave the run here, in the same write as the confirm.
             try db.execute(sql: """
-                UPDATE common_photo_runs SET state = ?, updatedAt = ?
-                WHERE id = ? AND state = ? AND (? IS NULL OR updatedAt = ?)
-                """, arguments: [CommonPhotosRun.State.running.rawValue, now, runId, CommonPhotosRun.State.ready.rawValue, asOf, asOf])
-            return db.changesCount > 0
+                DELETE FROM common_photo_items WHERE runId = ? AND status = ?
+                AND sha256 IN (SELECT sha256 FROM common_photo_left_out WHERE setKey = ?)
+                """, arguments: [runId, CommonPhotosItem.Status.pending.rawValue, setKey])
+            try db.execute(sql: "UPDATE common_photo_runs SET state = ?, updatedAt = ? WHERE id = ?",
+                           arguments: [CommonPhotosRun.State.running.rawValue, now, runId])
+            return true
+        }
+    }
+
+    /// A ready run's photos still to move: waiting, not left out of the set.
+    func waitingCount(runId: String) throws -> Int {
+        try database.reader.read { db in
+            guard let run = try CommonPhotosRun.fetchOne(db, key: runId) else { return 0 }
+            let setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
+            return try Int.fetchOne(db, sql: """
+                SELECT COUNT(*) FROM common_photo_items WHERE runId = ? AND status = ?
+                AND sha256 NOT IN (SELECT sha256 FROM common_photo_left_out WHERE setKey = ?)
+                """, arguments: [runId, CommonPhotosItem.Status.pending.rawValue, setKey]) ?? 0
         }
     }
 
