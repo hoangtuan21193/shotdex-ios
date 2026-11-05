@@ -112,7 +112,9 @@ struct CommonPhotosRunner: Sendable {
                     modifiedAt: file.modified.map { Int($0.timeIntervalSince1970) },
                     sidecar: sidecar.map { ServerUploadPath.join(folders[file.folder], $0) })
             }
-            return CommonPhotosItem(runId: runId, position: position, sha256: photo.sha256, size: photo.size, sources: sources)
+            var item = CommonPhotosItem(runId: runId, position: position, sha256: photo.sha256, size: photo.size, sources: sources)
+            item.checkMethod = photo.isQuick ? .quick : .full
+            return item
         }
     }
 
@@ -352,6 +354,39 @@ struct CommonPhotosRunner: Sendable {
             item.partPath = nil
         }
 
+        // Quick Check (§6e): the scan read no SHA-256. The first folder's
+        // copy is read now and its SHA-256 is the photo's — what the copy in
+        // the destination is checked against; the other folders' copies are
+        // never read.
+        var quickLocal: URL?
+        defer { if let quickLocal { try? FileManager.default.removeItem(at: quickLocal) } }
+        if item.sha256.hasPrefix(CommonPhoto.quickPrefix) {
+            // It goes to this Mac first: the same room rule as any copy.
+            if let free = freeBytes(), free - item.size < BackupRunner.minimumFreeBytes {
+                throw Stop.noRoom(needed: item.size + BackupRunner.minimumFreeBytes - free)
+            }
+            report(.downloading, 0)
+            try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+            let url = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
+            let read: String
+            do {
+                read = try await client.download(source.path, to: url, progress: { report(.downloading, Double($0) / Double(max(1, itemSize)) / 3) })
+            } catch let error as RemoteFileError where !error.stopsBatch {
+                try? FileManager.default.removeItem(at: url)
+                try finish(&item, .failed, reason: .serverError, detail: error.localizedDescription)
+                return
+            }
+            let length = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
+            guard length == item.size else {
+                try? FileManager.default.removeItem(at: url)
+                try finish(&item, .failed, reason: .changedOnServer)
+                return
+            }
+            quickLocal = url
+            item.sha256 = read
+            try store.update(item)
+        }
+
         // The name in the destination: Skipped when the same bytes are there.
         let taken = destination.sizes[name.lowercased()]
         if taken == item.size {
@@ -390,7 +425,8 @@ struct CommonPhotosRunner: Sendable {
             // shows the step while it does; one that has not answered yet
             // shows nothing for the ask, so a refusal leaves the steps as before.
             var copiedOnServer = false
-            if destination.copiesOnServer != false {
+            // A quick photo's bytes are here already: they go up from here.
+            if destination.copiesOnServer != false, quickLocal == nil {
                 if destination.copiesOnServer == true { report(.uploading, 0) }
                 do {
                     copiedOnServer = try await client.copyOnServer(source.path, to: ServerUploadPath.partPath(for: target))
@@ -404,17 +440,19 @@ struct CommonPhotosRunner: Sendable {
             if copiedOnServer {
                 report(.uploading, 2.0 / 3)
             } else {
-                step = .downloading
-                report(.downloading, 0)
-                let downloaded = try await client.download(source.path, to: local, progress: { report(.downloading, Double($0) / size / 3) })
-                guard downloaded == item.sha256 else {
-                    destination.sizes[freeName.lowercased()] = nil
-                    try finish(&item, .failed, reason: .changedOnServer)
-                    return
+                if quickLocal == nil {
+                    step = .downloading
+                    report(.downloading, 0)
+                    let downloaded = try await client.download(source.path, to: local, progress: { report(.downloading, Double($0) / size / 3) })
+                    guard downloaded == item.sha256 else {
+                        destination.sizes[freeName.lowercased()] = nil
+                        try finish(&item, .failed, reason: .changedOnServer)
+                        return
+                    }
                 }
                 try Task.checkCancellation()
                 step = .uploading
-                try await write.uploadPart(local, for: target, progress: { report(.uploading, (1 + Double($0) / size) / 3) })
+                try await write.uploadPart(quickLocal ?? local, for: target, progress: { report(.uploading, (1 + Double($0) / size) / 3) })
             }
             Self.log.info("common photos \(copiedOnServer ? "copied on the server" : "downloaded and uploaded", privacy: .public): \(name, privacy: .private)")
             step = .readingBack
@@ -470,6 +508,11 @@ struct CommonPhotosRunner: Sendable {
                       state: Progress, progress: @escaping @Sendable (Progress) -> Void) async throws {
         guard let source = item.sources.first else {
             try finish(&item, .failed, reason: .noSource)
+            return
+        }
+        // Move deletes on a SHA-256 of every byte, never on samples (§6e).
+        guard !item.sha256.hasPrefix(CommonPhoto.quickPrefix) else {
+            try finish(&item, .failed, reason: .unreadableRecord)
             return
         }
         let name = ServerUploadPath.lastComponent(of: source.path)

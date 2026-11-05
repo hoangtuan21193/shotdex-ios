@@ -17,6 +17,15 @@ enum CommonPhotosLog {
         }
     }
 
+    /// The log window's Check cell (FS-19.08 §6e).
+    static func check(_ method: CommonPhotosItem.CheckMethod?) -> String {
+        switch method {
+        case .quick: String(localized: "Quick", comment: "Common photos log, Check column: Same by three samples")
+        case .full: String(localized: "Full", comment: "Common photos log, Check column: Same by every byte")
+        case nil: ""
+        }
+    }
+
     /// The log window's File info cell (FS-19.08 §6e).
     static func fileInfo(_ outcome: FileInfoOutcome?) -> String {
         switch outcome {
@@ -57,18 +66,21 @@ enum CommonPhotosLog {
     /// empty where the run wrote no copy; last, so a script reading the
     /// earlier columns by position still reads them.
     static func csv(_ items: [CommonPhotosItem], isUndo: Bool = false) -> String {
-        var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason", "File info"])]
+        var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason", "File info", "Check"])]
         for item in items {
             lines.append(CSVField.line([
                 isUndo ? (item.status == .undone ? "Undone" : item.isDone ? "Not undone" : csvStatus(item.status)) : csvStatus(item.status),
                 item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? "",
                 item.sources.map(\.path).joined(separator: "; "),
                 item.destinationPath ?? "",
-                item.sha256,
+                // A Quick Check photo not read yet has no SHA-256 (§6e).
+                item.sha256.hasPrefix(CommonPhoto.quickPrefix) ? "" : item.sha256,
                 csvReason(item),
                 // An undo's row has its own verdict: a Move's copies put
                 // back with their dates or not; a Copy's undo dates nothing.
                 item.fileInfo?.rawValue ?? "",
+                // How Same was proven (§6e): quick or full; blank on an undo's rows.
+                isUndo || item.status == .skipped ? "" : item.checkMethod?.rawValue ?? "",
             ].map(defused)))
         }
         return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"

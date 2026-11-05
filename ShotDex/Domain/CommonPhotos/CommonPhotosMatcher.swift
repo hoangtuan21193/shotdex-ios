@@ -137,4 +137,16 @@ struct CommonPhoto: Equatable, Sendable {
     /// One list per folder, in folder order — a folder may hold the photo
     /// more than once.
     let files: [[CommonPhotosFile]]
+
+    /// Quick Check (FS-19.08 §6e): Same by path, size and three samples, no
+    /// SHA-256 read. Its key stands where the SHA-256 would — the samples'
+    /// hash and the first copy's path, so two photos never share one — and
+    /// the run puts the real SHA-256 in its place when it reads the photo.
+    static let quickPrefix = "quick:"
+
+    static func quickKey(samples: String, firstCopy: CommonPhotosFile) -> String {
+        quickPrefix + samples + ":" + firstCopy.relativePath
+    }
+
+    var isQuick: Bool { sha256.hasPrefix(Self.quickPrefix) }
 }

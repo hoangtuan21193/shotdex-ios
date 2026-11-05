@@ -58,7 +58,10 @@ struct CommonPhotosCompareLoader: Sendable {
             throw error
         }
         try Task.checkCancellation()
-        guard offset == size, FileChecksum.hex(hash.finalize()) == sha256 else { return .changed }
+        // A Quick Check row has no SHA-256 to hold the copy to (§6e): the
+        // size is all there is to check.
+        let isQuick = sha256.hasPrefix(CommonPhoto.quickPrefix)
+        guard offset == size, isQuick || FileChecksum.hex(hash.finalize()) == sha256 else { return .changed }
         // Another load of the same copy may have finished first: its file stands.
         if !FileManager.default.fileExists(atPath: target.path) {
             try FileManager.default.moveItem(at: part, to: target)

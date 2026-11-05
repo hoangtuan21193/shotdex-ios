@@ -399,6 +399,13 @@ tháng/năm thì không (share Windows NTFS).
 - Đổi sang **Move** sau khi quét quick → kết quả bị bỏ, phải Scan lại (băm đủ); giữa sheet ghi "Quick check results
   cleared. Move reads every byte, so Scan again." và nút thành **Scan**. Move không bao giờ dựa trên mẫu.
 - Ảnh quick không ghi vào bảng **SHA đã đọc** (§6c) cho bản ở folder khác — lần sau Move vẫn phải băm bản đó.
+- Chi tiết (T7, 2026-11-05): chỉ ghép quick khi mẫu đó có **đúng một file** ở mỗi folder — cùng ảnh hai lần trong một
+  folder đi đường băm, ra một ảnh nhiều bản như hôm nay; cỡ nào bộ đã có ảnh trong **Left Out** thì không ghép quick
+  (Left Out nhớ theo SHA-256); bỏ chọn một hàng quick thì đọc bản đầu lấy SHA-256 rồi mới lưu vào Left Out; Compare của
+  hàng quick tải bản sao mà không đòi SHA-256 (ghi "compared by three samples"); trước khi tải bản quick về Mac, kiểm chỗ
+  trống như mọi bản; CSV để trống SHA-256 của ảnh quick chưa đọc và cột Check ở hàng Skipped; tắt Quick check sau một
+  lượt quét quick cũng bỏ kết quả ("Quick check is off. Scan again to check every byte."). Tự gom (§6c) chưa dùng Quick
+  check — lưu theo bộ cùng Organize ở T10.
 - Đích: Tuan/Hue lần quét đầu ~5,5 giờ → ~1 giờ (13.340 × 2 × 113 ms ≈ 50 phút mẫu + băm phần còn lại).
 
 ### Chạy lại không liệt kê lại folder ngày không đổi

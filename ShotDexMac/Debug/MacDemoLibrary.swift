@@ -194,6 +194,8 @@ enum MacDemoLibrary {
         if arguments.contains("-ShotDexCommonPhotosSlow") { model.groupDelay = .seconds(2) }
         // `-ShotDexCommonPhotosNoDates`: the sheet as on a server that lost the dates last time (§6e).
         if arguments.contains("-ShotDexCommonPhotosNoDates") { model.serverKeepsNoDates = true }
+        // `-ShotDexCommonPhotosQuick`: Quick check on (§6e).
+        if arguments.contains("-ShotDexCommonPhotosQuick") { model.quickCheck = true }
         if arguments.contains("-ShotDexCommonPhotosScan") { model.scan() }
     }
 

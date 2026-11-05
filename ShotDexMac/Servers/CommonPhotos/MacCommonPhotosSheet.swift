@@ -93,7 +93,9 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var keepsGathering = false
 
     /// Board `MAC_CommonPhotos`: the sheet at 640×560, labels in a 64pt column.
-    static let size = CGSize(width: 640, height: 560)
+    // 640 tall (MAC_STYLE: a sheet whose body is a results list), so the
+    // list keeps four rows under the options §6e added.
+    static let size = CGSize(width: 640, height: 640)
     private static let labelWidth: CGFloat = 64
     private static let saveToWidth: CGFloat = 168
     private static let segmentWidth: CGFloat = 64
@@ -126,6 +128,10 @@ private struct MacCommonPhotosSheetContent: View {
                      comment: "Mac common photos sheet: what Move does")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            } else {
+                quickCheckRow
                     .padding(.leading, Self.labelWidth + 8)
                     .padding(.top, 6)
             }
@@ -401,7 +407,13 @@ private struct MacCommonPhotosSheetContent: View {
                 if let failure = model.failure { failureLine(failure).frame(maxWidth: .infinity, alignment: .leading) }
                 HStack(spacing: 16) {
                     Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                    count(String(localized: "Same", comment: "Mac common photos sheet: photos proven the same"), model.sameCount, done: true)
+                    HStack(spacing: 5) {
+                        count(String(localized: "Same", comment: "Mac common photos sheet: photos proven the same"), model.sameCount, done: true)
+                        if model.quickCount > 0 {
+                            Text("· \(model.quickCount.formatted()) quick", comment: "Mac common photos sheet: how many Same photos Quick check settled")
+                                .foregroundStyle(.secondary).monospacedDigit()
+                        }
+                    }
                     if model.checkingCount > 0 {
                         count(String(localized: "Checking", comment: "Mac common photos sheet: photos still being checked"),
                               model.checkingCount, done: false)
@@ -616,6 +628,12 @@ private struct MacCommonPhotosSheetContent: View {
         case .moveChecksAgain:
             String(localized: "Moving checks each copy before removing it. Scan again to list the photos.",
                    comment: "Mac common photos sheet: results dropped after switching to Move")
+        case .quickCleared:
+            String(localized: "Quick check results cleared. Move reads every byte, so Scan again.",
+                   comment: "Mac common photos sheet: quick results dropped after switching to Move")
+        case .quickOff:
+            String(localized: "Quick check is off. Scan again to check every byte.",
+                   comment: "Mac common photos sheet: quick results dropped after turning Quick check off")
         case .otherDestination:
             String(localized: "This folder has photos of its own already gathered. Scan again to list what's new.",
                    comment: "Mac common photos sheet: results dropped after changing the destination")
@@ -696,6 +714,24 @@ private struct MacCommonPhotosSheetContent: View {
     }
 
     // MARK: Keep gathering (FS-19.08 §6c)
+
+    /// Quick Check (FS-19.08 §6e): Copy only, off by default; the tooltip
+    /// says what it gives up.
+    private var quickCheckRow: some View {
+        HStack(spacing: 8) {
+            Toggle(String(localized: "Quick check", comment: "Mac common photos sheet: compare photos at the same path by samples (FS-19.08 §6e)"),
+                   isOn: $model.quickCheck)
+                .toggleStyle(.checkbox)
+                .fixedSize()
+                .accessibilityLabel(String(localized: "Quick check for photos in the same place",
+                                           comment: "Mac common photos sheet: VoiceOver name of Quick check"))
+            Text("Faster: same path and size are sampled. Move reads every byte.",
+                 comment: "Mac common photos sheet: what Quick check does, in one line")
+                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .help(String(localized: "Photos at the same path with the same size are compared by sampling, not read in full, so a file changed in the middle could be missed. Move always reads every byte.",
+                     comment: "Mac common photos sheet: Quick check tooltip"))
+    }
 
     private var keepGatheringRow: some View {
         HStack(spacing: 8) {
@@ -912,7 +948,17 @@ private struct MacCommonPhotosRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .opacity(isAlreadyThere ? 0.5 : 1)
             VStack(alignment: .leading, spacing: 1) {
-                Text(row.name).lineLimit(1).foregroundStyle(isAlreadyThere ? .secondary : .primary)
+                HStack(spacing: 6) {
+                    Text(row.name).lineLimit(1).foregroundStyle(isAlreadyThere ? .secondary : .primary)
+                    if row.isQuick {
+                        Text("Quick", comment: "Mac common photos sheet: a row Quick check settled by samples")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.fill.secondary, in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+                .help(row.isQuick ? String(localized: "Compared by three samples", comment: "Mac common photos sheet: the Quick tag's tooltip") : "")
                 // Where it comes from, then where it goes: the destination name never truncates.
                 HStack(spacing: 0) {
                     Text(row.paths).lineLimit(1).truncationMode(.middle)

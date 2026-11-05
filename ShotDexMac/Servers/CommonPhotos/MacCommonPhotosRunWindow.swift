@@ -58,6 +58,8 @@ final class MacCommonPhotosLogModel {
         let to: String
         let shortSHA: String
         let reason: String
+        /// §6e: Quick / Full; blank on skipped and undo rows.
+        let check: String
         /// §6e: Kept / Dates not kept / Tags not kept / —.
         let fileInfo: String
         let datesLost: Bool
@@ -65,6 +67,7 @@ final class MacCommonPhotosLogModel {
         let csvStatus: String
         let csvReason: String
         let csvFileInfo: String
+        let csvCheck: String
         let fromPaths: String
         let toPath: String
         let sha256: String
@@ -225,9 +228,9 @@ final class MacCommonPhotosLogModel {
         func field(_ text: String) -> String {
             text.replacingOccurrences(of: "\t", with: " ").replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
         }
-        let header = ["Status", "Name", "From", "To", "SHA-256", "Reason", "File info"].joined(separator: "\t")
+        let header = ["Status", "Name", "From", "To", "SHA-256", "Reason", "File info", "Check"].joined(separator: "\t")
         return ([header] + picked.map { row in
-            [row.csvStatus, row.name, row.fromPaths, row.toPath, row.sha256, row.csvReason, row.csvFileInfo].map(field).joined(separator: "\t")
+            [row.csvStatus, row.name, row.fromPaths, row.toPath, row.sha256, row.csvReason, row.csvFileInfo, row.csvCheck].map(field).joined(separator: "\t")
         }).joined(separator: "\n")
     }
 
@@ -251,16 +254,19 @@ final class MacCommonPhotosLogModel {
         return Row(id: item.position, status: item.status, statusText: status, name: name,
                    from: item.sources.map { place($0.path, run: run, name: name) }.joined(separator: " · "),
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
-                   shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
+                   shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 && !item.sha256.hasPrefix(CommonPhoto.quickPrefix)
+                       ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
+                   check: run.isUndo || item.status == .skipped ? "" : CommonPhotosLog.check(item.checkMethod),
                    fileInfo: run.state == .ready ? "" : notRestored ? String(localized: "Not restored", comment: "Common photos log, File info column: Restore File Info left this copy alone (the Reason says why)")
                        : CommonPhotosLog.fileInfo(item.fileInfo),
                    datesLost: item.fileInfo == .datesNotKept || notRestored,
                    csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
                    csvReason: CommonPhotosLog.csvReason(item),
                    csvFileInfo: item.fileInfo?.rawValue ?? "",
+                   csvCheck: run.isUndo || item.status == .skipped ? "" : item.checkMethod?.rawValue ?? "",
                    fromPaths: item.sources.map(\.path).joined(separator: "; "), toPath: item.destinationPath ?? "",
-                   sha256: item.sha256)
+                   sha256: item.sha256.hasPrefix(CommonPhoto.quickPrefix) ? "" : item.sha256)
     }
 
     /// "Tuấn/Da Lat", or "Vợ/Phone/2025-06-01 IMG_4021.HEIC" when the name
@@ -714,11 +720,11 @@ private struct MacCommonPhotosRunContent: View {
             TableColumn(String(localized: "Status", comment: "Common photos log column"), value: \.statusText) { row in
                 statusCell(row)
             }
-            .width(min: 110, ideal: 150)
+            .width(min: 110, ideal: 140)
             TableColumn(String(localized: "Name", comment: "Common photos log column"), value: \.name) { row in
                 Text(row.name).lineLimit(1)
             }
-            .width(min: 80, ideal: 110)
+            .width(min: 80, ideal: 100)
             TableColumn(String(localized: "From", comment: "Common photos log column"), value: \.from) { row in
                 Text(row.from).foregroundStyle(.secondary).lineLimit(1).help(row.fromPaths)
             }
@@ -726,7 +732,11 @@ private struct MacCommonPhotosRunContent: View {
             TableColumn(String(localized: "To", comment: "Common photos log column"), value: \.to) { row in
                 Text(row.to).foregroundStyle(.secondary).lineLimit(1).help(row.toPath)
             }
-            .width(min: 100, ideal: 200)
+            .width(min: 100, ideal: 170)
+            TableColumn(String(localized: "Check", comment: "Common photos log column: how Same was proven, Quick or Full (FS-19.08 §6e)"), value: \.check) { row in
+                Text(row.check).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .width(min: 50, ideal: 64)
             TableColumn(String(localized: "File info", comment: "Common photos log column: whether the copy kept its source's dates (FS-19.08 §6e)"), value: \.fileInfo) { row in
                 Text(row.fileInfo).foregroundStyle(row.datesLost ? Color.orange : .secondary).lineLimit(1)
             }
@@ -734,7 +744,7 @@ private struct MacCommonPhotosRunContent: View {
             TableColumn(String(localized: "SHA-256", comment: "Common photos log column"), value: \.sha256) { row in
                 Text(row.shortSHA).foregroundStyle(.secondary).monospacedDigit().help(row.sha256)
             }
-            .width(min: 60, ideal: 76)
+            .width(min: 64, ideal: 84)
             TableColumn(String(localized: "Reason", comment: "Common photos log column"), value: \.reason) { row in
                 Text(row.reason).foregroundStyle(row.status == .failed ? Color(nsColor: .systemRed) : .secondary).lineLimit(1)
             }

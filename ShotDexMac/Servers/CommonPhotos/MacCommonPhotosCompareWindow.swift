@@ -501,7 +501,7 @@ private struct MacCommonPhotosCompareContent: View {
     private func meta(_ side: CommonPhotosCompare.Copy) -> String {
         var parts = [side.size.formatted(.byteCount(style: .file))]
         if let date = model.previews[side.path]?.captured { parts.append(date.formatted(date: .abbreviated, time: .shortened)) }
-        parts.append("SHA-256 " + String(row.sha256.prefix(8)))
+        if !row.isQuick { parts.append("SHA-256 " + String(row.sha256.prefix(8))) }
         return parts.joined(separator: " · ")
     }
 
@@ -512,7 +512,8 @@ private struct MacCommonPhotosCompareContent: View {
                   systemImage: "checkmark")
                 .foregroundStyle(.green)
                 .fontWeight(.semibold)
-            Text(row.sha256).font(.caption.monospaced()).foregroundStyle(MacTheme.Editor.secondaryText)
+            Text(row.isQuick ? String(localized: "Quick check — compared by three samples, not read in full", comment: "Common photos Compare: a Quick Check row has no SHA-256") : row.sha256)
+                .font(.caption.monospaced()).foregroundStyle(MacTheme.Editor.secondaryText)
                 .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
             Spacer(minLength: 0)
             Text("↑↓ next row · Esc close", comment: "Common photos compare: keys").font(.caption)

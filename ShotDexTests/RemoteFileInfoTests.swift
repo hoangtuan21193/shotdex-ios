@@ -290,7 +290,7 @@ import Testing
         #expect(rows.map(\.status) == [.undone, .undone])
         #expect(rows.allSatisfy { $0.fileInfo == .datesNotKept })
         // A whole undo takes its CSVs away (§6b); a partial one leaves this.
-        #expect(CommonPhotosLog.csv(rows, isUndo: true).contains(",dates not kept\r\n"))
+        #expect(CommonPhotosLog.csv(rows, isUndo: true).contains(",dates not kept,\r\n"))
     }
 
     /// An undo of a Copy dates nothing: its rows carry no verdict, not the
@@ -346,7 +346,7 @@ import Testing
         let sheet = CommonPhotosScanModel(connectionId: "S1", sourceId: "src", folders: ["A", "B"], client: fixture.nas, database: database)
         #expect(sheet.serverKeepsNoDates)
         let csv = try #require(fixture.csv)
-        #expect(csv.text.contains(",dates not kept\r\n"))
+        #expect(csv.text.contains(",dates not kept,full\r\n"))
 
         fixture.nas.keepsDates = true
         for path in fixture.nas.files.keys where path.hasPrefix("C/") { fixture.nas.drop(path) }

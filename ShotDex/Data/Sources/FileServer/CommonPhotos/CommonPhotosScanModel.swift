@@ -52,6 +52,8 @@ final class CommonPhotosScanModel {
         let isIncluded: Bool
         /// The first folder's copy, for its thumbnail.
         let serverPath: String
+        /// Same by Quick Check (§6e): path, size, samples — no SHA-256 yet.
+        var isQuick: Bool { sha256.hasPrefix(CommonPhoto.quickPrefix) }
     }
 
     let connectionId: String
@@ -79,11 +81,25 @@ final class CommonPhotosScanModel {
             // A Copy scan took earlier hashes on trust (FS-19.08 §6c); a
             // Move deletes on them, so it scans again.
             if action == .move, scannedTrustingCache, phase != .idle {
+                let hadQuick = photos.contains(where: \.isQuick)
                 resetScan()
-                notice = .moveChecksAgain
+                notice = hadQuick ? .quickCleared : .moveChecksAgain
             }
         }
     }
+    /// Quick Check (FS-19.08 §6e), Copy only, off until the user turns it
+    /// on: same path and size, three samples, no SHA-256. Turned off after
+    /// a quick scan, those results go — they were never read in full.
+    var quickCheck = false {
+        didSet {
+            if !quickCheck, oldValue, photos.contains(where: \.isQuick) {
+                resetScan()
+                notice = .quickOff
+            }
+        }
+    }
+    /// Rows Quick Check made Same, for "Same 282 · 214 quick".
+    var quickCount: Int { listed.count(where: \.isQuick) }
     /// The server's error the last scan stopped on, for the helper to tell a
     /// folder gone from a server away (FS-19.08 §6c).
     private(set) var failureError: RemoteFileError?
@@ -104,7 +120,7 @@ final class CommonPhotosScanModel {
     /// — the ones the results leave out.
     private(set) var alreadyGathered = 0
     /// Why the last results went (FS-19.08 §6c): said where they were.
-    enum Notice: Equatable { case moveChecksAgain, otherDestination }
+    enum Notice: Equatable { case moveChecksAgain, otherDestination, quickCleared, quickOff }
     private(set) var notice: Notice?
     /// The scan read only the sizes new to its set (its destination was
     /// known when it listed).
@@ -245,14 +261,36 @@ final class CommonPhotosScanModel {
             if let setKey { record { try $0.include(shas, setKey: setKey) } }
         } else {
             leftOut.formUnion(shas)
-            let photos = chosen.map { CommonPhotosLeftOutStore.Photo(sha256: $0.sha256, name: $0.name, size: $0.size) }
-            if let setKey {
-                record { try $0.leaveOut(photos, setKey: setKey, connectionId: connectionId) }
-            } else {
-                photos.forEach { leftOutPending[$0.sha256] = $0 }
+            // A Quick Check row has no SHA-256 (§6e): its first copy is read
+            // for one before it is stored, so a later full scan knows it.
+            let photos = chosen.filter { !$0.isQuick }.map { CommonPhotosLeftOutStore.Photo(sha256: $0.sha256, name: $0.name, size: $0.size) }
+            store(leftOut: photos)
+            let quick = chosen.filter(\.isQuick)
+            if !quick.isEmpty {
+                let client = client
+                Task { [weak self] in
+                    var resolved: [(row: String, photo: CommonPhotosLeftOutStore.Photo)] = []
+                    for row in quick {
+                        guard let sha256 = try? await client.sha256(of: row.serverPath, progress: { _ in }) else { continue }
+                        resolved.append((row.sha256, .init(sha256: sha256, name: row.name, size: row.size)))
+                    }
+                    guard let self else { return }
+                    // Checked again meanwhile: not stored.
+                    self.store(leftOut: resolved.filter { self.leftOut.contains($0.row) }.map(\.photo))
+                    self.reloadLeftOutEntries()
+                }
             }
         }
         reloadLeftOutEntries()
+    }
+
+    private func store(leftOut photos: [CommonPhotosLeftOutStore.Photo]) {
+        guard !photos.isEmpty else { return }
+        if let setKey {
+            record { try $0.leaveOut(photos, setKey: setKey, connectionId: connectionId) }
+        } else {
+            photos.forEach { leftOutPending[$0.sha256] = $0 }
+        }
     }
 
     /// Include from the Left Out list: back as a row, checked, from the
@@ -562,8 +600,13 @@ final class CommonPhotosScanModel {
             let known = (await knownHashes(preview, folders: folders))
                 .merging(records.compactMapValues(\.sha256), uniquingKeysWith: { index, _ in index })
             let seen = gathered.seen
+            // Sizes a left-out photo has: never quick there (§6e) — the
+            // Left Out list knows photos by their SHA-256.
+            let storedOut = self.setKey.flatMap { key in try? self.leftOutStore?.entries(setKey: key) } ?? []
+            let leftOutSizes = Set(storedOut.map(\.size) + self.leftOutPending.values.map(\.size))
             let found = try await CommonPhotosVerifier(client: watched).verify(
-                preview, folders: folders, knownHashes: known, trustsCache: trustsCache,
+                preview, folders: folders, knownHashes: known, trustsCache: trustsCache, quick: trustsCache && quickCheck,
+                fullSizes: leftOutSizes,
                 hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
                 found: { [weak self] batch in
                 let fresh = CommonPhotosIncremental.newPhotos(batch, folders: folders, seen: seen)
@@ -727,7 +770,13 @@ final class CommonPhotosScanModel {
             // A file that would decide a row but could not be read: that row
             // gets no plan rather than a guess the run would contradict.
             var unread = Set<String>()
-            for there in CommonPhotosDestinationPlan.toHash(planned, in: existing) {
+            // A quick photo has no SHA-256 to match a file of its name and
+            // size: that row gets no plan — the run reads it and decides.
+            let namedSizes = Set(existing.map { "\($0.name.lowercased())|\($0.size)" })
+            for (index, photo) in planned.enumerated() where photos[index].isQuick {
+                if namedSizes.contains("\(photo.name.lowercased())|\(photo.size)") { unread.insert(photo.name.lowercased()) }
+            }
+            for there in CommonPhotosDestinationPlan.toHash(planned.filter { !$0.sha256.hasPrefix(CommonPhoto.quickPrefix) }, in: existing) {
                 // Unread, it stays a name taken by other bytes: the plan
                 // shows the next free name, the run checks again.
                 let sha: String

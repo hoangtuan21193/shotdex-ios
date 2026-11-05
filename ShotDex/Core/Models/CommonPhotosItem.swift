@@ -81,6 +81,15 @@ struct CommonPhotosItem: Hashable, Sendable {
     /// and undo never removes it. Kept apart from `reason`, which a later
     /// step may overwrite.
     var destinationWasThere = false
+    /// How the photo was proven Same (FS-19.08 §6e); nil for runs before it.
+    enum CheckMethod: String, Codable, Sendable {
+        /// Path, size and three samples (Quick Check, Copy only).
+        case quick
+        /// SHA-256 of every byte.
+        case full
+    }
+
+    var checkMethod: CheckMethod?
     /// What became of the copy's dates and flags (FS-19.08 §6e); nil where
     /// the run did not write the copy, or ran before §6e.
     var fileInfo: FileInfoOutcome?
@@ -150,6 +159,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         sidecarSHA256 = row["sidecarSHA256"]
         destinationWasThere = row["destinationWasThere"] ?? false
         fileInfo = (row["fileInfo"] as String?).flatMap(FileInfoOutcome.init(rawValue:))
+        checkMethod = (row["checkMethod"] as String?).flatMap(CheckMethod.init(rawValue:))
         updatedAt = row["updatedAt"]
     }
 
@@ -168,6 +178,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         container["sidecarSHA256"] = sidecarSHA256
         container["destinationWasThere"] = destinationWasThere
         container["fileInfo"] = fileInfo?.rawValue
+        container["checkMethod"] = checkMethod?.rawValue
         container["updatedAt"] = updatedAt
     }
 }

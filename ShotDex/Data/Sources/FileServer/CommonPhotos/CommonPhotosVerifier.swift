@@ -47,9 +47,17 @@ struct CommonPhotosVerifier {
     /// for the next scan. `found` hears each size group's Same photos as
     /// they are decided; `progress` hears after every group and while a big
     /// file hashes. A server that went away stops the scan.
+    ///
+    /// `quick` (Copy only, FS-19.08 §6e): a first-folder copy and a copy in
+    /// each other folder at the same path — case and Unicode form aside —
+    /// whose samples match are Same without a SHA-256; every other copy goes
+    /// the long way, so a photo filed under another day is still found.
+    /// `fullSizes` are sizes never settled quick (a photo left out there).
     func verify(_ preview: CommonPhotosMatcher.Preview, folders: [String],
                 knownHashes: [CommonPhotosFile: String] = [:],
                 trustsCache: Bool = false,
+                quick: Bool = false,
+                fullSizes: Set<Int64> = [],
                 hashed: @Sendable ([CommonPhotosFile: String]) -> Void = { _ in },
                 found: @Sendable ([CommonPhoto]) -> Void = { _ in },
                 progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws -> [CommonPhoto] {
@@ -81,7 +89,15 @@ struct CommonPhotosVerifier {
                 samples[file] = try await skippingUnreadable { try await sample(file, folders: folders) }
             }
             state.unreadableCount += group.files.joined().count - samples.count
-            let candidates = Self.flatten(CommonPhotosMatcher.shared(group.files, keys: samples), folderCount: group.files.count)
+            var candidates = Self.flatten(CommonPhotosMatcher.shared(group.files, keys: samples), folderCount: group.files.count)
+
+            // Quick Check: same path and samples in every folder — Same now.
+            var quickPhotos: [CommonPhoto] = []
+            // A size the set has a photo left out at goes the long way: the
+            // Left Out list knows photos by their SHA-256.
+            if quick, !fullSizes.contains(group.size), group.size > Int64(Self.sampleLength) * 3, candidates.count > 1 {
+                (quickPhotos, candidates) = Self.quickPairs(candidates, samples: samples, size: group.size)
+            }
 
             var hashes: [CommonPhotosFile: String] = [:]
             var fresh: Set<CommonPhotosFile> = []
@@ -112,7 +128,7 @@ struct CommonPhotosVerifier {
 
             let worked = hashes.filter { fresh.contains($0.key) }
             if !worked.isEmpty { hashed(worked) }
-            var groupPhotos: [CommonPhoto] = []
+            var groupPhotos: [CommonPhoto] = quickPhotos
             for (sha256, files) in CommonPhotosMatcher.shared(candidates, keys: hashes).sorted(by: { $0.key < $1.key }) {
                 // Nothing read this time vouches for these bytes: read one
                 // — not for a Copy, which reads every byte it writes back.
@@ -181,6 +197,39 @@ struct CommonPhotosVerifier {
         } catch let error as RemoteFileError where !error.stopsBatch {
             return nil
         }
+    }
+
+    /// Splits `candidates` into the photos Quick Check settles — a
+    /// first-folder copy with a copy at the same path and with the same
+    /// samples in every other folder — and what is left to hash. A sample
+    /// that more than one file of a folder holds (the same photo twice in
+    /// one folder) is left to the hash, which groups every copy into one
+    /// photo instead of one per pair.
+    static func quickPairs(_ candidates: [[CommonPhotosFile]], samples: [CommonPhotosFile: String],
+                           size: Int64) -> (photos: [CommonPhoto], rest: [[CommonPhotosFile]]) {
+        let pathKey = { (file: CommonPhotosFile) in file.relativePath.precomposedStringWithCanonicalMapping.lowercased() }
+        // Per folder: how many files hold each sample, and the file at each (path, sample).
+        let perFolder = candidates.map { files -> (counts: [String: Int], byPath: [String: CommonPhotosFile]) in
+            var counts: [String: Int] = [:]
+            var byPath: [String: CommonPhotosFile] = [:]
+            for file in files {
+                guard let sample = samples[file] else { continue }
+                counts[sample, default: 0] += 1
+                byPath[pathKey(file) + "\u{0}" + sample] = file
+            }
+            return (counts, byPath)
+        }
+        var taken = Set<CommonPhotosFile>()
+        var photos: [CommonPhoto] = []
+        for first in candidates[0] {
+            guard let sample = samples[first], perFolder.allSatisfy({ $0.counts[sample] == 1 }) else { continue }
+            let key = pathKey(first) + "\u{0}" + sample
+            let copies = perFolder.compactMap { $0.byPath[key] }
+            guard copies.count == candidates.count else { continue }
+            photos.append(CommonPhoto(sha256: CommonPhoto.quickKey(samples: sample, firstCopy: first), size: size, files: copies.map { [$0] }))
+            taken.formUnion(copies)
+        }
+        return (photos, candidates.map { $0.filter { !taken.contains($0) } })
     }
 
     private static func flatten(_ byKey: [String: [[CommonPhotosFile]]], folderCount: Int) -> [[CommonPhotosFile]] {
