@@ -456,9 +456,9 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
 
   | Thông tin | SMB | SFTP | WebDAV |
   |---|---|---|---|
-  | Ngày sửa | ✅ `SET_INFO` FileBasicInformation | ✅ `setstat` mtime | thử `PROPPATCH` / `X-OC-Mtime` |
+  | Ngày sửa | ✅ `SET_INFO` FileBasicInformation | ❌ `dates not kept` (Citadel không có `setstat` public; người dùng 2026-11-05) | thử `PROPPATCH` / `X-OC-Mtime` |
   | Ngày tạo | ✅ cùng lệnh | — (giao thức không có) | thử `PROPPATCH` `Win32CreationTime` |
-  | Cờ chỉ‑đọc, ẩn, archive | ✅ cùng lệnh | quyền POSIX (`setstat` permissions) | — |
+  | Cờ chỉ‑đọc, ẩn, archive | ✅ cùng lệnh | quyền POSIX, đặt lúc `openFile` | — |
   | Tag Finder, luồng phụ (ADS) | thử ở `/plan` | — | — |
 
   **Chốt (người dùng 2026-11-05):**
