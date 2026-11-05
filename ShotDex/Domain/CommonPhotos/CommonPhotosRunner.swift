@@ -399,7 +399,7 @@ struct CommonPhotosRunner: Sendable {
             if destination.sizes[ServerUploadPath.lastComponent(of: placed).lowercased()] == item.size,
                try await client.sha256(of: placed, progress: { _ in }) == item.sha256 {
                 try Task.checkCancellation()
-                if item.fileInfo == nil, let info = try? await client.fileInfo(at: source.path) {
+                if item.fileInfo == nil, let info = try? await client.sourceInfo(at: source.path) {
                     item.fileInfo = await write.applyInfo(info, to: placed)
                 }
                 try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: placed), into: destination)
@@ -528,7 +528,7 @@ struct CommonPhotosRunner: Sendable {
             step = .moving
             // The first folder's dates and flags (FS-19.08 §6e): the copy is
             // that file, down to what Finder sorts by.
-            let sourceInfo = try? await client.fileInfo(at: source.path)
+            let sourceInfo = try? await client.sourceInfo(at: source.path)
             let outcome = try await write.moveIntoPlace(target, replacing: false, info: sourceInfo)
             // Cancelled after the rename: no verdict, so Resume sets them. A
             // source whose info could not be read has none either — that

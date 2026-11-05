@@ -247,6 +247,9 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         case refuses
     }
 
+    /// No streams here: what a copy carries is the file's info.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
     func fileInfo(at path: String) async throws -> RemoteFileInfo? {
         let (data, response) = try await send(propfind(url(path), depth: 0))
         if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }

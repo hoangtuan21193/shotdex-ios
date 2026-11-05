@@ -520,6 +520,16 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
     - Chỉ hỏi luồng khi connection chưa bị nhớ là không có luồng; file nguồn đầu tiên không có luồng nào thì không
       hỏi các file sau trong lượt.
     - Lỗi ở bất kỳ bước luồng nào → `tags not kept`, ảnh vẫn Copied.
+    - *Đã làm (T10b)*: luồng chỉ đọc ở file sắp được chép (`RemoteFileClient.sourceInfo(at:)`; `fileInfo` đọc lại /
+      ghi trước khi Move vẫn chỉ stat). Chỉ chép `:AFP_AfpInfo:$DATA` và `:com.apple.metadata\u{F022}…:$DATA`; luồng khác
+      (`Zone.Identifier`, resource fork) bỏ qua, không làm đổi kết luận; tên luồng kiểm lại trước khi ghi, không bao giờ
+      là dữ liệu chính (`::$DATA`, `:$DATA`, hay mục không tên impacket trả — bản nháp đầu đã ghi đè part vì nó). Ghi
+      bằng handle riêng `overwriteIf` (luồng cùng tên trên bản đích bị thay, không xoá), **không bao giờ xoá luồng**.
+      Server trả `NOT_SUPPORTED`/`INVALID_INFO_CLASS` khi liệt kê = file không có luồng (không phải `tags not kept`).
+      **Lệch có chủ đích**: không nhớ "không có luồng" theo lượt/connection — một liệt kê mỗi file sắp chép (rẻ, một
+      lệnh ghép); nhớ sai từng làm kết luận `kept` khi tag bị mất. Chưa làm: Undo đẩy lại bản Move bằng đường chép
+      không mang luồng (thông tin đã ghi không có luồng) nhưng vẫn có thể ghi `kept`; Restore trên bản đích đã chỉ‑đọc
+      ghi luồng bị từ chối → `tags not kept`.
     - Server cục bộ (impacket trên APFS) không có luồng thật (ghi `x:s` thành file riêng, liệt kê ra rỗng) → test cục
       bộ chỉ chứng minh nhánh "không có luồng / tags not kept"; luồng thật chứng minh trên NAS ở `/verify` (ghi một file
       tạm, cần người dùng cho phép). Làm ở task riêng sau ngày và cờ.

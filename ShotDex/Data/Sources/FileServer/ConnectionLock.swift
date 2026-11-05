@@ -139,6 +139,7 @@ final class LockedRemoteFileClient: RemoteFileClient {
     func removeFolderTree(_ path: String) async throws { try await locked { try await $0.removeFolderTree(path) } }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await locked { try await $0.storageSpace(at: path) } }
     func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await locked { try await $0.fileInfo(at: path) } }
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await locked { try await $0.sourceInfo(at: path) } }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         try await locked { try await $0.setFileInfo(info, at: path) }
     }

@@ -130,6 +130,7 @@ final class ByteCountingClient: RemoteFileClient, @unchecked Sendable {
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func removeFolderTree(_ path: String) async throws { try await base.removeFolderTree(path) }
     func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await base.sourceInfo(at: path) }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         try await base.setFileInfo(info, at: path)
     }

@@ -339,6 +339,11 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Read-only files refuse a rename and a delete, as Windows does; the
     /// flag has to be cleared first.
     var readOnlyRefusesChanges = false
+    /// Off: streams (Finder tags) are not written — an SMB server with none.
+    var keepsStreams = true
+
+    /// The fake keeps streams in `infos`, as SMB keeps them on the file.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
 
     func fileInfo(at path: String) async throws -> RemoteFileInfo? {
         lock.withLock {
@@ -350,14 +355,18 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         log("info \(path)\(info.isReadOnly ? " read-only" : "")")
         guard keepsDates else { return .unsupported }
+        let streamsWritten = keepsStreams || info.streams.isEmpty
         try lock.withLock {
             guard storage[path] != nil else { throw RemoteFileError.other("missing \(path)") }
             var landed = info
             landed.modified += dateDrift
+            // A request without streams leaves the file's own, as SMB does.
+            landed.streams = streamsWritten && !info.streams.isEmpty ? info.streams : (infos[path]?.streams ?? [])
+            landed.hasUnreadStreams = false
             infos[path] = landed
             modified[path] = landed.modified
         }
-        return .applied
+        return streamsWritten ? .applied : .appliedWithoutStreams
     }
 
     private func refuseIfReadOnly(_ path: String) throws {

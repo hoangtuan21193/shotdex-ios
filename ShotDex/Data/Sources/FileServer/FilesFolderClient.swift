@@ -268,6 +268,9 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// No streams here: what a copy carries is the file's info.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
     func fileInfo(at path: String) async throws -> RemoteFileInfo? {
         let url = try url(path)
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .contentModificationDateKey, .creationDateKey, .isUserImmutableKey, .isHiddenKey]

@@ -71,7 +71,7 @@ struct CommonPhotosInfoRestorer: Sendable {
             if try await client.fileSize(at: copy) != item.size {
                 reason = kept ?? CommonPhotosItem.reason(.changedInShared)
                 state.leftAlone += 1
-            } else if let source = item.sources.first?.path, let info = try await client.fileInfo(at: source) {
+            } else if let source = item.sources.first?.path, let info = try await client.sourceInfo(at: source) {
                 guard let outcome = await write.applyInfo(info, to: copy) else { throw CancellationError() }
                 fileInfo = outcome
                 outcomes.append(outcome)

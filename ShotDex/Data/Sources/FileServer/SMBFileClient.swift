@@ -328,11 +328,91 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         do {
             let (client, rest) = try await openInShare(path)
             guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
+            // Streams first: writing one changes the file's write time,
+            // which the dates then set right (§6e "Thứ tự trên SMB").
+            let streamsWritten = await writeStreams(info.streams, to: rest, client: client)
             _ = try await client.session.setInfo(path: Self.smbName(rest), Self.basicInformation(info))
-            return .applied
+            return streamsWritten ? .applied : .appliedWithoutStreams
         } catch {
             throw Self.map(error, host: server.host, path: path)
         }
+    }
+
+    /// The info a copy carries (FS-19.08 §6e): dates and flags, and the
+    /// file's Finder tags and Finder info streams.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? {
+        guard var info = try await fileInfo(at: path) else { return nil }
+        do {
+            let (client, rest) = try await openInShare(path)
+            await readStreams(of: rest, client: client, into: &info)
+        } catch {
+            info.hasUnreadStreams = true
+        }
+        return info
+    }
+
+    /// Finder tags and Finder info, each up to 64 KB, by the names the
+    /// server gives them; Finder info only whole (60 bytes). Other streams
+    /// are not ShotDex's to carry and are left out without a word. A server
+    /// with no streams lists none; anything else that goes wrong — a reply
+    /// too long for SMBClient's fixed buffer, a stream that cannot be read —
+    /// marks them unread: the copy's tags are not kept, its dates still are.
+    private func readStreams(of rest: String, client: SMBClient, into info: inout RemoteFileInfo) async {
+        let listed: [SMBStreamInformation.Stream]
+        do {
+            let response = try await client.session.queryInfo(path: Self.smbName(rest), fileInfoClass: .fileStreamInformation)
+            listed = SMBStreamInformation.streams(in: response.buffer)
+        } catch let response as ErrorResponse where Self.hasNoStreams(response) {
+            return
+        } catch {
+            info.hasUnreadStreams = true
+            return
+        }
+        for stream in listed where stream.isCarried {
+            guard stream.size <= Int64(RemoteFileStream.maximumSize) else {
+                info.hasUnreadStreams = true
+                continue
+            }
+            let reader = client.fileReader(path: rest + stream.name)
+            do {
+                let data = stream.size == 0 ? Data() : try await reader.read(offset: 0, length: UInt32(stream.size))
+                try? await reader.close()
+                guard !stream.isFinderInfo || data.count == SMBStreamInformation.finderInfoSize else {
+                    info.hasUnreadStreams = true
+                    continue
+                }
+                info.streams.append(RemoteFileStream(name: stream.name, data: data))
+            } catch {
+                try? await reader.close()
+                info.hasUnreadStreams = true
+            }
+        }
+    }
+
+    /// Writes each stream onto `rest` on a handle of its own, replacing a
+    /// stream of that name; false when one could not be written — the
+    /// copy's tags are not kept. Nothing is ever removed: a stream already
+    /// there is the user's.
+    private func writeStreams(_ streams: [RemoteFileStream], to rest: String, client: SMBClient) async -> Bool {
+        for stream in streams {
+            // Checked again before any write: never the file's own bytes.
+            guard SMBStreamInformation.Stream(name: stream.name, size: Int64(stream.data.count)).isCarried else { return false }
+            do {
+                let created = try await client.session.create(
+                    desiredAccess: [.writeData, .writeAttributes, .synchronize], fileAttributes: [],
+                    shareAccess: [.read, .write], createDisposition: .overwriteIf, createOptions: [.nonDirectoryFile],
+                    name: Self.smbName(rest) + stream.name)
+                var failed = false
+                if !stream.data.isEmpty {
+                    do { try await client.session.write(data: stream.data, fileId: created.fileId, offset: 0) } catch { failed = true }
+                }
+                _ = try? await client.session.close(fileId: created.fileId)
+                if failed { return false }
+            } catch {
+                return false
+            }
+        }
+        return true
     }
 
     /// `FileBasicInformation` as MS-FSCC 2.4.7 lays it out. SMBClient keeps
@@ -413,6 +493,12 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     // MARK: - Errors
+
+    /// A server with no alternate data streams answers a stream listing
+    /// with `NOT_SUPPORTED` or `INVALID_INFO_CLASS`: its files have none.
+    private static func hasNoStreams(_ response: ErrorResponse) -> Bool {
+        [0xC000_00BB, 0xC000_0003].contains(response.header.status)
+    }
 
     /// `STATUS_DISK_FULL`; SMBClient's enum does not name it.
     private static let diskFull: UInt32 = 0xC000_007F

@@ -626,6 +626,7 @@ private final class MacDebugRunClient: RemoteFileClient, @unchecked Sendable {
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }
     func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await base.sourceInfo(at: path) }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         if keepsNoDates { return .unsupported }
         return try await base.setFileInfo(info, at: path)

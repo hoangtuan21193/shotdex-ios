@@ -267,6 +267,9 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// No streams here: what a copy carries is the file's info.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
     func fileInfo(at path: String) async throws -> RemoteFileInfo? {
         do {
             let attributes = try await connected().getAttributes(at: path)

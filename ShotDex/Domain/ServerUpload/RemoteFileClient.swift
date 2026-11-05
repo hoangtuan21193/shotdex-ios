@@ -72,6 +72,11 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// nothing is there. A server that does not say a creation date or a
     /// flag leaves it nil or false.
     func fileInfo(at path: String) async throws -> RemoteFileInfo?
+    /// The info a copy of the file carries: `fileInfo`, plus its Finder tags
+    /// and Finder info where the server keeps them in streams (SMB). Asked
+    /// only of a file about to be copied — the streams cost a round trip
+    /// each. Not a default either, for the same reason as `setFileInfo`.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo?
     /// Gives the file at `path` the dates and flags in `info`, as far as the
     /// protocol lets it (FS-19.08 §6e). `.unsupported` when this server will
     /// not set dates at all — the caller reports "dates not kept" rather than
@@ -111,6 +116,25 @@ struct RemoteFileInfo: Hashable, Codable, Sendable {
     var isReadOnly = false
     var isHidden = false
     var isArchive = false
+    /// The file's alternate data streams (SMB): Finder tags, Finder info
+    /// (FS-19.08 §6e) — each by the name the server gave it, at most
+    /// `RemoteFileStream.maximumSize`. Read for a copy, never stored: Undo
+    /// puts dates back, a rename keeps a file's streams.
+    var streams: [RemoteFileStream] = []
+    /// The streams could not all be read (too many for the reply, one too
+    /// big): a copy cannot carry them — its tags are not kept.
+    var hasUnreadStreams = false
+
+    private enum CodingKeys: String, CodingKey { case modified, created, isReadOnly, isHidden, isArchive }
+
+    /// The dates and flags alone, for a second request after the streams
+    /// went with the first.
+    var withoutStreams: RemoteFileInfo {
+        var copy = self
+        copy.streams = []
+        copy.hasUnreadStreams = false
+        return copy
+    }
 
     /// The same info without the read-only flag: what a part file gets before
     /// it is renamed, since a read-only file cannot be renamed over or
@@ -128,10 +152,24 @@ struct RemoteFileInfo: Hashable, Codable, Sendable {
     }
 }
 
+/// One alternate data stream of a file, as the server names it
+/// (`:AFP_AfpInfo:$DATA`).
+struct RemoteFileStream: Hashable, Sendable {
+    /// Samba keeps streams in extended attributes of 64 KB at most; a bigger
+    /// one is no tag, and is not read.
+    static let maximumSize = 64 * 1024
+
+    let name: String
+    let data: Data
+}
+
 /// Whether a server took a `setFileInfo` request.
 enum FileInfoSupport: Equatable, Sendable {
     /// Sent; whether it held is for a re-read to say.
     case applied
+    /// Dates and flags sent, but the file's streams (Finder tags) could
+    /// not be written: its tags are not kept.
+    case appliedWithoutStreams
     /// This server does not set dates (SFTP here, a WebDAV server that
     /// refused every way).
     case unsupported

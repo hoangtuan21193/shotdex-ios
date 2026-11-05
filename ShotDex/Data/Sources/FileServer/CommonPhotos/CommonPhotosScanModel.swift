@@ -1175,6 +1175,7 @@ private final class WatchedClient: RemoteFileClient, @unchecked Sendable {
         try await base.copyOnServer(source, to: destination)
     }
     func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await base.sourceInfo(at: path) }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         try await base.setFileInfo(info, at: path)
     }

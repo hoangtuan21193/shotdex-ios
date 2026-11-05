@@ -31,40 +31,40 @@ struct VerifiedRemoteWrite: Sendable {
     @discardableResult
     func moveIntoPlace(_ destination: String, replacing: Bool, info: RemoteFileInfo? = nil) async throws -> FileInfoOutcome? {
         let part = ServerUploadPath.partPath(for: destination)
-        var taken = false
+        var answer: FileInfoSupport?
         if let info {
-            taken = (try? await client.setFileInfo(info.writable, at: part)) == .applied
+            answer = try? await client.setFileInfo(info.writable, at: part)
         }
         if replacing {
             try await client.remove(destination)
         }
         try await client.move(part, to: destination)
         guard let info, !Task.isCancelled else { return nil }
-        guard taken else { return .datesNotKept }
+        return await verdict(answer, info: info, at: destination)
+    }
+
+    /// After the first request (streams, dates and flags but read-only):
+    /// read-only now — the streams went with the first — then read back.
+    private func verdict(_ answer: FileInfoSupport?, info: RemoteFileInfo, at destination: String) async -> FileInfoOutcome? {
+        guard answer == .applied || answer == .appliedWithoutStreams else { return .datesNotKept }
         if info.isReadOnly {
-            _ = try? await client.setFileInfo(info, at: destination)
+            _ = try? await client.setFileInfo(info.withoutStreams, at: destination)
         }
         guard !Task.isCancelled else { return nil }
         guard let landed = try? await client.fileInfo(at: destination), landed.hasSameModified(as: info) else {
             return Task.isCancelled ? nil : .datesNotKept
         }
-        return .kept
+        // Dates held; tags only when every stream went across.
+        return answer == .appliedWithoutStreams || info.hasUnreadStreams ? .tagsNotKept : .kept
     }
 
     /// Dates and flags for a file already in place — Restore File Info…
     /// (FS-19.08 §6e) and a server-side copy. Same order as above minus the
     /// rename: read-only last, then read back. Nil when cancelled.
     func applyInfo(_ info: RemoteFileInfo, to destination: String) async -> FileInfoOutcome? {
-        let taken = (try? await client.setFileInfo(info.writable, at: destination)) == .applied
+        let answer = try? await client.setFileInfo(info.writable, at: destination)
         guard !Task.isCancelled else { return nil }
-        guard taken else { return .datesNotKept }
-        if info.isReadOnly {
-            _ = try? await client.setFileInfo(info, at: destination)
-        }
-        guard let landed = try? await client.fileInfo(at: destination), landed.hasSameModified(as: info) else {
-            return Task.isCancelled ? nil : .datesNotKept
-        }
-        return .kept
+        return await verdict(answer, info: info, at: destination)
     }
 
     /// Removes the part. Runs even when the caller was cancelled: a cancelled

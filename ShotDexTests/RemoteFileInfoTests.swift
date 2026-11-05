@@ -592,3 +592,92 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: url.appendingPathComponent("b.JPG").path))
     }
 }
+
+/// FS-19.08 §6e, T10b: Finder tags and Finder info ride in alternate data
+/// streams on SMB — listed by `FILE_STREAM_INFORMATION`, copied by name.
+@Suite struct SMBStreamInfoTests {
+    /// One entry as MS-FSCC 2.4.44 lays it out.
+    private static func entry(_ name: String, size: Int64, last: Bool) -> Data {
+        let units = Array(name.utf16)
+        var data = Data()
+        let length = 24 + units.count * 2
+        let padded = last ? 0 : (length + 7) / 8 * 8
+        func append<T: FixedWidthInteger>(_ value: T) { withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) } }
+        append(UInt32(padded))
+        append(UInt32(units.count * 2))
+        append(size)
+        append(Int64(4096))
+        for unit in units { append(unit) }
+        if !last { data.append(Data(repeating: 0, count: padded - length)) }
+        return data
+    }
+
+    @Test func parsesEveryEntry() {
+        let tags = ":com.apple.metadata\u{F022}_kMDItemUserTags:$DATA"
+        let buffer = Self.entry("::$DATA", size: 1_234, last: false) + Self.entry(":AFP_AfpInfo:$DATA", size: 60, last: false)
+            + Self.entry(tags, size: 42, last: true)
+        let streams = SMBStreamInformation.streams(in: buffer)
+        #expect(streams.map(\.name) == ["::$DATA", ":AFP_AfpInfo:$DATA", tags])
+        #expect(streams.map(\.size) == [1_234, 60, 42])
+        #expect(streams[0].isMainData)
+        #expect(streams[1].isFinderInfo)
+        #expect(!streams[2].isMainData && !streams[2].isFinderInfo)
+        #expect(streams.map(\.isCarried) == [false, true, true])
+        // Never the file's own bytes, never another app's stream.
+        for name in ["", ":$DATA", "::$DATA", ":Zone.Identifier:$DATA", ":AFP_Resource:$DATA", ":a/b:$DATA",
+                     ":com.apple.metadata\u{F022}x:$INDEX_ALLOCATION", ":AFP_AfpInfo"] {
+            #expect(!SMBStreamInformation.Stream(name: name, size: 1).isCarried, "\(name)")
+        }
+    }
+
+    @Test func malformedTailIsDropped() {
+        var buffer = Self.entry("::$DATA", size: 1, last: false)
+        buffer += Data([0xFF, 0x00, 0x00])
+        #expect(SMBStreamInformation.streams(in: buffer).map(\.name) == ["::$DATA"])
+        #expect(SMBStreamInformation.streams(in: Data()).isEmpty)
+    }
+
+    /// Streams never reach the database: Move's recorded info is dates and flags.
+    @Test func streamsAreNotStored() throws {
+        var info = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_577_934_245))
+        info.streams = [RemoteFileStream(name: ":AFP_AfpInfo:$DATA", data: Data(count: 60))]
+        let decoded = try JSONDecoder().decode(RemoteFileInfo.self, from: JSONEncoder().encode(info))
+        #expect(decoded.streams.isEmpty)
+        #expect(decoded.modified == info.modified)
+    }
+
+    private func copy(_ nas: InMemoryRemoteFileClient, source: String, target: String) async throws -> FileInfoOutcome? {
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data("photo".utf8).write(to: local)
+        defer { try? FileManager.default.removeItem(at: local) }
+        let write = VerifiedRemoteWrite(client: nas)
+        try await write.uploadPart(local, for: target, progress: { _ in })
+        let info = try #require(try await nas.fileInfo(at: source))
+        return try await write.moveIntoPlace(target, replacing: false, info: info)
+    }
+
+    /// A tagged, read-only source: the copy carries its streams, dates and
+    /// flag — kept. A server that takes no streams: dates kept, tags not.
+    /// Streams too many to read: tags not kept either.
+    @Test func copyCarriesStreamsOrSaysTagsNotKept() async throws {
+        let nas = InMemoryRemoteFileClient()
+        nas.put("A/IMG_1.JPG", Data("photo".utf8))
+        let tags = RemoteFileStream(name: ":com.apple.metadata\u{F022}_kMDItemUserTags:$DATA", data: Data("bplist".utf8))
+        var info = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_577_934_245), isReadOnly: true)
+        info.streams = [tags]
+        nas.infos["A/IMG_1.JPG"] = info
+
+        #expect(try await copy(nas, source: "A/IMG_1.JPG", target: "C/IMG_1.JPG") == .kept)
+        #expect(nas.infos["C/IMG_1.JPG"]?.streams == [tags])
+        #expect(nas.infos["C/IMG_1.JPG"]?.isReadOnly == true)
+
+        nas.keepsStreams = false
+        #expect(try await copy(nas, source: "A/IMG_1.JPG", target: "C/IMG_2.JPG") == .tagsNotKept)
+        nas.keepsStreams = true
+
+        info.streams = []
+        info.hasUnreadStreams = true
+        nas.infos["A/IMG_1.JPG"] = info
+        #expect(try await copy(nas, source: "A/IMG_1.JPG", target: "C/IMG_3.JPG") == .tagsNotKept)
+    }
+}
