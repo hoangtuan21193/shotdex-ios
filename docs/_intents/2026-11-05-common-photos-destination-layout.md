@@ -5,9 +5,9 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-05 |
 | Trạng thái | accepted (2026-11-05) |
-| Tiến độ | **chưa làm** (2026-11-05) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-05) — spec FS-19.08 §6e, 27 AC (AC-193…219) |
 | Nguồn | phản hồi người dùng 2026-11-05: "Save common ra một thư mục khác thì nên có option chọn là lưu flat hay lưu theo cấu trúc ngày tháng hay chia ảnh video các kiểu nữa. giống kiểu các option ở màn hình backup trên iphone ấy. mục đích là để tìm ảnh dễ, verify kết quả cũng dễ hơn." |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-19.08 §6e](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…219 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 
 Intent anh em: [2026-11-05-common-photos-dated-folders-scan](2026-11-05-common-photos-dated-folders-scan.md) (quét nhanh hơn).
 

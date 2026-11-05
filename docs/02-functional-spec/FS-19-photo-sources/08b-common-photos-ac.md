@@ -1,6 +1,6 @@
 # FS-19.08b — Gom ảnh chung: tiêu chí nghiệm thu
 
-`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…191 · cập nhật 2026-11-04 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c; AC-174…191: xem kết quả Scan rồi mới quyết + chạy nhanh hơn, §6d)
+`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…191, AC-193…219 · cập nhật 2026-11-04 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c; AC-174…191: xem kết quả Scan rồi mới quyết + chạy nhanh hơn, §6d; AC-193…219: folder theo ngày, Organize, giữ thông tin file, §6e — 2026-11-05)
 
 Dữ liệu thử: server cục bộ (impacket smbserver + WebDAV trên Mac, memory `server-upload-fs15`), ảnh phong cảnh không
 có mặt người. Test domain chạy trên client giả của `ShotDexTests/BackupFakes.swift` và GRDB trong bộ nhớ.
@@ -104,3 +104,51 @@ số byte qua mạng.
 | AC-189 | bộ có 2 ảnh bỏ ra | Clear Local Metadata Index; sau đó xoá bộ (Remove from List) | sau Clear: vẫn 2 ảnh Left Out; sau xoá bộ: bảng Ảnh bỏ ra không còn hàng nào của bộ | ✅ `CommonPhotosLeftOutTests.whatClearsIt` (Clear Index giữ; Remove from List xoá của bộ đó; xoá connection xoá hết) |
 | AC-190 | bộ **Move** tự gom, ready 4 ảnh | trong cửa sổ log bỏ chọn 1 rồi **Move 3…** › xác nhận | hộp xác nhận nói 3; 3 ảnh Moved; ảnh thứ tư không bị đụng, nằm trong Left Out của bộ, lượt tự gom sau không đưa lại | ✅ `CommonPhotosGatherTests.readyLeavesOneOut` (bỏ 1/3: xác nhận theo tập đã thấy, hộp nói 2 thì 2 dời, ảnh bỏ ra còn ở cả hai folder và trong Left Out, lượt sau không đưa lại), `readyAllLeftOut`; ảnh Mac `build/design/shots/R7/` (sáng/tối) |
 | AC-191 | Copy 1 GB phần chung trên WebDAV cục bộ (2 folder) | **Copy** | byte qua Mac ≤ 1.1 GB (`COPY` trên server + đọc lại SHA ở đích); hôm nay ≈ 3 GB. Server từ chối `COPY` (hay connection SMB/SFTP) → tải + đẩy như cũ, ảnh vẫn Copied, log ghi cách chép | ✅ e2e WebDAV cục bộ (wsgidav 127.0.0.1:8096, 20 file 50 MB = 1 GB chung) `CommonPhotosWebDAVTests.serverCopyMovesOneThird`: có `COPY` qua mạng **1.00×** (1 048 793 598 B, chỉ đọc lại SHA), đường dài **3.00×**; cả 20 Copied, không sót part. `CommonPhotosRunnerTests.serverCopyThenReadBack`, `serverCopyMismatchLeavesNothing`, `serverCopyOfAChangedSource`, `serverCopyReplyLostResumes`, `serverCopyOfAGoneSourceFailsOnePhoto`, `refusedCopyFallsBack`, `refusedCopyIsAskedOnce`, `serverCopyPassesTheLock`; `WebDAVFileClientTests.copyOnServer`; SMB ảo (`CommonPhotosSMBTests`) đi đường dài, vẫn Copied. Cách chép ghi ở log hệ thống (`commonPhotos`), chưa vào CSV |
+
+## Folder theo ngày: kiểm nhanh, chạy lại (§6e)
+
+Cùng dữ liệu thử; client giả đếm từng lệnh (`entries`, `readRange`, `sha256`, `download`, `upload`, đặt thông tin file).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-193 | bộ chưa chạy, Action Copy | mở sheet; đổi Action sang Move | ô **Quick check for photos in the same place** có, tắt; sang Move thì ô biến mất | ảnh Mac sheet Copy/Move sáng + tối; ⚠️ chưa có |
+| AC-194 | Quick bật; A `2025/03/15/X.ARW` và B `2025/03/15/x.arw` cùng cỡ 48 MB, cùng byte | Scan | 1 hàng Same nhãn **Quick**; client giả đếm đúng 3 lệnh `readRange` 64 KB mỗi bản, 0 lệnh `sha256`/`download` khi Scan | ⚠️ chưa có (`CommonPhotosQuickCheckTests`) |
+| AC-195 | Quick bật; (1) cùng đường dẫn + cỡ, khác 1 byte ở mẫu giữa; (2) A `2026/07/25/HAT00130.MOV`, B `2026/07/26/HAT00130.MOV` cùng byte | Scan | (1) rơi khỏi danh sách; (2) Same **không** nhãn Quick, băm SHA cả file như §5 | ⚠️ chưa có |
+| AC-196 | 1 ảnh Same (quick) | **Copy 1** | Copied; SHA bản ở đích = SHA tính lúc tải bản folder đầu; bản ở B 0 lệnh đọc; CSV cột `Check` = `quick`; bảng SHA đã đọc không có hàng của bản ở B | ⚠️ chưa có |
+| AC-197 | Scan xong với Quick bật | đổi Action sang Move | kết quả bị bỏ, nút thành **Scan**; Scan lại băm SHA cả file mọi ứng viên, không hàng nào nhãn Quick | ⚠️ chưa có |
+| AC-198 | bộ đã chạy; cây `Năm/Tháng/Ngày` mỗi bên 1 năm, 12 tháng, 300 folder ngày; sau đó thêm 1 file vào `A/2025/03/15` (giờ sửa folder đổi) | Run Again (trong 24 giờ) | lệnh liệt kê = gốc + năm + 12 tháng mỗi bên + đúng 1 folder ngày; file mới vào kế hoạch; mọi file khác lấy từ danh sách đã lưu | ⚠️ chưa có (client giả đếm `entries`) |
+| AC-199 | như AC-198; `A/2025/03/16` có folder con `edited/` (giờ sửa `16` không đổi) | Run Again | `16` và `16/edited` vẫn được liệt kê | ⚠️ chưa có |
+| AC-200 | như AC-198 nhưng server không trả giờ sửa folder (WebDAV giả); hay lần liệt kê đủ gần nhất 25 giờ trước; hay bấm **Scan Everything** | quét | mọi folder được liệt kê (0 mục dùng danh sách đã lưu) | ⚠️ chưa có |
+| AC-201 | bộ Tuan/Hue trên NAS người dùng (≈1 TB mỗi bên) | Scan lần đầu, Quick bật; rồi Run Again ngay sau | số đo ghi vào §6e: lần đầu ≤ 1,5 giờ (hôm nay ~5,5 giờ ước); Run Again liệt kê ≤ 1 phút | ⚠️ chưa có (đo trên NAS thật, chỉ Scan) |
+
+## Xếp folder chung — Organize (§6e)
+
+Cùng dữ liệu thử; client giả đếm từng lệnh (`entries`, `readRange`, `sha256`, `download`, `upload`, đặt thông tin file).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-202 | bộ mới; ảnh `Tuấn/2025/03/15/X.ARW` = `Vợ/x/X.ARW` | Scan → Copy | sheet dòng Organize ghi `Same as Source`; kế hoạch `→ Shared/2025/03/15/X.ARW`; file nằm đúng đó | ⚠️ chưa có |
+| AC-203 | bộ đã chạy trước 2026-11-05 (phẳng) | mở sheet bộ đó | Organize ghi `No Folders`; ảnh mới vẫn vào gốc Shared | ⚠️ chưa có |
+| AC-204 | Organize Year › Month › Day, Videos Apart at the Top; ảnh EXIF 2025-10-12 14:03:27 `IMG_8812.HEIC`, video `IMG_8813.MOV` trong `Tuấn/2025/10/12` | Copy | `Shared/2025/Oct/2025.10.12/IMG_8812.HEIC`, `Shared/Videos/2025/Oct/2025.10.12/IMG_8813.MOV`; Preview ở trang Organize ghi đúng hai đường dẫn này | `BackupPathPlanner` tests dùng lại + ⚠️ chưa có |
+| AC-205 | Year › Month › Day; video không đọc được ngày: (1) ở `Tuấn/2025/03/15/`; (2) ở `Tuấn/Trip/`, ngày sửa server 2024-08-01 | Copy | (1) `Shared/2025/Mar/2025.03.15/…`; (2) `Shared/2024/Aug/2024.08.01/…`; không lệnh `download` nào cho video | ⚠️ chưa có |
+| AC-206 | File Names Date and Time; Shared đã có `2025/Oct/2025.10.12/2025-10-12 14.03.27.HEIC` khác byte | Copy ảnh chụp 2025-10-12 14:03:27 | ảnh thành `2025-10-12 14.03.27 (2).HEIC` trong đúng folder ngày; không ghi đè | ⚠️ chưa có |
+| AC-207 | Same as Source; `Shared/2025/03/15/X.ARW` đã có cùng SHA; `Shared/X.ARW` cũng có cùng SHA | Scan | hàng `Already in Shared` (xét ở `2025/03/15`); nếu chỉ có `Shared/X.ARW` thì hàng ghi `→ Shared/2025/03/15/X.ARW` | ⚠️ chưa có |
+| AC-208 | bộ đã gom 280 ảnh phẳng; đổi Organize sang Same as Source; thêm 3 ảnh mới ở cả hai bên | Run Again → Copy | dưới Organize: "Photos already gathered stay where they are."; 0 lệnh với 280 ảnh cũ; 3 ảnh mới vào folder con | ⚠️ chưa có |
+| AC-209 | lượt Copy Same as Source tạo `Shared/2025/03/15/` (2 ảnh) và `Shared/2025/03/16/` (1 ảnh + `note.txt` của người dùng thêm sau) | **Undo Copy…** › Undo Copy | 3 ảnh xoá; `15/` bị xoá (rỗng), `16/` còn với `note.txt`; `2025/03` còn vì không rỗng | ⚠️ chưa có |
+| AC-210 | bộ Copy tự gom, Organize Year › Month | lượt tự gom tìm 2 ảnh mới | 2 ảnh vào `Shared/<năm>/<tháng>/` | ⚠️ chưa có |
+
+## Giữ thông tin file (§6e)
+
+Cùng dữ liệu thử; client giả đếm từng lệnh (`entries`, `readRange`, `sha256`, `download`, `upload`, đặt thông tin file).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-211 | SMB ảo; `Tuấn/IMG_1.JPG` ngày sửa = ngày tạo = 2020-01-02 03:04:05, cờ chỉ‑đọc, tag Finder; cùng byte ở Vợ | Copy | ở Shared: ngày sửa và ngày tạo 2020-01-02 03:04:05 (±2 s), cờ chỉ‑đọc; tag còn nếu `SMBClient` mở được luồng phụ, không thì log `tags not kept`; log `File info` = `kept` | e2e `CommonPhotosSMBTests` (impacket) — ⚠️ chưa có; đo 2026-11-05 hôm nay ra giờ chạy |
+| AC-212 | bản ở Tuấn ngày sửa 2020-01-02, bản ở Vợ 2023-05-06, cùng byte | Copy | bản ở Shared mang 2020-01-02 (folder đầu) | ⚠️ chưa có |
+| AC-213 | Move; server từ chối đổi chỗ (khác share, client giả); và Move đổi chỗ được | Move | cả hai đường: ảnh ở Shared mang ngày/cờ của bản folder đầu; `.xmp` mang ngày của sidecar nguồn | ⚠️ chưa có |
+| AC-214 | WebDAV giả từ chối mọi cách đặt ngày | Scan → Copy | sheet dưới Action: "This server does not keep file dates; copies get today's date." (từ lượt thứ hai trên connection đó); ảnh Copied; CSV `File info` = `dates not kept` | ⚠️ chưa có |
+| AC-215 | server nhận lệnh đặt ngày nhưng liệt kê lại thấy lệch 1 giờ | Copy | ảnh Copied, log `dates not kept`; không Failed | ⚠️ chưa có |
+| AC-216 | lượt Move đã xoá `Vợ/IMG_2.JPG` (ngày sửa 2021-07-08, chỉ‑đọc) | **Undo Move…** | `Vợ/IMG_2.JPG` trở lại cùng SHA, ngày sửa 2021-07-08, chỉ‑đọc | ⚠️ chưa có |
+| AC-217 | lượt Copy cũ (trước §6e) 3 hàng Copied mang giờ chạy; 1 hàng bản ở Shared đã bị đổi cỡ | cửa sổ log › **Restore File Info…** | 2 file nhận ngày/cờ của bản folder đầu; 0 lệnh `upload`/`sha256`; hàng thứ ba ghi "changed in Shared", không đụng | ⚠️ chưa có |
+| AC-218 | Shared có `IMG_3.JPG` Already there (ngày 2019) | Copy | `IMG_3.JPG` không bị đặt lại gì, ngày vẫn 2019 | ⚠️ chưa có |
+| AC-219 | Server Upload (FS-15) một ảnh Photos chụp 2025-10-12 14:03:27; Backup (FS-22) một file nguồn folder ngày sửa 2022-02-02 | đẩy lên SMB ảo | ảnh Upload: ngày tạo = ngày sửa = 2025-10-12 14:03:27; file Backup mang 2022-02-02 | ⚠️ chưa có |

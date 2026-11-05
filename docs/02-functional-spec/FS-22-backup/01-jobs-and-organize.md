@@ -87,3 +87,6 @@ Ngày lấy từ ngày chụp (EXIF, không có thì ngày tạo trong Photos / 
 - Dò trùng ở đích theo **tên + cỡ** (Q3): cùng tên cùng số byte = đã có, ghi sổ `found`, không đẩy. Cùng tên khác cỡ =
   file khác → **Keep Both** `<tên> (2).<đuôi>` như FS-15.02 §5. Không bao giờ ghi đè, không bao giờ hỏi.
 - File app tự đẩy luôn kiểm SHA-256 bằng đọc lại như FS-15.02 §4 trước khi đổi tên `.shotdex-part` thành tên thật.
+
+> **Giữ thông tin file (2026-11-05):** file đẩy lên mang ngày/cờ theo [FS-19.08 §6e “Giữ thông tin file”](../FS-19-photo-sources/08-common-photos.md#6e-folder-theo-ngày-quét-nhanh-hơn--xếp-folder-chung--giữ-thông-tin-file-người-dùng-2026-11-05), đặt trước khi đổi tên part; ảnh Photos theo quyết ở đó. AC-219.
+

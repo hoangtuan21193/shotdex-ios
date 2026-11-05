@@ -5,9 +5,9 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-05 |
 | Trạng thái | accepted (2026-11-05) |
-| Tiến độ | **chưa làm** (2026-11-05) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-05) — spec FS-19.08 §6e, 27 AC (AC-193…219) |
 | Nguồn | phản hồi người dùng 2026-11-05: "sẽ có trường hợp ở thư mục A và B đều có cấu trúc folder giống nhau, theo năm, tháng, ngày … trong trường hợp này có thể lợi dụng để tìm ảnh giống nhau nhanh hơn không" |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-19.08 §6e](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…219 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 
 Intent anh em: [2026-11-05-common-photos-destination-layout](2026-11-05-common-photos-destination-layout.md) (xếp ảnh ở đích).
 
