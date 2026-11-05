@@ -171,6 +171,8 @@ input{font-family:inherit}
 <sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 142" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">142</span></span></sc-if>
 <!-- §6e: the plan reads each photo's date for Organize; the rows' → paths follow -->
 <sc-if value="{{readingDates}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Reading dates 120 of 282" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg>Reading dates 120 of 282</span></sc-if>
+<!-- §6f: Live Photos whose still and video are not both Same — neither is gathered -->
+<sc-if value="{{liveLeftOut}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Live halves left out, 2" title="The still and the video of these Live Photos are not both the same in every folder, so neither is gathered." style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{t.label2}}" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle><path d="M4 4l16 16"></path></svg><span style="color:{{t.label2}}">Live halves left out</span><span style="font-weight:600;font-variant-numeric:tabular-nums">2</span></span></sc-if>
 </div></sc-if>
 <!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
 <sc-if value="{{againRow}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;flex:none">
@@ -198,7 +200,7 @@ input{font-family:inherit}
 <sc-if value="{{m.there}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex:none;width:34px"></span></sc-if>
 <div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}};opacity:{{m.thumbDim}}"></div>
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{m.help}}">
-<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if></span>
+<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.live}}" hint-placeholder-val="{{false}}"><span title="Half of a Live Photo: its still and video go together" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle></svg>Live</span></sc-if><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if></span>
 <span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="flex:none">{{m.from}}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.to}}</span></span>
 </div>
 <sc-if value="{{m.hover}}" hint-placeholder-val="{{false}}"><button aria-label="Compare" title="Compare (Space)" style="width:28px;height:22px;flex:none;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7v14H3z M14 5h7v14h-7z"></path></svg></button></sc-if>
@@ -480,7 +482,9 @@ class Component extends DCLogic {
     // copies Move removes, same path in both (§6e Quick Check)]
     const PLAN = [
       ['IMG_4021.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4021.HEIC', '2.9 MB', true, 2, true],
-      ['IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.HEIC', '3.1 MB', true, 2, true],
+      // §6f: a Live Photo — still, then its motion, one name, one folder, checked together.
+      ['IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.HEIC', '3.1 MB', true, 2, true, true],
+      ['IMG_4022.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.MOV', '4.4 MB', true, 2, true, true],
       ['DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', '2025/10/12', 'DSC04388.ARW', '48.6 MB', true, 2, false],
       ['IMG_0001.JPG', 'Tuấn/2025/06/02 · Vợ/Messages', '2025/06/02', 'IMG_0001 (2).JPG', '1.2 MB', false, 2, false],
       ['IMG_4107.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4107.MOV', '212.4 MB', false, 2, true],
@@ -514,7 +518,7 @@ class Component extends DCLogic {
         // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
         note: there ? 'Already in Shared' : !m[5] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
         help: m[1] + (there ? '' : ' → ' + dest),
-        quick: quickOn && m[7] && !there,
+        quick: quickOn && m[7] && !there, live: !!m[8],
         there, hasBox: !there, on, off: !there && !m[5], checkVis: on ? 'visible' : 'hidden',
         thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
         boxBg: on ? t.accentFill : t.field, boxBorder: on ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
@@ -549,7 +553,7 @@ class Component extends DCLogic {
       leftOut, leftOutOpen: leftOutOpen && state === 'first', leftOutClosed: !leftOutOpen && state !== 'nothingNew',
       leftOutLine: 'Skipped by every scan and gather of this set',
       scrollTop: '4px',
-      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: checkingNow, progress: checkingNow, readingDates: reading, sameN,
+      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: checkingNow, progress: checkingNow, readingDates: reading, liveLeftOut: state === 'first', sameN,
       scanned: !waiting, waiting, listing,
       showsAction: !(before || listing || checkingNow),
       sortable: !waiting && !nothingNew && sameN !== '1',

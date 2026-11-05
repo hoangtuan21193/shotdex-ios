@@ -151,8 +151,13 @@ struct CommonPhotosStore: Sendable {
                   original.isOver, original.isReadable else { throw UndoRefusal.notOver }
             let undoes = try CommonPhotosRun.filter(Column("undoOf") == runId).fetchAll(db)
             guard undoes.allSatisfy(\.isOver) else { throw UndoRefusal.undoUnfinished }
-            let items = try CommonPhotosItem.filter(Column("runId") == runId).order(Column("position")).fetchAll(db)
-                .filter { $0.isUndoable && (positions?.contains($0.position) ?? true) }
+            let all = try CommonPhotosItem.filter(Column("runId") == runId).order(Column("position")).fetchAll(db)
+            // A Live Photo's halves are undone together (FS-19.08 §6f).
+            let chosen = positions.map { positions in
+                Set(all.indices.filter { positions.contains(all[$0].position) }
+                    .flatMap { CommonPhotosRunner.livePair(all, at: $0) }.map { all[$0].position })
+            }
+            let items = all.filter { $0.isUndoable && (chosen?.contains($0.position) ?? true) }
             guard !items.isEmpty else { throw UndoRefusal.nothingToUndo }
             let undo = CommonPhotosRun(id: id, connectionId: original.connectionId, folders: original.folders,
                                        destination: original.destination, action: original.action, createdAt: now,

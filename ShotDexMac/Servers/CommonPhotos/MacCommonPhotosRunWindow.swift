@@ -125,16 +125,21 @@ final class MacCommonPhotosLogModel {
     /// §6d: checks or unchecks a photo of a ready run. Stored for the set
     /// at once; Move leaves what is unchecked, and no later pass lists it.
     func setLeftOut(_ isLeftOut: Bool, row: Row) {
-        guard let setKey, let item = items.first(where: { $0.position == row.id }) else { return }
+        guard let setKey, let index = items.firstIndex(where: { $0.position == row.id }) else { return }
+        // A Live Photo's halves go together (§6f).
+        let pair = CommonPhotosRunner.livePair(items, at: index).map { items[$0] }
         // The box and the counts move at once; the read confirms.
-        if isLeftOut { leftOut.insert(item.sha256) } else { leftOut.remove(item.sha256) }
+        for item in pair {
+            if isLeftOut { leftOut.insert(item.sha256) } else { leftOut.remove(item.sha256) }
+        }
         let leftOutStore = CommonPhotosLeftOutStore(database: store.database)
         do {
             if isLeftOut {
-                try leftOutStore.leaveOut([.init(sha256: item.sha256, name: row.name, size: item.size)],
+                try leftOutStore.leaveOut(pair.map { .init(sha256: $0.sha256, name: $0.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? row.name,
+                                                           size: $0.size) },
                                           setKey: setKey, connectionId: connectionId)
             } else {
-                try leftOutStore.include([item.sha256], setKey: setKey)
+                try leftOutStore.include(Set(pair.map(\.sha256)), setKey: setKey)
             }
         } catch {
             CommonPhotosScanModel.logger.error("left out not stored: \(error.localizedDescription, privacy: .public)")

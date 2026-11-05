@@ -49,17 +49,32 @@ enum CommonPhotosDestinationPlan {
         }
     }
 
-    /// One landing per photo, in run order.
-    static func landings(_ photos: [Photo], in destination: [Existing]) -> [Landing] {
+    /// One landing per photo, in run order. `motionOf` pairs a Live
+    /// Photo's still (by position) with its motion (§6f): the still takes a
+    /// name whose motion name is free too, and the motion takes the still's.
+    static func landings(_ photos: [Photo], in destination: [Existing], motionOf: [Int: Int] = [:]) -> [Landing] {
         let byName = Dictionary(destination.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+        let stillOf = Dictionary(motionOf.map { ($0.value, $0.key) }, uniquingKeysWith: { first, _ in first })
         var names = Set(destination.map(\.name))
-        return photos.map { photo in
-            if let there = byName[photo.name.lowercased()], there.size == photo.size, there.sha256 == photo.sha256 {
-                return .alreadyThere(there.name)
+        var out: [Landing] = []
+        for (index, photo) in photos.enumerated() {
+            // The motion follows the name its still got.
+            var name = photo.name
+            if let still = stillOf[index], still < out.count {
+                name = CommonPhotosLive.motionName(for: out[still].name, motionExtension: (photo.name as NSString).pathExtension)
             }
-            let free = ServerUploadPath.nextFreeName(for: photo.name, existing: names)
+            if let there = byName[name.lowercased()], there.size == photo.size, there.sha256 == photo.sha256 {
+                out.append(.alreadyThere(there.name))
+                continue
+            }
+            let free = if let motion = motionOf[index] {
+                CommonPhotosLive.freeName(forStill: name, motionExtension: (photos[motion].name as NSString).pathExtension, existing: names)
+            } else {
+                ServerUploadPath.nextFreeName(for: name, existing: names)
+            }
             names.insert(free)
-            return .name(free)
+            out.append(.name(free))
         }
+        return out
     }
 }

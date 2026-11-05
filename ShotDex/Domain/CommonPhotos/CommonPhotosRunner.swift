@@ -124,6 +124,56 @@ struct CommonPhotosRunner: Sendable {
         "\(folder)/" + relativePath.lowercased()
     }
 
+    /// How a Live Photo's halves are named together (FS-19.08 §6f): the
+    /// still keeps its motion's name free beside it; the motion takes the
+    /// name its still got.
+    struct LiveNaming: Equatable, Sendable {
+        /// On the still: its motion's extension.
+        var motionExtension: String?
+        /// On the motion: its name beside the still, as the still landed.
+        var besideStill: String?
+    }
+
+    /// Whether two items are one Live Photo, still then motion: their first
+    /// sources one name in one folder (`CommonPhotosRunner.items` puts the
+    /// motion right after its still).
+    static func isLivePair(still: CommonPhotosItem, motion: CommonPhotosItem) -> Bool {
+        guard let a = still.sources.first?.path, let b = motion.sources.first?.path,
+              CommonPhotosLive.isStill(ServerUploadPath.lastComponent(of: a)),
+              CommonPhotosLive.isMotion(ServerUploadPath.lastComponent(of: b)) else { return false }
+        return (a as NSString).deletingPathExtension.lowercased() == (b as NSString).deletingPathExtension.lowercased()
+    }
+
+    /// The naming of `items[index]` as one half of a Live Photo, nil for any
+    /// other photo.
+    static func liveNaming(_ items: [CommonPhotosItem], at index: Int) -> LiveNaming? {
+        if index + 1 < items.count, isLivePair(still: items[index], motion: items[index + 1]),
+           let motion = items[index + 1].sources.first?.path {
+            return LiveNaming(motionExtension: (motion as NSString).pathExtension)
+        }
+        if index > 0, isLivePair(still: items[index - 1], motion: items[index]),
+           let landed = items[index - 1].destinationPath, let own = items[index].sources.first?.path {
+            return LiveNaming(besideStill: CommonPhotosLive.motionName(for: ServerUploadPath.lastComponent(of: landed),
+                                                                       motionExtension: (own as NSString).pathExtension))
+        }
+        return nil
+    }
+
+    /// The positions in `items` of the Live Photo `index` is half of, both
+    /// halves; just `index` for any other photo.
+    static func livePair(_ items: [CommonPhotosItem], at index: Int) -> [Int] {
+        if index + 1 < items.count, isLivePair(still: items[index], motion: items[index + 1]) { return [index, index + 1] }
+        if index > 0, isLivePair(still: items[index - 1], motion: items[index]) { return [index - 1, index] }
+        return [index]
+    }
+
+    private static func freeName(for name: String, existing: Set<String>, live: LiveNaming?) -> String {
+        if let motionExtension = live?.motionExtension {
+            return CommonPhotosLive.freeName(forStill: name, motionExtension: motionExtension, existing: existing)
+        }
+        return ServerUploadPath.nextFreeName(for: name, existing: existing)
+    }
+
     /// The sidecar that goes with the photo: the copied source's, else the
     /// first other source's.
     private static func sidecar(of item: CommonPhotosItem) -> (path: String, photo: String)? {
@@ -266,8 +316,43 @@ struct CommonPhotosRunner: Sendable {
                 if Self.hasLostClaim(runId: runId, in: store.database) { throw Stop.alreadyRunning }
                 try Task.checkCancellation()
                 if let organize = run.organize, items[index].status == .pending, items[index].placement == nil {
-                    items[index].placement = try await placement(of: items[index], organize: organize, run: run)
+                    // A Live Photo's motion is filed beside its still (§6f).
+                    if index > 0, Self.isLivePair(still: items[index - 1], motion: items[index]),
+                       let source = items[index].sources.first?.path {
+                        items[index].placement = items[index - 1].placement.map {
+                            CommonPhotosLive.motionPath(besideStill: $0, motionExtension: (source as NSString).pathExtension)
+                        }
+                    } else {
+                        items[index].placement = try await placement(of: items[index], organize: organize, run: run)
+                    }
                     if items[index].placement != nil { try store.update(items[index]) }
+                }
+                let live = Self.liveNaming(items, at: index)
+                // Move: a still whose motion changed since the scan stays,
+                // and so does the motion — checked before the still moves,
+                // so a pair is never parted (§6f).
+                if run.action == .move, items[index].status == .pending, index + 1 < items.count,
+                   Self.isLivePair(still: items[index], motion: items[index + 1]), items[index + 1].status == .pending {
+                    var motionUnchanged = true
+                    for source in items[index + 1].sources where !source.isRemoved {
+                        if try await !isUnchanged(source, sha256: items[index + 1].sha256) { motionUnchanged = false; break }
+                    }
+                    if !motionUnchanged {
+                        try finish(&items[index], .failed, reason: .liveMotionChanged)
+                        state.doneCount += 1
+                        state.doneBytes += items[index].size
+                        progress(state)
+                        continue
+                    }
+                }
+                // Move: a motion whose still did not move stays with it (§6f).
+                if run.action == .move, items[index].status == .pending, index > 0,
+                   Self.isLivePair(still: items[index - 1], motion: items[index]), items[index - 1].status == .failed {
+                    try finish(&items[index], .failed, reason: .liveStillFailed)
+                    state.doneCount += 1
+                    state.doneBytes += items[index].size
+                    progress(state)
+                    continue
                 }
                 var into = destination
                 if let placement = items[index].placement {
@@ -300,12 +385,12 @@ struct CommonPhotosRunner: Sendable {
                     }
                 }
                 switch run.action {
-                case .copy: try await copy(&items[index], into: into, state: state, progress: progress)
+                case .copy: try await copy(&items[index], into: into, live: live, state: state, progress: progress)
                 case .move:
                     // A sidecar two photos share (IMG_1.JPG and IMG_1.MOV)
                     // stays until the last of them is done.
                     let claimed = Set(items[(index + 1)...].filter { !$0.isDone }.flatMap { $0.sources.compactMap(\.sidecar) })
-                    try await move(&items[index], into: into, claimedSidecars: claimed, state: state, progress: progress)
+                    try await move(&items[index], into: into, live: live, claimedSidecars: claimed, state: state, progress: progress)
                 }
                 state.doneCount += 1
                 state.doneBytes += items[index].size
@@ -373,7 +458,7 @@ struct CommonPhotosRunner: Sendable {
     /// part removed first.
     /// `copied` and `skipped` are what the photo becomes; a Move passes
     /// `placed` for both and removes the sources after.
-    private func copy(_ item: inout CommonPhotosItem, into destination: Destination, state: Progress,
+    private func copy(_ item: inout CommonPhotosItem, into destination: Destination, live: LiveNaming? = nil, state: Progress,
                       progress: @escaping @Sendable (Progress) -> Void,
                       copied: CommonPhotosItem.Status = .copied, skipped: CommonPhotosItem.Status = .skipped) async throws {
         guard let source = item.sources.first else {
@@ -381,8 +466,9 @@ struct CommonPhotosRunner: Sendable {
             return
         }
         let write = VerifiedRemoteWrite(client: client)
-        // The name Organize gave it, else its own (§6e).
-        let name = ServerUploadPath.lastComponent(of: item.placement ?? source.path)
+        // A Live Photo's motion takes its still's name (§6f); else the name
+        // Organize gave it, else its own (§6e).
+        let name = live?.besideStill ?? ServerUploadPath.lastComponent(of: item.placement ?? source.path)
         let itemSize = item.size
         let report = { @Sendable (step: Progress.Step, fraction: Double) in
             var moving = state
@@ -457,7 +543,7 @@ struct CommonPhotosRunner: Sendable {
                 return
             }
         }
-        let freeName = ServerUploadPath.nextFreeName(for: name, existing: destination.names)
+        let freeName = Self.freeName(for: name, existing: destination.names, live: live)
         let target = ServerUploadPath.join(destination.folder, freeName)
 
         if let free = freeBytes(), free - item.size < BackupRunner.minimumFreeBytes {
@@ -561,7 +647,7 @@ struct CommonPhotosRunner: Sendable {
     /// - copying: the Copy fallback, resumed by `copy`;
     /// - placed: the destination proved to hold the scanned bytes, then every
     ///   other copy removed.
-    private func move(_ item: inout CommonPhotosItem, into destination: Destination, claimedSidecars: Set<String>,
+    private func move(_ item: inout CommonPhotosItem, into destination: Destination, live: LiveNaming? = nil, claimedSidecars: Set<String>,
                       state: Progress, progress: @escaping @Sendable (Progress) -> Void) async throws {
         guard let source = item.sources.first else {
             try finish(&item, .failed, reason: .noSource)
@@ -572,7 +658,7 @@ struct CommonPhotosRunner: Sendable {
             try finish(&item, .failed, reason: .unreadableRecord)
             return
         }
-        let name = ServerUploadPath.lastComponent(of: item.placement ?? source.path)
+        let name = live?.besideStill ?? ServerUploadPath.lastComponent(of: item.placement ?? source.path)
         let report = { @Sendable (step: Progress.Step) in
             var moving = state
             moving.currentName = name
@@ -643,7 +729,7 @@ struct CommonPhotosRunner: Sendable {
                 try finish(&item, .placed, reason: .alreadyThere)
                 provedThisRun = true
             } else {
-                let freeName = ServerUploadPath.nextFreeName(for: name, existing: destination.names)
+                let freeName = Self.freeName(for: name, existing: destination.names, live: live)
                 let target = ServerUploadPath.join(destination.folder, freeName)
                 item.status = .moving
                 item.destinationPath = target
@@ -681,7 +767,7 @@ struct CommonPhotosRunner: Sendable {
         }
 
         if item.status == .pending || item.status == .copying {
-            try await copy(&item, into: destination, state: state, progress: progress, copied: .placed, skipped: .placed)
+            try await copy(&item, into: destination, live: live, state: state, progress: progress, copied: .placed, skipped: .placed)
             guard item.status == .placed else { return }
             provedThisRun = true
         }

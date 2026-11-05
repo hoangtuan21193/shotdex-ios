@@ -540,6 +540,19 @@ private struct MacCommonPhotosSheetContent: View {
                         .fixedSize()
                         .accessibilityElement(children: .combine)
                     }
+                    // §6f: Live Photos whose still and video are not both Same.
+                    if model.liveLeftOutCount > 0 {
+                        HStack(spacing: 5) {
+                            Image(systemName: "livephoto.slash").foregroundStyle(.secondary)
+                            Text("Live halves left out", comment: "Mac common photos sheet: Live Photo halves whose other half is not the same")
+                                .foregroundStyle(.secondary)
+                            Text(model.liveLeftOutCount.formatted()).fontWeight(.semibold).monospacedDigit()
+                        }
+                        .fixedSize()
+                        .help(String(localized: "The still and the video of these Live Photos are not both the same in every folder, so neither is gathered.",
+                                     comment: "Mac common photos sheet: why Live halves are left out"))
+                        .accessibilityElement(children: .combine)
+                    }
                     Spacer(minLength: 0)
                 }
                 .lineLimit(1)
@@ -1101,6 +1114,17 @@ private struct MacCommonPhotosRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(row.name).lineLimit(1).foregroundStyle(isAlreadyThere ? .secondary : .primary)
+                    // §6f: one half of a Live Photo, checked and run with the other.
+                    if row.isLive {
+                        Label(String(localized: "Live", comment: "Mac common photos sheet: a row that is half of a Live Photo"),
+                              systemImage: "livephoto")
+                            .labelStyle(.titleAndIcon)
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.fill.secondary, in: RoundedRectangle(cornerRadius: 4))
+                            .help(String(localized: "Half of a Live Photo: its still and video go together", comment: "Mac common photos sheet: the Live tag's tooltip"))
+                    }
                     if row.isQuick {
                         Text("Quick", comment: "Mac common photos sheet: a row Quick check settled by samples")
                             .font(.caption2.weight(.semibold))

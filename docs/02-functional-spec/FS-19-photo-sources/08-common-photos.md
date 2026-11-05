@@ -604,6 +604,31 @@ Người dùng 2026-11-05: sửa một lần ở client server (`RemoteFileClien
   sau (cần board iPhone/Mac). Ghi đè ảnh khi sửa trên server (`ServerEditWriter`) không đi qua đây — ngoài §6e.
 - File đã đẩy trước đây không được tự sửa; lệnh sửa kiểu Restore File Info… cho Upload/Backup không thuộc §6e.
 
+## 6f. Live Photo đi theo cặp (người dùng 2026-11-06)
+
+Live Photo trên server là hai file cạnh nhau: ảnh tĩnh (`.HEIC`/`.HEIF`/`.JPG`/`.JPEG`) và video `.MOV`, **cùng tên, cùng
+folder** (`CommonPhotosLive`). Trước đây mỗi file là một hàng riêng nên cặp có thể bị tách: Move dời ảnh mà để video lại,
+tên ở đích chọn riêng (`IMG_1 (2).HEIC` cạnh `IMG_1.MOV` của ảnh khác), Organize lấy ngày khác nhau cho hai nửa.
+
+- **Same theo cặp.** Hai nửa chỉ vào kết quả khi mọi bản của ảnh có video bên cạnh, các video đó là một ảnh Same, và
+  ngược lại. Thiếu một nửa ở một folder, hay video khác byte → **cả hai** bị bỏ ra, đếm ở dòng **Live halves left out N**
+  (tooltip nói vì sao). Một tên có hai ảnh tĩnh (`IMG_1.JPG` + `IMG_1.HEIC`) không coi là Live Photo.
+- **Thứ tự.** Video đứng ngay sau ảnh của nó trong danh sách và trong lượt chạy; hàng có nhãn **Live**.
+- **Một tên.** Ảnh lấy tên trống đầu tiên mà tên video cùng gốc cũng trống (`IMG_1 (2).HEIC` + `IMG_1 (2).MOV`); video
+  lấy đúng gốc tên ảnh đã nhận, kể cả khi ảnh Already there. Kế hoạch (§6d) và lượt chạy theo cùng luật.
+- **Một folder.** Organize đặt video cạnh ảnh, theo ngày của ảnh; không đọc ngày của video.
+- **Leave Out / Include** một nửa là cả cặp — trong sheet, danh sách Left Out và cửa sổ lượt chạy; một nửa đã bỏ ra từ trước
+  thì cả cặp ở ngoài. **Undo** một nửa là undo cả cặp.
+- **Chạy lại chỉ ảnh mới (§6c):** một nửa mới thì nửa kia (đã gom) cũng được so và đi cùng — nửa đã có ở đích thành Already
+  there, nửa mới mang cùng tên.
+- **Move không tách cặp.** Trước khi dời ảnh, mọi bản video được hỏi lại cỡ + giờ sửa; video đổi → ảnh không dời
+  (`Live Photo video changed on server`), video tự hỏng `changed on server`. Ảnh hỏng → video không dời
+  (`Live Photo still not moved`). Lượt dừng giữa hai nửa: Resume làm tiếp nửa sau.
+- Một tên có hai ảnh tĩnh và một video: không phải Live Photo; video không bao giờ đứng ngay sau ảnh trùng tên.
+- Compare vẫn mở từng nửa như ảnh và video thường.
+- **Giới hạn đã biết:** ảnh Already there ở đích mà tên video cùng gốc đã có byte khác → video lấy tên trống kế
+  (`IMG_1 (2).MOV`), cặp ở đích lệch tên; Copy với ảnh hỏng vẫn chép video (nguồn không mất gì).
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |

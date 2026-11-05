@@ -100,11 +100,12 @@ import Testing
         #expect(Set(fixture.destinationFiles.keys) == ["C/IMG_4.xmp"])
     }
 
-    /// `IMG_1.JPG` and `IMG_1.MOV` share `IMG_1.xmp`: undoing one keeps it
-    /// for the other; undoing the other then takes it.
+    /// `IMG_1.ARW` and `IMG_1.MOV` share `IMG_1.xmp`: undoing one keeps it
+    /// for the other; undoing the other then takes it. (A JPEG or HEIC
+    /// beside the MOV would be a Live Photo, undone as a pair — §6f.)
     @Test func sharedSidecarGoesWithTheLastPhoto() async throws {
         let fixture = try Fixture(count: 2, layout: { index in
-            index == 1 ? ("IMG_1.JPG", "IMG_1.JPG") : ("IMG_1.MOV", "IMG_1.MOV")
+            index == 1 ? ("IMG_1.ARW", "IMG_1.ARW") : ("IMG_1.MOV", "IMG_1.MOV")
         })
         fixture.nas.put("A/IMG_1.xmp", Data("shared".utf8))
         let undoer = try await gathered(fixture, positions: [0])
@@ -113,7 +114,7 @@ import Testing
         try await undoer.run("U1")
 
         #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("shared".utf8))
-        #expect(fixture.nas.files["C/IMG_1.JPG"] == nil)
+        #expect(fixture.nas.files["C/IMG_1.ARW"] == nil)
 
         try fixture.store.startUndo(of: "R1", id: "U2")
         try await undoer.run("U2")

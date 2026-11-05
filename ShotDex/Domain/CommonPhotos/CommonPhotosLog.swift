@@ -51,6 +51,8 @@ enum CommonPhotosLog {
             let path = detail.map { " (\($0))" } ?? ""
             return String(localized: "name taken\(path)", comment: "Common photos undo reason: the old path now holds other bytes; the path follows in brackets")
         case .serverError: return detail ?? String(localized: "server error", comment: "Common photos log reason")
+        case .liveStillFailed: return String(localized: "Live Photo still not moved", comment: "Common photos log reason: the motion of a Live Photo stays because its still did not move")
+        case .liveMotionChanged: return String(localized: "Live Photo video changed on server", comment: "Common photos log reason: the still of a Live Photo stays because its video changed since the scan")
         }
     }
 
@@ -110,6 +112,8 @@ enum CommonPhotosLog {
         case .noOtherCopy: return "no other copy"
         case .changedInShared: return "changed in Shared"
         case .nameTaken: return detail.map { "name taken: \($0)" } ?? "name taken"
+        case .liveStillFailed: return "Live Photo still not moved"
+        case .liveMotionChanged: return "Live Photo video changed on server"
         case .serverError: return detail.map { "server error: \($0)" } ?? "server error"
         }
     }

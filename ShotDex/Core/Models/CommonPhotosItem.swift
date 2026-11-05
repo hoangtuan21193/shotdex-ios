@@ -58,6 +58,12 @@ struct CommonPhotosItem: Hashable, Sendable {
         case nameTaken
         /// The server's own words follow the code: `serverError:<text>`.
         case serverError
+        /// Move (FS-19.08 §6f): the still of this Live Photo did not move, so
+        /// its motion stays beside it — a pair is never parted.
+        case liveStillFailed
+        /// Move: this Live Photo's motion changed on the server since the
+        /// scan, so neither half moves.
+        case liveMotionChanged
     }
 
     var runId: String

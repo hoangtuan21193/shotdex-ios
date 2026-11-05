@@ -52,6 +52,9 @@ final class CommonPhotosScanModel {
         let isIncluded: Bool
         /// The first folder's copy, for its thumbnail.
         let serverPath: String
+        /// One half of a Live Photo (§6f): checked, unchecked and run with
+        /// its other half.
+        var isLive = false
         /// Same by Quick Check (§6e): path, size, samples — no SHA-256 yet.
         var isQuick: Bool { sha256.hasPrefix(CommonPhoto.quickPrefix) }
     }
@@ -200,6 +203,13 @@ final class CommonPhotosScanModel {
     /// What the scan found before the photos the set already gathered were
     /// taken out, so another destination can cut it again.
     private var allPhotos: [CommonPhoto] = []
+    /// Live Photos (FS-19.08 §6f): a kept pair's still SHA-256 → its
+    /// motion's, and back.
+    @ObservationIgnored private var motionOf: [String: String] = [:]
+    @ObservationIgnored private var stillOf: [String: String] = [:]
+    /// Halves of Live Photos whose other half is not Same beside them: left
+    /// out of the results so no run parts a pair.
+    private(set) var liveLeftOutCount = 0
     private var cutTask: Task<Void, Never>?
     /// Lists the destination and works out each photo's landing (§6d).
     private var planTask: Task<Void, Never>?
@@ -327,7 +337,11 @@ final class CommonPhotosScanModel {
     /// Checks or unchecks rows; ids from `rows`. Unchecked is stored for the
     /// set at once: every later scan, Run Again and Keep gathering skips it.
     func setIncluded(_ included: Bool, rows ids: Set<String>) {
-        let chosen = rows.filter { ids.contains($0.id) }
+        let all = rows
+        // A Live Photo's halves go together (§6f).
+        let mates = Set(all.filter { ids.contains($0.id) }.compactMap { motionOf[$0.sha256] ?? stillOf[$0.sha256] })
+        let ids = ids.union(all.filter { mates.contains($0.sha256) }.map(\.id))
+        let chosen = all.filter { ids.contains($0.id) }
         let shas = Set(chosen.map(\.sha256))
         if included {
             leftOut.subtract(shas)
@@ -370,6 +384,8 @@ final class CommonPhotosScanModel {
     /// Include from the Left Out list: back as a row, checked, from the
     /// next scan on (and now, when this scan found it).
     func include(_ entries: Set<String>) {
+        // A Live Photo comes back whole (§6f).
+        let entries = entries.union(entries.compactMap { motionOf[$0] ?? stillOf[$0] })
         leftOut.subtract(entries)
         leftOutBefore.subtract(entries)
         if let setKey { record { try $0.include(entries, setKey: setKey) } }
@@ -422,14 +438,19 @@ final class CommonPhotosScanModel {
     }
 
     /// The Same photos the run takes.
-    var includedPhotos: [CommonPhoto] { photos.filter { !leftOut.contains($0.sha256) } }
+    var includedPhotos: [CommonPhoto] { photos.filter { !isOut($0.sha256, in: leftOut) } }
 
     /// Every Same photo this scan proved, listed or left out before — what
     /// "confirmed so far" counts against the candidates.
     var confirmedCount: Int { photos.count }
 
     /// The Same photos listed as rows: not those left out by an earlier sheet.
-    private var listed: [CommonPhoto] { photos.filter { !leftOutBefore.contains($0.sha256) } }
+    /// A Live Photo is out when either half is (§6f).
+    private var listed: [CommonPhoto] { photos.filter { !isOut($0.sha256, in: leftOutBefore) } }
+
+    private func isOut(_ sha256: String, in out: Set<String>) -> Bool {
+        out.contains(sha256) || (motionOf[sha256] ?? stillOf[sha256]).map(out.contains) == true
+    }
 
     /// Whether some source shows what lands in the destination.
     var isDestinationIndexed: Bool {
@@ -510,8 +531,9 @@ final class CommonPhotosScanModel {
         let id = Self.rowId(first)
         return Row(id: id, name: first.name, paths: paths.joined(separator: " · "),
                    fullPaths: fullPaths.joined(separator: "\n"), size: size, landing: landings[id], copies: copies,
-                   sha256: sha256, isIncluded: !leftOut.contains(sha256),
-                   serverPath: ServerUploadPath.join(folders[first.folder], first.relativePath))
+                   sha256: sha256, isIncluded: !isOut(sha256, in: leftOut),
+                   serverPath: ServerUploadPath.join(folders[first.folder], first.relativePath),
+                   isLive: motionOf[sha256] != nil || stillOf[sha256] != nil)
     }
 
     // MARK: Scan
@@ -567,6 +589,12 @@ final class CommonPhotosScanModel {
         }
     }
 
+    private func setLive(_ live: CommonPhotosLive.Result) {
+        motionOf = live.motionOf
+        stillOf = Dictionary(live.motionOf.map { ($0.value, $0.key) }, uniquingKeysWith: { first, _ in first })
+        liveLeftOutCount = live.split.count
+    }
+
     private func resetScan() {
         scanTask?.cancel()
         scanTask = nil
@@ -586,6 +614,7 @@ final class CommonPhotosScanModel {
         notice = nil
         listingWasCut = false
         allPhotos = []
+        setLive(CommonPhotosLive.Result(photos: [], split: [], motionOf: [:]))
         cutTask?.cancel()
         cutTask = nil
         isCutting = false
@@ -675,7 +704,9 @@ final class CommonPhotosScanModel {
             notice = nil
             listingWasCut = !gathered.seen.isEmpty
             var checked = listing
-            checked.files = CommonPhotosIncremental.listing(listing.files, folders: folders, seen: gathered.seen)
+            // A Live Photo half that is new is checked with its mate (§6f).
+            checked.files = CommonPhotosLive.keepingMates(CommonPhotosIncremental.listing(listing.files, folders: folders, seen: gathered.seen),
+                                                          from: listing.files)
             let records = await scanRecords(checked, folders: folders)
             try Task.checkCancellation()
             // What size and name say, shown at once; the heads refine it.
@@ -729,8 +760,11 @@ final class CommonPhotosScanModel {
             // A newer scan took over (one not run through scanTask cannot be cancelled).
             guard self.scanId == scanId else { return }
             // The callbacks hop to the main actor; the result is the truth.
-            allPhotos = found
-            photos = CommonPhotosIncremental.newPhotos(found, folders: folders, seen: gathered.seen)
+            // Live Photos held together (§6f), before anything is cut or planned.
+            let live = CommonPhotosLive.pair(found, files: listing.files)
+            setLive(live)
+            allPhotos = live.photos
+            photos = CommonPhotosLive.withMates(CommonPhotosIncremental.newPhotos(live.photos, folders: folders, seen: gathered.seen), in: live)
             checkedFiles = preview.candidateCount
             bytesLeft = 0
             phase = .done
@@ -752,7 +786,10 @@ final class CommonPhotosScanModel {
         } catch {
             guard !Task.isCancelled, self.scanId == scanId else { return }
             if (error as? RemoteFileError)?.stopsBatch == true { isConnected = false }
-            photos = foundSoFar.withLock { $0 }
+            // What was found before it failed, Live Photos held together (§6f).
+            let live = CommonPhotosLive.pair(foundSoFar.withLock { $0 }, files: self.listing?.files ?? [])
+            setLive(live)
+            photos = live.photos
             checkedFiles = max(checkedFiles, decided.withLock { $0 })
             failureError = error as? RemoteFileError
             phase = .failed((error as? RemoteFileError)?.errorDescription ?? error.localizedDescription)
@@ -823,7 +860,8 @@ final class CommonPhotosScanModel {
             guard let self else { return }
             let gathered = scansEverything ? .init() : ((try? await gathered(folders: folders, destination: destination)) ?? .init())
             guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
-            photos = CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen)
+            photos = CommonPhotosLive.withMates(CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen),
+                                                in: CommonPhotosLive.Result(photos: allPhotos, split: [], motionOf: motionOf))
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
             alreadyGathered = gathered.photoCount
             placedInDestination = gathered.placed
@@ -861,17 +899,30 @@ final class CommonPhotosScanModel {
             // Where each photo goes: `folder/name` under the destination.
             let needsDates = CommonPhotosPlacement.needsDate(organize)
             let names = CommonPhotosPlacement.names(timeZone: .current, locale: .current)
+            let listedShas = Set(photos.map(\.sha256))
             let toDate = photos.filter {
                 let id = Self.rowId($0.files[0][0])
+                // A motion whose still is listed takes its still's date.
+                if let still = self.stillOf[$0.sha256], listedShas.contains(still) { return false }
                 return self.placements[id] == nil && self.placementDates[id] == nil
             }.count
             if needsDates, toDate > 0 { datesRead = (0, toDate) }
             var paths: [String] = []
+            var placedBySha: [String: String] = [:]
             for photo in photos {
                 let first = photo.files[0][0]
                 let id = Self.rowId(first)
                 if let known = placements[id] {
                     paths.append(known)
+                    placedBySha[photo.sha256] = known
+                    continue
+                }
+                // A Live Photo's motion is filed beside its still (§6f), its date never read.
+                if let still = stillOf[photo.sha256], let stillPath = placedBySha[still] {
+                    let path = CommonPhotosLive.motionPath(besideStill: stillPath, motionExtension: (first.name as NSString).pathExtension)
+                    placements[id] = path
+                    placedBySha[photo.sha256] = path
+                    paths.append(path)
                     continue
                 }
                 let source = path(of: first, folders: folders)
@@ -896,6 +947,7 @@ final class CommonPhotosScanModel {
                 let path = CommonPhotosPlacement.relativePath(organize: organize, sourcePath: source, firstFolder: folders[0], date: date,
                                                               names: names) ?? first.name
                 placements[id] = path
+                placedBySha[photo.sha256] = path
                 paths.append(path)
                 if let read = datesRead { datesRead = (read.done + 1, read.total) }
             }
@@ -982,7 +1034,13 @@ final class CommonPhotosScanModel {
             if let index = existing.firstIndex(where: { $0.name == there.name }) { existing[index].sha256 = sha }
             if let date = modified[there.name] ?? nil { destinationHashes[key(there.name)] = (there.size, date, sha) }
         }
-        return CommonPhotosDestinationPlan.landings(planned, in: existing).enumerated().map { index, landing in
+        // A Live Photo's halves filed into this folder share one name (§6f).
+        let position = Dictionary(photos.enumerated().map { ($1.sha256, $0) }, uniquingKeysWith: { first, _ in first })
+        var pairs: [Int: Int] = [:]
+        for (index, photo) in photos.enumerated() {
+            if let motion = motionOf[photo.sha256], let at = position[motion] { pairs[index] = at }
+        }
+        return CommonPhotosDestinationPlan.landings(planned, in: existing, motionOf: pairs).enumerated().map { index, landing in
             guard !unread.contains(planned[index].name.lowercased()) else { return nil }
             // The landing names the path under the destination (§6e).
             return switch landing {
