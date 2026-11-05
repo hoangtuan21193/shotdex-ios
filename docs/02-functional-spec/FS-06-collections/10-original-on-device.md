@@ -113,7 +113,7 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-13 | mọi trường của bộ dựng | mở menu phép của *Original* | chỉ có *is* và *is not*; không có *is missing* | ✅ `SmartAlbumOperatorTests.everyFieldOperators`, `choiceFieldsOfferOnlyIsAndIsNot` |
 | AC-14 | iPhone, Duo trong, iPad, Mac | mở sheet editor và màn album có dòng tiến độ | khớp board từng máy, lệch ≤ 2pt | ⚠️ một phần — Duo trong: `build/design/shots/FS0610/T8/album-final.png` (ui-drive `fs0610-smart-album.json`); iPhone/iPad/Mac ở T12 `design-parity` |
 
-**Chưa chứng minh được:** AC-1…AC-14 (spec mới, chưa có code).
+**Chưa chứng minh được (verify 2026-11-05, 95 test / 13 suite xanh):** AC-1 (spike chờ iPhone thật), AC-12 (Mac bật Download Originals), AC-9 (`.limited` thật chưa chụp), AC-11 (18.6: Xcode không tải được runtime, đã chụp 26.5 + 27.1), AC-14 (Duo cover + editor Duo chưa chụp).
 
 ## 8. Rủi ro đã biết
 

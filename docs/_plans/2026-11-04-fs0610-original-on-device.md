@@ -5,7 +5,7 @@
 | Đặc tả | [`FS-06.10`](../02-functional-spec/FS-06-collections/10-original-on-device.md) (14 AC) |
 | Intent | [2026-11-04-smart-album-local-original](../_intents/2026-11-04-smart-album-local-original.md) |
 | Ngày | 2026-11-04 |
-| Trạng thái | duyệt 2026-11-04 — loop [FS0610_LOOP](FS0610_LOOP.md) |
+| Trạng thái | làm xong 2026-11-05 — loop [FS0610_LOOP](FS0610_LOOP.md); verify 9/14 AC |
 
 ## 1. Hiểu đúng chưa
 
