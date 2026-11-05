@@ -131,6 +131,9 @@ struct CommonPhotosStore: Sendable {
                 row.status = .pending
                 row.partPath = nil
                 row.reason = nil
+                // The run's File info is not the undo's: an undo says its own
+                // or nothing (FS-19.08 §6e).
+                row.fileInfo = nil
                 row.updatedAt = now
                 try row.insert(db)
             }

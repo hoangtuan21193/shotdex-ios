@@ -78,6 +78,8 @@ final class MacCommonPhotosLogModel {
     struct Counts: Equatable {
         /// Copied or moved, undone since included — for an undo run, undone.
         var done = 0, skipped = 0, failed = 0
+        /// §6e: copies that came back without their original dates.
+        var datesLost = 0
         /// A gathering run's photos an undo took back since.
         var undone = 0
     }
@@ -153,6 +155,7 @@ final class MacCommonPhotosLogModel {
 
     private static func counts(_ rows: [Row], isUndo: Bool) -> Counts {
         rows.reduce(into: Counts()) { counts, row in
+            if row.datesLost { counts.datesLost += 1 }
             switch row.status {
             case .copied, .moved: counts.done += 1
             // A gathering run's undone photos were copied or moved first,
@@ -240,12 +243,11 @@ final class MacCommonPhotosLogModel {
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
                    shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
-                   // An undo's rows say nothing about dates: the copies were taken back.
-                   fileInfo: run.isUndo || run.state == .ready ? "" : CommonPhotosLog.fileInfo(item.fileInfo),
+                   fileInfo: run.state == .ready ? "" : CommonPhotosLog.fileInfo(item.fileInfo),
                    datesLost: item.fileInfo == .datesNotKept,
                    csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
                    csvReason: CommonPhotosLog.csvReason(item),
-                   csvFileInfo: run.isUndo ? "" : item.fileInfo?.rawValue ?? "",
+                   csvFileInfo: item.fileInfo?.rawValue ?? "",
                    fromPaths: item.sources.map(\.path).joined(separator: "; "), toPath: item.destinationPath ?? "",
                    sha256: item.sha256)
     }
@@ -730,9 +732,14 @@ private struct MacCommonPhotosRunContent: View {
     private var summary: String {
         let counts = log.counts
         if run.isUndo {
-            return [String(localized: "\(counts.done.formatted()) undone", comment: "Common photos window: count"),
-                    String(localized: "\(counts.failed.formatted()) not undone", comment: "Common photos window: count")]
-                .joined(separator: " · ")
+            var parts = [String(localized: "\(counts.done.formatted()) undone", comment: "Common photos window: count"),
+                         String(localized: "\(counts.failed.formatted()) not undone", comment: "Common photos window: count")]
+            // Back, but not as they were (FS-19.08 §6e): said, not a failure.
+            if counts.datesLost > 0 {
+                parts.append(String(localized: "\(counts.datesLost.formatted()) without original dates",
+                                    comment: "Common photos undo window: photos put back on a server that gave them today's date"))
+            }
+            return parts.joined(separator: " · ")
         }
         let done = run.action == .move
             ? String(localized: "\(counts.done.formatted()) moved", comment: "Common photos window: count")

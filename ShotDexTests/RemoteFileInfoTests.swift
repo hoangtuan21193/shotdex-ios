@@ -219,6 +219,101 @@ import Testing
         #expect(recorded.sidecarInfo == sidecar)
     }
 
+    /// AC-216 + AC-224: Undo Move writes each removed copy back with the
+    /// dates and flags recorded before the Move removed it — its own, not
+    /// the shared copy's — and its `.xmp` with the sidecar's. The run fell
+    /// back to copying (the server would not rename across folders) on a
+    /// server that keeps no dates on new copies… until the undo, which
+    /// writes on one that does.
+    @Test func undoMovePutsEachCopyBackAsItWas() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let first = RemoteFileInfo(modified: Self.old, created: Self.older, isReadOnly: true)
+        let second = RemoteFileInfo(modified: Self.older, isHidden: true)
+        let sidecar = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_500_000_000))
+        fixture.nas.infos["A/IMG_1.JPG"] = first
+        fixture.nas.infos["B/IMG_1.JPG"] = second
+        fixture.nas.put("A/IMG_1.xmp", Data("<x/>".utf8))
+        fixture.nas.infos["A/IMG_1.xmp"] = sidecar
+        try await fixture.start(action: .move)
+        fixture.nas.keepsDates = false
+        try await fixture.runner.run("R1")
+        #expect(try fixture.items().first?.status == .moved)
+        #expect(fixture.nas.files["A/IMG_1.JPG"] == nil && fixture.nas.files["B/IMG_1.JPG"] == nil)
+
+        fixture.nas.keepsDates = true
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        try await CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work).run("U1")
+
+        let undone = try #require(try fixture.store.items(runId: "U1").first)
+        #expect(undone.status == .undone)
+        #expect(undone.fileInfo == .kept)
+        #expect(try await fixture.nas.fileInfo(at: "A/IMG_1.JPG") == first)
+        #expect(try await fixture.nas.fileInfo(at: "B/IMG_1.JPG") == second)
+        #expect(try await fixture.nas.fileInfo(at: "A/IMG_1.xmp") == sidecar)
+    }
+
+    /// AC-216: a Move renamed on the server whose copy in `C` has lost its
+    /// date since (or never kept it): the undo renames it back and sets the
+    /// recorded date and flags again.
+    @Test func undoRenameBackSetsTheRecordedInfo() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        let first = RemoteFileInfo(modified: Self.old, isReadOnly: true)
+        fixture.nas.infos["A/IMG_1.JPG"] = first
+        try await fixture.start(action: .move)
+        try await fixture.runner.run("R1")
+        fixture.nas.infos["C/IMG_1.JPG"] = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_793_836_800))
+
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        try await CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work).run("U1")
+
+        #expect(try fixture.store.items(runId: "U1").first?.fileInfo == .kept)
+        #expect(try await fixture.nas.fileInfo(at: "A/IMG_1.JPG") == first)
+    }
+
+    /// AC-224: an undo on a server that sets no dates puts every photo back
+    /// (Undone, not a failure) and says so on the row and in the CSV; the
+    /// run's own verdict is not carried over.
+    @Test func undoOnAServerThatKeepsNoDatesSaysSo() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 2)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        fixture.nas.infos["A/IMG_1.JPG"] = RemoteFileInfo(modified: Self.old)
+        try await fixture.start(action: .move)
+        try await fixture.runner.run("R1")
+        #expect(try fixture.items().allSatisfy { $0.fileInfo == .kept })
+
+        fixture.nas.keepsDates = false
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        try await CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work).run("U1")
+
+        let rows = try fixture.store.items(runId: "U1")
+        #expect(rows.map(\.status) == [.undone, .undone])
+        #expect(rows.allSatisfy { $0.fileInfo == .datesNotKept })
+        // A whole undo takes its CSVs away (§6b); a partial one leaves this.
+        #expect(CommonPhotosLog.csv(rows, isUndo: true).contains(",dates not kept\r\n"))
+    }
+
+    /// An undo of a Copy dates nothing: its rows carry no verdict, not the
+    /// run's "kept".
+    @Test func undoCopyCarriesNoVerdict() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.infos["A/IMG_1.JPG"] = RemoteFileInfo(modified: Self.old)
+        try await fixture.start()
+        try await fixture.runner.run("R1")
+
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        try await CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work).run("U1")
+
+        #expect(try fixture.store.items(runId: "U1").first?.fileInfo == nil)
+    }
+
+    /// The undo row's verdict: the worst of its copies.
+    @Test func worstOutcomeWins() {
+        #expect(CommonPhotosUndoer.worst([]) == nil)
+        #expect(CommonPhotosUndoer.worst([.kept, .kept]) == .kept)
+        #expect(CommonPhotosUndoer.worst([.kept, .datesNotKept]) == .datesNotKept)
+    }
+
     /// AC-213 (sidecar): the `.xmp` gets its own source's dates, not the
     /// photo's.
     @Test func sidecarKeepsItsOwnInfo() async throws {

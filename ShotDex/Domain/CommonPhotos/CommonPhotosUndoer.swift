@@ -186,6 +186,9 @@ struct CommonPhotosUndoer: Sendable {
         var skipped: [String] = []
         var writing: String?
         let write = VerifiedRemoteWrite(client: client)
+        // What became of each put-back copy's dates (FS-19.08 §6e); the
+        // row says the worst of them.
+        var outcomes: [FileInfoOutcome] = []
         do {
             report(.checking, 0)
             try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
@@ -201,7 +204,11 @@ struct CommonPhotosUndoer: Sendable {
                 report(.checking, share(0))
                 switch try await state(of: path, size: item.size, sha256: item.sha256) {
                 case .same:
-                    break
+                    // Back already — an earlier session put it there and may
+                    // have stopped before its dates were set: set them now.
+                    if let info = item.sources[index].info, let outcome = await write.applyInfo(info, to: path) {
+                        outcomes.append(outcome)
+                    }
                 case .other:
                     skipped.append(path)
                     continue
@@ -220,6 +227,12 @@ struct CommonPhotosUndoer: Sendable {
                         if try await client.fileSize(at: path) == item.size {
                             renamedBack = true
                             placedIsGone = true
+                            // A rename keeps whatever dates the shared copy
+                            // has, and the run's rename may not have kept the
+                            // source's (WebDAV across mounts): set them.
+                            if let info = item.sources[index].info, let outcome = await write.applyInfo(info, to: path) {
+                                outcomes.append(outcome)
+                            }
                         }
                     }
                     if !renamedBack {
@@ -241,12 +254,17 @@ struct CommonPhotosUndoer: Sendable {
                                 == item.sha256 else {
                             throw RemoteFileError.other("checksum mismatch")
                         }
-                        try await write.moveIntoPlace(path, replacing: false)
+                        // Back as it was (FS-19.08 §6e): the dates and flags
+                        // recorded before the Move removed this copy.
+                        if let outcome = try await write.moveIntoPlace(path, replacing: false, info: item.sources[index].info) {
+                            outcomes.append(outcome)
+                        }
                         writing = nil
                     }
                 }
-                try await putBackSidecar(of: item.sources[index], item: item)
+                if let outcome = try await putBackSidecar(of: item.sources[index], item: item) { outcomes.append(outcome) }
                 item.sources[index].isRemoved = false
+                item.fileInfo = Self.worst(outcomes)
                 try store.finishUndo(item, originalRunId: originalId)
             }
             // The destination copy goes last: the run's, every removed copy
@@ -317,28 +335,39 @@ struct CommonPhotosUndoer: Sendable {
         return false
     }
 
+    /// The row's File info after an undo: lost when any copy put back lost
+    /// its dates, kept when every one that could be dated was; nil when
+    /// none was (an undo of a run from before §6e).
+    static func worst(_ outcomes: [FileInfoOutcome]) -> FileInfoOutcome? {
+        if outcomes.contains(.datesNotKept) { return .datesNotKept }
+        if outcomes.contains(.tagsNotKept) { return .tagsNotKept }
+        return outcomes.isEmpty ? nil : .kept
+    }
+
     /// A source's `.xmp`, removed by the Move, written back from the one in
-    /// the destination when its old name is free. Best effort: a sidecar
-    /// that will not go back never holds the photo up.
-    private func putBackSidecar(of source: CommonPhotosItem.Source, item: CommonPhotosItem) async throws {
-        guard let sidecar = source.sidecar, let there = Self.sidecarInDestination(of: item) else { return }
+    /// the destination when its old name is free, with its own recorded
+    /// dates; returns what became of them. Best effort: a sidecar that will
+    /// not go back never holds the photo up.
+    @discardableResult
+    private func putBackSidecar(of source: CommonPhotosItem.Source, item: CommonPhotosItem) async throws -> FileInfoOutcome? {
+        guard let sidecar = source.sidecar, let there = Self.sidecarInDestination(of: item) else { return nil }
         let write = VerifiedRemoteWrite(client: client)
         let local = workDirectory.appendingPathComponent(UUID().uuidString + ".xmp")
         defer { try? FileManager.default.removeItem(at: local) }
         do {
-            guard try await client.fileSize(at: sidecar) == nil, try await client.fileSize(at: there) != nil else { return }
+            guard try await client.fileSize(at: sidecar) == nil, try await client.fileSize(at: there) != nil else { return nil }
             let sha256 = try await client.download(there, to: local, progress: { _ in })
             // Written by the run and edited since: not what was removed.
-            if item.sidecarPlaced == there, let recorded = item.sidecarSHA256, recorded != sha256 { return }
+            if item.sidecarPlaced == there, let recorded = item.sidecarSHA256, recorded != sha256 { return nil }
             try await write.uploadPart(local, for: sidecar, progress: { _ in })
             guard try await write.readBackSHA256(for: sidecar, progress: { _ in }) == sha256 else {
                 await write.discardPart(for: sidecar)
-                return
+                return nil
             }
-            try await write.moveIntoPlace(sidecar, replacing: false)
+            return try await write.moveIntoPlace(sidecar, replacing: false, info: source.sidecarInfo)
         } catch {
             await write.discardPart(for: sidecar)
-            if let remote = error as? RemoteFileError, !remote.stopsBatch { return }
+            if let remote = error as? RemoteFileError, !remote.stopsBatch { return nil }
             throw error
         }
     }

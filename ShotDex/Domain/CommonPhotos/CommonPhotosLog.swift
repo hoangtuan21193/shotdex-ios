@@ -66,9 +66,9 @@ enum CommonPhotosLog {
                 item.destinationPath ?? "",
                 item.sha256,
                 csvReason(item),
-                // An undo's rows are the run's photos taken back: the
-                // verdict was the run's, not the undo's.
-                isUndo ? "" : item.fileInfo?.rawValue ?? "",
+                // An undo's row has its own verdict: a Move's copies put
+                // back with their dates or not; a Copy's undo dates nothing.
+                item.fileInfo?.rawValue ?? "",
             ].map(defused)))
         }
         return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"

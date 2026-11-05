@@ -522,8 +522,11 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
   ngày thì **vẫn Move** (người dùng 2026-11-05) — bản ở Shared mang ngày hôm nay, log `dates not kept`; thông tin của
   mọi bản bị xoá (ngày sửa, ngày tạo, cờ) được lưu **trước** khi xoá để Hoàn tác trả lại đúng. Sidecar `.xmp`: đặt
   theo sidecar nguồn của nó.
-- **Hoàn tác Move** (§6b) đẩy lại bản đã xoá: đặt thông tin của **chính bản đó** (lưu khi xoá: ngày sửa, ngày tạo, cờ).
-  Bỏ dòng "Trả ngày sửa cũ cho bản được trả về" khỏi §2 Cố ý không có.
+- **Hoàn tác Move** (§6b) đẩy lại bản đã xoá: đặt thông tin của **chính bản đó** (lưu khi xoá: ngày sửa, ngày tạo, cờ;
+  `.xmp` cũng vậy) — cả khi đổi chỗ về (lượt Move có thể đã không giữ ngày) và khi bản đã về từ lượt Undo trước bị dừng.
+  Hàng Undo có File info riêng (không chép của lượt gốc): `Dates not kept` nếu một bản trả về không giữ được ngày,
+  `Kept` nếu mọi bản giữ, `—` cho Undo Copy (không đặt gì); ảnh vẫn **Undone**, dòng tóm tắt thêm "· N without
+  original dates". Bỏ dòng "Trả ngày sửa cũ cho bản được trả về" khỏi §2 Cố ý không có.
 - Server biết trước là không giữ được (lượt trước trên connection đó đã bị từ chối) → sheet ghi ngay dưới hàng Save to ·
   Action (màu cam, có dấu ⚠): "This server does not keep file dates: copies show the day they were copied." CSV cột
   `File info` = `kept` / `dates not kept` / `tags not kept`; cửa sổ log cột **File info** = `Kept` / `Dates not kept`
