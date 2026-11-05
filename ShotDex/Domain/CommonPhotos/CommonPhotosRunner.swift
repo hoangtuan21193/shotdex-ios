@@ -282,6 +282,7 @@ struct CommonPhotosRunner: Sendable {
                         } else {
                             let path = ServerUploadPath.join(run.destination, folder)
                             do {
+                                try await recordFoldersToMake(folder, under: run.destination, runId: runId)
                                 try await client.createDirectory(path)
                                 into = destination.subfolder(folder, entries: try await client.entries(in: path).filter { !$0.isDirectory })
                             } catch let error as RemoteFileError where !error.stopsBatch {
@@ -692,35 +693,27 @@ struct CommonPhotosRunner: Sendable {
                                 claimedSidecars: claimedSidecars, report: report)
     }
 
-    /// Where Organize files the photo (§6e). Its date, when filing needs
-    /// one: the capture date in the head of a photo (never a video's, which
-    /// is not read for it), else the date its folder names, else its write
-    /// time. A head that cannot be read is no date, not a failure.
+    /// The levels of `folder` not on the server yet, recorded on the run
+    /// before they are made (§6e): an undo removes them again when it leaves
+    /// them empty. A level that is there already was not this run's.
+    private func recordFoldersToMake(_ folder: String, under destination: String, runId: String) async throws {
+        var missing: [String] = []
+        var relative = ""
+        for component in folder.split(separator: "/") {
+            relative = ServerUploadPath.join(relative, String(component))
+            // Below a level just found missing, every level is missing too.
+            if missing.isEmpty, try await client.directoryExists(ServerUploadPath.join(destination, relative)) { continue }
+            missing.append(relative)
+        }
+        try store.addCreatedFolders(missing, runId: runId)
+    }
+
+    /// Where Organize files the photo (§6e), for one the scan did not place.
     private func placement(of item: CommonPhotosItem, organize: BackupOrganize, run: CommonPhotosRun) async throws -> String? {
         guard let source = item.sources.first, let firstFolder = run.folders.first else { return nil }
-        // Dates in folder names are read in the Gregorian calendar; names
-        // are written in this Mac's, as Backup writes them.
-        var gregorian = Calendar(identifier: .gregorian)
-        gregorian.timeZone = timeZone
-        var calendar = Calendar.current
-        calendar.timeZone = timeZone
-        var date = now()
-        if CommonPhotosPlacement.needsDate(organize) {
-            var taken: Date?
-            if !PairingRule.isMovie(ServerUploadPath.lastComponent(of: source.path)) {
-                do {
-                    let head = try await client.readRange(source.path, offset: 0, length: Int(min(item.size, Int64(EmbeddedPreview.firstRead))))
-                    taken = EmbeddedPreview.captureDate(from: head, timeZone: timeZone)
-                } catch let error as RemoteFileError where !error.stopsBatch {
-                    taken = nil
-                }
-            }
-            let folder = CommonPhotosPlacement.sourceFolder(of: source.path, firstFolder: firstFolder)
-            let modified = source.modifiedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-            date = CommonPhotosOrganizeDate.date(taken: taken, folder: folder, modified: modified, calendar: gregorian) ?? date
-        }
-        return CommonPhotosPlacement.relativePath(organize: organize, sourcePath: source.path, firstFolder: firstFolder, date: date,
-                                                  names: BackupDateName(calendar: calendar, locale: locale))
+        return try await CommonPhotosPlacement.place(sourcePath: source.path, size: item.size, modifiedAt: source.modifiedAt,
+                                                     organize: organize, firstFolder: firstFolder, client: client,
+                                                     timeZone: timeZone, locale: locale, now: now())
     }
 
     private func reset(_ item: inout CommonPhotosItem) throws {

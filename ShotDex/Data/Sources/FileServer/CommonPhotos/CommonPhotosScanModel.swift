@@ -64,8 +64,9 @@ final class CommonPhotosScanModel {
     var destination: String? {
         didSet {
             guard destination != oldValue else { return }
-            // Another set, another Left Out (§6d).
+            // Another set, another Left Out (§6d), and its own Organize (§6e).
             loadLeftOut()
+            loadOrganize()
             // A scan whose listing was cut for another set never read what
             // this set needs: scan again. Otherwise the results are cut
             // again from the whole of them, now or when the scan ends
@@ -98,6 +99,77 @@ final class CommonPhotosScanModel {
             }
         }
     }
+    /// How the run files photos under the destination (§6e): the set's own
+    /// — its newest run's, No Folders for a set that ran before Organize —
+    /// or Same as Source for a set that never ran. Changing it plans again.
+    var organize = CommonPhotosScanModel.newSetOrganize {
+        didSet {
+            guard organize != oldValue else { return }
+            if !isLoadingOrganize { isOrganizeChosen = true }
+            placements = [:]
+            if phase == .done, !isCutting { replan() }
+        }
+    }
+    /// The user picked an Organize in this sheet: a set never run keeps
+    /// that choice when its folders or destination change.
+    @ObservationIgnored private var isOrganizeChosen = false
+    @ObservationIgnored private var isLoadingOrganize = false
+    /// The set's Organize as its runs left it; nil for a set never run.
+    private(set) var setOrganize: BackupOrganize?
+    /// A new set's Organize (§6e): Same as Source, videos together.
+    static let newSetOrganize: BackupOrganize = {
+        var organize = BackupOrganize()
+        organize.levels = .sameAsSource
+        organize.videoPlacement = .together
+        return organize
+    }()
+    /// How every run before §6e filed photos: all at the destination's top.
+    static let flatOrganize: BackupOrganize = {
+        var organize = BackupOrganize()
+        organize.levels = .noFolders
+        organize.videoPlacement = .together
+        return organize
+    }()
+    /// The set gathered photos under another Organize (§6e): those stay
+    /// where they are, only new ones follow this one — the sheet says so.
+    var organizeAffectsNewOnly: Bool {
+        guard let setOrganize, alreadyGathered > 0 else { return false }
+        return organize != setOrganize
+    }
+    /// Where each row's photo is filed, under the destination (folders and
+    /// name), for the Organize shown; by row id.
+    @ObservationIgnored private var placements: [String: String] = [:]
+    /// Each row's date as the plan read it — kept across Organize changes,
+    /// so trying levels reads no head twice; a new scan drops it.
+    @ObservationIgnored private var placementDates: [String: Date?] = [:]
+    /// Dates read for the plan (§6e: "Reading dates 120 of 13,000"); nil
+    /// when none are being read.
+    private(set) var datesRead: (done: Int, total: Int)?
+
+    private func loadOrganize() {
+        guard let database, let destination else { return }
+        let newest: BackupOrganize??
+        do {
+            newest = try CommonPhotosStore(database: database).organize(connectionId: connectionId, folders: folders, destination: destination)
+        } catch {
+            Self.logger.error("set organize not read: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+        isLoadingOrganize = true
+        defer { isLoadingOrganize = false }
+        if let ran = newest {
+            // A set that ran: as its newest run filed them, flat before §6e —
+            // unless the user chose in this sheet; the note then says what
+            // the choice does to the photos gathered.
+            setOrganize = ran ?? Self.flatOrganize
+            if !isOrganizeChosen { organize = ran ?? Self.flatOrganize }
+        } else {
+            setOrganize = nil
+            // A choice made before the set was complete stays.
+            if !isOrganizeChosen { organize = Self.newSetOrganize }
+        }
+    }
+
     /// Rows Quick Check made Same, for "Same 282 · 214 quick".
     var quickCount: Int { listed.count(where: \.isQuick) }
     /// The server's error the last scan stopped on, for the helper to tell a
@@ -197,6 +269,7 @@ final class CommonPhotosScanModel {
         // Another set: its own Left Out; what was unchecked was of the old one.
         leftOutPending = [:]
         loadLeftOut()
+        loadOrganize()
     }
 
     func remove(folder: String) {
@@ -204,6 +277,7 @@ final class CommonPhotosScanModel {
         resetScan()
         leftOutPending = [:]
         loadLeftOut()
+        loadOrganize()
     }
 
     /// The first thing that stops a run, or nil (FS-19.08 §4).
@@ -510,6 +584,9 @@ final class CommonPhotosScanModel {
         planTask = nil
         landings = [:]
         isPlanning = false
+        datesRead = nil
+        placements = [:]
+        placementDates = [:]
         placedInDestination = [:]
     }
 
@@ -524,6 +601,10 @@ final class CommonPhotosScanModel {
         planTask?.cancel()
         landings = [:]
         isPlanning = false
+        // A file rewritten since keeps its path: its date is read again.
+        placements = [:]
+        placementDates = [:]
+        datesRead = nil
         loadLeftOut()
         phase = .listing
         preview = nil
@@ -744,68 +825,161 @@ final class CommonPhotosScanModel {
 
     /// Lists the destination and works out what each Same photo becomes
     /// there (§6d), reading only the files a landing hangs on — same name
-    /// and size as a photo. A destination that cannot be listed leaves the
-    /// rows without a plan; the run names them anyway.
+    /// and size as a photo. Organize (§6e) first says where each photo is
+    /// filed, reading its date when that needs one; then each folder the
+    /// plan files into is listed — only those — and a landing is judged in
+    /// its own folder. A destination that cannot be listed leaves the rows
+    /// without a plan; the run names them anyway.
     private func replan() {
         reloadLeftOutEntries()
         planTask?.cancel()
         landings = [:]
         isPlanning = false
+        datesRead = nil
         // The rows only: a photo left out before claims no name in the plan.
         let photos = listed
         guard plansDestination, let destination, !photos.isEmpty else { return }
         let scanId = scanId
+        let organize = organize
+        let folders = folders
         isPlanning = true
         planTask = Task { [weak self] in
             guard let self else { return }
-            defer { if self.scanId == scanId, self.destination == destination, !Task.isCancelled { self.isPlanning = false } }
-            guard let entries = try? await destinationEntries(destination) else { return }
-            let planned = photos.map {
-                CommonPhotosDestinationPlan.Photo(name: $0.files[0][0].name, size: $0.size, sha256: $0.sha256)
-            }
-            let key = { (name: String) in ServerUploadPath.join(destination, name).lowercased() }
-            var existing = entries.map { entry in
-                let known = self.destinationHashes[key(entry.name)]
-                let holds = known != nil && known?.size == entry.size && entry.modified != nil && known?.modified == entry.modified
-                let placed = self.placedInDestination[entry.name.lowercased()].flatMap { $0.size == entry.size ? $0.sha256 : nil }
-                return CommonPhotosDestinationPlan.Existing(name: entry.name, size: entry.size,
-                                                            sha256: holds ? known?.sha256 : placed)
-            }
-            let modified = Dictionary(entries.map { ($0.name, $0.modified) }, uniquingKeysWith: { first, _ in first })
-            // A file that would decide a row but could not be read: that row
-            // gets no plan rather than a guess the run would contradict.
-            var unread = Set<String>()
-            // A quick photo has no SHA-256 to match a file of its name and
-            // size: that row gets no plan — the run reads it and decides.
-            let namedSizes = Set(existing.map { "\($0.name.lowercased())|\($0.size)" })
-            for (index, photo) in planned.enumerated() where photos[index].isQuick {
-                if namedSizes.contains("\(photo.name.lowercased())|\(photo.size)") { unread.insert(photo.name.lowercased()) }
-            }
-            for there in CommonPhotosDestinationPlan.toHash(planned.filter { !$0.sha256.hasPrefix(CommonPhoto.quickPrefix) }, in: existing) {
-                // Unread, it stays a name taken by other bytes: the plan
-                // shows the next free name, the run checks again.
-                let sha: String
-                do {
-                    sha = try await client.sha256(of: ServerUploadPath.join(destination, there.name), progress: { _ in })
-                    try Task.checkCancellation()
-                } catch is CancellationError {
-                    return
-                } catch {
-                    if Task.isCancelled { return }
-                    unread.insert(there.name.lowercased())
+            let isCurrent = { self.scanId == scanId && self.destination == destination && self.organize == organize && !Task.isCancelled }
+            defer { if isCurrent() { self.isPlanning = false; self.datesRead = nil } }
+            guard let rootEntries = try? await destinationEntries(destination) else { return }
+
+            // Where each photo goes: `folder/name` under the destination.
+            let needsDates = CommonPhotosPlacement.needsDate(organize)
+            let names = CommonPhotosPlacement.names(timeZone: .current, locale: .current)
+            let toDate = photos.filter {
+                let id = Self.rowId($0.files[0][0])
+                return self.placements[id] == nil && self.placementDates[id] == nil
+            }.count
+            if needsDates, toDate > 0 { datesRead = (0, toDate) }
+            var paths: [String] = []
+            for photo in photos {
+                let first = photo.files[0][0]
+                let id = Self.rowId(first)
+                if let known = placements[id] {
+                    paths.append(known)
                     continue
                 }
-                if let index = existing.firstIndex(where: { $0.name == there.name }) { existing[index].sha256 = sha }
-                if let date = modified[there.name] ?? nil { destinationHashes[key(there.name)] = (there.size, date, sha) }
+                let source = path(of: first, folders: folders)
+                var date = Date()
+                if needsDates {
+                    if let known = placementDates[id] {
+                        date = known ?? date
+                    } else {
+                        let read: Date?
+                        do {
+                            read = try await CommonPhotosPlacement.date(
+                                sourcePath: source, size: photo.size, modifiedAt: first.modified.map { Int($0.timeIntervalSince1970) },
+                                firstFolder: folders[0], client: client, timeZone: .current)
+                        } catch {
+                            return
+                        }
+                        guard isCurrent() else { return }
+                        placementDates[id] = .some(read)
+                        date = read ?? date
+                    }
+                }
+                let path = CommonPhotosPlacement.relativePath(organize: organize, sourcePath: source, firstFolder: folders[0], date: date,
+                                                              names: names) ?? first.name
+                placements[id] = path
+                paths.append(path)
+                if let read = datesRead { datesRead = (read.done + 1, read.total) }
             }
-            guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
-            let landings = CommonPhotosDestinationPlan.landings(planned, in: existing)
+            if isCurrent() { datesRead = nil }
+
+            // Each folder filed into, listed once; a missing one holds nothing.
+            // One folder however its name is cased, as the run treats it.
+            var byFolder: [String: (folder: String, indices: [Int])] = [:]
+            for (index, path) in paths.enumerated() {
+                let folder = ServerUploadPath.parent(of: path)
+                byFolder[folder.lowercased(), default: (folder, [])].indices.append(index)
+            }
             var byRow: [String: CommonPhotosDestinationPlan.Landing] = [:]
-            for (index, landing) in landings.enumerated() where !unread.contains(planned[index].name.lowercased()) {
-                let id = Self.rowId(photos[index].files[0][0])
-                if byRow[id] == nil { byRow[id] = landing }
+            for key in byFolder.keys.sorted() {
+                guard let (folder, indices) = byFolder[key] else { continue }
+                let entries: [RemoteEntry]
+                if folder.isEmpty {
+                    entries = rootEntries
+                } else {
+                    // A folder that cannot be listed leaves its own rows
+                    // without a plan; the rest are planned.
+                    guard let listed = try? await destinationEntries(ServerUploadPath.join(destination, folder)) else {
+                        if Task.isCancelled { return }
+                        continue
+                    }
+                    entries = listed
+                }
+                guard isCurrent() else { return }
+                let landings = await plan(indices.map { photos[$0] }, names: indices.map { ServerUploadPath.lastComponent(of: paths[$0]) },
+                                          folder: folder, entries: entries, destination: destination)
+                guard let landings, isCurrent() else { return }
+                for (offset, index) in indices.enumerated() {
+                    guard let landing = landings[offset] else { continue }
+                    let id = Self.rowId(photos[index].files[0][0])
+                    if byRow[id] == nil { byRow[id] = landing }
+                }
             }
+            guard isCurrent() else { return }
             self.landings = byRow
+        }
+    }
+
+    /// The landings of the photos filed into one folder (`folder` under the
+    /// destination, "" its top), as `names`; a landing is nil where a file
+    /// that decides it could not be read. Nil when cancelled.
+    private func plan(_ photos: [CommonPhoto], names: [String], folder: String, entries: [RemoteEntry],
+                      destination: String) async -> [CommonPhotosDestinationPlan.Landing?]? {
+        let planned = zip(photos, names).map { photo, name in
+            CommonPhotosDestinationPlan.Photo(name: name, size: photo.size, sha256: photo.sha256)
+        }
+        let folderPath = ServerUploadPath.join(destination, folder)
+        let key = { (name: String) in ServerUploadPath.join(folderPath, name).lowercased() }
+        var existing = entries.map { entry in
+            let known = destinationHashes[key(entry.name)]
+            let holds = known != nil && known?.size == entry.size && entry.modified != nil && known?.modified == entry.modified
+            let placed = placedInDestination[ServerUploadPath.join(folder, entry.name).lowercased()]
+                .flatMap { $0.size == entry.size ? $0.sha256 : nil }
+            return CommonPhotosDestinationPlan.Existing(name: entry.name, size: entry.size, sha256: holds ? known?.sha256 : placed)
+        }
+        let modified = Dictionary(entries.map { ($0.name, $0.modified) }, uniquingKeysWith: { first, _ in first })
+        // A file that would decide a row but could not be read: that row
+        // gets no plan rather than a guess the run would contradict.
+        var unread = Set<String>()
+        // A quick photo has no SHA-256 to match a file of its name and
+        // size: that row gets no plan — the run reads it and decides.
+        let namedSizes = Set(existing.map { "\($0.name.lowercased())|\($0.size)" })
+        for (index, photo) in planned.enumerated() where photos[index].isQuick {
+            if namedSizes.contains("\(photo.name.lowercased())|\(photo.size)") { unread.insert(photo.name.lowercased()) }
+        }
+        for there in CommonPhotosDestinationPlan.toHash(planned.filter { !$0.sha256.hasPrefix(CommonPhoto.quickPrefix) }, in: existing) {
+            // Unread, it stays a name taken by other bytes: the plan
+            // shows the next free name, the run checks again.
+            let sha: String
+            do {
+                sha = try await client.sha256(of: ServerUploadPath.join(folderPath, there.name), progress: { _ in })
+                try Task.checkCancellation()
+            } catch is CancellationError {
+                return nil
+            } catch {
+                if Task.isCancelled { return nil }
+                unread.insert(there.name.lowercased())
+                continue
+            }
+            if let index = existing.firstIndex(where: { $0.name == there.name }) { existing[index].sha256 = sha }
+            if let date = modified[there.name] ?? nil { destinationHashes[key(there.name)] = (there.size, date, sha) }
+        }
+        return CommonPhotosDestinationPlan.landings(planned, in: existing).enumerated().map { index, landing in
+            guard !unread.contains(planned[index].name.lowercased()) else { return nil }
+            // The landing names the path under the destination (§6e).
+            return switch landing {
+            case .name(let name): .name(ServerUploadPath.join(folder, name))
+            case .alreadyThere(let name): .alreadyThere(ServerUploadPath.join(folder, name))
+            }
         }
     }
 
@@ -819,12 +993,24 @@ final class CommonPhotosScanModel {
         let store = CommonPhotosStore(database: database)
         let connectionId = connectionId
         guard let entries = try await destinationEntries(destination) else { return .init() }
+        // The folders Organize filed earlier photos into (§6e), each listed:
+        // a photo gathered there is still gathered while it is there.
+        var listed: [(folder: String, entries: [RemoteEntry])] = [("", entries)]
+        let filedIn = try await Task.detached { try store.gatheredFolders(connectionId: connectionId, folders: folders, destination: destination) }.value
+        for folder in filedIn.sorted() {
+            // Unlisted, its photos count as not gathered — checked again,
+            // never taken for gone.
+            guard let inFolder = try await destinationEntries(ServerUploadPath.join(destination, folder)) else { continue }
+            listed.append((folder, inFolder))
+        }
         // A database that cannot say what was gathered fails the scan:
         // taking it as "nothing gathered" would gather everything again.
         return try await Task.detached {
-            // The name → sizes map is built here, off the main actor.
+            // The path → sizes map is built here, off the main actor.
             var present: [String: Set<Int64>] = [:]
-            for entry in entries { present[entry.name.lowercased(), default: []].insert(entry.size) }
+            for (folder, entries) in listed {
+                for entry in entries { present[ServerUploadPath.join(folder, entry.name).lowercased(), default: []].insert(entry.size) }
+            }
             return try store.gathered(connectionId: connectionId, folders: folders, destination: destination, inDestination: present)
         }.value
     }
@@ -917,9 +1103,17 @@ final class CommonPhotosScanModel {
     /// photo, sidecars and all. Nil until it can run.
     func makeRun() -> (run: CommonPhotosRun, items: [CommonPhotosItem])? {
         guard canRun, let destination, let listing else { return nil }
-        let run = CommonPhotosRun(connectionId: connectionId, folders: folders, destination: destination, action: action)
-        let items = CommonPhotosRunner.items(for: includedPhotos, runId: run.id, folders: folders,
+        var run = CommonPhotosRun(connectionId: connectionId, folders: folders, destination: destination, action: action)
+        // The set's Organize goes with the run (§6e); where the plan already
+        // filed a photo, the run files it there — the rest it works out.
+        run.organize = organize
+        let photos = includedPhotos
+        var items = CommonPhotosRunner.items(for: photos, runId: run.id, folders: folders,
                                              files: listing.files, sidecars: listing.sidecars)
+        for index in items.indices {
+            let first = photos[index].files[0][0]
+            if let placed = placements[Self.rowId(first)], placed != first.name { items[index].placement = placed }
+        }
         return (run, items)
     }
 

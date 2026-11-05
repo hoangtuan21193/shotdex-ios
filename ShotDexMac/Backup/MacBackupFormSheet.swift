@@ -159,6 +159,15 @@ struct MacBackupFormSheet: View {
 struct MacBackupOrganizePage: View {
     @Binding var organize: BackupOrganize
     var back: () -> Void
+    /// Find Common Photos opens this page too (FS-19.08 §6e), naming its
+    /// first folder: Same as Source joins the levels, Album leaves them.
+    var commonPhotosFirstFolder: String? = nil
+    /// What the sheet behind is doing, shown beside Done.
+    var status: String? = nil
+
+    private var levels: [BackupOrganize.Levels] {
+        commonPhotosFirstFolder == nil ? BackupOrganize.Levels.backup : BackupOrganize.Levels.commonPhotos
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -171,11 +180,18 @@ struct MacBackupOrganizePage: View {
             .padding(.bottom, 12)
             Form {
                 Section(String(localized: "Preview", comment: "Organize: the example tree")) {
-                    Text(BackupOrganizeText.sampleTree(organize)).font(.callout.monospaced()).textSelection(.enabled)
+                    Text(commonPhotosFirstFolder == nil ? BackupOrganizeText.sampleTree(organize) : BackupOrganizeText.commonPhotosTree(organize))
+                        .font(.callout.monospaced()).textSelection(.enabled)
                 }
                 Section {
-                    Picker(String(localized: "Levels:", comment: "Organize: folder levels"), selection: $organize.levels) {
-                        ForEach(BackupOrganize.Levels.backup, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
+                    Picker(selection: $organize.levels) {
+                        ForEach(levels, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
+                    } label: {
+                        Text("Levels:", comment: "Organize: folder levels")
+                        if let first = commonPhotosFirstFolder, !first.isEmpty, organize.levels == .sameAsSource {
+                            Text("Each photo keeps the folder it has in \(first), the first folder listed in Find Common Photos.",
+                                 comment: "Organize, Find Common Photos: what Same as Source does")
+                        }
                     }
                     Picker(String(localized: "Videos:", comment: "Organize: where videos go"), selection: $organize.videoPlacement) {
                         ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) { Text(BackupOrganizeText.videos($0)).tag($0) }
@@ -189,11 +205,19 @@ struct MacBackupOrganizePage: View {
                         ForEach(BackupOrganize.FileNames.allCases, id: \.self) { Text(BackupOrganizeText.fileNames($0)).tag($0) }
                     }
                 } footer: {
-                    Text("A file with the same name but different size is kept as a second copy.", comment: "Organize: Keep Both rule")
+                    if commonPhotosFirstFolder != nil {
+                        Text("A name already taken in that folder gets a number, like IMG_0001 (2).JPG.",
+                             comment: "Organize, Find Common Photos: the next free name rule")
+                    } else {
+                        Text("A file with the same name but different size is kept as a second copy.", comment: "Organize: Keep Both rule")
+                    }
                 }
             }
             .formStyle(.grouped)
             HStack {
+                if let status {
+                    Text(status).font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1)
+                }
                 Spacer()
                 Button(String(localized: "Done", comment: "Mac sheet: done"), action: back).keyboardShortcut(.defaultAction)
             }

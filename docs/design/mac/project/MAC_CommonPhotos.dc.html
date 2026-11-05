@@ -158,6 +158,8 @@ input{font-family:inherit}
 <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{headline}}</span>
 <span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span><sc-if value="{{quickN}}" hint-placeholder-val="{{false}}"><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">· {{quickN}} quick</span></sc-if></span>
 <sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 32" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">32</span></span></sc-if>
+<!-- §6e: the plan reads each photo's date for Organize; the rows' → paths follow -->
+<sc-if value="{{readingDates}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Reading dates 120 of 282" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg>Reading dates 120 of 282</span></sc-if>
 </div></sc-if>
 <!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
 <sc-if value="{{againRow}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;flex:none">
@@ -489,13 +491,15 @@ class Component extends DCLogic {
       return p[0] + '/' + MON[+p[1] - 1] + '/' + p[0] + '.' + p[1] + '.' + p[2] + '/';
     };
     const quickOn = !!this.props.quick && !move;
+    // §6e: while the plan reads dates, rows show without their → path yet.
+    const readingNow = this.props.state === 'readingDates';
     const row = (m, i, seed) => {
       const there = m[3] === '', on = m[5] && !there;
       const copies = m[6] === 1 ? '1 copy' : m[6] + ' copies';
       const dest = folderOf(m[2]) + m[3]; // under Shared, which Save to names
       // The second line names the folders; the full source paths are in the tooltip, the full destination is shown.
       const from = m[1].split(' · ').map(p => p.split('/')[0] + (p.indexOf('×') >= 0 ? ' ×' + p.split('×')[1] : '')).join(' · ');
-      return { name:m[0], from, to: there ? '' : '\u00a0→ ' + dest, size:m[4],
+      return { name:m[0], from, to: there || readingNow ? '' : '\u00a0→ ' + dest, size:m[4],
         // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
         note: there ? 'Already in Shared' : !m[5] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
         help: m[1] + (there ? '' : ' → ' + dest),
@@ -514,19 +518,20 @@ class Component extends DCLogic {
     // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
     const state = this.props.state || 'first';
     const dropped = state === 'quickThenMove', reading = state === 'readingDates';
-    const before = state === 'beforeScan', listing = state === 'listing' || reading, waiting = before || listing || dropped;
+    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing || dropped;
     const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
     const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
     // Left Out open: the list scrolled to its end, the last photos then the section.
-    const shown = state === 'first' ? matches : (nothingNew ? [] : NEW);
-    const sameN = state === 'first' ? '282' : (nothingNew ? '0' : '3');
+    const first = state === 'first' || reading;
+    const shown = first ? matches : (nothingNew ? [] : NEW);
+    const sameN = first ? '282' : (nothingNew ? '0' : '3');
     const verb = move ? 'Move' : 'Copy';
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
       leftOut, leftOutOpen: leftOutOpen && state === 'first', leftOutClosed: !leftOutOpen && state !== 'nothingNew',
       leftOutLine: 'Skipped by every scan and gather of this set',
       scrollTop: '4px',
-      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', sameN,
+      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', readingDates: reading, sameN,
       scanned: !waiting, waiting, listing,
       moveNote: move,
       sheetH: '640px', // MAC_STYLE: a results-list sheet may be 640 tall
@@ -538,11 +543,11 @@ class Component extends DCLogic {
       noDates: !!this.props.noDates,
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
-      waitingLine: dropped ? 'Quick check results cleared. Move reads every byte, so Scan again.' : reading ? 'Reading dates 120 of 13,000' : listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
+      waitingLine: dropped ? 'Quick check results cleared. Move reads every byte, so Scan again.' : listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
       footHint: nothingNew || before || dropped ? '' : listing ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
-      headline: state === 'first' ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
+      headline: first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before || dropped ? 'Scan' : listing ? 'Stop' : (state === 'first' ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
+      runLabel: before || dropped ? 'Scan' : listing ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
       runBg: nothingNew || listing ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }

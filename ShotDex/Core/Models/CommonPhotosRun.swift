@@ -42,6 +42,10 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
     /// How the run files photos in the destination (FS-19.08 §6e); nil = all
     /// at its top under their own names, as before §6e.
     var organize: BackupOrganize?
+    /// The folders under the destination this run made for Organize,
+    /// relative to it (§6e): what an undo removes again when it leaves them
+    /// empty.
+    var createdFolders: [String] = []
     /// False when a stored value could not be read back (folders, action):
     /// the banner offers Discard only, never Resume. Not stored.
     var isReadable = true
@@ -99,6 +103,7 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         // An Organize that cannot be read makes the run Discard only, as
         // unreadable folders do: its pending photos must not land at the top
         // beside the ones already filed.
+        createdFolders = JSONList.decode(row["createdFolders"]) ?? []
         if let text = row["organize"] as String? {
             organize = try? JSONDecoder().decode(BackupOrganize.self, from: Data(text.utf8))
             if organize == nil { isReadable = false }
@@ -118,6 +123,7 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         container["undoOf"] = undoOf
         container["watchId"] = watchId
         container["day"] = day
+        container["createdFolders"] = createdFolders.isEmpty ? nil : JSONList.encode(createdFolders)
         container["organize"] = organize.flatMap { try? String(decoding: JSONEncoder().encode($0), as: UTF8.self) }
     }
 }

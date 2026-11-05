@@ -80,6 +80,7 @@ struct CommonPhotosUndoer: Sendable {
                 state.currentStep = nil
                 progress(state)
             }
+            try await removeEmptyFolders(madeBy: originalId, destination: run.destination)
             try store.markState(.finishing, runId: runId)
             let csvPath = try await writeLog(items, run: run, originalId: originalId)
             let restored = Set(items.flatMap { $0.sources.filter { !$0.isRemoved }.map(\.path) })
@@ -88,6 +89,25 @@ struct CommonPhotosUndoer: Sendable {
         } catch {
             if let state = try? store.run(id: runId)?.state, state != .finishing { try? store.markState(.paused, runId: runId) }
             throw error
+        }
+    }
+
+    /// The folders the run made for Organize (§6e) that its photos leaving
+    /// left empty — deepest first, so `2025/03/15` goes before `2025/03`.
+    /// A folder anything else is in (a photo not undone, a file the user put
+    /// there) stays; one already gone, or that the server will not remove,
+    /// is left as it is.
+    private func removeEmptyFolders(madeBy originalId: String, destination: String) async throws {
+        guard let made = try store.run(id: originalId)?.createdFolders, !made.isEmpty else { return }
+        for folder in made.sorted(by: { $0.split(separator: "/").count > $1.split(separator: "/").count }) {
+            try Task.checkCancellation()
+            let path = ServerUploadPath.join(destination, folder)
+            do {
+                guard try await client.entries(in: path).isEmpty else { continue }
+                try await client.removeEmptyDirectory(path)
+            } catch let error as RemoteFileError where !error.stopsBatch {
+                continue
+            }
         }
     }
 

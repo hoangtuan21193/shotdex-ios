@@ -451,16 +451,22 @@ Tuan/Hue. Băm song song — vẫn giữ một lệnh (§6d mục 3); đo lại 
     tên folder nguồn → ngày sửa file trên server. **Chốt (người dùng 2026-11-05): EXIF trước** — chỉ đọc khi Organize
     dùng ngày, cho ảnh Same chưa có ngày. Ảnh đã qua bước đọc 3 mẫu (§5 bước 4) lấy EXIF ngay từ mẫu đầu đã đọc, không
     đọc thêm; chỉ ảnh không qua bước đó (SHA đã biết) mới đọc riêng ~113 ms/ảnh (trần ước Tuan/Hue ~25 phút); tiến độ
-    Scan đếm bước này ("Reading dates 120 of 13,000"). *Hiện (T9): lượt chạy tự tìm chỗ cho ảnh chưa có — đọc 256 KB
-    đầu (`EmbeddedPreview.firstRead`) của ảnh, không bao giờ của video — và ghi `placement` của mục trước khi ghi gì
-    lên server, nên Resume xếp đúng chỗ cũ; bước đọc ngày lúc Scan (từ mẫu đầu) và ngày từ index vào ở T10.* Ngày
+    Scan đếm bước này ("Reading dates 120 of 13,000"). *Hiện (T9–T10): kế hoạch sau Scan đọc 256 KB đầu
+    (`EmbeddedPreview.firstRead`) của ảnh — không bao giờ của video — một lần mỗi hàng, giữ khi người dùng thử Levels
+    khác ("Reading dates N of M" ở dòng đếm, board `readingDates`); chỗ đặt vào `placement` của mục khi bắt đầu lượt.
+    Lượt tự gom (không kế hoạch) và ảnh chưa có chỗ: runner tự đọc và ghi `placement` trước khi ghi gì lên server, nên
+    Resume xếp đúng chỗ cũ. Chưa làm: lấy EXIF từ mẫu đầu của bước 3 mẫu và ngày chụp từ index (đọc thêm 256 KB/ảnh).* Ngày
     trong tên folder đọc theo lịch Gregory; tên folder viết theo lịch của máy, như Backup. Tên folder Windows giữ cho
     thiết bị (`CON`, `AUX`, `COM1`…) thêm `-`; `.`/`..` thành `-`. Folder con Organize không tạo được (một file chắn
     đường, tên server từ chối) làm **ảnh đó** Failed, lượt đi tiếp.
   - video: tên folder nguồn nếu là ngày (`2025/03/15`, `2025-03-15`, `20250315`, `2025/03` → ngày 1), không thì ngày sửa
     file trên server (người dùng 2026-11-05). Không tải video để lấy ngày.
 - **Mặc định**: bộ mới **Same as Source** (người dùng 2026-11-05); bộ đã từng chạy giữ **No Folders** (đúng như nó đã
-  chạy) cho tới khi người dùng đổi.
+  chạy) cho tới khi người dùng đổi. *Lưu ở đâu*: Organize của bộ = Organize của lượt mới nhất của bộ (lượt trước §6e =
+  No Folders); lượt ngày của Keep gathering mang Organize của bộ lúc gom, nên không cần cột ở bảng bộ gom. Người dùng
+  đã chọn trong sheet thì đổi Save to / folder không ghi đè lựa chọn đó. Lượt ghi `createdFolders` (các cấp chưa có
+  trên server) trước khi tạo; Undo xoá những folder đó khi rỗng, sâu trước; WebDAV/Files chỉ xoá folder khi liệt kê
+  ngay trước đó thấy rỗng (DELETE của chúng xoá cả nội dung).
 - Kế hoạch (§6d) ghi đường dẫn đủ: `→ Shared/2025/03/15/X.ARW`. Already there và tên trống (` (2)`) xét **trong folder
   đích của ảnh**, không ở gốc folder chung.
 - Scan liệt kê trong folder chung **chỉ các folder đích của ảnh trong kế hoạch** (và gốc), dùng danh sách đã lưu như trên; không liệt kê cả cây.

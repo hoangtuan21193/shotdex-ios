@@ -31,6 +31,26 @@ enum BackupOrganizeText {
         return (planner.folders(for: input) + [planner.fileName(for: input)]).joined(separator: " › ")
     }
 
+    /// Find Common Photos' example (FS-19.08 §6e): a RAW the first folder
+    /// keeps in `2025/10/12`, as `organize` files it —
+    /// `2025/10/12/DSC04388.ARW` for Same as Source.
+    static func commonPhotosSample(_ organize: BackupOrganize) -> String {
+        commonPhotosPath(organize, name: "DSC04388.ARW", sourceFolder: "2025/10/12").joined(separator: "/")
+    }
+
+    /// The Organize page's preview for Find Common Photos: a photo the first
+    /// folder keeps in `2025/03/15`.
+    static func commonPhotosTree(_ organize: BackupOrganize) -> String {
+        commonPhotosPath(organize, name: "IMG_4021.HEIC", sourceFolder: "2025/03/15").joined(separator: " › ")
+    }
+
+    private static func commonPhotosPath(_ organize: BackupOrganize, name: String, sourceFolder: String) -> [String] {
+        let planner = BackupPathPlanner(organize: organize, names: names)
+        let input = BackupPlacementInput(date: sampleDate, isVideo: false, originalFilename: name,
+                                         isRAW: FileTypeBadge.isRAW(filename: name), sourceFolder: sourceFolder)
+        return planner.folders(for: input) + [planner.fileName(for: input)]
+    }
+
     static func levels(_ levels: BackupOrganize.Levels) -> String {
         switch levels {
         case .yearMonthDay: String(localized: "Year › Month › Day", comment: "Organize levels")

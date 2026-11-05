@@ -308,6 +308,9 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func removeEmptyDirectory(_ path: String) async throws {
+        // The coordinated delete takes what is in the folder: refused
+        // unless it is empty now.
+        guard try await entries(in: path).isEmpty else { throw RemoteFileError.other("not empty") }
         try await remove(path)
     }
 

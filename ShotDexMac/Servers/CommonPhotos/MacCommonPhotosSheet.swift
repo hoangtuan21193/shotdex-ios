@@ -91,6 +91,15 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var isStarting = false
     /// Keep gathering (FS-19.08 §6c): saved when the run starts.
     @State private var keepsGathering = false
+    /// §6e: the Organize page shown in place of the sheet's own;
+    /// `-ShotDexCommonPhotosOrganizePage` (DEBUG) opens on it, for screenshots.
+    @State private var showsOrganize: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosOrganizePage")
+        #else
+        false
+        #endif
+    }()
 
     /// Board `MAC_CommonPhotos`: the sheet at 640×560, labels in a 64pt column.
     // 640 tall (MAC_STYLE: a sheet whose body is a results list), so the
@@ -107,53 +116,17 @@ private struct MacCommonPhotosSheetContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Find Common Photos", comment: "Mac common photos sheet: title")
-                .font(.title3.weight(.semibold))
-            Spacer().frame(height: 14)
-            foldersRow
-            Divider().padding(.vertical, 12)
-            saveToRow
-            if model.serverKeepsNoDates {
-                Label(String(localized: "This server does not keep file dates: copies show the day they were copied.",
-                             comment: "Mac common photos sheet: the last run through this connection lost the files' dates (FS-19.08 §6e)"),
-                      systemImage: "exclamationmark.triangle")
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
-                    .padding(.leading, Self.labelWidth + 8)
-                    .padding(.top, 6)
-            }
-            if model.action == .move {
-                Text("Moved photos are removed from every folder above. The server has no Trash.",
-                     comment: "Mac common photos sheet: what Move does")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, Self.labelWidth + 8)
-                    .padding(.top, 6)
+        Group {
+            if showsOrganize {
+                // §6e: Backup's own Organize page, in the sheet.
+                MacBackupOrganizePage(organize: $model.organize, back: { showsOrganize = false },
+                                      commonPhotosFirstFolder: model.folders.first.map { ServerUploadPath.lastComponent(of: $0) } ?? "",
+                                      status: organizeStatus)
+                    .padding(.horizontal, -24)
+                    .padding(.vertical, -20)
             } else {
-                quickCheckRow
-                    .padding(.leading, Self.labelWidth + 8)
-                    .padding(.top, 6)
+                mainPage
             }
-            if !model.isDestinationIndexed, let destination = model.destination {
-                let name = ServerUploadPath.lastComponent(of: destination)
-                Label(model.action == .move
-                      ? String(localized: "These photos will leave ShotDex's library until you add “\(name)” as a source.",
-                               comment: "Mac common photos sheet: Move into a folder no source holds")
-                      : String(localized: "“\(name)” isn't in a source, so photos saved there won't show in ShotDex until you add it.",
-                               comment: "Mac common photos sheet: the destination is in no source"),
-                      systemImage: "exclamationmark.triangle")
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
-                    .padding(.leading, Self.labelWidth + 8)
-                    .padding(.top, 6)
-            }
-            Divider().padding(.vertical, 12)
-            results
-            Spacer().frame(height: 12)
-            keepGatheringRow
-            Spacer().frame(height: 8)
-            footer
         }
         // The set's own choice, read again whenever the set changes.
         .task(id: "\(model.connectionId)|\(model.folders)|\(model.destination ?? "")") { readKeepGathering() }
@@ -306,6 +279,109 @@ private struct MacCommonPhotosSheetContent: View {
         }
     }
 
+    private var mainPage: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Find Common Photos", comment: "Mac common photos sheet: title")
+                .font(.title3.weight(.semibold))
+            Spacer().frame(height: 14)
+            foldersRow
+            Divider().padding(.vertical, 12)
+            saveToRow
+            if model.serverKeepsNoDates {
+                Label(String(localized: "This server does not keep file dates: copies show the day they were copied.",
+                             comment: "Mac common photos sheet: the last run through this connection lost the files' dates (FS-19.08 §6e)"),
+                      systemImage: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            }
+            organizeRow
+            if model.organizeAffectsNewOnly {
+                Text("Changing this affects new photos only. The \(model.alreadyGathered.formatted()) already gathered stay where they are.",
+                     comment: "Mac common photos sheet: Organize changed for a set that gathered before (FS-19.08 §6e)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            }
+            if model.action == .move {
+                Text("Moved photos are removed from every folder above. The server has no Trash.",
+                     comment: "Mac common photos sheet: what Move does")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            } else {
+                quickCheckRow
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            }
+            if !model.isDestinationIndexed, let destination = model.destination {
+                let name = ServerUploadPath.lastComponent(of: destination)
+                Label(model.action == .move
+                      ? String(localized: "These photos will leave ShotDex's library until you add “\(name)” as a source.",
+                               comment: "Mac common photos sheet: Move into a folder no source holds")
+                      : String(localized: "“\(name)” isn't in a source, so photos saved there won't show in ShotDex until you add it.",
+                               comment: "Mac common photos sheet: the destination is in no source"),
+                      systemImage: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            }
+            Divider().padding(.vertical, 12)
+            results
+            Spacer().frame(height: 12)
+            keepGatheringRow
+            Spacer().frame(height: 8)
+            footer
+        }
+    }
+
+    /// What the sheet behind the Organize page is doing (§6e).
+    private var organizeStatus: String? {
+        if let read = model.datesRead {
+            return String(localized: "Reading dates \(read.done.formatted()) of \(read.total.formatted())",
+                          comment: "Mac common photos sheet: dates read for Organize so far")
+        }
+        if model.isScanning || model.isPlanning {
+            return String(localized: "Scanning… the plan follows your choice when it ends.",
+                          comment: "Mac common photos Organize page: the scan is still going behind it")
+        }
+        return nil
+    }
+
+    /// §6e: how photos are laid out under Save to; opens Organize.
+    private var organizeRow: some View {
+        HStack(spacing: 8) {
+            Text("Organize:", comment: "Mac common photos sheet: label").frame(width: Self.labelWidth, alignment: .trailing)
+            Button {
+                showsOrganize = true
+            } label: {
+                Text(BackupOrganizeText.summary(model.organize) + "…").lineLimit(1).fixedSize()
+            }
+            .help(String(localized: "Opens Organize", comment: "Mac common photos sheet: Organize button tooltip"))
+            .accessibilityLabel(String(localized: "Organize, \(BackupOrganizeText.summary(model.organize))",
+                                       comment: "Mac common photos sheet: Organize button"))
+            // After a scan (as the board draws it): the first row's own path
+            // once planned, else the sample.
+            if model.destination != nil, model.preview != nil {
+                let sample = model.rows.first?.landing.map(\.name) ?? BackupOrganizeText.commonPhotosSample(model.organize)
+                Text("e.g. \(sample)", comment: "Mac common photos sheet: where a photo lands under Organize")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(sample)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(height: 28)
+        .padding(.top, 8)
+    }
+
     // MARK: Save to and action
 
     private var saveToRow: some View {
@@ -417,6 +493,17 @@ private struct MacCommonPhotosSheetContent: View {
                     if model.checkingCount > 0 {
                         count(String(localized: "Checking", comment: "Mac common photos sheet: photos still being checked"),
                               model.checkingCount, done: false)
+                    }
+                    // §6e: the plan reads each photo's date for Organize.
+                    if let read = model.datesRead {
+                        HStack(spacing: 5) {
+                            ProgressView().controlSize(.mini)
+                            Text("Reading dates \(read.done.formatted()) of \(read.total.formatted())",
+                                 comment: "Mac common photos sheet: dates read for Organize so far")
+                                .foregroundStyle(.secondary).monospacedDigit()
+                        }
+                        .lineLimit(1)
+                        .fixedSize()
                     }
                     if model.notCheckedCount > 0 {
                         // A failed scan's leftovers: counted, never listed (§6d).

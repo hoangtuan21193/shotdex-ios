@@ -37,6 +37,24 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// Folders a run made under its destination for Organize (§6e), added
+    /// to those it made before — recorded before anything is written in
+    /// them, so an undo after a quit still knows them.
+    func addCreatedFolders(_ folders: [String], runId: String) throws {
+        guard !folders.isEmpty else { return }
+        try database.writer.write { db in
+            guard var run = try CommonPhotosRun.fetchOne(db, key: runId) else { throw RunMissing(runId: runId) }
+            let known = Set(run.createdFolders)
+            run.createdFolders += folders.filter { !known.contains($0) }
+            try db.execute(sql: "UPDATE common_photo_runs SET createdFolders = ? WHERE id = ?",
+                           arguments: [String(decoding: try JSONEncoder().encode(run.createdFolders), as: UTF8.self), runId])
+        }
+    }
+
+    private static func organizeColumn(_ organize: BackupOrganize?) -> String? {
+        organize.flatMap { try? String(decoding: JSONEncoder().encode($0), as: UTF8.self) }
+    }
+
     func update(_ item: CommonPhotosItem, now: Int = Int(Date().timeIntervalSince1970)) throws {
         var item = item
         item.updatedAt = now
@@ -180,8 +198,9 @@ struct CommonPhotosStore: Sendable {
         var photos: Set<String> = []
         var lastAt: Int?
         /// What the set's runs put in the destination and is still there at
-        /// its size, by lowercased file name (§6d: the plan knows those bytes
-        /// without reading them).
+        /// its size, by lowercased path under it — `2025/03/15/x.arw`, or the
+        /// name alone at its top (§6d: the plan knows those bytes without
+        /// reading them).
         var placed: [String: Placed] = [:]
         var isEmpty: Bool { lastAt == nil }
     }
@@ -194,6 +213,57 @@ struct CommonPhotosStore: Sendable {
     /// `inDestination`, the sizes the destination holds now under each
     /// lowercased name: a gathered photo whose copy there is gone or another
     /// size is not counted, so it is gathered again (§6c). Nil: not checked.
+    /// How a set files photos (§6e): its newest run's Organize — that run's
+    /// filed at the top when it had none, as every run before §6e did — or
+    /// nil for a set that never ran. Keep gathering's day runs carry it on.
+    func organize(connectionId: String, folders: [String], destination: String) throws -> BackupOrganize?? {
+        let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
+        return try database.reader.read { db in
+            let newest = try CommonPhotosRun
+                .filter(Column("connectionId") == connectionId && Column("undoOf") == nil)
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+                .first { $0.isReadable && CommonPhotosIncremental.setKey(connectionId: $0.connectionId, folders: $0.folders,
+                                                                         destination: $0.destination) == key }
+            return newest.map { $0.organize }
+        }
+    }
+
+    /// The folders under the destination, relative to it, where the set's
+    /// runs filed photos (§6e) — what a rescan lists besides its top to see
+    /// whether they are still there.
+    func gatheredFolders(connectionId: String, folders: [String], destination: String) throws -> Set<String> {
+        let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
+        return try database.reader.read { db in
+            let runIds = try CommonPhotosRun
+                .filter(Column("connectionId") == connectionId && Column("undoOf") == nil)
+                .fetchAll(db)
+                .filter { $0.isReadable && CommonPhotosIncremental.setKey(connectionId: $0.connectionId, folders: $0.folders,
+                                                                          destination: $0.destination) == key }
+                .map(\.id)
+            guard !runIds.isEmpty else { return [] }
+            let paths = try String.fetchAll(db, sql: """
+                SELECT DISTINCT destinationPath FROM common_photo_items
+                WHERE runId IN (\(databaseQuestionMarks(count: runIds.count))) AND destinationPath IS NOT NULL
+                """, arguments: StatementArguments(runIds))
+            return Set(paths.compactMap { path in
+                let folder = ServerUploadPath.parent(of: Self.relative(path, under: destination))
+                return folder.isEmpty ? nil : folder
+            })
+        }
+    }
+
+    /// `path` under `destination`, `/`-separated; the name alone when it is
+    /// not under it.
+    static func relative(_ path: String, under destination: String) -> String {
+        let root = destination.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/"
+        let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard trimmed.lowercased().hasPrefix(root.lowercased()) else { return ServerUploadPath.lastComponent(of: path) }
+        return String(trimmed.dropFirst(root.count))
+    }
+
+    /// `inDestination`: what the destination holds, by lowercased path under
+    /// it, as `relative(_:under:)` gives it.
     func gathered(connectionId: String, folders: [String], destination: String,
                   inDestination: [String: Set<Int64>]? = nil) throws -> Gathered {
         let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
@@ -224,14 +294,14 @@ struct CommonPhotosStore: Sendable {
                     if let inDestination, !undone {
                         // Placed where, and is it still there at its size?
                         guard let placed: String = row["destinationPath"], let size: Int64 = row["size"],
-                              inDestination[ServerUploadPath.lastComponent(of: placed).lowercased()]?.contains(size) == true
+                              inDestination[Self.relative(placed, under: destination).lowercased()]?.contains(size) == true
                         else { continue }
                     }
                     // Seen, not gathered: not in "N already gathered".
                     if !undone, let sha: String = row["sha256"] {
                         out.photos.insert(sha)
                         if let placed: String = row["destinationPath"], let size: Int64 = row["size"] {
-                            out.placed[ServerUploadPath.lastComponent(of: placed).lowercased()] = Placed(size: size, sha256: sha)
+                            out.placed[Self.relative(placed, under: destination).lowercased()] = Placed(size: size, sha256: sha)
                         }
                     }
                     let list: String = row["sources"]
@@ -513,8 +583,9 @@ extension CommonPhotosStore {
                 // Nothing moved in it yet: it is today's list now. `updatedAt`
                 // moves on every change, even within a second — Move N…
                 // confirms against it.
-                try db.execute(sql: "UPDATE common_photo_runs SET day = ?, updatedAt = ? WHERE id = ?",
-                               arguments: [kept.isEmpty ? day : waiting.day, max(now, waiting.updatedAt + 1), waiting.id])
+                try db.execute(sql: "UPDATE common_photo_runs SET day = ?, updatedAt = ?, organize = ? WHERE id = ?",
+                               arguments: [kept.isEmpty ? day : waiting.day, max(now, waiting.updatedAt + 1),
+                                           Self.organizeColumn(run.organize), waiting.id])
                 return DayGathered(runId: waiting.id, added: items.filter { !listed.contains(firstPath($0) ?? "") }.count)
             }
             // The set's own action only: a set switched from Move to Copy
@@ -552,8 +623,9 @@ extension CommonPhotosStore {
                     item.position = next + offset
                     try item.insert(db)
                 }
-                try db.execute(sql: "UPDATE common_photo_runs SET state = ?, updatedAt = ? WHERE id = ?",
-                               arguments: [state.rawValue, now, open.id])
+                // The new photos are filed as the set files them now (§6e).
+                try db.execute(sql: "UPDATE common_photo_runs SET state = ?, updatedAt = ?, organize = ? WHERE id = ?",
+                               arguments: [state.rawValue, now, Self.organizeColumn(run.organize), open.id])
                 return DayGathered(runId: open.id, added: items.count)
             }
             var run = run

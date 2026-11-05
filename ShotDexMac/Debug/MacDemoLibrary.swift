@@ -196,6 +196,12 @@ enum MacDemoLibrary {
         if arguments.contains("-ShotDexCommonPhotosNoDates") { model.serverKeepsNoDates = true }
         // `-ShotDexCommonPhotosQuick`: Quick check on (§6e).
         if arguments.contains("-ShotDexCommonPhotosQuick") { model.quickCheck = true }
+        // `-ShotDexCommonPhotosOrganize yearMonthDay`: the set's Organize levels (§6e).
+        if let levels = value("-ShotDexCommonPhotosOrganize").flatMap(BackupOrganize.Levels.init(rawValue:)) {
+            var organize = model.organize
+            organize.levels = levels
+            model.organize = organize
+        }
         if arguments.contains("-ShotDexCommonPhotosScan") { model.scan() }
     }
 

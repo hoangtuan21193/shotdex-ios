@@ -318,6 +318,9 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
     }
 
     func removeEmptyDirectory(_ path: String) async throws {
+        // A collection's DELETE takes what is in it: refused unless the
+        // listing just now found it empty (FS-19.08 §6e, Undo's folders).
+        guard try await entries(in: path).isEmpty else { throw RemoteFileError.other("not empty") }
         let (_, response) = try await send(request("DELETE", url(path, isDirectory: true)))
         try check(response, path: path, allow: [200, 204, 404])
     }

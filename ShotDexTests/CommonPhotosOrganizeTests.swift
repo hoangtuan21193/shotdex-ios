@@ -306,3 +306,165 @@ import UniformTypeIdentifiers
         #expect(try store.items(runId: "R").first?.placement == "2025/Oct/2025.10.12/1.JPG")
     }
 }
+
+/// FS-19.08 §6e Organize as a set carries it: the sheet's default, the
+/// plan's paths, the note after a change, Undo's empty folders, Keep
+/// gathering's runs.
+@Suite(.serialized) @MainActor struct CommonPhotosOrganizeSetTests {
+    private static let folders = ["photos/Tuấn", "photos/Vợ"]
+
+    private static func waitForPlan(_ sheet: CommonPhotosScanModel) async throws {
+        sheet.scan()
+        for _ in 0..<600 where sheet.phase != .done || sheet.isCutting || sheet.isPlanning {
+            if case .failed(let message) = sheet.phase { Issue.record("scan failed: \(message)"); return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(sheet.phase == .done)
+    }
+
+    private static func sheet(_ nas: InMemoryRemoteFileClient, _ database: AppDatabase) -> CommonPhotosScanModel {
+        let sheet = CommonPhotosScanModel(connectionId: "nas", sourceId: "source", folders: folders, client: nas, database: database)
+        sheet.destination = "photos/Shared"
+        return sheet
+    }
+
+    private static func run(_ made: (run: CommonPhotosRun, items: [CommonPhotosItem]), nas: InMemoryRemoteFileClient,
+                            database: AppDatabase) async throws -> CommonPhotosStore {
+        let store = CommonPhotosStore(database: database)
+        try store.start(made.run, items: made.items)
+        try await CommonPhotosRunner(client: nas, store: store,
+                                     workDirectory: FileManager.default.temporaryDirectory.appendingPathComponent("OrganizeSet-\(UUID().uuidString)"))
+            .run(made.run.id)
+        return store
+    }
+
+    /// AC-202: a new set starts at Same as Source; its plan names the full
+    /// path and the run puts the photo there.
+    @Test func newSetIsSameAsSource() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let raw = CommonPhotosQuickCheckTests.photo(51)
+        nas.put("photos/Tuấn/2025/03/15/X.ARW", raw)
+        nas.put("photos/Vợ/x/X.ARW", raw)
+        let database = try AppDatabase.makeEmpty()
+        let sheet = Self.sheet(nas, database)
+        #expect(sheet.organize == CommonPhotosScanModel.newSetOrganize)
+        #expect(BackupOrganizeText.summary(sheet.organize).hasPrefix("Same as Source"))
+
+        try await Self.waitForPlan(sheet)
+
+        #expect(sheet.rows.first?.landing == .name("2025/03/15/X.ARW"))
+        let made = try #require(sheet.makeRun())
+        #expect(made.run.organize == CommonPhotosScanModel.newSetOrganize)
+        #expect(made.items.first?.placement == "2025/03/15/X.ARW")
+        _ = try await Self.run(made, nas: nas, database: database)
+        #expect(nas.files["photos/Shared/2025/03/15/X.ARW"] == raw)
+    }
+
+    /// AC-203 + AC-208: a set that ran flat before §6e keeps No Folders;
+    /// changed to Same as Source, the sheet says the photos gathered stay,
+    /// nothing is done with them, and the new photo goes into its folder.
+    @Test func oldSetStaysFlatAndAChangeIsForNewPhotos() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let old = CommonPhotosQuickCheckTests.photo(61)
+        nas.put("photos/Tuấn/2025/03/15/OLD.ARW", old)
+        nas.put("photos/Vợ/2025/03/15/OLD.ARW", old)
+        let database = try AppDatabase.makeEmpty()
+        // The run before §6e: no Organize, the photo at the top.
+        let first = Self.sheet(nas, database)
+        first.organize = CommonPhotosScanModel.flatOrganize
+        try await Self.waitForPlan(first)
+        var made = try #require(first.makeRun())
+        made.run.organize = nil
+        _ = try await Self.run(made, nas: nas, database: database)
+        #expect(nas.files["photos/Shared/OLD.ARW"] == old)
+
+        let fresh = CommonPhotosQuickCheckTests.photo(62)
+        nas.put("photos/Tuấn/2025/03/16/NEW.ARW", fresh)
+        nas.put("photos/Vợ/2025/03/16/NEW.ARW", fresh)
+        let sheet = Self.sheet(nas, database)
+        #expect(sheet.organize == CommonPhotosScanModel.flatOrganize)
+        try await Self.waitForPlan(sheet)
+        #expect(sheet.alreadyGathered == 1)
+        #expect(!sheet.organizeAffectsNewOnly)
+        sheet.organize = CommonPhotosScanModel.newSetOrganize
+        #expect(sheet.organizeAffectsNewOnly)
+        for _ in 0..<300 where sheet.isPlanning || sheet.landings.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(sheet.rows.map(\.name) == ["NEW.ARW"])
+        #expect(sheet.rows.first?.landing == .name("2025/03/16/NEW.ARW"))
+        let before = nas.commands.count
+        _ = try await Self.run(try #require(sheet.makeRun()), nas: nas, database: database)
+        #expect(nas.files["photos/Shared/2025/03/16/NEW.ARW"] == fresh)
+        #expect(nas.files["photos/Shared/OLD.ARW"] == old)
+        #expect(!nas.commands.dropFirst(before).contains { $0.contains("OLD.ARW") })
+
+        // Gathered in a folder, it is still gathered: not offered again.
+        let again = Self.sheet(nas, database)
+        try await Self.waitForPlan(again)
+        #expect(again.rows.isEmpty)
+        #expect(again.alreadyGathered == 2)
+    }
+
+    /// AC-209: Undo takes the photos back and the folders the run made with
+    /// them, when nothing else is in them — deepest first; a folder holding
+    /// the user's `note.txt` stays, and so does what is above it.
+    @Test func undoRemovesTheEmptyFoldersItMade() async throws {
+        let nas = InMemoryRemoteFileClient()
+        for (index, day) in ["15", "15", "16"].enumerated() {
+            let bytes = CommonPhotosQuickCheckTests.photo(UInt8(70 + index))
+            nas.put("photos/Tuấn/2025/03/\(day)/P\(index).ARW", bytes)
+            nas.put("photos/Vợ/2025/03/\(day)/P\(index).ARW", bytes)
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sheet = Self.sheet(nas, database)
+        try await Self.waitForPlan(sheet)
+        let made = try #require(sheet.makeRun())
+        let store = try await Self.run(made, nas: nas, database: database)
+        #expect(Set(try #require(try store.run(id: made.run.id)).createdFolders)
+                == ["2025", "2025/03", "2025/03/15", "2025/03/16"])
+        nas.put("photos/Shared/2025/03/16/note.txt", Data("mine".utf8))
+
+        let undo = try store.startUndo(of: made.run.id)
+        try await CommonPhotosUndoer(client: nas, store: store,
+                                     workDirectory: FileManager.default.temporaryDirectory.appendingPathComponent("OrganizeUndo-\(UUID().uuidString)"))
+            .run(undo.id)
+
+        #expect(try await !nas.directoryExists("photos/Shared/2025/03/15"))
+        #expect(try await nas.directoryExists("photos/Shared/2025/03/16"))
+        #expect(nas.files["photos/Shared/2025/03/16/note.txt"] != nil)
+        #expect(try await nas.directoryExists("photos/Shared/2025/03"))
+        #expect(!nas.files.keys.contains { $0.hasSuffix(".ARW") && $0.hasPrefix("photos/Shared/") })
+    }
+
+    /// AC-210: Keep gathering's pass files new photos as the set does —
+    /// here Year › Month, from the set's last run.
+    @Test func gatherUsesTheSetsOrganize() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let first = CommonPhotosQuickCheckTests.photo(81)
+        nas.put("photos/Tuấn/2025/03/15/A.ARW", first)
+        nas.put("photos/Vợ/2025/03/15/A.ARW", first)
+        let database = try AppDatabase.makeEmpty()
+        let sheet = Self.sheet(nas, database)
+        var yearMonth = CommonPhotosScanModel.newSetOrganize
+        yearMonth.levels = .yearMonth
+        yearMonth.monthStyle = .number
+        sheet.organize = yearMonth
+        try await Self.waitForPlan(sheet)
+        _ = try await Self.run(try #require(sheet.makeRun()), nas: nas, database: database)
+
+        for (index, name) in ["B.ARW", "C.ARW"].enumerated() {
+            let bytes = CommonPhotosQuickCheckTests.photo(UInt8(82 + index))
+            nas.put("photos/Tuấn/2025/04/02/\(name)", bytes)
+            nas.put("photos/Vợ/2025/04/02/\(name)", bytes)
+        }
+        // As the pass does: a scan with no sheet, no plan.
+        let pass = Self.sheet(nas, database)
+        #expect(pass.organize == yearMonth)
+        await pass.scanToEnd()
+        let made = try #require(pass.makeRun())
+        #expect(made.items.count == 2)
+        #expect(made.run.organize == yearMonth)
+        _ = try await Self.run(made, nas: nas, database: database)
+        #expect(nas.files["photos/Shared/2025/04/B.ARW"] != nil)
+        #expect(nas.files["photos/Shared/2025/04/C.ARW"] != nil)
+    }
+}
