@@ -495,8 +495,16 @@ private struct MacCommonPhotosSheetContent: View {
             VStack(spacing: 8) {
                 if let failure = model.failure { failureLine(failure).frame(maxWidth: .infinity, alignment: .leading) }
                 if let fraction = model.checkFraction { checkProgress(fraction) }
+                // Headline and sort on one line, the counts on their own
+                // beneath: in one row they squeezed each other to "S… 2…".
                 HStack(spacing: 16) {
-                    Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1).truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .help(headline)
+                    if model.sameCount > 1 { sortMenu }
+                }
+                .frame(height: 22)
+                HStack(spacing: 16) {
                     HStack(spacing: 5) {
                         count(String(localized: "Same", comment: "Mac common photos sheet: photos proven the same"), model.sameCount, done: true)
                         if model.quickCount > 0 {
@@ -504,6 +512,7 @@ private struct MacCommonPhotosSheetContent: View {
                                 .foregroundStyle(.secondary).monospacedDigit()
                         }
                     }
+                    .fixedSize()
                     if model.checkingCount > 0 {
                         count(String(localized: "Checking", comment: "Mac common photos sheet: photos still being checked"),
                               model.checkingCount, done: false)
@@ -531,9 +540,10 @@ private struct MacCommonPhotosSheetContent: View {
                         .fixedSize()
                         .accessibilityElement(children: .combine)
                     }
-                    if model.sameCount > 1 { sortMenu }
+                    Spacer(minLength: 0)
                 }
-                .frame(height: 28)
+                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
                 let isNothingNew = model.phase == .done && !model.isCutting && model.sameCount == 0
                     && model.lastGathered != nil && !model.scansEverything
                 if let gathered = model.lastGathered, !model.scansEverything, !isNothingNew {
@@ -795,6 +805,11 @@ private struct MacCommonPhotosSheetContent: View {
     private var headline: String {
         let folders = model.folders.count
         guard model.phase == .done else {
+            // A scan that failed is not checking any more.
+            if case .failed = model.phase {
+                return String(localized: "Stopped · \(model.confirmedCount.formatted()) of \(model.candidateCount.formatted()) confirmed",
+                              comment: "Mac common photos sheet: headline after the scan failed partway")
+            }
             // How far the check is, the bar above says (bytes left beside it).
             return String(localized: "Checking · \(model.confirmedCount.formatted()) of \(model.candidateCount.formatted()) confirmed so far",
                           comment: "Mac common photos sheet: headline while checking")
@@ -843,6 +858,8 @@ private struct MacCommonPhotosSheetContent: View {
             Text(label).foregroundStyle(.secondary)
             Text(value.formatted()).fontWeight(.semibold).monospacedDigit()
         }
+        .lineLimit(1)
+        .fixedSize()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label), \(value)")
     }
