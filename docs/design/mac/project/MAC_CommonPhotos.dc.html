@@ -102,7 +102,7 @@ input{font-family:inherit}
 </nav>
 <div style="position:absolute;inset:0;background:{{t.scrim}};z-index:20"></div>
 <!-- SHEET 640×560 Find Common Photos (FS-19.08 §4), state after Scan: Same 280 · Checking 32, Save to Shared, Copy selected → default button "Copy 280" (counts Same only) -->
-<div role="dialog" aria-label="Find Common Photos" style="position:absolute;left:400px;top:52px;width:640px;height:560px;border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};border:1px solid {{t.glassStroke}};padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;z-index:25">
+<div role="dialog" aria-label="Find Common Photos" style="position:absolute;left:400px;top:52px;width:640px;height:{{sheetH}};border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};border:1px solid {{t.glassStroke}};padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;z-index:25">
 <div style="font-size:15px;font-weight:600;line-height:18px;flex:none">Find Common Photos</div>
 <div style="height:14px;flex:none"></div>
 <!-- Folders -->
@@ -132,13 +132,31 @@ input{font-family:inherit}
 <sc-for list="{{action}}" as="s" hint-placeholder-count="2"><button role="radio" aria-checked="{{s.pressed}}" style="width:64px;height:24px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
 </div>
 </div>
+<!-- §6e: a server that refused to set dates on an earlier run on this connection -->
+<sc-if value="{{noDates}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;padding:6px 0 0 72px;font-size:12px;color:{{S.orangeText}};flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg>This server does not keep file dates: copies show the day they were copied.</div></sc-if>
+<!-- §6e Organize: how photos are laid out under Save to; opens Backup's Organize page -->
+<div style="display:flex;align-items:center;gap:8px;height:28px;margin-top:8px;flex:none">
+<span style="width:64px;flex:none;text-align:right;font-size:13px">Organize:</span>
+<button aria-label="Organize, {{organizeSummary}}" title="Opens Organize" style="max-width:300px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{organizeSummary}}…</span></button>
+<span title="{{organizeSample}}" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{organizeSample}}</span>
+</div>
+<sc-if value="{{gatheredNote}}" hint-placeholder-val="{{false}}"><div style="padding:6px 0 0 72px;font-size:12px;line-height:16px;color:{{t.label2}};flex:none">Changing this affects new photos only. The 280 already gathered stay where they are.</div></sc-if>
 <!-- Move: what it does, under the row (the server has no Trash) -->
 <sc-if value="{{moveNote}}" hint-placeholder-val="{{false}}"><div style="padding:6px 0 0 72px;font-size:12px;color:{{t.label2}};flex:none">Moved photos are removed from every folder above. The server has no Trash.</div></sc-if>
+<!-- §6e Quick Check: Copy only, off by default -->
+<sc-if value="{{quickRow}}" hint-placeholder-val="{{true}}"><label title="Photos at the same path with the same size are compared by sampling, not read in full, so a file changed in the middle could be missed. Move always reads every byte." style="position:relative;display:flex;align-items:center;gap:8px;height:22px;margin-top:6px;padding-left:72px;flex:none;font-size:13px">
+<span aria-hidden="true" style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{quickBorder}};background:{{quickBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{quickVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+<sc-if value="{{quick}}" hint-placeholder-val="{{false}}"><input type="checkbox" checked aria-label="Quick check for photos in the same place" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<sc-if value="{{quickOff}}" hint-placeholder-val="{{true}}"><input type="checkbox" aria-label="Quick check for photos in the same place" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<span style="flex:none">Quick check</span>
+<span style="min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Faster: same path and size are sampled. Move reads every byte.</span>
+</label></sc-if>
+
 <div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
 <!-- Result after Scan -->
 <sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:28px;flex:none">
 <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{headline}}</span>
-<span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span></span>
+<span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span><sc-if value="{{quickN}}" hint-placeholder-val="{{false}}"><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">· {{quickN}} quick</span></sc-if></span>
 <sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 32" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">32</span></span></sc-if>
 </div></sc-if>
 <!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
@@ -167,8 +185,8 @@ input{font-family:inherit}
 <sc-if value="{{m.there}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex:none;width:34px"></span></sc-if>
 <div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}};opacity:{{m.thumbDim}}"></div>
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{m.help}}">
-<span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span>
-<span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.from}}</span><span style="flex:none">{{m.to}}</span></span>
+<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if></span>
+<span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="flex:none">{{m.from}}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.to}}</span></span>
 </div>
 <sc-if value="{{m.hover}}" hint-placeholder-val="{{false}}"><button aria-label="Compare" title="Compare (Space)" style="width:28px;height:22px;flex:none;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7v14H3z M14 5h7v14h-7z"></path></svg></button></sc-if>
 <span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{m.size}}</span>
@@ -221,7 +239,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"leftOut":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","readingDates","first","quickThenMove","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -441,32 +459,48 @@ class Component extends DCLogic {
       { path:'NAS Home › Family › Tuấn', count:'18,240 files', remove:'Remove Tuấn', rowBg:'transparent' },
       { path:'NAS Home › Family › Vợ', count:'15,902 files', remove:'Remove Vợ', rowBg:t.rowAlt }
     ];
-    const move = this.props.action === 'move';
+    // quickThenMove: Quick check was on, the user switched to Move — the scan is dropped, Move needs every byte read.
+    const move = this.props.action === 'move' || this.props.state === 'quickThenMove';
     const action = k.seg(['Copy', 'Move'], move ? 1 : 0);
     const leftOutOpen = !!this.props.leftOut;
-    // §6d: only Same rows. [name, sources, name in Shared ('' = already there), size, checked, copies Move removes]
+    // §6d: only Same rows. [name, sources, first folder's subfolder, name in Shared ('' = already there), size, checked,
+    // copies Move removes, same path in both (§6e Quick Check)]
     const PLAN = [
-      ['IMG_4021.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4021.HEIC', '2.9 MB', true, 2],
-      ['IMG_4022.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4022.HEIC', '3.1 MB', true, 2],
-      ['DSC04388.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat', 'DSC04388.ARW', '48.6 MB', true, 2],
-      ['IMG_0001.JPG', 'Tuấn/Sent · Vợ/Messages', 'IMG_0001 (2).JPG', '1.2 MB', false, 2],
-      ['IMG_4107.MOV', 'Tuấn/2025 · Vợ/Phone', 'IMG_4107.MOV', '212.4 MB', false, 2],
-      ['IMG_4110.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '2.7 MB', false, 0],
-      ['DSC04392.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat ×2', 'DSC04392.ARW', '47.9 MB', true, 3]
+      ['IMG_4021.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4021.HEIC', '2.9 MB', true, 2, true],
+      ['IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.HEIC', '3.1 MB', true, 2, true],
+      ['DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', '2025/10/12', 'DSC04388.ARW', '48.6 MB', true, 2, false],
+      ['IMG_0001.JPG', 'Tuấn/2025/06/02 · Vợ/Messages', '2025/06/02', 'IMG_0001 (2).JPG', '1.2 MB', false, 2, false],
+      ['IMG_4107.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4107.MOV', '212.4 MB', false, 2, true],
+      ['IMG_4110.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', '2025/03/16', '', '2.7 MB', false, 0, true],
+      ['DSC04392.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat ×2', '2025/10/12', 'DSC04392.ARW', '47.9 MB', true, 3, false]
     ];
     const NEWPLAN = [
-      ['IMG_4512.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4512.HEIC', '3.0 MB', true, 2],
-      ['IMG_4513.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4513.HEIC', '2.8 MB', true, 2],
-      ['DSC04501.ARW', 'Tuấn/Hội An · Vợ/Hội An', 'DSC04501.ARW', '49.2 MB', true, 2]
+      ['IMG_4512.HEIC', 'Tuấn/2025/11/02 · Vợ/2025/11/02', '2025/11/02', 'IMG_4512.HEIC', '3.0 MB', true, 2, true],
+      ['IMG_4513.HEIC', 'Tuấn/2025/11/02 · Vợ/2025/11/02', '2025/11/02', 'IMG_4513.HEIC', '2.8 MB', true, 2, true],
+      ['DSC04501.ARW', 'Tuấn/2025/11/04 · Vợ/Hội An', '2025/11/04', 'DSC04501.ARW', '49.2 MB', true, 2, false]
     ];
+    // §6e Organize: an old set keeps No Folders; a new one starts at Same as Source.
+    const organize = this.props.organize || 'sameAsSource';
+    const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const folderOf = (sub) => {
+      if (organize === 'noFolders') return '';
+      if (organize === 'sameAsSource') return sub + '/';
+      const p = sub.split('/');
+      return p[0] + '/' + MON[+p[1] - 1] + '/' + p[0] + '.' + p[1] + '.' + p[2] + '/';
+    };
+    const quickOn = !!this.props.quick && !move;
     const row = (m, i, seed) => {
-      const there = m[2] === '', on = m[4] && !there;
-      const copies = m[5] === 1 ? '1 copy' : m[5] + ' copies';
-      return { name:m[0], from: m[1], to: there ? '' : '\u00a0→ Shared/' + m[2], size:m[3],
+      const there = m[3] === '', on = m[5] && !there;
+      const copies = m[6] === 1 ? '1 copy' : m[6] + ' copies';
+      const dest = folderOf(m[2]) + m[3]; // under Shared, which Save to names
+      // The second line names the folders; the full source paths are in the tooltip, the full destination is shown.
+      const from = m[1].split(' · ').map(p => p.split('/')[0] + (p.indexOf('×') >= 0 ? ' ×' + p.split('×')[1] : '')).join(' · ');
+      return { name:m[0], from, to: there ? '' : '\u00a0→ ' + dest, size:m[4],
         // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
-        note: there ? 'Already in Shared' : !m[4] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
-        help: m[1] + (there ? '' : ' → Shared/' + m[2]),
-        there, hasBox: !there, on, off: !there && !m[4], checkVis: on ? 'visible' : 'hidden',
+        note: there ? 'Already in Shared' : !m[5] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
+        help: m[1] + (there ? '' : ' → ' + dest),
+        quick: quickOn && m[7] && !there,
+        there, hasBox: !there, on, off: !there && !m[5], checkVis: on ? 'visible' : 'hidden',
         thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
         boxBg: on ? t.accentFill : t.field, boxBorder: on ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
         boxLabel: m[0],
@@ -479,7 +513,8 @@ class Component extends DCLogic {
 
     // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
     const state = this.props.state || 'first';
-    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing;
+    const dropped = state === 'quickThenMove', reading = state === 'readingDates';
+    const before = state === 'beforeScan', listing = state === 'listing' || reading, waiting = before || listing || dropped;
     const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
     const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
     // Left Out open: the list scrolled to its end, the last photos then the section.
@@ -494,13 +529,20 @@ class Component extends DCLogic {
       again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', sameN,
       scanned: !waiting, waiting, listing,
       moveNote: move,
+      sheetH: '640px', // MAC_STYLE: a results-list sheet may be 640 tall
+      organizeSummary: organize === 'noFolders' ? 'No Folders' : (organize === 'sameAsSource' ? 'Same as Source' : 'Year › Month › Day') + ' · videos together',
+      organizeSample: before ? '' : 'e.g. ' + folderOf('2025/10/12') + 'DSC04388.ARW',
+      gatheredNote: again && !!this.props.organizeChanged,
+      quickRow: !move, quickN: quickOn && state === 'first' ? '214' : (quickOn && state === 'again' ? '2' : ''), quick: quickOn, quickOff: !quickOn, quickVis: quickOn ? 'visible' : 'hidden',
+      quickBg: quickOn ? t.accentFill : t.field, quickBorder: quickOn ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
+      noDates: !!this.props.noDates,
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
-      waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
-      footHint: nothingNew || before ? '' : listing ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      waitingLine: dropped ? 'Quick check results cleared. Move reads every byte, so Scan again.' : reading ? 'Reading dates 120 of 13,000' : listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
+      footHint: nothingNew || before || dropped ? '' : listing ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
       headline: state === 'first' ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before ? 'Scan' : listing ? 'Stop' : (state === 'first' ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
+      runLabel: before || dropped ? 'Scan' : listing ? 'Stop' : (state === 'first' ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
       runBg: nothingNew || listing ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }

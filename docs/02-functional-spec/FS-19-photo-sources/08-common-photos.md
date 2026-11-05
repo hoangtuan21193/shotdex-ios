@@ -48,7 +48,7 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 | Folders | danh sách folder đã chọn (đường dẫn rút gọn, số file), nút − từng dòng, **Add Folder…** |
 | Save to | popup chọn folder (bộ chọn folder của connection) + **New Folder…**; mặc định trống, nút chạy mờ tới khi chọn |
 | Organize (§6e) | tóm tắt + ví dụ đường dẫn; mở trang Organize của Backup; bộ mới mặc định **Same as Source** |
-| Action | segmented **Copy** · **Move**; Copy chọn sẵn; Copy có ô **Quick check for photos in the same place** (tắt sẵn, §6e). Move hiện câu: "Moved photos are removed from every folder above. The server has no Trash." |
+| Action | segmented **Copy** · **Move**; Copy chọn sẵn; Copy có ô **Quick check** (tắt sẵn, §6e). Move hiện câu: "Moved photos are removed from every folder above. The server has no Trash." |
 | Kết quả | sau **Scan**: "312 photos in all 3 folders · 4.2 GB", hai đếm **Same 280** · **Checking 32**, danh sách (thumbnail cache nếu có, tên, đường dẫn từng folder, cỡ). **§6d:** danh sách chỉ gồm hàng Same, mỗi hàng ghi kế hoạch của nó, có ô chọn và mở so sánh được |
 | Nút | **Cancel** · **Scan** → sau khi quét xong thành **Copy 280** / **Move 280** (chỉ đếm Same); chân trái "Only photos marked Same are copied." |
 
@@ -385,16 +385,19 @@ tháng/năm thì không (share Windows NTFS).
 
 ### Kiểm nhanh (Quick Check) — chỉ Copy
 
-- Sheet có ô **Quick check for photos in the same place** (tắt sẵn), chỉ hiện khi Action là **Copy**. Câu phụ: "Photos
-  at the same path with the same size are compared by three samples instead of every byte. Move always checks every
-  byte."
+- Sheet có ô **Quick check** (tắt sẵn; tên cho VoiceOver "Quick check for photos in the same place"), chỉ hiện khi
+  Action là **Copy**, một dòng dưới Organize với câu phụ cùng dòng: "Faster: same path and size are sampled. Move reads
+  every byte." Tooltip nói đủ cái giá: "Photos at the same path with the same size are compared by sampling, not read in
+  full, so a file changed in the middle could be missed. Move always reads every byte."
 - Bật: trong mỗi nhóm cùng cỡ (§5 bước 2), một bản ở folder đầu và một bản ở folder khác có **cùng đường dẫn tương đối**
   (không phân biệt hoa thường, một dạng Unicode như §5) và **3 mẫu 64 KB trùng** (đầu, giữa, cuối) → **Same (quick)**,
   không băm cả file khi Scan. Mọi cặp khác (khác đường dẫn, mẫu lệch) theo §5 như cũ — ảnh lệch ngày vẫn được tìm.
 - Khi chạy Copy: SHA tính trong lúc tải bản nguồn đầu (§6d) và là SHA của ảnh; bản ở đích đọc lại phải trùng SHA đó
   (§6d mục 2). Bản ở folder khác **không** được băm — đó là phần người dùng chấp nhận bỏ.
-- Hàng kế hoạch của ảnh quick có nhãn nhỏ **Quick**; log và CSV có cột `Check` = `quick` / `full`.
-- Đổi sang **Move** sau khi quét quick → kết quả bị bỏ, phải Scan lại (băm đủ). Move không bao giờ dựa trên mẫu.
+- Hàng kế hoạch của ảnh quick có nhãn nhỏ **Quick**; ô Same ghi thêm số ảnh quick ("Same 282 · 214 quick"). Cửa sổ
+  log có cột **Check** = `Quick` / `Full` (trống ở hàng Skipped và ở log Undo); CSV cột `Check` = `quick` / `full`.
+- Đổi sang **Move** sau khi quét quick → kết quả bị bỏ, phải Scan lại (băm đủ); giữa sheet ghi "Quick check results
+  cleared. Move reads every byte, so Scan again." và nút thành **Scan**. Move không bao giờ dựa trên mẫu.
 - Ảnh quick không ghi vào bảng **SHA đã đọc** (§6c) cho bản ở folder khác — lần sau Move vẫn phải băm bản đó.
 - Đích: Tuan/Hue lần quét đầu ~5,5 giờ → ~1 giờ (13.340 × 2 × 113 ms ≈ 50 phút mẫu + băm phần còn lại).
 
@@ -440,7 +443,8 @@ Tuan/Hue. Băm song song — vẫn giữ một lệnh (§6d mục 3); đo lại 
 - Scan liệt kê folder chung **cả cây** (chỉ lệnh liệt kê; dùng danh sách đã lưu như trên).
 - Ảnh đã gom ở lượt trước (§6c) xét theo **đường dẫn đích đã ghi trong log**, không theo cách xếp hiện tại: đổi
   Organize sau khi đã gom thì ảnh cũ **ở nguyên chỗ**, không bị chép lại; chỉ ảnh mới theo cách mới (người dùng
-  2026-11-05). Sheet ghi dưới Organize khi bộ đã có lượt: "Photos already gathered stay where they are."
+  2026-11-05). Khi bộ đã có lượt và Organize khác cách của lượt trước, sheet ghi dưới Organize: "Changing this affects new
+  photos only. The 280 already gathered stay where they are." (số = ảnh đã gom).
 - Lượt chạy tạo folder con khi cần (`createDirectory` từng mức). Hoàn tác (§6b) xoá folder con lượt đó đã tạo **nếu nó
   rỗng** sau khi trả ảnh; folder có file khác giữ nguyên.
 - Tự gom (§6c) dùng Organize của bộ; Organize lưu theo bộ.
@@ -474,11 +478,14 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
   theo sidecar nguồn của nó.
 - **Hoàn tác Move** (§6b) đẩy lại bản đã xoá: đặt thông tin của **chính bản đó** (lưu khi xoá: ngày sửa, ngày tạo, cờ).
   Bỏ dòng "Trả ngày sửa cũ cho bản được trả về" khỏi §2 Cố ý không có.
-- Server biết trước là không giữ được (lượt trước trên connection đó đã bị từ chối) → sheet ghi dưới Action: "This
-  server does not keep file dates; copies get today's date." Log/CSV cột `File info` = `kept` / `dates not kept` /
-  `tags not kept`.
+- Server biết trước là không giữ được (lượt trước trên connection đó đã bị từ chối) → sheet ghi ngay dưới hàng Save to ·
+  Action (màu cam, có dấu ⚠): "This server does not keep file dates: copies show the day they were copied." CSV cột
+  `File info` = `kept` / `dates not kept` / `tags not kept`; cửa sổ log cột **File info** = `Kept` / `Dates not kept`
+  (cam) / `Tags not kept` / `Restored` (xanh).
 - **Sửa ngày cho ảnh đã gom** (người dùng 2026-11-05): cửa sổ log của lượt Copy đã xong có **Restore File Info…**
-  (và chuột phải trên hàng chọn). Với từng hàng Copied: bản ở đích còn đúng đường dẫn + cỡ, bản ở folder đầu còn đó →
+  (và chuột phải trên hàng chọn), bật khi còn một hàng Copied chưa `Kept` (lượt trước §6e: mọi hàng), mờ kèm tooltip
+  khi không còn hàng nào. Dòng phụ trên đầu nói: "1 copy did not keep its dates. Restore File Info… sets them without
+  copying again."; xong thì: "File info restored on 1 copy · 0 skipped. Nothing was copied again." Với từng hàng Copied: bản ở đích còn đúng đường dẫn + cỡ, bản ở folder đầu còn đó →
   đặt thông tin như trên; không đẩy byte, không băm. Thiếu một trong hai → hàng ghi lý do, bỏ qua.
 - File **Already there** không bị đụng, kể cả thông tin của nó.
 

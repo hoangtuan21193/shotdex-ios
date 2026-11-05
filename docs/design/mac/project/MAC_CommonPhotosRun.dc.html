@@ -114,7 +114,7 @@ input{font-family:inherit}
      same window) · readyToMove (§6c: Keep gathering found photos for a Move set and moved nothing; Move N… asks first,
      tweak "confirm" draws that question). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
      the confirmation over a finished run; Cancel is the default button. -->
-<section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:300px;top:196px;width:900px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
+<section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:200px;top:196px;width:1040px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
 <div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
 <div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
 <div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">{{winTitle}}</div>
@@ -149,18 +149,20 @@ input{font-family:inherit}
 <sc-if value="{{r.busy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
 <span style="overflow:hidden;text-overflow:ellipsis">{{r.status}}</span></span>
 <span role="cell" style="width:116px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.name}}</span>
-<span role="cell" style="width:180px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.from}}</span>
-<span role="cell" style="width:178px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.to}}</span>
+<span role="cell" title="{{r.from}}" style="width:120px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.from}}</span>
+<span role="cell" title="{{r.to}}" style="width:200px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.to}}</span>
+<span role="cell" style="width:64px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}}">{{r.check}}</span>
+<span role="cell" style="width:110px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.infoColor}}">{{r.info}}</span>
 <span role="cell" style="width:76px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.sha}}</span>
-<span role="cell" style="flex:1;min-width:0;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.reasonColor}}">{{r.reason}}</span>
+<span role="cell" title="{{r.reason}}" style="flex:1;min-width:0;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.reasonColor}}">{{r.reason}}</span>
 </div></sc-for>
 <div aria-hidden="true" style="position:absolute;right:3px;top:32px;width:5px;height:64px;border-radius:3px;background:{{S.scroller}}"></div>
 </div>
 <!-- Footer -->
 <div style="height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px">
-<span role="status" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
+<span role="status" title="{{summaryHelp}}" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
 <sc-if value="{{failNote}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:12px;color:{{S.redText}};font-variant-numeric:tabular-nums">{{failNote}}</span></sc-if>
-<sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
+<sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" title="{{b.help}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
 </div>
 <!-- Undo confirmation (§6b), and Move N… on a ready run (§6c): the system alert as macOS draws it — no icon, text leading, Cancel the default (blue, leading;
      Return takes nothing back) -->
@@ -176,7 +178,7 @@ input{font-family:inherit}
 </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","undoing","undone","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","restored","undoing","undone","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -406,24 +408,26 @@ class Component extends DCLogic {
     const crumbs = [ { name:'NAS Home', d:I.server, sep:false, w:'400' }, { name:'Family', d:I.folder, sep:true, w:'400' }, { name:'Shared', d:I.folder, sep:true, w:'600' } ];
 
     const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', state === 'readyToMove' ? 'Moved' : 'Copied', 'Skipped', 'Failed'], 0);
-    const C = [['Status',172],['Name',116],['From',180],['To',178],['SHA-256',76],['Reason',0]];
+    const C = [['Status',172],['Name',116],['From',120],['To',200],['Check',64],['File info',110],['SHA-256',76],['Reason',0]];
     const cols = C.map((c, i) => ({ label:c[0], aria:'Sort by ' + c[0], w: c[1] ? c[1] + 'px' : 'auto', flex: c[1] ? 'none' : '1',
       edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', // No column sorts (the app's run table is in run order).
       sorted: false, sort: 'none' }));
     const OK = 'M5 12.5l4.5 4.5L19 7.5', SKIP = 'M12 3a9 9 0 1 0 0.01 0z M8 12h8', FAIL = 'M12 4l9 16H3z M12 10v4 M12 17h.01';
+    // §6e: To is the full path under Shared (Organize: Same as Source; the window title names Shared, the cell drops it); Check = quick (three samples, same path in
+    // both, Copy only) or full; File info = what the run could set from the first folder's copy.
     const L = [
-      ['ok', 'DSC04388.ARW', 'Tuấn/Da Lat · Vợ/Da Lat', 'Shared/DSC04388.ARW', '3f9a…c21e', ''],
-      ['ok', 'DSC04392.ARW', 'Tuấn/Da Lat · Vợ/Da Lat', 'Shared/DSC04392.ARW', 'a41d…07b3', ''],
-      ['fail', 'DSC04401.ARW', 'Tuấn/Da Lat · Vợ/Da Lat', 'Shared/DSC04401.ARW', '7b02…9e4d', 'checksum mismatch'],
-      ['ok', 'IMG_0007.JPG', 'Tuấn/Sent · Vợ/Messages', 'Shared/IMG_0007 (2).JPG', 'c8e5…1f60', ''],
-      ['ok', 'IMG_0012.JPG', 'Tuấn/Sent · Vợ/Messages', 'Shared/IMG_0012.JPG', '19bc…e2a8', ''],
-      ['ok', 'IMG_4021.HEIC', 'Tuấn/2025/IMG_4021.HEIC · Vợ/Phone/2025-06-01 IMG_4021.HEIC', 'Shared/IMG_4021.HEIC', '5d70…aa94', ''],
-      ['ok', 'IMG_4022.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4022.HEIC', 'e03f…6c1b', ''],
-      ['skip', 'IMG_4035.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4035.HEIC', '0a6e…d377', ''],
-      ['ok', 'IMG_4107.MOV', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4107.MOV', 'b2c9…4e05', ''],
-      ['ok', 'IMG_4110.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4110.HEIC', '6f18…b9d2', ''],
-      ['busy', 'IMG_4188.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4188.HEIC', '', ''],
-      ['ok', 'IMG_4190.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4190.HEIC', '92d4…3a7f', '']
+      ['ok', 'DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', 'Shared/2025/10/12/DSC04388.ARW', '3f9a…c21e', '', 'full', 'kept'],
+      ['ok', 'DSC04392.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', 'Shared/2025/10/12/DSC04392.ARW', 'a41d…07b3', '', 'full', 'kept'],
+      ['fail', 'DSC04401.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', 'Shared/2025/10/12/DSC04401.ARW', '7b02…9e4d', 'checksum mismatch', 'full', ''],
+      ['ok', 'IMG_0007.JPG', 'Tuấn/2025/06/02 · Vợ/Messages', 'Shared/2025/06/02/IMG_0007 (2).JPG', 'c8e5…1f60', '', 'full', 'kept'],
+      ['ok', 'IMG_0012.JPG', 'Tuấn/2025/06/02 · Vợ/Messages', 'Shared/2025/06/02/IMG_0012.JPG', '19bc…e2a8', '', 'full', 'dates not kept'],
+      ['ok', 'IMG_4021.HEIC', 'Tuấn/2025/03/15/IMG_4021.HEIC · Vợ/2025/03/15/IMG_4021.HEIC', 'Shared/2025/03/15/IMG_4021.HEIC', '5d70…aa94', '', 'quick', 'kept'],
+      ['ok', 'IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', 'Shared/2025/03/15/IMG_4022.HEIC', 'e03f…6c1b', '', 'quick', 'kept'],
+      ['skip', 'IMG_4035.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', 'Shared/2025/03/15/IMG_4035.HEIC', '0a6e…d377', '', 'quick', ''],
+      ['ok', 'IMG_4107.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', 'Shared/2025/03/15/IMG_4107.MOV', 'b2c9…4e05', '', 'quick', 'kept'],
+      ['ok', 'IMG_4110.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', 'Shared/2025/03/16/IMG_4110.HEIC', '6f18…b9d2', '', 'quick', 'kept'],
+      ['busy', 'IMG_4188.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', 'Shared/2025/03/16/IMG_4188.HEIC', '', '', 'quick', ''],
+      ['ok', 'IMG_4190.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', 'Shared/2025/03/16/IMG_4190.HEIC', '92d4…3a7f', '', 'quick', 'kept']
     ];
     const UNDO = 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
     // Finished: the busy row is done. An undo lists only the rows it takes back (Copied ones); one whose
@@ -432,27 +436,30 @@ class Component extends DCLogic {
     // run names each photo in Shared. Each row has its checkbox; IMG_4204.MOV is left out from now on — Move 3…,
     // and the set never gathers it again.
     const READY = [
-      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '1c3e…8a02', ''],
-      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '7d41…e915', ''],
-      ['leftOut', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', '', 'a0b7…34cc', ''],
-      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '55e2…f07d', '']
+      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025/11/02 · Vợ/Phone', '', '1c3e…8a02', '', 'full', ''],
+      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025/11/02 · Vợ/Phone', '', '7d41…e915', '', 'full', ''],
+      ['leftOut', 'IMG_4204.MOV', 'Tuấn/2025/11/02 · Vợ/Phone', '', 'a0b7…34cc', '', 'full', ''],
+      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025/11/03 · Vợ/Phone', '', '55e2…f07d', '', 'full', '']
     ];
     const rows = state === 'readyToMove' ? READY : state === 'running' ? L
-      : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', ''] : r)
-      : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared']
-          : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], ''] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '']
-          : ['undone', r[1], r[2], r[3], r[4], '']);
+      : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', '', r[6], 'kept'] : r)
+          .map(r => state === 'restored' && r[7] === 'dates not kept' ? [r[0], r[1], r[2], r[3], r[4], r[5], r[6], 'restored'] : r)
+      : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5], r[6]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared', r[6]]
+          : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], '', r[6]] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '', r[6]]
+          : ['undone', r[1], r[2], r[3], r[4], '', r[6]]);
     const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', leftOut:'Left out from now on', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
     const log = rows.map((r, i) => ({ status: word[r[0]],
       icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : (r[0]==='fail' || r[0]==='not') ? FAIL : r[0]==='undone' ? UNDO : null,
       busy: r[0]==='busy' || r[0]==='undoBusy',
       color: (r[0]==='ok' || r[0]==='undone') ? S.greenText : (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
-      name:r[1], from:r[2], to:r[3], sha: r[4] || '—', reason: r[5], reasonColor: (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
+      name:r[1], from:r[2], to:r[3].replace(/^Shared\//, ''), sha: r[4] || '—', reason: r[5], check: (isUndo || r[0] === 'skip') ? '' : ({ quick:'Quick', full:'Full' }[r[6]] || ''),
+      info: (r[0] === 'ready' || r[0] === 'leftOut') ? '' : ({ kept:'Kept', 'dates not kept':'Dates not kept', restored:'Restored' }[r[7]] || '—'),
+      infoColor: r[7] === 'dates not kept' ? S.orangeText : r[7] === 'restored' ? S.greenText : t.label2, reasonColor: (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
       rowBg: (i % 2) ? t.rowAlt : 'transparent',
       hasBox: r[0]==='ready' || r[0]==='leftOut', checkVis: r[0]==='ready' ? 'visible' : 'hidden',
       boxBg: r[0]==='ready' ? t.accentFill : S.box, boxBorder: '1px solid ' + (r[0]==='ready' ? t.accentFill : t.checkboxStroke),
       on: r[0]==='ready', off: r[0]==='leftOut' }));
-    const fb = (label, kind, dis) => ({ label, dis: dis ? 'true' : 'false',
+    const fb = (label, kind, dis, help) => ({ label, dis: dis ? 'true' : 'false', help: help || '',
       bg: kind === 'default' ? t.accentFill : t.fill, fg: dis ? t.label3 : (kind === 'default' ? t.onAccentFill : t.label),
       weight: kind === 'default' ? '600' : '400' });
     const V = {
@@ -460,15 +467,21 @@ class Component extends DCLogic {
         detail:'IMG_4188.HEIC · reading back SHA-256 in Shared', pct:'43%', summary:'120 copied · 1 skipped · 1 failed',
         footBtns:[ fb('Show Failed'), fb('Show in Browser', null, true) ], failNote:'1 failed' },
       finished: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
-        detail:'Undo Copy… takes these copies back out of “Shared”.', pct:'100%', summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0942.csv”',
+        pct:'100%', summary:'Log saved in Shared',
         // §6c: Run Again opens the sheet on the same set, checking only new photos
-        footBtns:[ fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
+        // §6e: Restore File Info… sets the first folder's dates and flags on copies that lost them; nothing is copied
+        // again. Enabled while a Copied row is not Kept; right-click on selected rows offers the same for those rows.
+        detail:'1 copy did not keep its dates. Restore File Info… sets them without copying again.',
+        footBtns:[ fb('Undo Copy…'), fb('Restore File Info…', null, false, 'Sets the dates of the copies in Shared from Tuấn, without copying again'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
+      restored: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
+        detail:'File info restored on 1 copy · 0 skipped. Nothing was copied again.', pct:'100%', summary:'Log saved in Shared',
+        footBtns:[ fb('Undo Copy…'), fb('Restore File Info…', null, true, 'Every copy already has its dates'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
       undoing: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Undoing 120 of 278 · 1.8 of 4.2 GB',
         detail:'IMG_4110.HEIC · checking the copies', pct:'43%', summary:'119 undone · 1 not undone',
         footBtns:[ fb('Show in Browser', null, true) ] },
       undone: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'277 undone · 1 not undone',
         detail:'1 not undone — select it and choose Undo Selected… to try again', pct:'100%',
-        summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0958 Undo.csv”',
+        summary:'Log saved in Shared',
         footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] },
       readyToMove: { winTitle:'Common Photos — Tuấn + Vợ → Shared · Nov 3', head:'4 photos ready to move · 3 checked',
         detail:'Keep gathering found them. Nothing has been moved yet.', pct:'0%',
@@ -481,7 +494,7 @@ class Component extends DCLogic {
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, files, crumbs, filter, cols, log,
       winTitle:V.winTitle, head:V.head, detail:V.detail, pct:V.pct, pctNum:V.pct.replace('%', ''), going,
-      barFg: going ? t.accent : S.greenText, hasBar: !ready, summary:V.summary, footBtns:V.footBtns, failNote:V.failNote || null, confirm,
+      barFg: going ? t.accent : S.greenText, hasBar: !ready, summary:V.summary, summaryHelp: isUndo ? 'ShotDex Common Photos 2026-11-03 0958 Undo.csv' : 'ShotDex Common Photos 2026-11-03 0942.csv', footBtns:V.footBtns, failNote:V.failNote || null, confirm,
       sysBlue: dark ? '#0A84FF' : '#007AFF',
       confirmAction: ready ? 'Move' : 'Undo Copy',
       confirmTitle: ready ? 'Move 3 photos to “Shared”?' : 'Undo copying 278 photos?',

@@ -92,7 +92,7 @@ def board_size(board: pathlib.Path) -> tuple[int, int]:
     sys.exit(f"{board.name}: no size in canvas.json or $preview")
 
 
-def render(boards: list[pathlib.Path], out: pathlib.Path, dark: bool = False) -> int:
+def render(boards: list[pathlib.Path], out: pathlib.Path, dark: bool = False, props=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     binary = renderer()
     failures = 0
@@ -104,9 +104,12 @@ def render(boards: list[pathlib.Path], out: pathlib.Path, dark: bool = False) ->
         name = board.name.removesuffix(".dc.html")
         w, h = board_size(board)
         html = board.read_text()
+        tweaks = json.loads(props) if props else {}
         if dark:
+            tweaks["dark"] = True
+        if tweaks:
             html = html.replace('<script src="./support.js"></script>',
-                                '<script>window.__DC_PROPS={dark:true}</script>\n<script src="./support.js"></script>', 1)
+                                f'<script>window.__DC_PROPS={json.dumps(tweaks)}</script>\n<script src="./support.js"></script>', 1)
         staged = stage / board.name
         staged.write_text(html)
         png, frames_path = out / f"{name}.png", out / f"{name}.json"
@@ -178,6 +181,7 @@ def main() -> int:
     r.add_argument("boards", nargs="+", type=pathlib.Path)
     r.add_argument("-o", "--out", type=pathlib.Path, default=pathlib.Path("build/design/render"))
     r.add_argument("--dark", action="store_true", help="render with the board's dark tweak on")
+    r.add_argument("--props", help='other tweaks as JSON, e.g. \'{"action":"move"}\'')
     c = sub.add_parser("compare")
     c.add_argument("design")
     c.add_argument("app")
@@ -187,7 +191,7 @@ def main() -> int:
     c.add_argument("--text", action="store_true", help="also require the board's plain text leaves")
     a = ap.parse_args()
     if a.cmd == "render":
-        return render(a.boards, a.out, a.dark)
+        return render(a.boards, a.out, a.dark, a.props)
     return compare(a.design, a.app, a.tolerance, a.offset_y, a.text)
 
 

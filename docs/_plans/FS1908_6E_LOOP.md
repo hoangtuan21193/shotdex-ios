@@ -32,7 +32,7 @@ loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
 
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
-| T0 | chưa | | board `MAC_CommonPhotos`, `MAC_BackupOrganize`, `MAC_CommonPhotosRun` |
+| T0 | xong | (commit này) | Canvas v127. `MAC_CommonPhotos`: hàng Organize dưới Save to (nút "Same as Source · videos together…" + "e.g. 2025/10/12/DSC04388.ARW"), câu "Changing this affects new photos only…" chỉ khi Organize khác lượt trước (tweak `organizeChanged`), ô **Quick check** một dòng + tooltip nói cái giá, câu cam "does not keep file dates" ngay dưới hàng Save to · Action, hàng kế hoạch ghi đích đủ (bỏ tiền tố Shared/) + nhãn Quick, "Same 282 · 214 quick", trạng thái mới `readingDates`, `quickThenMove` (kết quả bị bỏ, nút Scan). Sheet 640×640: **MAC_STYLE thêm ngoại lệ** cho sheet có danh sách kết quả (560 chỉ còn 1–2 hàng — cả hai review chỉ ra). `MAC_BackupOrganize`: tweak `from=commonPhotos` (Same as Source, câu nói folder đầu, không Folder Names/popover, nền trình duyệt NAS Home). `MAC_CommonPhotosRun`: rộng 1040, cột Check (Quick/Full) + File info (Kept/Dates not kept/Restored), Restore File Info… (bật khi còn hàng chưa Kept, trạng thái `restored`), tên CSV vào tooltip. **Không vẽ menu Levels mở** (luật người dùng: không board menu mở) — review design đề nghị, bỏ qua có lý do. `Tools/design-board render --props` để render từng tweak. §6e + AC-193/208/214 sửa chữ theo review UX. Code (sheet hiện 560) đổi ở T7/T10. Ảnh `build/design/shots/6E-T0/` |
 | T1 | chưa | | spike ADS SMB + WebDAV PROPPATCH |
 | T2 | chưa | | AC-211, 215, 218 |
 | T3 | chưa | | AC-212, 213, 214 |
