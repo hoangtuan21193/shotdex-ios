@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Network
+import os
 import SMBClient
 
 /// `RemoteFileClient` over SMB 2/3 (SMBClient, MIT). Paths start at the
@@ -16,6 +17,11 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     private var client: SMBClient?
     /// The share the session's tree is connected to.
     private var connectedShare: String?
+    /// Which login is current, and whether the server has ended it — a NAS
+    /// drops one left idle for about 50 minutes. The next call then logs in
+    /// again instead of failing on the dead session. Written on the
+    /// connection's queue; a report from an earlier login is ignored.
+    private let login = OSAllocatedUnfairLock(initialState: (current: 0, attempts: 0, wasDropped: false))
 
     init(server: FileServer, password: String) {
         self.server = server
@@ -24,13 +30,23 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func connect() async throws {
         let client = SMBClient(host: server.host, port: server.port)
+        // Numbered per attempt, so a failed one can never pass for the login in use.
+        let number = login.withLock { $0.attempts += 1; return $0.attempts }
+        // Set before the connection starts, so its queue never reads it mid-write.
+        client.onDisconnected = { [login] _ in
+            login.withLock { if $0.current == number { $0.wasDropped = true } }
+        }
         do {
             _ = try await withConnectTimeout(host: server.host) {
                 try await client.login(username: self.server.username, password: self.password)
             }
         } catch {
+            client.session.disconnect()
             throw Self.map(error, host: server.host, path: "")
         }
+        let previous = self.client
+        login.withLock { $0.current = number; $0.wasDropped = false }
+        previous?.session.disconnect()
         self.client = client
         connectedShare = nil
     }
@@ -57,9 +73,15 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         if connectedShare != nil { _ = try? await client.disconnectShare() }
         connectedShare = nil
         _ = try? await client.logoff()
+        client.session.disconnect()
     }
 
-    private func connected() throws -> SMBClient {
+    /// The logged-in client; a login the server ended is replaced first.
+    private func connected() async throws -> SMBClient {
+        guard client != nil else { throw RemoteFileError.connectionLost }
+        // The dead login stays until a new one succeeds, so a failed
+        // attempt is tried again on the next call.
+        if login.withLock({ $0.wasDropped }) { try await connect() }
         guard let client else { throw RemoteFileError.connectionLost }
         return client
     }
@@ -68,7 +90,7 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     /// share; nil for the machine's root. Moving to another share swaps the
     /// tree within the same login.
     private func open(_ path: String) async throws -> (client: SMBClient, rest: String)? {
-        let client = try connected()
+        let client = try await connected()
         guard let (share, rest) = SMBPath.split(path) else { return nil }
         if share != connectedShare {
             if connectedShare != nil { _ = try? await client.disconnectShare() }
