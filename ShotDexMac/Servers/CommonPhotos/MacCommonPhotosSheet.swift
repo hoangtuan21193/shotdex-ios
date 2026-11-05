@@ -112,6 +112,15 @@ private struct MacCommonPhotosSheetContent: View {
             foldersRow
             Divider().padding(.vertical, 12)
             saveToRow
+            if model.serverKeepsNoDates {
+                Label(String(localized: "This server does not keep file dates: copies show the day they were copied.",
+                             comment: "Mac common photos sheet: the last run through this connection lost the files' dates (FS-19.08 §6e)"),
+                      systemImage: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .padding(.leading, Self.labelWidth + 8)
+                    .padding(.top, 6)
+            }
             if model.action == .move {
                 Text("Moved photos are removed from every folder above. The server has no Trash.",
                      comment: "Mac common photos sheet: what Move does")

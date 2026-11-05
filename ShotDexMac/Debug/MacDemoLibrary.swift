@@ -192,6 +192,8 @@ enum MacDemoLibrary {
         if let folder = value("-ShotDexCommonPhotosAddFolder") { model.add(folder: folder) }
         if value("-ShotDexCommonPhotosAction") == "move" { model.action = .move }
         if arguments.contains("-ShotDexCommonPhotosSlow") { model.groupDelay = .seconds(2) }
+        // `-ShotDexCommonPhotosNoDates`: the sheet as on a server that lost the dates last time (§6e).
+        if arguments.contains("-ShotDexCommonPhotosNoDates") { model.serverKeepsNoDates = true }
         if arguments.contains("-ShotDexCommonPhotosScan") { model.scan() }
     }
 

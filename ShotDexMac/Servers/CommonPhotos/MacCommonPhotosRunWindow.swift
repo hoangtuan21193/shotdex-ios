@@ -10,7 +10,7 @@ import SwiftUI
 struct MacCommonPhotosRunWindow: View {
     static let id = "commonPhotosRun"
     /// Board `MAC_CommonPhotosRun`: the window at 900×560.
-    static let size = CGSize(width: 900, height: 560)
+    static let size = CGSize(width: 1040, height: 560)
 
     /// Nil for a window macOS restored with no run to show.
     let runId: String?
@@ -28,7 +28,10 @@ struct MacCommonPhotosRunWindow: View {
                                                          comment: "Common photos window: why nothing shows"))
             }
         }
-        .frame(minWidth: 720, idealWidth: Self.size.width, minHeight: 420, idealHeight: Self.size.height)
+        // The board's width (FS-19.08 §6e added File info): below it Reason,
+        // the column that explains a failure, is cut. A window saved
+        // narrower opens at it.
+        .frame(minWidth: Self.size.width, idealWidth: Self.size.width, minHeight: 420, idealHeight: Self.size.height)
         .tint(MacTheme.accent)
         .task(id: runId) {
             guard let runId, dependencies.commonPhotos.entry(for: runId) != nil else { return }
@@ -55,9 +58,13 @@ final class MacCommonPhotosLogModel {
         let to: String
         let shortSHA: String
         let reason: String
+        /// §6e: Kept / Dates not kept / Tags not kept / —.
+        let fileInfo: String
+        let datesLost: Bool
         // As the CSV writes them, for ⌘C.
         let csvStatus: String
         let csvReason: String
+        let csvFileInfo: String
         let fromPaths: String
         let toPath: String
         let sha256: String
@@ -207,9 +214,9 @@ final class MacCommonPhotosLogModel {
         func field(_ text: String) -> String {
             text.replacingOccurrences(of: "\t", with: " ").replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
         }
-        let header = ["Status", "Name", "From", "To", "SHA-256", "Reason"].joined(separator: "\t")
+        let header = ["Status", "Name", "From", "To", "SHA-256", "Reason", "File info"].joined(separator: "\t")
         return ([header] + picked.map { row in
-            [row.csvStatus, row.name, row.fromPaths, row.toPath, row.sha256, row.csvReason].map(field).joined(separator: "\t")
+            [row.csvStatus, row.name, row.fromPaths, row.toPath, row.sha256, row.csvReason, row.csvFileInfo].map(field).joined(separator: "\t")
         }).joined(separator: "\n")
     }
 
@@ -233,8 +240,12 @@ final class MacCommonPhotosLogModel {
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
                    shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
+                   // An undo's rows say nothing about dates: the copies were taken back.
+                   fileInfo: run.isUndo || run.state == .ready ? "" : CommonPhotosLog.fileInfo(item.fileInfo),
+                   datesLost: item.fileInfo == .datesNotKept,
                    csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
                    csvReason: CommonPhotosLog.csvReason(item),
+                   csvFileInfo: run.isUndo ? "" : item.fileInfo?.rawValue ?? "",
                    fromPaths: item.sources.map(\.path).joined(separator: "; "), toPath: item.destinationPath ?? "",
                    sha256: item.sha256)
     }
@@ -618,11 +629,15 @@ private struct MacCommonPhotosRunContent: View {
             TableColumn(String(localized: "From", comment: "Common photos log column"), value: \.from) { row in
                 Text(row.from).foregroundStyle(.secondary).lineLimit(1).help(row.fromPaths)
             }
-            .width(min: 100, ideal: 160)
+            .width(min: 90, ideal: 120)
             TableColumn(String(localized: "To", comment: "Common photos log column"), value: \.to) { row in
                 Text(row.to).foregroundStyle(.secondary).lineLimit(1).help(row.toPath)
             }
-            .width(min: 100, ideal: 160)
+            .width(min: 100, ideal: 200)
+            TableColumn(String(localized: "File info", comment: "Common photos log column: whether the copy kept its source's dates (FS-19.08 §6e)"), value: \.fileInfo) { row in
+                Text(row.fileInfo).foregroundStyle(row.datesLost ? Color.orange : .secondary).lineLimit(1)
+            }
+            .width(min: 96, ideal: 110)
             TableColumn(String(localized: "SHA-256", comment: "Common photos log column"), value: \.sha256) { row in
                 Text(row.shortSHA).foregroundStyle(.secondary).monospacedDigit().help(row.sha256)
             }

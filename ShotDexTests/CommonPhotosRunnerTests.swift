@@ -929,9 +929,9 @@ import Testing
         #expect(csv.text.hasPrefix("\u{FEFF}"))
         let rows = csv.text.dropFirst().components(separatedBy: "\r\n").filter { !$0.isEmpty }
         #expect(rows.count == 5)
-        #expect(rows[0] == "Status,Name,From,To,SHA-256,Reason")
+        #expect(rows[0] == "Status,Name,From,To,SHA-256,Reason,File info")
         #expect(rows.dropFirst().map { $0.split(separator: ",").first.map(String.init) } == ["Copied", "Copied", "Copied", "Skipped"])
-        #expect(rows[4].hasSuffix(",already there"))
+        #expect(rows[4].hasSuffix(",already there,"))
         #expect(rows[1].contains("A/IMG_1.JPG; B/IMG_1.JPG"))
         #expect(try fixture.store.run(id: "R1")?.csvPath == csv.path)
         #expect(changes.withLock { $0 }.isEmpty)

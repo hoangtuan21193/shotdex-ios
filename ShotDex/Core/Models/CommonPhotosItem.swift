@@ -36,6 +36,8 @@ struct CommonPhotosItem: Hashable, Sendable {
         /// §6e, AC-224 — written from T3 on), so Undo puts it back as it
         /// was. Nil for older rows.
         var info: RemoteFileInfo?
+        /// The same for its `.xmp`, which a Move removes with it.
+        var sidecarInfo: RemoteFileInfo?
     }
 
     /// Why a photo was skipped or failed, stored as a code and worded when

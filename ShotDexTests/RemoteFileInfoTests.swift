@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -141,6 +142,132 @@ import Testing
 
         let infoWrites = fixture.nas.commands.filter { $0.hasPrefix("info ") }
         #expect(infoWrites.count == 4 + 2)
+    }
+
+    // MARK: Move, sidecars, the server's verdict (T3)
+
+    /// AC-213 (rename): a Move renamed on the server keeps the dates; the
+    /// row says kept after checking.
+    @Test func moveByRenameKeepsInfo() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        let info = RemoteFileInfo(modified: Self.old, created: Self.older, isReadOnly: true)
+        fixture.nas.infos["A/IMG_1.JPG"] = info
+        try await fixture.start(action: .move)
+
+        try await fixture.runner.run("R1")
+
+        let item = try #require(try fixture.items().first)
+        #expect(item.status == .moved)
+        #expect(item.fileInfo == .kept)
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_1.JPG") == info)
+    }
+
+    /// AC-213 (refused rename) + AC-224: the server will not rename across
+    /// folders, so the photo is copied — with the first folder's dates —
+    /// and both copies' info is on the row before either is removed.
+    @Test func moveByCopyKeepsInfoAndRecordsTheRemovedCopies() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let first = RemoteFileInfo(modified: Self.old, isReadOnly: true)
+        let second = RemoteFileInfo(modified: Self.older, isHidden: true)
+        fixture.nas.infos["A/IMG_1.JPG"] = first
+        fixture.nas.infos["B/IMG_1.JPG"] = second
+        try await fixture.start(action: .move)
+
+        try await fixture.runner.run("R1")
+
+        let item = try #require(try fixture.items().first)
+        #expect(item.status == .moved)
+        #expect(item.fileInfo == .kept)
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_1.JPG") == first)
+        #expect(item.sources.map(\.info) == [first, second])
+        #expect(item.sources.allSatisfy { $0.isRemoved })
+    }
+
+    /// AC-224: the same on a server that keeps no dates — still Moved (the
+    /// user's choice, 2026-11-05), dates not kept, and the removed copies'
+    /// info recorded for Undo.
+    @Test func moveOnAServerThatKeepsNoDates() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        fixture.nas.keepsDates = false
+        let first = RemoteFileInfo(modified: Self.old)
+        fixture.nas.infos["A/IMG_1.JPG"] = first
+        fixture.nas.put("A/IMG_1.xmp", Data("<x/>".utf8))
+        let sidecar = RemoteFileInfo(modified: Self.older)
+        fixture.nas.infos["A/IMG_1.xmp"] = sidecar
+        try await fixture.start(action: .move)
+        // What the store holds at the moment A's photo is first set aside
+        // or removed: the info must already be there.
+        let store = fixture.store
+        let atRemoval = OSAllocatedUnfairLock<CommonPhotosItem.Source?>(initialState: nil)
+        fixture.nas.onMove = { source, _ in
+            guard source == "A/IMG_1.JPG" else { return }
+            let row = try? store.items(runId: "R1").first?.sources.first
+            atRemoval.withLock { if $0 == nil { $0 = row } }
+        }
+
+        try await fixture.runner.run("R1")
+
+        let item = try #require(try fixture.items().first)
+        #expect(item.status == .moved)
+        #expect(item.fileInfo == .datesNotKept)
+        #expect(item.sources.first?.info == first)
+        #expect(item.sources.first?.sidecarInfo == sidecar)
+        let recorded = try #require(atRemoval.withLock { $0 })
+        #expect(recorded.info == first)
+        #expect(recorded.sidecarInfo == sidecar)
+    }
+
+    /// AC-213 (sidecar): the `.xmp` gets its own source's dates, not the
+    /// photo's.
+    @Test func sidecarKeepsItsOwnInfo() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("<x/>".utf8))
+        let photo = RemoteFileInfo(modified: Self.old)
+        let sidecar = RemoteFileInfo(modified: Self.older)
+        fixture.nas.infos["A/IMG_1.JPG"] = photo
+        fixture.nas.infos["A/IMG_1.xmp"] = sidecar
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_1.JPG") == photo)
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_1.xmp") == sidecar)
+    }
+
+    /// AC-214: a run that lost every date records it for the connection;
+    /// the next sheet on that connection warns; the CSV says why per photo.
+    /// A run that kept them clears the warning again.
+    @Test @MainActor func refusedDatesAreRemembered() async throws {
+        var fixture = try CommonPhotosRunnerTests.Fixture(count: 2)
+        fixture.nas.keepsDates = false
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        let database = fixture.store.database
+        #expect(try ServerFileInfoSupport.keepsDates(connectionId: "S1", in: database) == false)
+        let sheet = CommonPhotosScanModel(connectionId: "S1", sourceId: "src", folders: ["A", "B"], client: fixture.nas, database: database)
+        #expect(sheet.serverKeepsNoDates)
+        let csv = try #require(fixture.csv)
+        #expect(csv.text.contains(",dates not kept\r\n"))
+
+        fixture.nas.keepsDates = true
+        for path in fixture.nas.files.keys where path.hasPrefix("C/") { fixture.nas.drop(path) }
+        fixture.runId = "R2"
+        try await fixture.start()
+        try await fixture.runner.run("R2")
+        #expect(try ServerFileInfoSupport.keepsDates(connectionId: "S1", in: database) == true)
+        #expect(!CommonPhotosScanModel(connectionId: "S1", sourceId: "src", folders: ["A", "B"], client: fixture.nas, database: database).serverKeepsNoDates)
+    }
+
+    /// The verdict from a run's outcomes: lost only when every copy lost
+    /// them; nothing written, no verdict.
+    @Test func verdictFromOutcomes() {
+        #expect(ServerFileInfoSupport.keepsDates(from: []) == nil)
+        #expect(ServerFileInfoSupport.keepsDates(from: [.datesNotKept, .datesNotKept]) == false)
+        #expect(ServerFileInfoSupport.keepsDates(from: [.datesNotKept, .kept]) == true)
     }
 
     // MARK: Files folder (AC-222)

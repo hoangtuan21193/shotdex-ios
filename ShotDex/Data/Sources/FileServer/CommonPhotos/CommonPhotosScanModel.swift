@@ -163,7 +163,13 @@ final class CommonPhotosScanModel {
         self.client = client
         self.database = database
         self.sources = sources
+        serverKeepsNoDates = database.flatMap { try? ServerFileInfoSupport.keepsDates(connectionId: connectionId, in: $0) } == false
     }
+
+    /// The last run through this connection lost every copy's dates (FS-19.08
+    /// §6e): the sheet says so before this one starts. Settable for the
+    /// Mac's screenshot launch arguments.
+    var serverKeepsNoDates: Bool
 
     // MARK: Folders and destination
 

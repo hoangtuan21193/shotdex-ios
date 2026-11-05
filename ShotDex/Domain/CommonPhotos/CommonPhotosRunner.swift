@@ -255,6 +255,10 @@ struct CommonPhotosRunner: Sendable {
                 state.currentStep = nil
                 progress(state)
             }
+            // What the server did with the dates, for the next run's sheet (§6e).
+            if let keeps = ServerFileInfoSupport.keepsDates(from: items.compactMap(\.fileInfo)) {
+                try? ServerFileInfoSupport.record(connectionId: run.connectionId, keepsDates: keeps, in: store.database)
+            }
             try store.markState(.finishing, runId: runId)
             let csvPath = try await writeLog(items, run: run, into: destination)
             try await afterRun(run, CommonPhotosLog.historyChanges(items))
@@ -431,8 +435,10 @@ struct CommonPhotosRunner: Sendable {
             // that file, down to what Finder sorts by.
             let sourceInfo = try? await client.fileInfo(at: source.path)
             let outcome = try await write.moveIntoPlace(target, replacing: false, info: sourceInfo)
-            // Cancelled after the rename: no verdict, so Resume sets them.
-            item.fileInfo = Task.isCancelled ? nil : outcome ?? .datesNotKept
+            // Cancelled after the rename: no verdict, so Resume sets them. A
+            // source whose info could not be read has none either — that
+            // is not the server losing dates.
+            item.fileInfo = Task.isCancelled ? nil : outcome
         } catch {
             try await discard(&item, target: target)
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
@@ -486,6 +492,7 @@ struct CommonPhotosRunner: Sendable {
             let fromSize = try await client.fileSize(at: from)
             if fromSize == nil, targetSize == item.size,
                try await client.sha256(of: target, progress: { _ in }) == item.sha256 {
+                await checkRenameKeptInfo(&item, target: target)
                 try markMoved(&item, from: from, target: target)
                 provedThisRun = true
             } else if fromSize != nil, targetSize == nil {
@@ -513,6 +520,18 @@ struct CommonPhotosRunner: Sendable {
                 try finish(&item, .failed, reason: .changedOnServer)
                 return
             }
+            // Every copy's dates and flags, recorded before anything is
+            // renamed or removed (FS-19.08 §6e, AC-224): Undo puts each back
+            // as it was, even where the server keeps no dates.
+            for index in item.sources.indices where item.sources[index].info == nil {
+                item.sources[index].info = try? await client.fileInfo(at: item.sources[index].path)
+                if let sidecar = item.sources[index].sidecar, item.sources[index].sidecarInfo == nil {
+                    item.sources[index].sidecarInfo = try? await client.fileInfo(at: sidecar)
+                }
+            }
+            // A Stop during those reads stops here, before any rename.
+            try Task.checkCancellation()
+            try store.update(item)
             let taken = destination.sizes[name.lowercased()]
             var alreadyThere = false
             if taken == item.size {
@@ -550,6 +569,7 @@ struct CommonPhotosRunner: Sendable {
                         try finish(&item, .failed, reason: .changedOnServer)
                         return
                     }
+                    await checkRenameKeptInfo(&item, target: target)
                     try markMoved(&item, from: source.path, target: target)
                     provedThisRun = true
                 } else {
@@ -579,6 +599,14 @@ struct CommonPhotosRunner: Sendable {
         item.movedFrom = nil
         item.partPath = nil
         try store.update(item)
+    }
+
+    /// A rename keeps a file's dates: checked against the first copy's info
+    /// recorded before it, not set (FS-19.08 §6e). Either read missing, no
+    /// verdict — an unread date is not a lost one.
+    private func checkRenameKeptInfo(_ item: inout CommonPhotosItem, target: String) async {
+        guard let before = item.sources.first?.info, let after = try? await client.fileInfo(at: target) else { return }
+        item.fileInfo = after.hasSameModified(as: before) ? .kept : .datesNotKept
     }
 
     /// The rename went through: the moved source is gone, the photo placed.
@@ -765,7 +793,9 @@ struct CommonPhotosRunner: Sendable {
                 try clearPlacedSidecar(&item, target: target)
                 return
             }
-            try await write.moveIntoPlace(target, replacing: false)
+            // The sidecar's own dates, as the photo gets its own (§6e).
+            let sidecarInfo = try? await client.fileInfo(at: path)
+            try await write.moveIntoPlace(target, replacing: false, info: sidecarInfo)
             destination.sizes[name.lowercased()] = Int64(try Data(contentsOf: local).count)
         } catch {
             await write.discardPart(for: target)

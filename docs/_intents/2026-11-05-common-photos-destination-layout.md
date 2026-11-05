@@ -5,7 +5,7 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-05 |
 | Trạng thái | accepted (2026-11-05) |
-| Tiến độ | **đang làm** (2026-11-05) — task 3/13, 2/34 AC xanh (3 một phần) — plan [2026-11-05-fs1908-6e-dated-organize-fileinfo](../_plans/2026-11-05-fs1908-6e-dated-organize-fileinfo.md) |
+| Tiến độ | **đang làm** (2026-11-05) — task 4/13, 5/34 AC xanh (4 một phần) — plan [2026-11-05-fs1908-6e-dated-organize-fileinfo](../_plans/2026-11-05-fs1908-6e-dated-organize-fileinfo.md) |
 | Nguồn | phản hồi người dùng 2026-11-05: "Save common ra một thư mục khác thì nên có option chọn là lưu flat hay lưu theo cấu trúc ngày tháng hay chia ảnh video các kiểu nữa. giống kiểu các option ở màn hình backup trên iphone ấy. mục đích là để tìm ảnh dễ, verify kết quả cũng dễ hơn." |
 | Spec sinh ra từ đây | [FS-19.08 §6e](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…226 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 

@@ -17,6 +17,16 @@ enum CommonPhotosLog {
         }
     }
 
+    /// The log window's File info cell (FS-19.08 §6e).
+    static func fileInfo(_ outcome: FileInfoOutcome?) -> String {
+        switch outcome {
+        case .kept: String(localized: "Kept", comment: "Common photos log, File info column: the copy has its source's dates and flags")
+        case .datesNotKept: String(localized: "Dates not kept", comment: "Common photos log, File info column: the server gave the copy today's date")
+        case .tagsNotKept: String(localized: "Tags not kept", comment: "Common photos log, File info column: dates kept, Finder tags lost")
+        case nil: "—"
+        }
+    }
+
     static func reason(_ item: CommonPhotosItem) -> String {
         guard let (code, detail) = item.failure else { return "" }
         switch code {
@@ -42,9 +52,12 @@ enum CommonPhotosLog {
     /// `Tuấn` as written; names from the server that would read as a formula
     /// (`=`, `+`, `-`, `@`) start with `'`.
     /// An undo's CSV (`isUndo`) has the same columns; its rows read
-    /// Undone or Not undone (§6b).
+    /// Undone or Not undone (§6b). `File info` (§6e) says whether the copy
+    /// kept its source's dates: `kept`, `dates not kept`, `tags not kept`,
+    /// empty where the run wrote no copy; last, so a script reading the
+    /// earlier columns by position still reads them.
     static func csv(_ items: [CommonPhotosItem], isUndo: Bool = false) -> String {
-        var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason"])]
+        var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason", "File info"])]
         for item in items {
             lines.append(CSVField.line([
                 isUndo ? (item.status == .undone ? "Undone" : item.isDone ? "Not undone" : csvStatus(item.status)) : csvStatus(item.status),
@@ -53,6 +66,9 @@ enum CommonPhotosLog {
                 item.destinationPath ?? "",
                 item.sha256,
                 csvReason(item),
+                // An undo's rows are the run's photos taken back: the
+                // verdict was the run's, not the undo's.
+                isUndo ? "" : item.fileInfo?.rawValue ?? "",
             ].map(defused)))
         }
         return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"
