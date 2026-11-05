@@ -67,8 +67,8 @@ final class MacCommonPhotosCompareModel {
     private(set) var failures: [String: String] = [:]
     /// Sides read whole that this Mac cannot draw (a RAW it does not know).
     private(set) var noPreview: Set<String> = []
-    /// Video sides read whole, by copy path.
-    private(set) var videoFiles: [String: URL] = [:]
+    /// Video sides, played from the server where they lie, by copy path.
+    @ObservationIgnored private var videoStreams: [String: RemoteVideoStream] = [:]
     /// Both sides' videos read: played as one (AC-185).
     private(set) var videoPair: MacCommonPhotosVideoPair?
     /// Bumped by Try Again: the sides load again.
@@ -160,20 +160,27 @@ final class MacCommonPhotosCompareModel {
         // Before the guard: a list emptied by a rescan stops the sound too.
         videoPair?.stop()
         videoPair = nil
-        guard !isClosed, let sha256 = row?.sha256 else { return }
         let sides = sides
         let paths = Set(sides.map(\.path))
-        videoFiles = videoFiles.filter { paths.contains($0.key) }
+        // Before the guard too: a list emptied by a rescan stops the reads.
+        for (path, stream) in videoStreams where !paths.contains(path) { stream.cancel() }
+        videoStreams = videoStreams.filter { paths.contains($0.key) }
+        guard !isClosed, let sha256 = row?.sha256 else { return }
         previews = previews.filter { paths.contains($0.key) }
         downloading = downloading.filter { paths.contains($0.key) }
         // A failure belongs to its row: another row's never shows or blocks.
         failures = failures.filter { paths.contains($0.key) }
         noPreview = noPreview.intersection(paths)
         cache.pin(paths: sides.map { ($0.path, sha256) })
-        for side in sides where previews[side.path] == nil && videoFiles[side.path] == nil
+        for side in sides where previews[side.path] == nil && videoStreams[side.path] == nil
             && !noPreview.contains(side.path) && failures[side.path] == nil {
-            // A video is played from the file, never from the index's still.
-            if !Self.isVideo(side.path), let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
+            // A video is played from the server, never from the index's still
+            // and never downloaded: any size plays (§6d).
+            if Self.isVideo(side.path) {
+                await stream(side)
+                continue
+            }
+            if let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
                                                                maxPixelSize: Self.previewPixels), indexed.image != nil {
                 guard !Task.isCancelled else { return }
                 previews[side.path] = indexed
@@ -184,15 +191,40 @@ final class MacCommonPhotosCompareModel {
         }
         // Two videos: one transport for both.
         guard !Task.isCancelled, !isClosed else { return }
-        if sides.count == 2, let left = videoFiles[sides[0].path], let right = videoFiles[sides[1].path] {
-            videoPair = MacCommonPhotosVideoPair(left: left, right: right)
+        if sides.count == 2, let left = videoStreams[sides[0].path], let right = videoStreams[sides[1].path] {
+            videoPair = MacCommonPhotosVideoPair(left: left.asset, right: right.asset)
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosComparePlay") { videoPair?.playFromSixTenths() }
             #endif
         } else {
             // One video with nothing to play against: said, not a spinner.
-            for side in sides where videoFiles[side.path] != nil { noPreview.insert(side.path) }
+            for side in sides where videoStreams[side.path] != nil { noPreview.insert(side.path) }
         }
+    }
+
+    /// A video side: the session's login, then a stream AVFoundation reads
+    /// from as it plays.
+    private func stream(_ side: CommonPhotosCompare.Copy) async {
+        guard let client else {
+            failures[side.path] = String(localized: "The connection for this copy is gone.",
+                                         comment: "Common photos compare: no client to read the copy")
+            return
+        }
+        do {
+            if connecting == nil { connecting = Task { try await client.connect() } }
+            do {
+                try await connecting?.value
+            } catch {
+                connecting = nil
+                throw error
+            }
+        } catch {
+            guard !Task.isCancelled, !isClosed, !(error is CancellationError) else { return }
+            failures[side.path] = (error as? RemoteFileError)?.errorDescription ?? error.localizedDescription
+            return
+        }
+        guard !Task.isCancelled, !isClosed else { return }
+        videoStreams[side.path] = RemoteVideoStream(client: client, path: side.path, size: side.size)
     }
 
     private func download(_ side: CommonPhotosCompare.Copy, sha256: String) async {
@@ -262,11 +294,6 @@ final class MacCommonPhotosCompareModel {
             failures[path] = (error as? RemoteFileError)?.errorDescription ?? error.localizedDescription
             return
         }
-        // A video is played, not drawn.
-        if Self.isVideo(path) {
-            videoFiles[path] = file
-            return
-        }
         let drawn = await Task.detached { Self.draw(file) }.value
         guard !Task.isCancelled else { return }
         if let drawn {
@@ -302,6 +329,8 @@ final class MacCommonPhotosCompareModel {
         isClosed = true
         videoPair?.stop()
         videoPair = nil
+        videoStreams.values.forEach { $0.cancel() }
+        videoStreams = [:]
         // The files go first: the logoff may wait behind the scan's calls.
         cache.removeAll()
         guard let connecting, let client else { return }
@@ -442,6 +471,9 @@ private struct MacCommonPhotosCompareContent: View {
                     }
                 } else if let read = model.downloading[side.path] {
                     downloadingView(side, read: read)
+                } else if MacCommonPhotosCompareModel.isVideo(side.path), model.scan.isScanning {
+                    // Its reads wait behind the scan's (AC-184).
+                    downloadingView(side, read: 0)
                 } else {
                     ProgressView().controlSize(.small)
                 }
@@ -501,6 +533,9 @@ private struct MacCommonPhotosCompareContent: View {
     private func meta(_ side: CommonPhotosCompare.Copy) -> String {
         var parts = [side.size.formatted(.byteCount(style: .file))]
         if let date = model.previews[side.path]?.captured { parts.append(date.formatted(date: .abbreviated, time: .shortened)) }
+        if MacCommonPhotosCompareModel.isVideo(side.path) {
+            parts.append(String(localized: "played from \(model.serverName)", comment: "Common photos compare: a video side streams from the server"))
+        }
         if !row.isQuick { parts.append("SHA-256 " + String(row.sha256.prefix(8))) }
         return parts.joined(separator: " · ")
     }
@@ -508,11 +543,14 @@ private struct MacCommonPhotosCompareContent: View {
     /// Status only (MAC_STYLE: nothing actionable in the bottom 60pt).
     private var proofBar: some View {
         HStack(spacing: 12) {
-            Label(String(localized: "Same bytes — SHA-256 matches", comment: "Common photos compare: the proof"),
+            // A Quick Check row was never read whole: it claims no SHA-256 (§6e).
+            Label(row.isQuick
+                  ? String(localized: "Quick check — same path and size, three samples match", comment: "Common photos compare: the proof of a Quick Check row")
+                  : String(localized: "Same bytes — SHA-256 matches", comment: "Common photos compare: the proof"),
                   systemImage: "checkmark")
                 .foregroundStyle(.green)
                 .fontWeight(.semibold)
-            Text(row.isQuick ? String(localized: "Quick check — compared by three samples, not read in full", comment: "Common photos Compare: a Quick Check row has no SHA-256") : row.sha256)
+            Text(row.isQuick ? String(localized: "Not read in full", comment: "Common photos Compare: a Quick Check row has no SHA-256") : row.sha256)
                 .font(.caption.monospaced()).foregroundStyle(MacTheme.Editor.secondaryText)
                 .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
             Spacer(minLength: 0)

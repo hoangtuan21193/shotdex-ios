@@ -88,7 +88,7 @@ button{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"select","options":["photo","video","loading","waiting","noPreview","error","threeFolders"],"default":"photo"},"$preview":{"width":1180,"height":760}}'>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"select","options":["photo","video","loading","waiting","noPreview","error","threeFolders"],"default":"photo"},"quick":{"editor":"boolean","default":false},"$preview":{"width":1180,"height":760}}'>
 // Tier D tokens (ShotDex/Features/Editing/EditorTheme.swift): the window is always dark.
 const D = { bg:'#000000', panel:'#0E0E0E', control:'#1C1C1C', track:'#2A2A2A', hair:'rgba(255,255,255,0.09)',
   text:'rgba(255,255,255,0.92)', text2:'rgba(255,255,255,0.55)', accent:'#EB9526', green:'#30D158' };
@@ -104,11 +104,14 @@ class Component extends DCLogic {
     const raw = loading || error || waiting || noPreview;
     const name = video ? 'IMG_4107.MOV' : raw ? 'DSC04388.ARW' : 'IMG_4021.HEIC';
     const row = video ? 5 : raw ? 3 : 1;
-    const size = video ? '212.4 MB' : raw ? '48.6 MB' : '2.9 MB';
+    // A video plays from the server where it lies: any size, nothing downloaded (§6d).
+    const size = video ? '2.62 GB' : raw ? '48.6 MB' : '2.9 MB';
+    // Quick check: no SHA-256 was read, only the size and three samples (§6e).
+    const quick = !!this.props.quick;
     const taken = video ? 'Jun 3, 2025 at 6:41 PM' : raw ? 'Jul 12, 2025 at 5:58 AM' : 'Jun 1, 2025 at 4:12 PM';
     const side = (folder, file, i) => ({
       folder, name: file, aria: folder + ', ' + file,
-      meta: size + ' · ' + taken + ' · SHA-256 1c3e8a02',
+      meta: size + ' · ' + taken + (video ? ' · played from NAS Home' : '') + (quick ? '' : ' · SHA-256 1c3e8a02'),
       // Same bytes, so the same picture on both sides.
       tile: tile(row), shows: !(loading || waiting || noPreview || (error && i === 1)), video,
       waiting, noPreview: noPreview && i === 1, picker: three && i === 1, plain: !(three && i === 1),
@@ -131,9 +134,10 @@ class Component extends DCLogic {
     const proven = !(loading || error || waiting);
     return { D, sides, zoom, video,
       title: 'Compare — ' + name, subtitle: row + ' of 282',
-      proof: proven ? 'Same bytes — SHA-256 matches' : 'Same bytes — SHA-256 matched in the scan',
+      proof: quick ? 'Quick check — same path and size, three samples match'
+        : proven ? 'Same bytes — SHA-256 matches' : 'Same bytes — SHA-256 matched in the scan',
       proofIcon: 'M5 12.5l4.5 4.5L19 7.5', proofColor: proven ? D.green : D.text2,
-      sha: FULL };
+      sha: quick ? 'Not read in full' : FULL };
   }
 }
 </script>

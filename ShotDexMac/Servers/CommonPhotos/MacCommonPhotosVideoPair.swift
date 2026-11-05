@@ -24,11 +24,14 @@ final class MacCommonPhotosVideoPair {
     @ObservationIgnored private var seeksInFlight = 0
     @ObservationIgnored private var observer: Any?
     @ObservationIgnored private var endObserver: NSObjectProtocol?
+    /// Either side stopped short — the server went, or the file changed
+    /// under a stream (§6d): said, not a frozen picture.
+    @ObservationIgnored private var failureObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var infoTask: Task<Void, Never>?
 
-    init(left: URL, right: URL) {
-        leader = AVPlayer(url: left)
-        follower = AVPlayer(url: right)
+    init(left: AVAsset, right: AVAsset) {
+        leader = AVPlayer(playerItem: AVPlayerItem(asset: left))
+        follower = AVPlayer(playerItem: AVPlayerItem(asset: right))
         follower.isMuted = true
         for player in [leader, follower] {
             player.actionAtItemEnd = .pause
@@ -42,6 +45,12 @@ final class MacCommonPhotosVideoPair {
         endObserver = NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification,
                                                              object: leader.currentItem, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.reachedEnd() }
+        }
+        for player in [leader, follower] {
+            failureObservers.append(NotificationCenter.default.addObserver(
+                forName: AVPlayerItem.failedToPlayToEndTimeNotification, object: player.currentItem, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.failed() }
+            })
         }
         infoTask = Task { [weak self, left = leader.currentItem?.asset, right = follower.currentItem?.asset] in
             guard let left, let right else { return }
@@ -161,6 +170,13 @@ final class MacCommonPhotosVideoPair {
         time = seconds
     }
 
+    private func failed() {
+        leader.pause()
+        follower.pause()
+        isPlaying = false
+        cannotPlay = true
+    }
+
     /// The row changed or Compare closed: playback ends and the items go.
     func stop() {
         infoTask?.cancel()
@@ -169,6 +185,8 @@ final class MacCommonPhotosVideoPair {
         observer = nil
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil
+        failureObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        failureObservers = []
         for player in [leader, follower] {
             player.pause()
             player.replaceCurrentItem(with: nil)

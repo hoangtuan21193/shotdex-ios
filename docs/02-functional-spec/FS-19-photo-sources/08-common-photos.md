@@ -292,7 +292,10 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 - **Video:** một nút Play (Space) và một thanh tua cho cả hai; tua và Play đưa cả hai về cùng thời điểm, cùng một giờ
   máy; lúc chạy, bên phải lệch quá 2 khung hình (ít nhất 50 ms) thì được kéo lại; tiếng chỉ bên trái. Hết video thì
   dừng, Play lại từ đầu. File máy Mac không phát được (AVI, hỏng) thì nói "No preview for this video", không có thanh
-  phát. Hai bản của hàng cùng ghim trong cache nên tổng hai bản phải vừa trần 2 GB.
+  phát. **Đổi 2026-11-06 (người dùng):** video **không tải về** — phát thẳng từ server (`RemoteVideoStream`: AVFoundation
+  hỏi đoạn byte nào thì đọc đoạn đó, mỗi lần đọc 1 MB, mỗi yêu cầu tối đa 8 MB, xếp sau lệnh của Scan như mọi lệnh Compare), nên video cỡ nào
+  cũng xem được và không tốn ổ; trần 2 GB chỉ còn cho ảnh. Dòng dưới mỗi bên ghi "played from <server>". Hàng Quick
+  Check không có SHA-256: dòng chứng minh ghi "Quick check — same path and size, three samples match · Not read in full".
 - **Byte lấy ở đâu:** bản đã index thì dùng ảnh preview đã có. Chưa index thì **tải cả file** về thư mục tạm:
   - thanh tiến độ từng khung;
   - chỉ tải hai bản của hàng đang xem; sang hàng khác thì huỷ lượt tải dở;
@@ -654,5 +657,5 @@ Người dùng 2026-11-05: sửa một lần ở client server (`RemoteFileClien
 | Hoàn tác Move chậm như lượt chạy | phải đẩy lại byte cho mọi bản không phải bản đã đổi chỗ; tiến độ đếm byte |
 | §6c: file đổi nội dung mà giữ nguyên cỡ và ngày sửa (công cụ ghi đè giữ mtime) | SHA cũ bị dùng lại, ảnh có thể bị coi là chung sai. Copy vẫn an toàn (chép byte thật, kiểm SHA khi đọc lại); Move hỏi lại cỡ + ngày sửa và kiểm SHA ở đích như §6, nên không xoá nhầm. Scan Everything không giúp; giới hạn đã biết |
 | §6d: WebDAV `COPY` trên NAS ghi sai mà vẫn báo xong | đọc lại SHA ở đích (đã chốt) bắt được |
-| §6d: tải cả file để Compare với RAW/video lớn | chỉ hai bản của hàng đang xem, huỷ khi sang hàng khác, trần cache tạm, xoá khi đóng |
+| §6d: tải cả file để Compare với RAW lớn (video phát thẳng từ server, 2026-11-06) | chỉ hai bản của hàng đang xem, huỷ khi sang hàng khác, trần cache tạm, xoá khi đóng |
 | §6c: tự gom 15 phút trên NAS 50k file | mỗi lượt liệt kê lại hai cây (lệnh liệt kê, không đọc byte); đo ở `/verify`, nếu một lượt quá 2 phút thì giãn chu kỳ |
