@@ -86,6 +86,19 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         return client
     }
 
+    /// A read the server cut off midway runs once more on a new login: a NAS
+    /// resets a busy login now and then (seen 2026-11-06, eight minutes into
+    /// a scan), and a scan of 15,000 photos should not stop for it. Reads
+    /// only — a write cut off may have landed.
+    private func readingAgain<T>(_ work: () async throws -> T) async throws -> T {
+        do {
+            return try await work()
+        } catch RemoteFileError.connectionLost where client != nil {
+            try await connect()
+            return try await work()
+        }
+    }
+
     /// The client with `path`'s share connected, and the path inside that
     /// share; nil for the machine's root. Moving to another share swaps the
     /// tree within the same login.
@@ -126,6 +139,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func fileSize(at path: String) async throws -> Int64? {
+        try await readingAgain { try await fileSizeOnce(at: path) }
+    }
+
+    private func fileSizeOnce(at path: String) async throws -> Int64? {
         do {
             guard let (client, rest) = try await open(path), !rest.isEmpty else { return nil }
             let stat = try await client.fileStat(path: rest)
@@ -138,6 +155,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func directoryExists(_ path: String) async throws -> Bool {
+        try await readingAgain { try await directoryExistsOnce(path) }
+    }
+
+    private func directoryExistsOnce(_ path: String) async throws -> Bool {
         do {
             guard let (client, rest) = try await open(path) else { return true }
             if rest.isEmpty { return true }
@@ -199,6 +220,20 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        // Read again from the start, the bar does not go back.
+        let reported = OSAllocatedUnfairLock(initialState: Int64(0))
+        let onward: @Sendable (Int64) -> Void = { bytes in
+            let isNew = reported.withLock { last in
+                guard bytes > last else { return false }
+                last = bytes
+                return true
+            }
+            if isNew { progress(bytes) }
+        }
+        return try await readingAgain { try await sha256Once(of: path, progress: onward) }
+    }
+
+    private func sha256Once(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         do {
             let (client, rest) = try await openInShare(path)
             let size = try await client.fileStat(path: rest).size
@@ -223,6 +258,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func entries(in directory: String) async throws -> [RemoteEntry] {
+        try await readingAgain { try await entriesOnce(in: directory) }
+    }
+
+    private func entriesOnce(in directory: String) async throws -> [RemoteEntry] {
         do {
             guard let (client, rest) = try await open(directory) else { return try await shareEntries() }
             let files = try await client.listDirectory(path: rest)
@@ -236,6 +275,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        try await readingAgain { try await readRangeOnce(path, offset: offset, length: length) }
+    }
+
+    private func readRangeOnce(_ path: String, offset: Int64, length: Int) async throws -> Data {
         do {
             let (client, rest) = try await openInShare(path)
             let reader = client.fileReader(path: rest)
@@ -331,6 +374,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     // MARK: - File info (FS-19.08 §6e)
 
     func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        try await readingAgain { try await fileInfoOnce(at: path) }
+    }
+
+    private func fileInfoOnce(at path: String) async throws -> RemoteFileInfo? {
         do {
             let (client, rest) = try await openInShare(path)
             guard !rest.isEmpty else { return nil }

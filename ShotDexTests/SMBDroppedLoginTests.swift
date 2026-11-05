@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -19,7 +20,8 @@ struct SMBDroppedLoginTests {
         defer { relay.stop() }
         let smb = client(port: relay.port)
         try await smb.connect()
-        let before = try await smb.entries(in: "photos")
+        // A folder no other suite writes into: their scratch folders sit at the share root.
+        let before = try await smb.entries(in: "photos/Tuan/2025/06")
         #expect(!before.isEmpty)
         #expect(relay.acceptedCount == 1)
 
@@ -28,10 +30,34 @@ struct SMBDroppedLoginTests {
         // loopback it lands at once.
         try await Task.sleep(for: .milliseconds(500))
 
-        let after = try await smb.entries(in: "photos")
+        let after = try await smb.entries(in: "photos/Tuan/2025/06")
         await smb.disconnect()
         #expect(after.map(\.name).sorted() == before.map(\.name).sorted())
         #expect(relay.acceptedCount == 2, "the second listing did not log in again")
+    }
+
+    /// The reset lands while a read is answering (seen 2026-11-06, eight
+    /// minutes into a scan): the read runs again on a new login instead of
+    /// stopping the scan.
+    @Test func readCutOffMidwayRunsAgain() async throws {
+        let relay = try ResettingRelay(upstreamPort: 4450)
+        defer { relay.stop() }
+        let smb = client(port: relay.port)
+        try await smb.connect()
+        let path = "photos/Tuan/2025/06/IMG_0001.JPG"
+        // Opens the share first, so the cut lands in the photo's bytes.
+        _ = try await smb.fileSize(at: path)
+        let whole = try await smb.sha256(of: path, progress: { _ in })
+
+        relay.resetAfterServerSends(20_000)
+        let progress = OSAllocatedUnfairLock(initialState: [Int64]())
+        let again = try await smb.sha256(of: path, progress: { bytes in progress.withLock { $0.append(bytes) } })
+        await smb.disconnect()
+
+        #expect(again == whole)
+        #expect(relay.acceptedCount == 2, "the cut read did not log in again")
+        let reported = progress.withLock { $0 }
+        #expect(reported == reported.sorted(), "the progress went back: \(reported)")
     }
 }
 
@@ -45,6 +71,8 @@ final class ResettingRelay: @unchecked Sendable {
     private var isResetRequested = false
     private var isStopped = false
     private var accepted = 0
+    /// Bytes the server may still send before every connection is reset; nil = no limit.
+    private var serverBytesLeft: Int?
 
     var acceptedCount: Int { lock.withLock { accepted } }
 
@@ -69,6 +97,8 @@ final class ResettingRelay: @unchecked Sendable {
     }
 
     func resetAll() { lock.withLock { isResetRequested = true } }
+    /// Resets every connection once the server has sent `bytes` more.
+    func resetAfterServerSends(_ bytes: Int) { lock.withLock { serverBytesLeft = bytes } }
     func stop() { lock.withLock { isStopped = true } }
 
     private static func loopback(port: UInt16) -> sockaddr_in {
@@ -131,6 +161,16 @@ final class ResettingRelay: @unchecked Sendable {
                 for (from, to, slot) in [(client, server, 1 + index * 2), (server, client, 2 + index * 2)]
                 where slot < polled.count && polled[slot].revents != 0 {
                     let count = read(from, &buffer, buffer.count)
+                    if count > 0, from == server {
+                        let cut = lock.withLock {
+                            guard let left = serverBytesLeft else { return false }
+                            serverBytesLeft = left - count
+                            if left - count <= 0 { serverBytesLeft = nil; isResetRequested = true; return true }
+                            return false
+                        }
+                        // Cut before these bytes reach the client: mid-answer.
+                        if cut { break }
+                    }
                     if count <= 0 || write(to, buffer, count) != count { closed.insert(index) }
                 }
             }
