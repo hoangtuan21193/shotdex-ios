@@ -445,9 +445,9 @@ final class CommonPhotosScanModel {
     /// One scan of only the new photos, to its end — the helper's pass
     /// (FS-19.08 §6c), with no sheet to watch it. What it read is saved
     /// before it returns.
-    func scanToEnd() async {
+    func scanToEnd(everything: Bool = false) async {
         guard canScan else { return }
-        scansEverything = false
+        scansEverything = everything
         failureError = nil
         plansDestination = false
         phase = .listing
@@ -560,7 +560,12 @@ final class CommonPhotosScanModel {
                 }
             }
             let scanner = CommonPhotosScanner(client: watched)
-            let listing = try await scanner.list(folders)
+            // A Copy rescan takes unchanged day folders from the last listing
+            // (§6e); a Move, which deletes on what it lists, and Scan
+            // Everything list every folder.
+            let listings = action == .copy && !scansEverything
+                ? database.map { CommonPhotosFolderListings(database: $0, connectionId: connectionId) } : nil
+            let listing = try await scanner.list(folders, listings: listings)
             try Task.checkCancellation()
             self.listing = listing
             // Forgotten before anything new is saved, so a save never

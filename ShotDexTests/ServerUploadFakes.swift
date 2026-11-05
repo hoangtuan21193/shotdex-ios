@@ -148,6 +148,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     /// Write times by path; files without one list a nil date.
     var modified: [String: Date] = [:]
+    /// Folders' write times by path, as their parent lists them; nil when
+    /// absent — a server that gives folders no time.
+    var folderModified: [String: Date] = [:]
     /// Bytes handed out by `readRange` and `download` — how a test proves a
     /// thumbnail read only the head of a file.
     private(set) var bytesRead = 0
@@ -179,7 +182,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 RemoteEntry(name: ServerUploadPath.lastComponent(of: path), isDirectory: false, size: Int64(data.count), modified: modified[path])
             }
             let folders = directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map {
-                RemoteEntry(name: ServerUploadPath.lastComponent(of: $0), isDirectory: true, size: 0, modified: nil)
+                RemoteEntry(name: ServerUploadPath.lastComponent(of: $0), isDirectory: true, size: 0, modified: folderModified[$0])
             }
             return files + folders
         }

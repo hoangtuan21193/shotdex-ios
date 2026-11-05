@@ -420,7 +420,14 @@ tháng/năm thì không (share Windows NTFS).
 - Không dùng danh sách đã lưu khi: Action là **Move** (Move luôn liệt kê đủ, review T1), server không trả giờ sửa của folder (một số WebDAV), **Scan Everything**, hay lần
   liệt kê đầy đủ gần nhất của bộ đã quá **24 giờ** (mặc định, đổi được ở `/plan` nếu đo ra lý do). Lý do: NTFS không đổi giờ sửa folder
   khi một file bên trong bị ghi đè tại chỗ cùng tên.
-- Danh sách đã lưu là dữ liệu dẫn xuất; xoá khi xoá bộ hay connection.
+- Danh sách đã lưu là dữ liệu dẫn xuất; xoá khi xoá connection, hàng không được liệt kê lại trong 7 ngày cũng xoá.
+- Chi tiết (T8, 2026-11-05): mốc 24 giờ tính **cho từng folder** (lần nó được liệt kê), không theo cả bộ; folder vừa
+  được ghi chưa tới 5 giây trước khi liệt kê thì không lưu (đồng hồ folder bước 1–2 s, file thêm cùng giây không đổi giờ);
+  folder con của folder ngày (`edited/`) là lá, giờ của nó đọc từ danh sách mới của folder ngày, nên được dùng lại khi
+  giờ đó không đổi; Copy và tự gom dùng danh sách đã lưu, **Move** và **Scan Everything** liệt kê đủ; danh sách mới ghi
+  một lần (một giao dịch) cuối lượt liệt kê. Đánh đổi đã biết: file bị ghi đè tại chỗ cùng tên trong folder không đổi giờ
+  thì tới 24 giờ sau mới được thấy (Copy có thể coi là Already there theo SHA cũ; Move không ảnh hưởng); dòng "Listing…
+  N files" chỉ đếm file của folder thật sự được liệt kê.
 
 **Không làm** (đã cân): bỏ nhánh chỉ một bên có (`A/2019` mà B không có) — đo được chỉ ~75 s trên 9 phút, và làm sót
 ảnh lệch ngày qua ranh năm/tháng (`2019/12/31` ↔ `2020/01/01`). Chỉ so file trong cùng folder ngày — sót 205 file ở bộ

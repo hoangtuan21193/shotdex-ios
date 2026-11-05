@@ -6,15 +6,28 @@ import Foundation
 /// `.shotdex/` index and hidden files never show up; part files fail the
 /// readable check.
 enum ServerTreeListing {
-    static func list(_ folder: String, client: RemoteFileClient) async throws -> [FolderEnumeration.Entry] {
+    /// `entries`, when given, lists each folder instead of the client — with
+    /// the folder's write time as its parent listed it (nil for `folder`
+    /// itself): how Common Photos reuses a day folder that has not changed
+    /// (FS-19.08 §6e).
+    static func list(_ folder: String, client: RemoteFileClient,
+                     entries: ((_ path: String, _ folderModified: Date?) async throws -> [RemoteEntry])? = nil)
+        async throws -> [FolderEnumeration.Entry] {
         var out: [FolderEnumeration.Entry] = []
-        var pending = [""]
-        while let relative = pending.popLast() {
+        var pending: [(path: String, modified: Date?)] = [("", nil)]
+        while let (relative, folderModified) = pending.popLast() {
             try Task.checkCancellation()
-            for entry in try await client.entries(in: ServerUploadPath.join(folder, relative)) where !entry.name.hasPrefix(".") {
+            let path = ServerUploadPath.join(folder, relative)
+            let listed: [RemoteEntry]
+            if let entries {
+                listed = try await entries(path, folderModified)
+            } else {
+                listed = try await client.entries(in: path)
+            }
+            for entry in listed where !entry.name.hasPrefix(".") {
                 let path = relative.isEmpty ? entry.name : relative + "/" + entry.name
                 if entry.isDirectory {
-                    pending.append(path)
+                    pending.append((path, entry.modified))
                     continue
                 }
                 let url = URL(fileURLWithPath: entry.name)

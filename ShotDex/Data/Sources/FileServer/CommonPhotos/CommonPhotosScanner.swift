@@ -14,16 +14,23 @@ struct CommonPhotosScanner {
         var sidecars: [[CommonPhotosFile]]
     }
 
-    func list(_ folders: [String]) async throws -> Listing {
+    /// `listings`, when given, lets a folder that has not changed since the
+    /// last scan be taken from it instead of the server (FS-19.08 §6e).
+    func list(_ folders: [String], listings: CommonPhotosFolderListings? = nil) async throws -> Listing {
         var listing = Listing(files: [], sidecars: [])
+        let client = client
+        let cached: ((String, Date?) async throws -> [RemoteEntry])? = listings.map { listings in
+            { path, modified in try await listings.entries(in: path, folderModified: modified, client: client) }
+        }
         for (index, folder) in folders.enumerated() {
-            let entries = try await ServerTreeListing.list(folder, client: client)
+            let entries = try await ServerTreeListing.list(folder, client: client, entries: cached)
             let files = entries.map {
                 (CommonPhotosFile(folder: index, relativePath: $0.relativePath, size: $0.size, modified: $0.modified), $0.isSidecar)
             }
             listing.files.append(files.filter { !$0.1 }.map(\.0))
             listing.sidecars.append(files.filter(\.1).map(\.0))
         }
+        listings?.flush()
         return listing
     }
 
