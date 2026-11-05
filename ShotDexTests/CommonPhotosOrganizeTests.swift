@@ -360,6 +360,26 @@ import UniformTypeIdentifiers
         #expect(nas.files["photos/Shared/2025/03/15/X.ARW"] == raw)
     }
 
+    /// AC-207 (the plan's half): Same as Source — the same bytes in
+    /// `Shared/2025/03/15` make the row Already in Shared; the same bytes
+    /// only at Shared's top do not, and the row names the full path.
+    @Test func planJudgesTheFolderFiledTo() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let x = CommonPhotosQuickCheckTests.photo(91), y = CommonPhotosQuickCheckTests.photo(92)
+        for folder in ["photos/Tuấn", "photos/Vợ"] {
+            nas.put("\(folder)/2025/03/15/X.ARW", x)
+            nas.put("\(folder)/2025/03/15/Y.ARW", y)
+        }
+        nas.put("photos/Shared/2025/03/15/X.ARW", x)
+        nas.put("photos/Shared/Y.ARW", y)
+        let sheet = Self.sheet(nas, try AppDatabase.makeEmpty())
+        try await Self.waitForPlan(sheet)
+        let landing = Dictionary(uniqueKeysWithValues: sheet.rows.map { ($0.name, $0.landing) })
+        #expect(landing["X.ARW"] == .alreadyThere("2025/03/15/X.ARW"))
+        #expect(landing["Y.ARW"] == .name("2025/03/15/Y.ARW"))
+        #expect(sheet.alreadyThereCount == 1)
+    }
+
     /// AC-203 + AC-208: a set that ran flat before §6e keeps No Folders;
     /// changed to Same as Source, the sheet says the photos gathered stay,
     /// nothing is done with them, and the new photo goes into its folder.
