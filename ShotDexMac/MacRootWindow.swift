@@ -17,6 +17,8 @@ struct MacRootWindow: View {
     @State private var serverForm: MacServerFormRequest?
     @State private var smartAlbumForm: MacSmartAlbumFormRequest?
     @State private var smartAlbums: [SmartAlbum] = []
+    /// Why the sidebar's Add Folder… could not add (Settings shows its own).
+    @State private var addFolderFailure: SourcesModel.Failure?
     @State private var viewMode = MacViewMode.grid
     /// The sidebar's sources, read when they change — not on every body.
     @State private var sources: [SourceStore.Source] = []
@@ -36,11 +38,7 @@ struct MacRootWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            MacSidebar(selection: $selection, library: library, sources: sources,
-                       backup: backupBadge, smartAlbums: smartAlbums,
-                       newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
-                       busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
-                .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
+            sidebar
         } detail: {
             if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
@@ -127,6 +125,23 @@ struct MacRootWindow: View {
 
     /// The server source picked in the sidebar: its browser fills the
     /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
+    /// The sidebar, with what its + › Add Folder… could not add.
+    private var sidebar: some View {
+        MacSidebar(selection: $selection, library: library, sources: sources,
+                   backup: backupBadge, smartAlbums: smartAlbums,
+                   newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
+                   addFolder: addFolderFromSidebar,
+                   connectToServer: { serverForm = MacServerFormRequest() },
+                   busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
+            .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
+            .alert(addFolderFailure?.title ?? "",
+                   isPresented: Binding(get: { addFolderFailure != nil }, set: { if !$0 { addFolderFailure = nil } })) {
+                Button(String(localized: "OK", comment: "Mac alert: dismiss")) {}
+            } message: {
+                Text(addFolderFailure?.message ?? "")
+            }
+    }
+
     private var serverSource: SourceStore.Source? {
         guard case .source(let id) = selection else { return nil }
         return sources.first { $0.id == id && $0.kind == "server" }
@@ -134,6 +149,21 @@ struct MacRootWindow: View {
 
     private func reloadSources() {
         sources = (try? dependencies.sources.sources()) ?? []
+    }
+
+    /// The sidebar's + › Add Folder…: what Settings › Sources adds, the
+    /// failure said here rather than in a Settings window that may be shut.
+    private func addFolderFromSidebar() {
+        MacPhotoSourcesSection.chooseFolder { folder in
+            let model = dependencies.sourcesModel
+            Task {
+                await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true)
+                if let failure = model.failure {
+                    model.failure = nil
+                    addFolderFailure = failure
+                }
+            }
+        }
     }
 
     /// Jobs, or a warning when one is stuck on something only the user can

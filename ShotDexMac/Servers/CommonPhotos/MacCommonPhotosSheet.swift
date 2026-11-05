@@ -77,6 +77,8 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var showsLeftOut = Self.showsLeftOutAtStart
     /// Rows picked in the list: Space compares one, or checks several (§6d).
     @State private var selectedRows = Set<String>()
+    /// How the Same rows are listed; remembered across sheets.
+    @AppStorage("commonPhotosRowOrder") private var rowOrder = MacCommonPhotosRowOrder.found
 
     /// `-ShotDexCommonPhotosShowLeftOut` (DEBUG): the Left Out list open, for screenshots.
     private static let showsLeftOutAtStart: Bool = {
@@ -407,18 +409,27 @@ private struct MacCommonPhotosSheetContent: View {
             }
 
             Spacer(minLength: 8)
-            Text("Action:", comment: "Mac common photos sheet: label")
-            Picker(selection: $model.action) {
-                Text("Copy", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.copy)
-                Text("Move", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.move)
-            } label: {
-                Text("Action", comment: "Mac common photos sheet: label")
+            if showsAction {
+                Text("Action:", comment: "Mac common photos sheet: label")
+                Picker(selection: $model.action) {
+                    Text("Copy", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.copy)
+                    Text("Move", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.move)
+                } label: {
+                    Text("Action", comment: "Mac common photos sheet: label")
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: Self.segmentWidth * 2 + 4)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: Self.segmentWidth * 2 + 4)
         }
         .frame(height: 28)
+    }
+
+    /// Copy or Move is chosen once the scan has found what to run: a switch
+    /// to Move mid-scan would throw the scan away (§6c). Shown too while
+    /// Move is on and nothing scans, so it can be switched back.
+    private var showsAction: Bool {
+        model.phase == .done || (!model.isScanning && model.action == .move)
     }
 
     /// New Folder… goes inside the destination, or beside the first folder.
@@ -457,7 +468,9 @@ private struct MacCommonPhotosSheetContent: View {
         if model.preview == nil {
             VStack(spacing: 6) {
                 if model.phase == .listing {
-                    ProgressView().controlSize(.small)
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .frame(width: 280)
                     Text(model.listedFiles == 0
                          ? String(localized: "Listing…", comment: "Mac common photos sheet: the scan lists the folders")
                          : String(localized: "Listing… \(model.listedFiles.formatted()) files", comment: "Mac common photos sheet: files listed so far"))
@@ -481,6 +494,7 @@ private struct MacCommonPhotosSheetContent: View {
         } else {
             VStack(spacing: 8) {
                 if let failure = model.failure { failureLine(failure).frame(maxWidth: .infinity, alignment: .leading) }
+                if let fraction = model.checkFraction { checkProgress(fraction) }
                 HStack(spacing: 16) {
                     Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: 5) {
@@ -517,6 +531,7 @@ private struct MacCommonPhotosSheetContent: View {
                         .fixedSize()
                         .accessibilityElement(children: .combine)
                     }
+                    if model.sameCount > 1 { sortMenu }
                 }
                 .frame(height: 28)
                 let isNothingNew = model.phase == .done && !model.isCutting && model.sameCount == 0
@@ -533,7 +548,7 @@ private struct MacCommonPhotosSheetContent: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(model.rows, selection: $selectedRows) { row in
+                    List(rowOrder.sorted(model.rows), selection: $selectedRows) { row in
                         MacCommonPhotosRow(row: row, destination: model.destination.map(ServerUploadPath.lastComponent(of:)),
                                            action: model.action, database: dependencies.database, sources: sources,
                                            setIncluded: { model.setIncluded($0, rows: [row.id]) },
@@ -587,6 +602,41 @@ private struct MacCommonPhotosSheetContent: View {
                 if model.phase == .done, !model.leftOutEntries.isEmpty { leftOutSection }
             }
         }
+    }
+
+    /// The check's bar: bytes read of the photos to check, as a percent.
+    private func checkProgress(_ fraction: Double) -> some View {
+        HStack(spacing: 10) {
+            ProgressView(value: fraction)
+                .progressViewStyle(.linear)
+            Text(String(localized: "\(fraction.formatted(.percent.precision(.fractionLength(0)))) · \(model.bytesLeft.formatted(.byteCount(style: .file))) left",
+                        comment: "Mac common photos sheet: scan bar, percent done and bytes still to read"))
+                .font(.callout)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Scan progress", comment: "Mac common photos sheet: VoiceOver name of the scan bar"))
+        .accessibilityValue(fraction.formatted(.percent.precision(.fractionLength(0))))
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            Picker(selection: $rowOrder) {
+                ForEach(MacCommonPhotosRowOrder.allCases, id: \.self) { Text($0.title).tag($0) }
+            } label: {
+                Text("Sort By", comment: "Mac common photos sheet: sort menu")
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(rowOrder.title, systemImage: "arrow.up.arrow.down")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(String(localized: "Sort the photos", comment: "Mac common photos sheet: sort menu tooltip"))
+        .accessibilityLabel(String(localized: "Sort By, \(rowOrder.title)", comment: "Mac common photos sheet: sort menu, VoiceOver"))
     }
 
     /// §6d: opens Compare on this row (one window for the app).
@@ -745,12 +795,9 @@ private struct MacCommonPhotosSheetContent: View {
     private var headline: String {
         let folders = model.folders.count
         guard model.phase == .done else {
-            let confirmed = String(localized: "Checking · \(model.confirmedCount.formatted()) of \(model.candidateCount.formatted()) confirmed so far",
-                                   comment: "Mac common photos sheet: headline while checking")
-            guard model.isScanning else { return confirmed }
-            let left = model.bytesLeft.formatted(.byteCount(style: .file))
-            return confirmed + " · " + String(localized: "\(model.checkedFiles.formatted()) of \(model.candidateCount.formatted()), \(left) left",
-                                              comment: "Mac common photos sheet: how far the check is")
+            // How far the check is, the bar above says (bytes left beside it).
+            return String(localized: "Checking · \(model.confirmedCount.formatted()) of \(model.candidateCount.formatted()) confirmed so far",
+                          comment: "Mac common photos sheet: headline while checking")
         }
         let count = model.sameCount
         let bytes = model.sameBytes.formatted(.byteCount(style: .file))
@@ -1110,3 +1157,27 @@ private struct MacCommonPhotosRow: View {
 
 }
 
+
+/// How the sheet lists the Same photos.
+enum MacCommonPhotosRowOrder: String, CaseIterable {
+    case found, name, largest, smallest
+
+    var title: String {
+        switch self {
+        case .found: String(localized: "Order Found", comment: "Mac common photos sheet: sort, as the scan found them")
+        case .name: String(localized: "Name", comment: "Mac common photos sheet: sort by file name")
+        case .largest: String(localized: "Largest First", comment: "Mac common photos sheet: sort by file size, biggest on top")
+        case .smallest: String(localized: "Smallest First", comment: "Mac common photos sheet: sort by file size, smallest on top")
+        }
+    }
+
+    func sorted(_ rows: [CommonPhotosScanModel.Row]) -> [CommonPhotosScanModel.Row] {
+        switch self {
+        case .found: rows
+        case .name: rows.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        // Ties keep the order found.
+        case .largest: rows.enumerated().sorted { ($0.element.size, $1.offset) > ($1.element.size, $0.offset) }.map(\.element)
+        case .smallest: rows.enumerated().sorted { ($0.element.size, $0.offset) < ($1.element.size, $1.offset) }.map(\.element)
+        }
+    }
+}

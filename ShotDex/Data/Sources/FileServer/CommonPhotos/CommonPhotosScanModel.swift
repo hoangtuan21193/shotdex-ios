@@ -447,6 +447,15 @@ final class CommonPhotosScanModel {
 
     var checkingCount: Int { isScanning ? max(0, candidateCount - checkedFiles) : 0 }
 
+    /// How far the check is, 0…1, by bytes read (by photos when the
+    /// candidates have no size); nil outside the check.
+    var checkFraction: Double? {
+        guard phase == .checking, let preview, preview.candidateCount > 0 else { return nil }
+        guard preview.candidateBytes > 0 else { return Double(checkedFiles) / Double(preview.candidateCount) }
+        let read = Double(preview.candidateBytes - min(bytesLeft, preview.candidateBytes))
+        return min(1, read / Double(preview.candidateBytes))
+    }
+
     /// First-folder candidates a failed scan never reached.
     var notCheckedCount: Int { failure != nil ? max(0, candidateCount - checkedFiles) : 0 }
 

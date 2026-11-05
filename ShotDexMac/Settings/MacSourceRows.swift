@@ -102,6 +102,11 @@ struct MacPhotoSourcesSection: View {
     }
 
     private func addFolder() {
+        Self.chooseFolder { add($0) }
+    }
+
+    /// Add Folder's open panel, here and on the sidebar's + (board `Main`).
+    static func chooseFolder(_ picked: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -109,11 +114,11 @@ struct MacPhotoSourcesSection: View {
         panel.prompt = String(localized: "Add Folder", comment: "Mac Sources: the open panel's button")
         panel.message = String(localized: "Choose a folder or drive of photos. ShotDex reads it in place and never changes its files.",
                                comment: "Mac Sources: Add Folder panel message")
-        let picked: (NSApplication.ModalResponse) -> Void = { response in
+        let done: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .OK, let folder = panel.url else { return }
-            add(folder)
+            picked(folder)
         }
-        if let window = NSApp.keyWindow { panel.beginSheetModal(for: window, completionHandler: picked) } else { panel.begin(completionHandler: picked) }
+        if let window = NSApp.keyWindow { panel.beginSheetModal(for: window, completionHandler: done) } else { panel.begin(completionHandler: done) }
     }
 
     /// Subfolders in, RAW + JPEG as pairs: the defaults Add Source uses on iOS.

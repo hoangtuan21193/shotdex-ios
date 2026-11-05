@@ -11,6 +11,9 @@ struct MacSidebar: View {
     var backup: (jobs: Int, needsAttention: Bool) = (0, false)
     var smartAlbums: [SmartAlbum] = []
     var newSmartAlbum: () -> Void = {}
+    /// The Sources header's + (board `Main`): a folder or drive, or a server.
+    var addFolder: () -> Void = {}
+    var connectToServer: () -> Void = {}
     /// A long task's foot (a common-photos run), shown instead of the index line.
     var busyFooter: AnyView? = nil
 
@@ -21,10 +24,26 @@ struct MacSidebar: View {
                     row(item, count: item == .allPhotos ? library?.items.count : nil)
                 }
             }
-            Section(String(localized: "Sources", comment: "Mac sidebar group")) {
+            Section {
                 ForEach(sources, id: \.id) { source in
                     Label(source.name, systemImage: MacSidebar.symbol(forSourceKind: source.kind))
                         .tag(MacSidebarItem.source(source.id))
+                }
+            } header: {
+                HStack {
+                    Text("Sources", comment: "Mac sidebar group")
+                    Spacer()
+                    Menu {
+                        Button(String(localized: "Add Folder…", comment: "Mac sidebar: add a folder or drive source"), action: addFolder)
+                        Button(String(localized: "Connect to Server…", comment: "Mac sidebar: add a server connection"), action: connectToServer)
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                    .accessibilityLabel(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
                 }
             }
             Section {

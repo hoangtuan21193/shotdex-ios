@@ -101,7 +101,7 @@ input{font-family:inherit}
 </div></sc-if>
 </nav>
 <div style="position:absolute;inset:0;background:{{t.scrim}};z-index:20"></div>
-<!-- SHEET 640×560 Find Common Photos (FS-19.08 §4), state after Scan: Same 280 · Checking 32, Save to Shared, Copy selected → default button "Copy 280" (counts Same only) -->
+<!-- SHEET 640×560 Find Common Photos (FS-19.08 §4), states via the state tweak: listing (bar, no Action), checking (bar with percent, Same so far, no Action, Stop), first (scan done: Action appears, Copy 278) -->
 <div role="dialog" aria-label="Find Common Photos" style="position:absolute;left:400px;top:52px;width:640px;height:{{sheetH}};border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};border:1px solid {{t.glassStroke}};padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;z-index:25">
 <div style="font-size:15px;font-weight:600;line-height:18px;flex:none">Find Common Photos</div>
 <div style="height:14px;flex:none"></div>
@@ -127,10 +127,11 @@ input{font-family:inherit}
 <button aria-label="Save to" aria-haspopup="menu" style="width:168px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;color:{{saveToFg}}">{{saveTo}}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></button>
 <button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">New Folder…</button>
 <div style="flex:1"></div>
-<span style="font-size:13px;flex:none">Action:</span>
+<!-- Copy or Move only once the scan has found what to run: a switch to Move mid-scan would throw the scan away -->
+<sc-if value="{{showsAction}}" hint-placeholder-val="{{true}}"><span style="font-size:13px;flex:none">Action:</span>
 <div role="radiogroup" aria-label="Action" style="height:28px;border-radius:8px;background:{{t.fill}};display:flex;align-items:center;padding:2px;box-sizing:border-box;flex:none">
 <sc-for list="{{action}}" as="s" hint-placeholder-count="2"><button role="radio" aria-checked="{{s.pressed}}" style="width:64px;height:24px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
-</div>
+</div></sc-if>
 </div>
 <!-- §6e: a server that refused to set dates on an earlier run on this connection -->
 <sc-if value="{{noDates}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;padding:6px 0 0 72px;font-size:12px;color:{{S.orangeText}};flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg>This server does not keep file dates: copies show the day they were copied.</div></sc-if>
@@ -153,13 +154,20 @@ input{font-family:inherit}
 </label></sc-if>
 
 <div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
+<!-- While the scan checks: a bar of bytes read, the percent and what is left beside it -->
+<sc-if value="{{progress}}" hint-placeholder-val="{{false}}"><div role="progressbar" aria-label="Scan progress" aria-valuenow="61" aria-valuemin="0" aria-valuemax="100" style="display:flex;align-items:center;gap:10px;height:20px;margin-bottom:8px;flex:none">
+<div style="flex:1;height:6px;border-radius:3px;background:{{t.track}};overflow:hidden"><div style="width:61%;height:6px;border-radius:3px;background:{{t.accentFill}}"></div></div>
+<span style="flex:none;font-size:12px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">61% · 1.6 GB left</span>
+</div></sc-if>
 <!-- Result after Scan -->
 <sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:28px;flex:none">
 <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{headline}}</span>
 <span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span><sc-if value="{{quickN}}" hint-placeholder-val="{{false}}"><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">· {{quickN}} quick</span></sc-if></span>
-<sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 32" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">32</span></span></sc-if>
+<sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 142" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">142</span></span></sc-if>
 <!-- §6e: the plan reads each photo's date for Organize; the rows' → paths follow -->
 <sc-if value="{{readingDates}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Reading dates 120 of 282" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg>Reading dates 120 of 282</span></sc-if>
+<!-- Sort: Order Found · Name · Largest First · Smallest First, remembered across sheets -->
+<sc-if value="{{sortable}}" hint-placeholder-val="{{true}}"><button aria-label="Sort By, {{sortTitle}}" aria-haspopup="menu" title="Sort the photos" style="height:22px;border:none;background:none;padding:0;display:flex;align-items:center;gap:4px;color:{{t.accent}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16 M3 8l4-4 4 4 M17 20V4 M13 16l4 4 4-4"></path></svg>{{sortTitle}}<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
 </div></sc-if>
 <!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
 <sc-if value="{{againRow}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;flex:none">
@@ -170,7 +178,7 @@ input{font-family:inherit}
 <div style="height:8px;flex:none"></div>
 <!-- Before Scan, and while it lists the folders: one line in the middle, nothing to choose yet -->
 <sc-if value="{{waiting}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 40px;text-align:center">
-<sc-if value="{{listing}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
+<sc-if value="{{listing}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="width:280px;height:6px;border-radius:3px;background:{{t.track}};position:relative;overflow:hidden"><div style="position:absolute;left:30%;width:28%;height:6px;border-radius:3px;background:{{t.accentFill}}"></div></div></sc-if>
 <div style="font-size:13px;line-height:17px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{waitingLine}}</div>
 </div></sc-if>
 <!-- §6d: the plan — only Same rows, each with its checkbox and what it becomes in the destination.
@@ -241,7 +249,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","readingDates","first","quickThenMove","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","quickThenMove","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -522,17 +530,27 @@ class Component extends DCLogic {
     const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
     const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
     // Left Out open: the list scrolled to its end, the last photos then the section.
-    const first = state === 'first' || reading;
-    const shown = first ? matches : (nothingNew ? [] : NEW);
-    const sameN = first ? '282' : (nothingNew ? '0' : '3');
+    // "checking": the scan still reading — Same so far listed, the bar above, Stop.
+    const checkingNow = state === 'checking';
+    const first = state === 'first' || reading || checkingNow;
+    const MB = s => parseFloat(s) * (/GB/.test(s) ? 1024 : /kB/.test(s) ? 1 / 1024 : 1);
+    const sort = this.props.sort || 'found';
+    const order = rows => sort === 'name' ? rows.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+      : sort === 'largest' ? rows.slice().sort((a, b) => MB(b.size) - MB(a.size))
+      : sort === 'smallest' ? rows.slice().sort((a, b) => MB(a.size) - MB(b.size)) : rows;
+    const shown = order(first ? matches : (nothingNew ? [] : NEW)).map((r, i) => Object.assign({}, r, { rowBg: r.rowBg === t.rowSel ? r.rowBg : (i % 2) ? t.rowAlt : 'transparent' }));
+    const sameN = checkingNow ? '172' : first ? '282' : (nothingNew ? '0' : '3');
     const verb = move ? 'Move' : 'Copy';
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
       leftOut, leftOutOpen: leftOutOpen && state === 'first', leftOutClosed: !leftOutOpen && state !== 'nothingNew',
       leftOutLine: 'Skipped by every scan and gather of this set',
       scrollTop: '4px',
-      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', readingDates: reading, sameN,
+      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: checkingNow, progress: checkingNow, readingDates: reading, sameN,
       scanned: !waiting, waiting, listing,
+      showsAction: !(before || listing || checkingNow),
+      sortable: !waiting && !nothingNew && sameN !== '1',
+      sortTitle: { found: 'Order Found', name: 'Name', largest: 'Largest First', smallest: 'Smallest First' }[sort],
       moveNote: move,
       sheetH: '640px', // MAC_STYLE: a results-list sheet may be 640 tall
       organizeSummary: organize === 'noFolders' ? 'No Folders' : (organize === 'sameAsSource' ? 'Same as Source' : 'Year › Month › Day') + ' · videos together',
@@ -544,11 +562,11 @@ class Component extends DCLogic {
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
       waitingLine: dropped ? 'Quick check results cleared. Move reads every byte, so Scan again.' : listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
-      footHint: nothingNew || before || dropped ? '' : listing ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
-      headline: first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
+      footHint: nothingNew || before || dropped ? '' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      headline: checkingNow ? 'Checking · 172 of 314 confirmed so far' : first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before || dropped ? 'Scan' : listing ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
-      runBg: nothingNew || listing ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing ? t.label : t.onAccentFill,
+      runLabel: before || dropped ? 'Scan' : listing || checkingNow ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
+      runBg: nothingNew || listing || checkingNow ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing || checkingNow ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }
 }
