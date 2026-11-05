@@ -16,6 +16,9 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
     private let lock = NSLock()
     /// Why the last request's TLS handshake was refused, if it was.
     private var trustRejection: RemoteFileError?
+    /// How this server took a file's dates the first time one held, or
+    /// that none did (FS-19.08 §6e); nil until a file has been tried.
+    private var datesVerdict: DatesVerdict?
 
     /// `configuration` is the tests' seam: a stub `URLProtocol` stands in
     /// for the server there.
@@ -222,6 +225,96 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         guard let (data, response) = try? await send(request),
               (response as? HTTPURLResponse)?.statusCode == 207 else { return nil }
         return StorageSpaceReading.webdavQuota(data)
+    }
+
+    // MARK: File info (FS-19.08 §6e)
+
+    /// The ways WebDAV servers take a file's dates, in the order they are
+    /// tried: IIS and wsgidav's Windows emulation honour the `Win32*`
+    /// properties, a server that lets `getlastmodified` be written takes
+    /// that, Nextcloud and ownCloud take `lastmodified` as Unix seconds. Each
+    /// is its own `PROPPATCH` — a protected property's 403 would turn the
+    /// others in the same request into 424 (RFC 4918 §9.2).
+    private enum DatesMethod: CaseIterable {
+        case win32, getLastModified, lastModifiedSeconds
+    }
+
+    private enum DatesVerdict {
+        case takes(DatesMethod)
+        /// Every way failed on this many files in a row; at two the server
+        /// counts as refusing — one slow read-back is not a verdict.
+        case failed(Int)
+        case refuses
+    }
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        let (data, response) = try await send(propfind(url(path), depth: 0))
+        if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }
+        try check(response, path: path, allow: [207])
+        guard let item = PropfindParser.parse(data).first, !item.isCollection else { return nil }
+        return RemoteFileInfo(modified: item.modified ?? .distantPast)
+    }
+
+    /// Whether a date held is read back, never taken from the 207: Apache
+    /// `mod_dav` (Synology, QNAP) stores `Win32*` as dead properties and
+    /// answers 200 with the date unchanged. The first file tries each way;
+    /// the rest of the connection uses the one that held, or none.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        switch lock.withLock({ datesVerdict }) {
+        case .refuses:
+            return .unsupported
+        case .takes(let method):
+            try await patchDates(info, at: path, method)
+            return .applied
+        case nil, .failed:
+            // A file already at that time proves nothing either way.
+            if let before = try await fileInfo(at: path), before.hasSameModified(as: info) { return .applied }
+            for method in DatesMethod.allCases {
+                try await patchDates(info, at: path, method)
+                if let now = try await fileInfo(at: path), now.hasSameModified(as: info) {
+                    lock.withLock { datesVerdict = .takes(method) }
+                    return .applied
+                }
+            }
+            lock.withLock {
+                if case .failed(let count) = datesVerdict, count >= 1 {
+                    datesVerdict = .refuses
+                } else {
+                    datesVerdict = .failed(1)
+                }
+            }
+            return .unsupported
+        }
+    }
+
+    private func patchDates(_ info: RemoteFileInfo, at path: String, _ method: DatesMethod) async throws {
+        let props: String
+        switch method {
+        case .win32:
+            let created = info.created.map { "<z:Win32CreationTime>\(Self.httpDate($0))</z:Win32CreationTime>" } ?? ""
+            props = "<z:Win32LastModifiedTime>\(Self.httpDate(info.modified))</z:Win32LastModifiedTime>" + created
+        case .getLastModified:
+            props = "<d:getlastmodified>\(Self.httpDate(info.modified))</d:getlastmodified>"
+        case .lastModifiedSeconds:
+            props = "<d:lastmodified>\(Int(info.modified.timeIntervalSince1970))</d:lastmodified>"
+        }
+        var patch = request("PROPPATCH", url(path))
+        patch.setValue("application/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        patch.httpBody = Data("""
+            <?xml version="1.0" encoding="utf-8"?>
+            <d:propertyupdate xmlns:d="DAV:" xmlns:z="urn:schemas-microsoft-com:"><d:set><d:prop>\(props)</d:prop></d:set></d:propertyupdate>
+            """.utf8)
+        let (_, response) = try await send(patch)
+        // A lost login throws (a caller that swallows it meets the 401 again
+        // on its next request); any other answer is the re-read's to judge.
+        if (response as? HTTPURLResponse)?.statusCode == 401 { try check(response, path: path, allow: []) }
+    }
+
+    /// RFC 1123 in GMT, as WebDAV dates are written.
+    private static func httpDate(_ date: Date) -> String {
+        date.formatted(Date.VerbatimFormatStyle(
+            format: "\(weekday: .abbreviated), \(day: .twoDigits) \(month: .abbreviated) \(year: .defaultDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) GMT",
+            locale: Locale(identifier: "en_US_POSIX"), timeZone: .gmt, calendar: Calendar(identifier: .gregorian)))
     }
 
     func removeEmptyDirectory(_ path: String) async throws {

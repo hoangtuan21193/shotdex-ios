@@ -32,6 +32,10 @@ struct CommonPhotosItem: Hashable, Sendable {
         var sidecar: String?
         /// Removed by this run (Move).
         var isRemoved = false
+        /// Its dates and flags, to be read before a Move removes it (FS-19.08
+        /// §6e, AC-224 — written from T3 on), so Undo puts it back as it
+        /// was. Nil for older rows.
+        var info: RemoteFileInfo?
     }
 
     /// Why a photo was skipped or failed, stored as a code and worded when
@@ -75,6 +79,9 @@ struct CommonPhotosItem: Hashable, Sendable {
     /// and undo never removes it. Kept apart from `reason`, which a later
     /// step may overwrite.
     var destinationWasThere = false
+    /// What became of the copy's dates and flags (FS-19.08 §6e); nil where
+    /// the run did not write the copy, or ran before §6e.
+    var fileInfo: FileInfoOutcome?
     var updatedAt: Int
 
     init(runId: String, position: Int, sha256: String, size: Int64, sources: [Source], status: Status = .pending,
@@ -140,6 +147,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         sidecarPlaced = row["sidecarPlaced"]
         sidecarSHA256 = row["sidecarSHA256"]
         destinationWasThere = row["destinationWasThere"] ?? false
+        fileInfo = (row["fileInfo"] as String?).flatMap(FileInfoOutcome.init(rawValue:))
         updatedAt = row["updatedAt"]
     }
 
@@ -157,6 +165,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         container["sidecarPlaced"] = sidecarPlaced
         container["sidecarSHA256"] = sidecarSHA256
         container["destinationWasThere"] = destinationWasThere
+        container["fileInfo"] = fileInfo?.rawValue
         container["updatedAt"] = updatedAt
     }
 }

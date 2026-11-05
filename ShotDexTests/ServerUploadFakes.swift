@@ -123,6 +123,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             throw RemoteFileError.connectionLost
         }
         put(path, data)
+        // A new file: whatever info the path had is gone.
+        lock.withLock { infos[path] = nil }
         progress(Int64(data.count))
         if failsAfter { throw RemoteFileError.connectionLost }
     }
@@ -294,6 +296,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         if refusesMovesAcrossTopFolders, source.split(separator: "/").first != destination.split(separator: "/").first {
             throw RemoteFileError.other("cross-share rename refused")
         }
+        try refuseIfReadOnly(source)
         try lock.withLock {
             guard storage[source] != nil || directories.contains(source) else { throw RemoteFileError.other("missing \(source)") }
             guard storage[destination] == nil, !directories.contains(destination) else { throw RemoteFileError.other("exists") }
@@ -310,6 +313,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 storage[destination] = storage.removeValue(forKey: source)
                 // A rename keeps the write time, as SMB and WebDAV MOVE do.
                 if let date = modified.removeValue(forKey: source) { modified[destination] = date }
+                if let info = infos.removeValue(forKey: source) { infos[destination] = info }
             }
         }
         if failMoveAfterDoing {
@@ -317,6 +321,46 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             throw RemoteFileError.other("gateway timeout")
         }
         if failsAfter { throw RemoteFileError.connectionLost }
+    }
+
+    // MARK: File info (FS-19.08 §6e)
+
+    /// Dates and flags by path, as `setFileInfo` left them; a file without
+    /// an entry has its `modified` time and nothing else.
+    var infos: [String: RemoteFileInfo] = [:]
+    /// Off: `setFileInfo` answers unsupported, as SFTP does.
+    var keepsDates = true
+    /// Seconds a set write time lands off by — a server that takes the
+    /// request and keeps another date.
+    var dateDrift: TimeInterval = 0
+    /// Read-only files refuse a rename and a delete, as Windows does; the
+    /// flag has to be cleared first.
+    var readOnlyRefusesChanges = false
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        lock.withLock {
+            guard storage[path] != nil else { return nil }
+            return infos[path] ?? RemoteFileInfo(modified: modified[path] ?? .distantPast)
+        }
+    }
+
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        log("info \(path)\(info.isReadOnly ? " read-only" : "")")
+        guard keepsDates else { return .unsupported }
+        try lock.withLock {
+            guard storage[path] != nil else { throw RemoteFileError.other("missing \(path)") }
+            var landed = info
+            landed.modified += dateDrift
+            infos[path] = landed
+            modified[path] = landed.modified
+        }
+        return .applied
+    }
+
+    private func refuseIfReadOnly(_ path: String) throws {
+        if readOnlyRefusesChanges, lock.withLock({ infos[path]?.isReadOnly == true }) {
+            throw RemoteFileError.permissionDenied(path)
+        }
     }
 
     /// Answers `copyOnServer` the way a WebDAV server with `COPY` does;
@@ -346,9 +390,11 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func remove(_ path: String) async throws {
         log("remove \(path)")
         let failsAfter = try countWrite()
+        try refuseIfReadOnly(path)
         try lock.withLock {
             if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
             if storage.removeValue(forKey: path) != nil { removed.append(path) }
+            infos[path] = nil
         }
         if failsAfter { throw RemoteFileError.connectionLost }
     }

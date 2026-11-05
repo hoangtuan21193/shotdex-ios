@@ -218,7 +218,31 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
                     guard !FileManager.default.fileExists(atPath: to.path) else {
                         throw RemoteFileError.other(String(localized: "An item with that name already exists.", comment: "Cloud folder: rename onto an existing name"))
                     }
-                    try FileManager.default.moveItem(at: from, to: to)
+                    // A locked file (a read-only copy, FS-19.08 §6e) cannot be
+                    // renamed: unlocked for the move, locked again after.
+                    var source = from
+                    let locked = (try? source.resourceValues(forKeys: [.isUserImmutableKey]).isUserImmutable) == true
+                    if locked {
+                        var unlock = URLResourceValues()
+                        unlock.isUserImmutable = false
+                        try source.setResourceValues(unlock)
+                    }
+                    do {
+                        try FileManager.default.moveItem(at: from, to: to)
+                    } catch {
+                        if locked {
+                            var lock = URLResourceValues()
+                            lock.isUserImmutable = true
+                            try? source.setResourceValues(lock)
+                        }
+                        throw error
+                    }
+                    if locked {
+                        var moved = to
+                        var lock = URLResourceValues()
+                        lock.isUserImmutable = true
+                        try? moved.setResourceValues(lock)
+                    }
                 } catch {
                     failure = error
                 }
@@ -228,14 +252,59 @@ final class FilesFolderClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// A locked file (the read-only flag a copy may carry, FS-19.08 §6e) is
+    /// unlocked first: `removeItem` refuses it.
     func remove(_ path: String) async throws {
         let url = try url(path)
         try await coordinated {
             try Self.write(url, options: .forDeleting) { url in
                 guard FileManager.default.fileExists(atPath: url.path) else { return }
+                var unlocked = url
+                var values = URLResourceValues()
+                values.isUserImmutable = false
+                try? unlocked.setResourceValues(values)
                 try FileManager.default.removeItem(at: url)
             }
         }
+    }
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        let url = try url(path)
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .contentModificationDateKey, .creationDateKey, .isUserImmutableKey, .isHiddenKey]
+        return try await coordinated {
+            guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory != true,
+                  let modified = values.contentModificationDate else { return nil }
+            return RemoteFileInfo(modified: modified, created: values.creationDate,
+                                  isReadOnly: values.isUserImmutable ?? false, isHidden: values.isHidden ?? false)
+        }
+    }
+
+    /// Read-only maps to the locked flag. A locked file takes no other
+    /// change, so it is unlocked first and locked last.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        let url = try url(path)
+        try await coordinated {
+            try Self.write(url, options: .forMerging) { url in
+                var target = url
+                var unlock = URLResourceValues()
+                unlock.isUserImmutable = false
+                try target.setResourceValues(unlock)
+                // Locked again even when a date below is refused.
+                defer {
+                    if info.isReadOnly {
+                        var lock = URLResourceValues()
+                        lock.isUserImmutable = true
+                        try? target.setResourceValues(lock)
+                    }
+                }
+                var values = URLResourceValues()
+                values.contentModificationDate = info.modified
+                if let created = info.created { values.creationDate = created }
+                values.isHidden = info.isHidden
+                try target.setResourceValues(values)
+            }
+        }
+        return .applied
     }
 
     func removeEmptyDirectory(_ path: String) async throws {

@@ -20,12 +20,51 @@ struct VerifiedRemoteWrite: Sendable {
     }
 
     /// Gives the checked part its real name, removing what was there first
-    /// when the caller chose Replace.
-    func moveIntoPlace(_ destination: String, replacing: Bool) async throws {
+    /// when the caller chose Replace. With `info`, the file also gets its
+    /// source's dates and flags (FS-19.08 §6e): set on the part before the
+    /// rename (a rename keeps them), read-only only after it (a read-only
+    /// part could not be renamed or cleaned up everywhere), then read back.
+    /// Returns what became of them — nil without `info`, and nil when the
+    /// task was cancelled after the rename, so a resumed run sets them again
+    /// instead of recording a verdict it never reached. The info never fails
+    /// the write: the bytes are already checked.
+    @discardableResult
+    func moveIntoPlace(_ destination: String, replacing: Bool, info: RemoteFileInfo? = nil) async throws -> FileInfoOutcome? {
+        let part = ServerUploadPath.partPath(for: destination)
+        var taken = false
+        if let info {
+            taken = (try? await client.setFileInfo(info.writable, at: part)) == .applied
+        }
         if replacing {
             try await client.remove(destination)
         }
-        try await client.move(ServerUploadPath.partPath(for: destination), to: destination)
+        try await client.move(part, to: destination)
+        guard let info, !Task.isCancelled else { return nil }
+        guard taken else { return .datesNotKept }
+        if info.isReadOnly {
+            _ = try? await client.setFileInfo(info, at: destination)
+        }
+        guard !Task.isCancelled else { return nil }
+        guard let landed = try? await client.fileInfo(at: destination), landed.hasSameModified(as: info) else {
+            return Task.isCancelled ? nil : .datesNotKept
+        }
+        return .kept
+    }
+
+    /// Dates and flags for a file already in place — Restore File Info…
+    /// (FS-19.08 §6e) and a server-side copy. Same order as above minus the
+    /// rename: read-only last, then read back. Nil when cancelled.
+    func applyInfo(_ info: RemoteFileInfo, to destination: String) async -> FileInfoOutcome? {
+        let taken = (try? await client.setFileInfo(info.writable, at: destination)) == .applied
+        guard !Task.isCancelled else { return nil }
+        guard taken else { return .datesNotKept }
+        if info.isReadOnly {
+            _ = try? await client.setFileInfo(info, at: destination)
+        }
+        guard let landed = try? await client.fileInfo(at: destination), landed.hasSameModified(as: info) else {
+            return Task.isCancelled ? nil : .datesNotKept
+        }
+        return .kept
     }
 
     /// Removes the part. Runs even when the caller was cancelled: a cancelled

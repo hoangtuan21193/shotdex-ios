@@ -95,6 +95,44 @@ struct CommonPhotosSMBTests {
         try await smb.removeFolderTree(destination)
     }
 
+    /// AC-211 on the local SMB server (FS-19.08 §6e): every copy in `Shared`
+    /// carries its first-folder source's write time, where before §6e it
+    /// carried the time of the run. impacket keeps no creation date or
+    /// flags; those wait for the NAS.
+    @Test func copyKeepsWriteTimes() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let folders = ["photos/Tuan", "photos/Vo"]
+        let destination = "photos/Shared/e2e-info-\(UUID().uuidString.prefix(8))"
+        let listing = try await CommonPhotosScanner(client: smb).list(folders)
+        let photos = try await CommonPhotosVerifier(client: smb).verify(CommonPhotosMatcher.preview(listing.files), folders: folders)
+        let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosSMB-\(UUID().uuidString)")
+        try store.start(CommonPhotosRun(id: "info", connectionId: "smb", folders: folders, destination: destination, action: .copy),
+                        items: CommonPhotosRunner.items(for: photos, runId: "info", folders: folders,
+                                                        files: listing.files, sidecars: listing.sidecars))
+        do {
+            try await CommonPhotosRunner(client: smb, store: store, workDirectory: work).run("info")
+        } catch {
+            try? await smb.removeFolderTree(destination)
+            throw error
+        }
+
+        let items = try store.items(runId: "info")
+        #expect(!items.isEmpty)
+        for item in items {
+            let sourcePath = try #require(item.sources.first?.path)
+            let copyPath = try #require(item.destinationPath)
+            let source = try #require(try await smb.fileInfo(at: sourcePath))
+            let copy = try #require(try await smb.fileInfo(at: copyPath))
+            #expect(source.modified < Date(timeIntervalSinceNow: -86_400), "the fixture's sources are old")
+            #expect(copy.hasSameModified(as: source), "\(item.destinationPath ?? "")")
+            #expect(item.fileInfo == .kept)
+        }
+        try await smb.removeFolderTree(destination)
+    }
+
     /// Move on the real server, in a scratch folder of its own: 3 photos put
     /// in both `A` and `B` (renamed in `B`) plus one only in `A`; the 3 are
     /// renamed into `C` on the server — no download — and gone from both

@@ -4,22 +4,73 @@ import os
 import Testing
 @testable import ShotDex
 
-/// Whether the local WebDAV test server (wsgidav) answers on 127.0.0.1:8096.
+/// Whether the local WebDAV test servers (wsgidav) answer: 127.0.0.1:8096
+/// with its defaults, and 127.0.0.1:8097 configured to let dates be set
+/// (`docs/_plans/FS1908_6E_LOOP.md`).
 enum LocalWebDAVTestServer {
-    static let isListening: Bool = {
+    static let isListening = listens(8096)
+    static let takesDates = listens(8097)
+
+    private static func listens(_ port: UInt16) -> Bool {
         let socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard socket >= 0 else { return false }
         defer { close(socket) }
         var address = sockaddr_in()
         address.sin_family = sa_family_t(AF_INET)
-        address.sin_port = in_port_t(8096).bigEndian
+        address.sin_port = in_port_t(port).bigEndian
         address.sin_addr.s_addr = inet_addr("127.0.0.1")
         return withUnsafePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 connect(socket, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
             }
         }
-    }()
+    }
+}
+
+/// FS-19.08 §6e on real WebDAV: a server that refuses every way of setting
+/// a date says so (and is not asked again), one that takes them keeps the
+/// copy's write time. Each skipped when its server is not running.
+@Suite(.serialized) struct WebDAVFileInfoTests {
+    private func client(port: Int) -> WebDAVFileClient {
+        WebDAVFileClient(server: FileServer(name: "Test DAV", transferProtocol: .webdav, host: "127.0.0.1", port: port,
+                                            username: "tester", share: "", usesTLS: false),
+                         password: "secret")
+    }
+
+    private func put(_ dav: WebDAVFileClient, _ path: String) async throws {
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data("hello".utf8).write(to: local)
+        defer { try? FileManager.default.removeItem(at: local) }
+        try await dav.upload(local, to: path, progress: { _ in })
+    }
+
+    @Test(.enabled(if: LocalWebDAVTestServer.isListening)) func refusingServerIsUnsupported() async throws {
+        let dav = client(port: 8096)
+        try await dav.connect()
+        let path = "photos/Shared/info-\(UUID().uuidString.prefix(8)).txt"
+        try await put(dav, path)
+        defer { Task { try? await dav.remove(path) } }
+        let info = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_577_934_245))
+
+        #expect(try await dav.setFileInfo(info, at: path) == .unsupported)
+        #expect(try await dav.setFileInfo(info, at: path) == .unsupported)
+        #expect(try await dav.fileInfo(at: path)?.hasSameModified(as: info) == false)
+    }
+
+    @Test(.enabled(if: LocalWebDAVTestServer.takesDates)) func acceptingServerKeepsTheDate() async throws {
+        let dav = client(port: 8097)
+        try await dav.connect()
+        let path = "photos/Shared/info-\(UUID().uuidString.prefix(8)).txt"
+        try await put(dav, path)
+        defer { Task { try? await dav.remove(path) } }
+        let info = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_577_934_245))
+
+        #expect(try await dav.setFileInfo(info, at: path) == .applied)
+        #expect(try await dav.fileInfo(at: path)?.hasSameModified(as: info) == true)
+        let second = RemoteFileInfo(modified: Date(timeIntervalSince1970: 1_546_398_245))
+        #expect(try await dav.setFileInfo(second, at: path) == .applied)
+        #expect(try await dav.fileInfo(at: path)?.hasSameModified(as: second) == true)
+    }
 }
 
 /// Every byte a client moves in or out, and an off switch for the server's
@@ -78,6 +129,10 @@ final class ByteCountingClient: RemoteFileClient, @unchecked Sendable {
     func remove(_ path: String) async throws { try await base.remove(path) }
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func removeFolderTree(_ path: String) async throws { try await base.removeFolderTree(path) }
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        try await base.setFileInfo(info, at: path)
+    }
 }
 
 /// FS-19.08 AC-191 end to end against a real WebDAV server: wsgidav on

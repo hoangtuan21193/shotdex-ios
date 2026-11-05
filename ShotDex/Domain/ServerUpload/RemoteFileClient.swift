@@ -68,6 +68,16 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// The system's thumbnail of a file (QuickLook — the service supplies
     /// it without downloading); nil when it has none.
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage?
+    /// The dates and flags of the file at `path` (FS-19.08 §6e); nil when
+    /// nothing is there. A server that does not say a creation date or a
+    /// flag leaves it nil or false.
+    func fileInfo(at path: String) async throws -> RemoteFileInfo?
+    /// Gives the file at `path` the dates and flags in `info`, as far as the
+    /// protocol lets it (FS-19.08 §6e). `.unsupported` when this server will
+    /// not set dates at all — the caller reports "dates not kept" rather than
+    /// failing the file. Never part of the protocol's defaults: a wrapper that
+    /// forgot to forward it would quietly lose every date.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport
 }
 
 extension RemoteFileClient {
@@ -90,6 +100,49 @@ extension RemoteFileClient {
         }
         try await removeEmptyDirectory(path)
     }
+}
+
+/// A file's dates and flags as a server keeps them (FS-19.08 §6e): what a
+/// copy carries over from its source so the server shows the same file —
+/// the bytes are checked separately, by SHA-256.
+struct RemoteFileInfo: Hashable, Codable, Sendable {
+    var modified: Date
+    var created: Date?
+    var isReadOnly = false
+    var isHidden = false
+    var isArchive = false
+
+    /// The same info without the read-only flag: what a part file gets before
+    /// it is renamed, since a read-only file cannot be renamed over or
+    /// deleted everywhere (§6e "Thứ tự trên SMB").
+    var writable: RemoteFileInfo {
+        var copy = self
+        copy.isReadOnly = false
+        return copy
+    }
+
+    /// Whether `other`'s write time is this one's within 2 seconds — FAT and
+    /// exFAT shares keep times in 2-second steps, and servers round.
+    func hasSameModified(as other: RemoteFileInfo) -> Bool {
+        abs(modified.timeIntervalSince(other.modified)) <= 2
+    }
+}
+
+/// Whether a server took a `setFileInfo` request.
+enum FileInfoSupport: Equatable, Sendable {
+    /// Sent; whether it held is for a re-read to say.
+    case applied
+    /// This server does not set dates (SFTP here, a WebDAV server that
+    /// refused every way).
+    case unsupported
+}
+
+/// What became of a file's info after a write (FS-19.08 §6e); the raw
+/// values are the CSV's words.
+enum FileInfoOutcome: String, Codable, Sendable {
+    case kept
+    case datesNotKept = "dates not kept"
+    case tagsNotKept = "tags not kept"
 }
 
 /// Why a server operation failed, in the terms the user can act on.

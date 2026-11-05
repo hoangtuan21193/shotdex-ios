@@ -917,4 +917,11 @@ private final class WatchedClient: RemoteFileClient, @unchecked Sendable {
     func remove(_ path: String) async throws { try await base.remove(path) }
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        try await base.copyOnServer(source, to: destination)
+    }
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        try await base.setFileInfo(info, at: path)
+    }
 }

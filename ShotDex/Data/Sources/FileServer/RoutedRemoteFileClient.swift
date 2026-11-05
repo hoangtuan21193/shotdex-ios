@@ -74,6 +74,10 @@ final class RoutedRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func removeEmptyDirectory(_ path: String) async throws { try await client().removeEmptyDirectory(path) }
     func removeFolderTree(_ path: String) async throws { try await client().removeFolderTree(path) }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await client().storageSpace(at: path) }
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await client().fileInfo(at: path) }
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        try await client().setFileInfo(info, at: path)
+    }
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage? {
         await client().systemThumbnail(at: path, maxPixelSize: maxPixelSize)
     }

@@ -577,4 +577,8 @@ private final class CountingClient: RemoteFileClient, @unchecked Sendable {
     func remove(_ path: String) async throws { try await base.remove(path) }
     func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        try await base.setFileInfo(info, at: path)
+    }
 }

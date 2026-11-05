@@ -501,12 +501,14 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
   - **SMB đo trên impacket** (T1): impacket lấy `ChangeTime` làm mtime và bỏ qua lệnh khi một trong hai bằng 0. Gửi
     như trên: ngày sửa ra đúng 2020‑01‑02 03:04:05; ngày tạo và cờ impacket không giữ → chứng minh trên NAS ở `/verify`.
   - **WebDAV** (wsgidav 4.4 cục bộ, T1; review giao thức):
-    - `X-OC-Mtime` (giây Unix nguyên) + `X-OC-Ctime` khi `PUT`: wsgidav bỏ qua im lặng (201, không có
-      `X-OC-MTime: accepted`); Nextcloud/ownCloud trả header đó.
-    - Không có `accepted` → `PROPPATCH` `Win32LastModifiedTime` + `Win32CreationTime` (RFC 1123, GMT), rồi
-      `getlastmodified` trong **một `PROPPATCH` riêng** (nó là thuộc tính bảo vệ; gộp chung thì 403 của nó làm các cái
-      kia thành 424). wsgidav mặc định: 207 với từng thuộc tính 403; bật `mutable_live_props` +
-      `emulate_win32_lastmod`: 200 và ngày sửa đổi thật.
+    - `X-OC-Mtime` khi `PUT`: wsgidav bỏ qua im lặng. **Không dùng** (T2): `upload` không mang thông tin file;
+      Nextcloud/ownCloud nhận cùng ngày qua `PROPPATCH` `lastmodified` (giây Unix) ở dưới.
+    - Ba cách, mỗi cách **một `PROPPATCH` riêng** (thuộc tính bảo vệ 403 làm cái khác 424): `Win32LastModifiedTime` +
+      `Win32CreationTime` (RFC 1123, GMT; IIS, wsgidav giả Windows) → `getlastmodified` → `lastmodified` giây Unix
+      (Nextcloud). File đầu thử lần lượt, đọc lại sau mỗi cách; cách nào giữ được thì cả connection dùng cách đó;
+      **hai file liền** không cách nào giữ → connection coi là từ chối (một lần đọc lại chậm không đủ kết luận).
+      wsgidav mặc định: 207 với từng thuộc tính 403; bật `mutable_live_props` + `emulate_win32_lastmod`: 200 và ngày
+      sửa đổi thật.
     - **Phán quyết chỉ theo liệt kê lại** (`getlastmodified` sau `MOVE` part → tên thật, ±2 s), không theo mã 207:
       Apache `mod_dav` (Synology, QNAP) lưu Win32* như thuộc tính chết, trả 200 mà ngày không đổi.
     - Test: wsgidav `127.0.0.1:8096` (từ chối) và `127.0.0.1:8097` (`build/wsgidav-dates.yaml`, nhận); cách bật ở

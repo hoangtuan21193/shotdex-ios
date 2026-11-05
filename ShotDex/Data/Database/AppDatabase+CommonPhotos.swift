@@ -190,6 +190,54 @@ extension AppDatabase {
         }
     }
 
+    /// FS-19.08 §6e, every table and column of it in one migration:
+    /// - items: how each photo was checked (`quick` / `full`) and what became
+    ///   of its file info (`kept` / `dates not kept` / `tags not kept`);
+    /// - runs: the Organize a run placed photos by, and the folders it made
+    ///   in the destination (JSON), which Undo removes when empty;
+    /// - watches (the set): its Organize and Quick check, and when every
+    ///   folder was last listed in full;
+    /// - `common_photo_folder_listings`: what each folder held when last
+    ///   listed, so a rescan skips day folders that have not changed;
+    /// - `server_file_info_support`: whether a connection keeps dates and
+    ///   tags, from its last run — the sheet warns before the next.
+    /// The listings and the support rows are derived; they go with the
+    /// connection.
+    static func registerCommonPhotosSixE(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v59-commonPhotosSixE") { db in
+            try db.alter(table: "common_photo_items") { t in
+                t.add(column: "checkMethod", .text)
+                t.add(column: "fileInfo", .text)
+            }
+            try db.alter(table: "common_photo_runs") { t in
+                t.add(column: "organize", .text)
+                t.add(column: "createdFolders", .text)
+            }
+            try db.alter(table: "common_photo_watches") { t in
+                t.add(column: "organize", .text)
+                t.add(column: "quickCheck", .boolean).notNull().defaults(to: false)
+                t.add(column: "fullListingAt", .integer)
+            }
+            try db.create(table: "common_photo_folder_listings") { t in
+                t.column("connectionId", .text).notNull()
+                t.column("path", .text).notNull()
+                // The folder's write time as its parent listed it, epoch seconds.
+                t.column("folderModified", .integer).notNull()
+                t.column("hasSubfolders", .boolean).notNull()
+                // JSON [RemoteEntry] of what was in it.
+                t.column("entries", .text).notNull()
+                t.column("listedAt", .integer).notNull()
+                t.primaryKey(["connectionId", "path"])
+            }
+            try db.create(table: "server_file_info_support") { t in
+                t.primaryKey("connectionId", .text)
+                t.column("keepsDates", .boolean).notNull()
+                t.column("keepsTags", .boolean)
+                t.column("checkedAt", .integer).notNull()
+            }
+        }
+    }
+
     static func registerCommonPhotosWatchResume(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v55-commonPhotosWatchResume") { db in
             try db.alter(table: "common_photo_watches") { t in

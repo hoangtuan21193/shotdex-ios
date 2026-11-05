@@ -96,6 +96,9 @@ struct FileServerStore: Sendable {
             try CommonPhotosScanRecords.forget(connectionId: id, in: db)
             // Nor what the user left out of its sets (§6d).
             try CommonPhotosLeftOutStore.forget(connectionId: id, in: db)
+            // Nor what its folders held, nor whether it keeps dates (§6e).
+            try db.execute(sql: "DELETE FROM common_photo_folder_listings WHERE connectionId = ?", arguments: [id])
+            try db.execute(sql: "DELETE FROM server_file_info_support WHERE connectionId = ?", arguments: [id])
             // Photos ready to move through it never can be (§6c).
             for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE connectionId = ? AND state = ?",
                                              arguments: [id, CommonPhotosRun.State.ready.rawValue]) {

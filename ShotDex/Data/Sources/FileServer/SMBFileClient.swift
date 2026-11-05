@@ -280,15 +280,104 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// A read-only file cannot be deleted (Windows `STATUS_CANNOT_DELETE`,
+    /// Samba's `delete readonly = no`): when the delete is refused, the flag
+    /// is cleared and the delete tried once more (FS-19.08 §6e).
     func remove(_ path: String) async throws {
         do {
             let (client, rest) = try await openInShare(path)
             guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
-            try await client.deleteFile(path: rest)
+            do {
+                try await client.deleteFile(path: rest)
+            } catch where Self.refusesDeleting(error) {
+                // Only a read-only file is unlocked, and only that flag goes:
+                // anything else refused stays exactly as it was.
+                guard let stat = try? await client.fileStat(path: rest), stat.isReadOnly else { throw error }
+                var kept: FileAttributes = []
+                if stat.isHidden { kept.insert(.hidden) }
+                if stat.isArchive { kept.insert(.archive) }
+                if stat.isSystem { kept.insert(.system) }
+                _ = try await client.session.setInfo(path: Self.smbName(rest), Self.basicInformation(attributesOnly: kept))
+                try await client.deleteFile(path: rest)
+            }
         } catch {
             if Self.isNotFound(error) { return }
             throw Self.map(error, host: server.host, path: path)
         }
+    }
+
+    // MARK: - File info (FS-19.08 §6e)
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        do {
+            let (client, rest) = try await openInShare(path)
+            guard !rest.isEmpty else { return nil }
+            let stat = try await client.fileStat(path: rest)
+            guard !stat.isDirectory else { return nil }
+            return RemoteFileInfo(modified: stat.lastWriteTime, created: stat.creationTime,
+                                  isReadOnly: stat.isReadOnly, isHidden: stat.isHidden, isArchive: stat.isArchive)
+        } catch {
+            if Self.isNotFound(error) { return nil }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// One `SET_INFO` FileBasicInformation on a handle of its own, so it
+    /// lands after the upload's handle has closed.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        do {
+            let (client, rest) = try await openInShare(path)
+            guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
+            _ = try await client.session.setInfo(path: Self.smbName(rest), Self.basicInformation(info))
+            return .applied
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// `FileBasicInformation` as MS-FSCC 2.4.7 lays it out. SMBClient keeps
+    /// the memberwise init and its `FileTime(Date)` internal, so the 40 bytes
+    /// are built here: LastAccessTime 0 leaves it alone; ChangeTime carries
+    /// the write time too, because some servers (impacket) take the file's
+    /// mtime from it and ignore a request where it is 0 — Windows and Samba
+    /// overwrite it anyway. Attributes 0 would mean "leave them", so a file
+    /// with none gets NORMAL.
+    static func basicInformation(_ info: RemoteFileInfo) -> FileBasicInformation {
+        var attributes: UInt32 = 0
+        if info.isReadOnly { attributes |= 0x01 }
+        if info.isHidden { attributes |= 0x02 }
+        if info.isArchive { attributes |= 0x20 }
+        let written = fileTime(info.modified)
+        return basic(created: info.created.map(fileTime) ?? 0, written: written, changed: written,
+                     attributes: attributes == 0 ? 0x80 : attributes)
+    }
+
+    /// Only the flags, times untouched — clearing read-only before a delete.
+    static func basicInformation(attributesOnly attributes: FileAttributes) -> FileBasicInformation {
+        basic(created: 0, written: 0, changed: 0, attributes: attributes.rawValue == 0 ? 0x80 : attributes.rawValue)
+    }
+
+    private static func basic(created: UInt64, written: UInt64, changed: UInt64, attributes: UInt32) -> FileBasicInformation {
+        var data = Data()
+        for value in [created, 0, written, changed] {
+            withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+        }
+        withUnsafeBytes(of: attributes.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: UInt32(0)) { data.append(contentsOf: $0) }
+        return FileBasicInformation(data: data)
+    }
+
+    /// FILETIME: 100-nanosecond steps since 1601-01-01 UTC.
+    static func fileTime(_ date: Date) -> UInt64 {
+        let steps = (date.timeIntervalSince1970 + 11_644_473_600) * 10_000_000
+        return steps > 0 ? UInt64(steps.rounded()) : 0
+    }
+
+    /// A path inside the share as SMB names it: backslashes, no leading one.
+    /// SMBClient's own calls normalize this way; `Session` ones take the
+    /// name as given.
+    private static func smbName(_ rest: String) -> String {
+        rest.split(separator: "/").joined(separator: "\\")
     }
 
     /// The share's size and what this account may still write
@@ -327,6 +416,14 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     /// `STATUS_DISK_FULL`; SMBClient's enum does not name it.
     private static let diskFull: UInt32 = 0xC000_007F
+
+    /// `STATUS_ACCESS_DENIED` or `STATUS_CANNOT_DELETE` (0xC0000121, which
+    /// SMBClient's enum does not name) — what a delete of a read-only file
+    /// gets.
+    private static func refusesDeleting(_ error: Error) -> Bool {
+        guard let response = error as? ErrorResponse else { return false }
+        return NTStatus(response.header.status) == .accessDenied || response.header.status == 0xC000_0121
+    }
 
     private static func isNotFound(_ error: Error) -> Bool {
         guard let response = error as? ErrorResponse else { return false }
