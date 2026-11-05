@@ -451,7 +451,12 @@ Tuan/Hue. Băm song song — vẫn giữ một lệnh (§6d mục 3); đo lại 
     tên folder nguồn → ngày sửa file trên server. **Chốt (người dùng 2026-11-05): EXIF trước** — chỉ đọc khi Organize
     dùng ngày, cho ảnh Same chưa có ngày. Ảnh đã qua bước đọc 3 mẫu (§5 bước 4) lấy EXIF ngay từ mẫu đầu đã đọc, không
     đọc thêm; chỉ ảnh không qua bước đó (SHA đã biết) mới đọc riêng ~113 ms/ảnh (trần ước Tuan/Hue ~25 phút); tiến độ
-    Scan đếm bước này ("Reading dates 120 of 13,000").
+    Scan đếm bước này ("Reading dates 120 of 13,000"). *Hiện (T9): lượt chạy tự tìm chỗ cho ảnh chưa có — đọc 256 KB
+    đầu (`EmbeddedPreview.firstRead`) của ảnh, không bao giờ của video — và ghi `placement` của mục trước khi ghi gì
+    lên server, nên Resume xếp đúng chỗ cũ; bước đọc ngày lúc Scan (từ mẫu đầu) và ngày từ index vào ở T10.* Ngày
+    trong tên folder đọc theo lịch Gregory; tên folder viết theo lịch của máy, như Backup. Tên folder Windows giữ cho
+    thiết bị (`CON`, `AUX`, `COM1`…) thêm `-`; `.`/`..` thành `-`. Folder con Organize không tạo được (một file chắn
+    đường, tên server từ chối) làm **ảnh đó** Failed, lượt đi tiếp.
   - video: tên folder nguồn nếu là ngày (`2025/03/15`, `2025-03-15`, `20250315`, `2025/03` → ngày 1), không thì ngày sửa
     file trên server (người dùng 2026-11-05). Không tải video để lấy ngày.
 - **Mặc định**: bộ mới **Same as Source** (người dùng 2026-11-05); bộ đã từng chạy giữ **No Folders** (đúng như nó đã

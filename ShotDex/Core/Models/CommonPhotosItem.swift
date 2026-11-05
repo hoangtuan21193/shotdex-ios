@@ -93,6 +93,11 @@ struct CommonPhotosItem: Hashable, Sendable {
     /// What became of the copy's dates and flags (FS-19.08 §6e); nil where
     /// the run did not write the copy, or ran before §6e.
     var fileInfo: FileInfoOutcome?
+    /// Where the run's Organize files the photo (FS-19.08 §6e): its path
+    /// under the destination, folders and name, `/`-separated — worked out
+    /// once, before anything is written, so a Resume files it where the
+    /// first try did. Nil: at the destination's top under its own name.
+    var placement: String?
     var updatedAt: Int
 
     init(runId: String, position: Int, sha256: String, size: Int64, sources: [Source], status: Status = .pending,
@@ -160,6 +165,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         destinationWasThere = row["destinationWasThere"] ?? false
         fileInfo = (row["fileInfo"] as String?).flatMap(FileInfoOutcome.init(rawValue:))
         checkMethod = (row["checkMethod"] as String?).flatMap(CheckMethod.init(rawValue:))
+        placement = row["placement"]
         updatedAt = row["updatedAt"]
     }
 
@@ -179,6 +185,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         container["destinationWasThere"] = destinationWasThere
         container["fileInfo"] = fileInfo?.rawValue
         container["checkMethod"] = checkMethod?.rawValue
+        container["placement"] = placement
         container["updatedAt"] = updatedAt
     }
 }

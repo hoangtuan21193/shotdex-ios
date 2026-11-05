@@ -699,6 +699,7 @@ final class AppDatabase: Sendable {
         registerCommonPhotosLeftOut(&migrator)
         registerOriginalPresence(&migrator)
         registerCommonPhotosSixE(&migrator)
+        registerCommonPhotosPlacement(&migrator)
 
         return migrator
     }

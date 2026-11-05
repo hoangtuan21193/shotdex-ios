@@ -175,7 +175,7 @@ struct MacBackupOrganizePage: View {
                 }
                 Section {
                     Picker(String(localized: "Levels:", comment: "Organize: folder levels"), selection: $organize.levels) {
-                        ForEach(BackupOrganize.Levels.allCases, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
+                        ForEach(BackupOrganize.Levels.backup, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
                     }
                     Picker(String(localized: "Videos:", comment: "Organize: where videos go"), selection: $organize.videoPlacement) {
                         ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) { Text(BackupOrganizeText.videos($0)).tag($0) }

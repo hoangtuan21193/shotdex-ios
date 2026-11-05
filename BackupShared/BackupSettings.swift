@@ -30,7 +30,17 @@ struct BackupSettings: Codable, Hashable, Sendable {
 /// How files are laid out at the destination (FS-22.01 §3–§5).
 struct BackupOrganize: Codable, Hashable, Sendable {
     enum Levels: String, Codable, Sendable, CaseIterable {
+        /// Common Photos only (FS-19.08 §6e): the folder the photo has in
+        /// the first folder of the set.
+        case sameAsSource
         case yearMonthDay, yearMonth, yearDate, dateOnly, album, noFolders
+
+        /// What a backup's Organize offers — never Same as Source, which has
+        /// no source folder to follow.
+        static let backup: [Levels] = [.yearMonthDay, .yearMonth, .yearDate, .dateOnly, .album, .noFolders]
+        /// What Common Photos' Organize offers: Same as Source first, no
+        /// Album — a server folder has none.
+        static let commonPhotos: [Levels] = [.sameAsSource, .yearMonthDay, .yearMonth, .yearDate, .dateOnly, .noFolders]
     }
     enum YearStyle: String, Codable, Sendable, CaseIterable { case full, short }
     enum MonthStyle: String, Codable, Sendable, CaseIterable {

@@ -22,7 +22,7 @@ struct BackupOrganizeScreen: View {
 
             Section {
                 Picker(String(localized: "Levels", comment: "Organize row: how deep the folders go"), selection: $settings.organize.levels) {
-                    ForEach(BackupOrganize.Levels.allCases, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
+                    ForEach(BackupOrganize.Levels.backup, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
                 }
                 if usesYear {
                     Picker(String(localized: "Year", comment: "Organize row: year folder name"), selection: $settings.organize.yearStyle) {

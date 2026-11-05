@@ -34,6 +34,8 @@ struct CommonPhotosRunner: Sendable {
     /// Now, and the zone it is told in, for the CSV's name.
     var now: @Sendable () -> Date = { Date() }
     var timeZone: TimeZone = .current
+    /// The language Organize's month names follow (FS-22.01 §3).
+    var locale: Locale = .current
 
     /// What the progress window shows (FS-19.08 §7).
     struct Progress: Equatable, Sendable {
@@ -134,17 +136,34 @@ struct CommonPhotosRunner: Sendable {
     /// the server spells it, since WebDAV and SFTP paths are case-sensitive.
     private final class Destination: @unchecked Sendable {
         let folder: String
+        /// The run's destination folder — `folder` itself, or the one
+        /// Organize's subfolder is under.
+        let root: String
         var sizes: [String: Int64]
         var spelled: [String: String]
         /// Whether the server copies files itself (§6d): nil until the first
         /// photo asks, then the answer for the rest of the run, so a server
-        /// that refuses is asked once.
-        var copiesOnServer: Bool?
+        /// that refuses is asked once — one answer for every folder Organize
+        /// files into.
+        private let serverCopy: ServerCopy
+        var copiesOnServer: Bool? {
+            get { serverCopy.answer }
+            set { serverCopy.answer = newValue }
+        }
 
-        init(folder: String, entries: [RemoteEntry]) {
+        final class ServerCopy: @unchecked Sendable { var answer: Bool? }
+
+        init(folder: String, root: String? = nil, entries: [RemoteEntry], serverCopy: ServerCopy = ServerCopy()) {
             self.folder = folder
+            self.root = root ?? folder
+            self.serverCopy = serverCopy
             sizes = Dictionary(entries.map { ($0.name.lowercased(), $0.size) }, uniquingKeysWith: { first, _ in first })
             spelled = Dictionary(entries.map { ($0.name.lowercased(), $0.name) }, uniquingKeysWith: { first, _ in first })
+        }
+
+        /// A folder under this one, sharing its server-copy answer.
+        func subfolder(_ relative: String, entries: [RemoteEntry]) -> Destination {
+            Destination(folder: ServerUploadPath.join(folder, relative), root: folder, entries: entries, serverCopy: serverCopy)
         }
 
         var names: Set<String> { Set(sizes.keys) }
@@ -239,17 +258,53 @@ struct CommonPhotosRunner: Sendable {
             try await client.createDirectory(run.destination)
             let listing = try await client.entries(in: run.destination).filter { !$0.isDirectory }
             let destination = Destination(folder: run.destination, entries: listing)
+            // Organize's folders (§6e), each listed the first time a photo
+            // is filed into it — only the folders this run writes to.
+            var subfolders: [String: Destination] = [:]
             for index in items.indices where !items[index].isDone {
                 // The other process took the run over (FS-19.08 §6c).
                 if Self.hasLostClaim(runId: runId, in: store.database) { throw Stop.alreadyRunning }
                 try Task.checkCancellation()
+                if let organize = run.organize, items[index].status == .pending, items[index].placement == nil {
+                    items[index].placement = try await placement(of: items[index], organize: organize, run: run)
+                    if items[index].placement != nil { try store.update(items[index]) }
+                }
+                var into = destination
+                if let placement = items[index].placement {
+                    let folder = ServerUploadPath.parent(of: placement)
+                    // One folder however its name is cased: SMB and APFS are
+                    // case-insensitive, and two listings would miss each
+                    // other's names.
+                    let key = Self.comparable(folder)
+                    if !folder.isEmpty {
+                        if let known = subfolders[key] {
+                            into = known
+                        } else {
+                            let path = ServerUploadPath.join(run.destination, folder)
+                            do {
+                                try await client.createDirectory(path)
+                                into = destination.subfolder(folder, entries: try await client.entries(in: path).filter { !$0.isDirectory })
+                            } catch let error as RemoteFileError where !error.stopsBatch {
+                                // A folder this server will not make (a file
+                                // in the way, a name it refuses) fails this
+                                // photo, not the run.
+                                try finish(&items[index], .failed, reason: .serverError, detail: error.localizedDescription)
+                                state.doneCount += 1
+                                state.doneBytes += items[index].size
+                                progress(state)
+                                continue
+                            }
+                            subfolders[key] = into
+                        }
+                    }
+                }
                 switch run.action {
-                case .copy: try await copy(&items[index], into: destination, state: state, progress: progress)
+                case .copy: try await copy(&items[index], into: into, state: state, progress: progress)
                 case .move:
                     // A sidecar two photos share (IMG_1.JPG and IMG_1.MOV)
                     // stays until the last of them is done.
                     let claimed = Set(items[(index + 1)...].filter { !$0.isDone }.flatMap { $0.sources.compactMap(\.sidecar) })
-                    try await move(&items[index], into: destination, claimedSidecars: claimed, state: state, progress: progress)
+                    try await move(&items[index], into: into, claimedSidecars: claimed, state: state, progress: progress)
                 }
                 state.doneCount += 1
                 state.doneBytes += items[index].size
@@ -325,7 +380,8 @@ struct CommonPhotosRunner: Sendable {
             return
         }
         let write = VerifiedRemoteWrite(client: client)
-        let name = ServerUploadPath.lastComponent(of: source.path)
+        // The name Organize gave it, else its own (§6e).
+        let name = ServerUploadPath.lastComponent(of: item.placement ?? source.path)
         let itemSize = item.size
         let report = { @Sendable (step: Progress.Step, fraction: Double) in
             var moving = state
@@ -515,7 +571,7 @@ struct CommonPhotosRunner: Sendable {
             try finish(&item, .failed, reason: .unreadableRecord)
             return
         }
-        let name = ServerUploadPath.lastComponent(of: source.path)
+        let name = ServerUploadPath.lastComponent(of: item.placement ?? source.path)
         let report = { @Sendable (step: Progress.Step) in
             var moving = state
             moving.currentName = name
@@ -636,6 +692,37 @@ struct CommonPhotosRunner: Sendable {
                                 claimedSidecars: claimedSidecars, report: report)
     }
 
+    /// Where Organize files the photo (§6e). Its date, when filing needs
+    /// one: the capture date in the head of a photo (never a video's, which
+    /// is not read for it), else the date its folder names, else its write
+    /// time. A head that cannot be read is no date, not a failure.
+    private func placement(of item: CommonPhotosItem, organize: BackupOrganize, run: CommonPhotosRun) async throws -> String? {
+        guard let source = item.sources.first, let firstFolder = run.folders.first else { return nil }
+        // Dates in folder names are read in the Gregorian calendar; names
+        // are written in this Mac's, as Backup writes them.
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        var date = now()
+        if CommonPhotosPlacement.needsDate(organize) {
+            var taken: Date?
+            if !PairingRule.isMovie(ServerUploadPath.lastComponent(of: source.path)) {
+                do {
+                    let head = try await client.readRange(source.path, offset: 0, length: Int(min(item.size, Int64(EmbeddedPreview.firstRead))))
+                    taken = EmbeddedPreview.captureDate(from: head, timeZone: timeZone)
+                } catch let error as RemoteFileError where !error.stopsBatch {
+                    taken = nil
+                }
+            }
+            let folder = CommonPhotosPlacement.sourceFolder(of: source.path, firstFolder: firstFolder)
+            let modified = source.modifiedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            date = CommonPhotosOrganizeDate.date(taken: taken, folder: folder, modified: modified, calendar: gregorian) ?? date
+        }
+        return CommonPhotosPlacement.relativePath(organize: organize, sourcePath: source.path, firstFolder: firstFolder, date: date,
+                                                  names: BackupDateName(calendar: calendar, locale: locale))
+    }
+
     private func reset(_ item: inout CommonPhotosItem) throws {
         item.status = .pending
         item.destinationPath = nil
@@ -696,14 +783,17 @@ struct CommonPhotosRunner: Sendable {
             placedSidecar = try await sidecarHash(besides: placed, item: item)
         }
         report(.removing)
-        let destinationFolder = Self.comparable(destination.folder)
+        // The folder the photo was filed to, and the destination's top — a
+        // source sitting at either is the destination's, never removed (§6e:
+        // Organize files below the top).
+        let destinationFolders = Set([destination.folder, destination.root].map(Self.comparable))
         var changed = false
         var keptSidecar = false
         for index in item.sources.indices {
             try Task.checkCancellation()
             let source = item.sources[index]
             guard Self.comparable(source.path) != Self.comparable(placed),
-                  Self.comparable(ServerUploadPath.parent(of: source.path)) != destinationFolder else {
+                  !destinationFolders.contains(Self.comparable(ServerUploadPath.parent(of: source.path))) else {
                 // The destination itself: never removed, never reported so.
                 continue
             }

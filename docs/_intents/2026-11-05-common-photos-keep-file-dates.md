@@ -5,7 +5,7 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-05 |
 | Trạng thái | accepted (2026-11-05) |
-| Tiến độ | **đang làm** (2026-11-05) — task 9/13, 20/34 AC xanh (3 một phần) — plan [2026-11-05-fs1908-6e-dated-organize-fileinfo](../_plans/2026-11-05-fs1908-6e-dated-organize-fileinfo.md) |
+| Tiến độ | **đang làm** (2026-11-05) — task 10/13, 24/34 AC xanh (4 một phần) — plan [2026-11-05-fs1908-6e-dated-organize-fileinfo](../_plans/2026-11-05-fs1908-6e-dated-organize-fileinfo.md) |
 | Nguồn | phản hồi người dùng 2026-11-05: "khi move hay copy file sang thư mục share phải keep được thông tin file, k đc đổi ngày edit hay meta data nào cả" |
 | Spec sinh ra từ đây | [FS-19.08 §6e](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…226 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 

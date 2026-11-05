@@ -238,6 +238,16 @@ extension AppDatabase {
         }
     }
 
+    /// FS-19.08 §6e Organize: where each photo of a run is filed under the
+    /// destination, fixed before it is written.
+    static func registerCommonPhotosPlacement(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v60-commonPhotosPlacement") { db in
+            try db.alter(table: "common_photo_items") { t in
+                t.add(column: "placement", .text)
+            }
+        }
+    }
+
     static func registerCommonPhotosWatchResume(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v55-commonPhotosWatchResume") { db in
             try db.alter(table: "common_photo_watches") { t in

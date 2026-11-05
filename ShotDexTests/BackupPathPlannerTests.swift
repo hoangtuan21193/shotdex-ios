@@ -45,6 +45,8 @@ import Testing
             .dateOnly: ["2025.10.12"],
             .album: ["Trip"],
             .noFolders: [],
+            // No source folder given: the top (FS-19.08 §6e).
+            .sameAsSource: [],
         ]
         let fileNames: [BackupOrganize.FileNames: (photo: String, video: String)] = [
             .original: ("IMG_1.HEIC", "IMG_2.MOV"),
@@ -79,7 +81,22 @@ import Testing
                 }
             }
         }
-        #expect(checked == 3 * (5 + 4 + 4 + 3 + 2 + 2))
+        #expect(checked == 3 * (5 + 4 + 4 + 3 + 2 + 2 + 2))
+    }
+
+    /// FS-19.08 §6e Same as Source: the source's folders, each mended as
+    /// an album name is; videos apart at the top go above them.
+    @Test func sameAsSourceFollowsTheSourceFolder() {
+        let p = planner {
+            $0.levels = .sameAsSource
+            $0.videoPlacement = .apartAtTop
+        }
+        var input = photo()
+        input.sourceFolder = "2025/03/Trip. "
+        #expect(p.relativePath(for: input) == "2025/03/Trip/IMG_1.HEIC")
+        var movie = video()
+        movie.sourceFolder = "2025/03"
+        #expect(p.relativePath(for: movie) == "Videos/2025/03/IMG_2.MOV")
     }
 
     @Test func monthAndDayStylesAreTheirExamples() {

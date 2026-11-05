@@ -39,6 +39,7 @@ enum BackupOrganizeText {
         case .dateOnly: String(localized: "Date Only", comment: "Organize levels")
         case .album: String(localized: "Album", comment: "Organize levels")
         case .noFolders: String(localized: "No Folders", comment: "Organize levels")
+        case .sameAsSource: String(localized: "Same as Source", comment: "Organize levels: Common Photos keeps the first folder's subfolders (FS-19.08 §6e)")
         }
     }
 

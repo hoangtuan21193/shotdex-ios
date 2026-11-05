@@ -6,7 +6,7 @@
 | Intent | [dated-folders-scan](../_intents/2026-11-05-common-photos-dated-folders-scan.md) · [destination-layout](../_intents/2026-11-05-common-photos-destination-layout.md) · [keep-file-dates](../_intents/2026-11-05-common-photos-keep-file-dates.md) |
 | Commit spec | `9fbba089` (intent `1c6ace09`) |
 | Ngày | 2026-11-05 |
-| Trạng thái | đang làm — duyệt 2026-11-05 (Q1: a); T0–T8 xong — loop [FS1908_6E_LOOP.md](FS1908_6E_LOOP.md) |
+| Trạng thái | đang làm — duyệt 2026-11-05 (Q1: a); T0–T9 xong — loop [FS1908_6E_LOOP.md](FS1908_6E_LOOP.md) |
 
 ## 1. Hiểu đúng chưa
 
