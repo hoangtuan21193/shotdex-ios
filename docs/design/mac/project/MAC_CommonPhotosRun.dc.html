@@ -178,7 +178,7 @@ input{font-family:inherit}
 </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","restored","undoing","undone","undoneMove","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","restoring","restored","undoing","undone","undoneMove","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -445,7 +445,8 @@ class Component extends DCLogic {
     ];
     const rows = state === 'readyToMove' ? READY : state === 'running' ? L
       : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', '', r[6], 'kept'] : r)
-          .map(r => state === 'restored' && r[7] === 'dates not kept' ? [r[0], r[1], r[2], r[3], r[4], r[5], r[6], 'restored'] : r)
+          // Restored rows read Kept like the rest: the detail line says what Restore File Info… did.
+          .map(r => state === 'restored' && r[7] === 'dates not kept' ? [r[0], r[1], r[2], r[3], r[4], r[5], r[6], 'kept'] : r)
       : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5], r[6]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared', r[6]]
           : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], '', r[6]] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '', r[6]]
           : ['undone', r[1], r[2], r[3], r[4], '', r[6], undoMove ? (i === 2 ? 'dates not kept' : 'kept') : '']);
@@ -475,10 +476,14 @@ class Component extends DCLogic {
         // §6e: Restore File Info… sets the first folder's dates and flags on copies that lost them; nothing is copied
         // again. Enabled while a Copied row is not Kept; right-click on selected rows offers the same for those rows.
         detail:'1 copy did not keep its dates. Restore File Info… sets them without copying again.',
-        footBtns:[ fb('Undo Copy…'), fb('Restore File Info…', null, false, 'Sets the dates of the copies in Shared from Tuấn, without copying again'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
+        footBtns:[ fb('Restore File Info…', null, false, 'Sets the dates of the copies in “Shared” from Tuấn, without copying again'), fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
+      // Restore File Info… going: progress in the detail line, Stop in its place; rows land as they are set.
+      restoring: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
+        detail:'Restoring file info · 120 of 280', pct:'100%', summary:'Log saved in Shared',
+        footBtns:[ fb('Stop'), fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
       restored: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
-        detail:'File info restored on 1 copy · 0 skipped. Nothing was copied again.', pct:'100%', summary:'Log saved in Shared',
-        footBtns:[ fb('Undo Copy…'), fb('Restore File Info…', null, true, 'Every copy already has its dates'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
+        detail:'File info restored on 1 copy. Nothing was copied again.', pct:'100%', summary:'Log saved in Shared',
+        footBtns:[ fb('Restore File Info…', null, true, 'Every copy already has its dates'), fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
       undoing: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Undoing 120 of 278 · 1.8 of 4.2 GB',
         detail:'IMG_4110.HEIC · checking the copies', pct:'43%', summary:'119 undone · 1 not undone',
         footBtns:[ fb('Show in Browser', null, true) ] },

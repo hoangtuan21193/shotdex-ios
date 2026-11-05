@@ -200,7 +200,98 @@ final class MacCommonPhotosRuns {
 
     var store: CommonPhotosStore { CommonPhotosStore(database: database) }
 
-    var isAnyRunning: Bool { !tasks.isEmpty }
+    var isAnyRunning: Bool { !tasks.isEmpty || !restoreTasks.isEmpty }
+
+    // MARK: Restore File Info… (FS-19.08 §6e)
+
+    /// One run's Restore File Info…, as its window shows it.
+    struct Restore: Equatable {
+        var progress = CommonPhotosInfoRestorer.Progress()
+        var isRunning = true
+        /// Stop was pressed: it ends after the row being worked on.
+        var isStopping = false
+        /// Stopped by the user before the last row.
+        var wasStopped = false
+        var problem: String?
+    }
+
+    /// By run id; kept after it ends so the window can say what it did.
+    private(set) var restores: [String: Restore] = [:]
+    @ObservationIgnored private var restoreTasks: [String: Task<Void, Never>] = [:]
+
+    func isRestoring(runId: String) -> Bool { restoreTasks[runId] != nil }
+
+    /// Sets the first folder's dates and flags on the run's copies that do
+    /// not have them (`positions`: the selected rows); nothing is copied.
+    /// Refused, with the reason shown, while the run, an undo of it or the
+    /// helper has it.
+    func restoreFileInfo(runId: String, positions: Set<Int>? = nil) {
+        guard restoreTasks[runId] == nil, let run = (try? store.run(id: runId)) ?? nil else { return }
+        let busy = String(localized: "This run is busy — wait for it, or its undo, to finish, then try again.",
+                          comment: "Common photos: Restore File Info refused while the run or its undo goes")
+        guard tasks[runId] == nil, ((try? store.undoRuns(of: runId)) ?? []).allSatisfy({ tasks[$0.id] == nil }) else {
+            restores[runId] = Restore(isRunning: false, problem: busy)
+            return
+        }
+        guard let server = (try? servers.fetch(id: run.connectionId)) ?? nil else {
+            restores[runId] = Restore(isRunning: false, problem: String(localized: "The connection for this run was deleted.",
+                                                                        comment: "Common photos: the run's connection is gone"))
+            return
+        }
+        restores[runId] = Restore()
+        var client = makeClient(server)
+        #if DEBUG
+        client = MacDemoLibrary.commonPhotosRunClient(client, forRestore: true)
+        #endif
+        let restorer = CommonPhotosInfoRestorer(client: client, store: store)
+        keepAwake()
+        // Progress hops to the main actor in order; an older one is dropped.
+        let sequence = OSAllocatedUnfairLock(initialState: 0)
+        restoreTasks[runId] = Task { [weak self] in
+            var problem: String?
+            let last = OSAllocatedUnfairLock(initialState: CommonPhotosInfoRestorer.Progress())
+            do {
+                try await client.connect()
+                try await restorer.run(runId, positions: positions) { progress in
+                    let number = sequence.withLock { value in
+                        value += 1
+                        return value
+                    }
+                    Task { @MainActor in
+                        guard let self, sequence.withLock({ $0 }) == number, self.restoreTasks[runId] != nil else { return }
+                        self.restores[runId]?.progress = progress
+                    }
+                    last.withLock { $0 = progress }
+                }
+            } catch is CancellationError {
+            } catch CommonPhotosInfoRestorer.Refusal.busy {
+                problem = busy
+            } catch {
+                problem = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
+            await client.disconnect()
+            let final = last.withLock { $0 }
+            let stopped = Task.isCancelled && final.done < final.total
+            await MainActor.run {
+                guard let self else { return }
+                self.restoreTasks[runId] = nil
+                self.restores[runId]?.progress = final
+                self.restores[runId]?.isRunning = false
+                self.restores[runId]?.isStopping = false
+                self.restores[runId]?.wasStopped = stopped
+                self.restores[runId]?.problem = problem
+                if self.tasks.isEmpty, self.restoreTasks.isEmpty { self.letSleep() }
+                self.storeChanged()
+            }
+        }
+    }
+
+    /// Stops after the row being worked on; what is done stays done.
+    func stopRestore(runId: String) {
+        guard let task = restoreTasks[runId] else { return }
+        restores[runId]?.isStopping = true
+        task.cancel()
+    }
 
     /// A new run from the sheet: refused when a run going on the same
     /// server works in an overlapping folder; written, then started.
@@ -340,6 +431,8 @@ final class MacCommonPhotosRuns {
 
     /// Quit with runs going: every one paused; `done` once all have stopped.
     func pauseAll(then done: @escaping () -> Void) {
+        // A Restore File Info… stops after its row; what it set stays (§6e).
+        for task in restoreTasks.values { task.cancel() }
         guard !tasks.isEmpty else { return done() }
         onAllPaused = done
         // A quit is not the user pausing a run: Keep gathering may carry on.
@@ -378,7 +471,7 @@ final class MacCommonPhotosRuns {
     /// Whether Discard may forget the run: not while it runs, here or in
     /// another runner of this process.
     func canDiscard(runId: String) -> Bool {
-        guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
+        guard tasks[runId] == nil, restoreTasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
               let run = (try? store.run(id: runId)) ?? nil, run.state != .finished, run.state != .ready else { return false }
         // An undo owing its history and rescan finishes on Resume: discarded,
         // the history would keep pointing at the destination (§6b).
@@ -391,6 +484,7 @@ final class MacCommonPhotosRuns {
         guard canDiscard(runId: runId) else { return false }
         try? store.discard(runId: runId)
         entries[runId] = nil
+        restores[runId] = nil
         refreshFoot()
         return true
     }
@@ -411,7 +505,7 @@ final class MacCommonPhotosRuns {
     /// Whether Remove from List may forget a run that is over (FS-19.08
     /// §6b): not while it or an undo of it goes.
     func canRemove(runId: String) -> Bool {
-        guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
+        guard tasks[runId] == nil, restoreTasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
               let run = (try? store.run(id: runId)) ?? nil, run.isOver || run.state == .ready else { return false }
         let undos = run.isUndo ? [] : ((try? store.undoRuns(of: runId)) ?? [])
         return undos.allSatisfy { $0.isOver && tasks[$0.id] == nil }
@@ -427,12 +521,14 @@ final class MacCommonPhotosRuns {
             if (try? store.run(id: runId))??.state == .ready {
                 try? store.dropReady(runId: runId)
                 entries[runId] = nil
+                restores[runId] = nil
                 removed = true
                 continue
             }
             let undos = (try? store.undoRuns(of: runId)) ?? []
             try? store.discard(runId: runId)
             entries[runId] = nil
+            restores[runId] = nil
             for undo in undos { entries[undo.id] = nil }
             removed = true
         }
@@ -456,7 +552,7 @@ final class MacCommonPhotosRuns {
     /// Whether the run's log offers Undo: a run that is over, not itself an
     /// undo, with photos it put in place and no undo of it still to finish.
     func canUndo(runId: String) -> Bool {
-        guard tasks[runId] == nil, let run = (try? store.run(id: runId)) ?? nil,
+        guard tasks[runId] == nil, restoreTasks[runId] == nil, let run = (try? store.run(id: runId)) ?? nil,
               !run.isUndo, run.isOver, run.isReadable else { return false }
         guard ((try? store.undoRuns(of: runId)) ?? []).allSatisfy(\.isOver) else { return false }
         return (try? store.hasUndoableRows(runId: runId)) ?? false
@@ -471,6 +567,8 @@ final class MacCommonPhotosRuns {
         // Nothing written for a connection that is gone: the undo could never run.
         guard let server = try servers.fetch(id: original.connectionId) else { throw ConnectionGone() }
         if overlapsARunGoing(original, on: server) { throw Overlaps() }
+        // Restore File Info… writes the same rows: one at a time (§6e).
+        if restoreTasks[runId] != nil { throw Overlaps() }
         let undo = try store.startUndo(of: runId, positions: positions)
         entries[undo.id] = Entry(run: undo)
         resume(runId: undo.id)
@@ -539,7 +637,7 @@ final class MacCommonPhotosRuns {
             }
             refreshFoot()
             if tasks.isEmpty {
-                letSleep()
+                if restoreTasks.isEmpty { letSleep() }
                 let done = onAllPaused
                 onAllPaused = nil
                 done?()

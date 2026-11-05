@@ -530,12 +530,20 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
 - Server biết trước là không giữ được (lượt trước trên connection đó đã bị từ chối) → sheet ghi ngay dưới hàng Save to ·
   Action (màu cam, có dấu ⚠): "This server does not keep file dates: copies show the day they were copied." CSV cột
   `File info` = `kept` / `dates not kept` / `tags not kept`; cửa sổ log cột **File info** = `Kept` / `Dates not kept`
-  (cam) / `Tags not kept` / `Restored` (xanh).
+  (cam) / `Tags not kept` / `—` (lượt không ghi bản nào); hàng Restore File Info… đặt xong cũng ghi `Kept` — dòng phụ trên
+  đầu nói Restore đã làm gì.
 - **Sửa ngày cho ảnh đã gom** (người dùng 2026-11-05): cửa sổ log của lượt Copy đã xong có **Restore File Info…**
   (và chuột phải trên hàng chọn), bật khi còn một hàng Copied chưa `Kept` (lượt trước §6e: mọi hàng), mờ kèm tooltip
   khi không còn hàng nào. Dòng phụ trên đầu nói: "1 copy did not keep its dates. Restore File Info… sets them without
   copying again."; xong thì: "File info restored on 1 copy · 0 skipped. Nothing was copied again." Với từng hàng Copied: bản ở đích còn đúng đường dẫn + cỡ, bản ở folder đầu còn đó →
   đặt thông tin như trên; không đẩy byte, không băm. Thiếu một trong hai → hàng ghi lý do, bỏ qua.
+  Chi tiết (T5, 2026-11-05): giữ khoá của lượt chạy như runner (không chạy cạnh helper, cạnh Undo của lượt đó; Undo,
+  Remove, Discard tắt khi nó chạy); chỉ ghi File info + Reason của hàng **còn Copied**, không xoá cảnh báo sẵn có của
+  hàng (`sidecar not copied`); hàng để nguyên (changed in Shared / không còn bản folder đầu) ghi `Not restored` (cam)
+  và không được mời Restore lại; Stop dừng sau ảnh đang làm ("Stopping after this photo…"), chạy lại làm phần còn lại;
+  server vẫn từ chối thì dòng kết quả nói "The server did not accept the dates of N." Lượt trước §6e (File info `—`) nói
+  "These copies were made before ShotDex kept file dates." **CSV trong Shared là ảnh lúc lượt xong** — Restore không
+  ghi lại nó; cửa sổ log là chỗ xem kết quả mới.
 - File **Already there** không bị đụng, kể cả thông tin của nó.
 
 ### Chung cho Server Upload và Backup

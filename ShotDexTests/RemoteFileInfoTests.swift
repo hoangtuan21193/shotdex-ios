@@ -365,6 +365,132 @@ import Testing
         #expect(ServerFileInfoSupport.keepsDates(from: [.datesNotKept, .kept]) == true)
     }
 
+    // MARK: Restore File Info… (T5)
+
+    /// A Copy run whose copies lost their dates (a server that set none,
+    /// or a run before §6e), on a server that sets them now.
+    private func runThatLostTheDates(count: Int) async throws -> CommonPhotosRunnerTests.Fixture {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: count)
+        for index in 1...count { fixture.nas.infos["A/IMG_\(index).JPG"] = RemoteFileInfo(modified: Self.old.addingTimeInterval(Double(index)), isReadOnly: index == 1) }
+        fixture.nas.keepsDates = false
+        try await fixture.start()
+        try await fixture.runner.run("R1")
+        fixture.nas.keepsDates = true
+        return fixture
+    }
+
+    /// AC-217: two copies take the first folder's dates and flags; the one
+    /// changed in Shared since is said and left; not a byte uploaded or
+    /// hashed.
+    @Test func restoreSetsTheDatesWithoutCopying() async throws {
+        let fixture = try await runThatLostTheDates(count: 3)
+        #expect(try fixture.items().allSatisfy { $0.fileInfo == .datesNotKept })
+        fixture.nas.put("C/IMG_3.JPG", Data(repeating: 7, count: 10))
+        let before = fixture.nas.commands.count
+
+        let result = try await CommonPhotosInfoRestorer(client: fixture.nas, store: fixture.store).run("R1")
+
+        #expect(result == .init(done: 3, total: 3, restored: 2, leftAlone: 1))
+        let after = fixture.nas.commands.dropFirst(before)
+        #expect(!after.contains { $0.hasPrefix("upload ") || $0.hasPrefix("sha256 ") || $0.hasPrefix("download ") })
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_1.JPG") == fixture.nas.infos["A/IMG_1.JPG"])
+        #expect(try await fixture.nas.fileInfo(at: "C/IMG_2.JPG") == fixture.nas.infos["A/IMG_2.JPG"])
+        let rows = try fixture.items()
+        #expect(rows.map(\.status) == [.copied, .copied, .copied])
+        #expect(rows.map(\.fileInfo) == [.kept, .kept, .datesNotKept])
+        #expect(rows[2].failure?.reason == .changedInShared)
+        // Left alone with its reason: not offered again.
+        #expect(CommonPhotosInfoRestorer.candidates(rows, run: try #require(try fixture.store.run(id: "R1"))).isEmpty)
+    }
+
+    /// AC-225: Stop at row 12 of 30 keeps the 12 set and leaves the rest
+    /// untouched; running it again does the rest.
+    @Test func restoreStopsAndContinues() async throws {
+        let fixture = try await runThatLostTheDates(count: 30)
+        let restorer = CommonPhotosInfoRestorer(client: fixture.nas, store: fixture.store)
+        let handle = OSAllocatedUnfairLock<Task<Void, Error>?>(initialState: nil)
+        let started = OSAllocatedUnfairLock(initialState: false)
+        let task = Task {
+            while !started.withLock({ $0 }) { await Task.yield() }
+            try await restorer.run("R1") { progress in
+                if progress.done == 12 { handle.withLock { $0?.cancel() } }
+            }
+        }
+        handle.withLock { $0 = task }
+        started.withLock { $0 = true }
+        await #expect(throws: CancellationError.self) { try await task.value }
+
+        var rows = try fixture.items()
+        #expect(rows.filter { $0.fileInfo == .kept }.count == 12)
+        #expect(rows.filter { $0.fileInfo == .datesNotKept }.count == 18)
+        // What the 12 showed about the server is recorded, Stop or not.
+        #expect(try ServerFileInfoSupport.keepsDates(connectionId: "S1", in: fixture.store.database) == true)
+        // The claim went with the restore: the run can go again.
+        #expect(!CommonPhotosRunner.isActive(runId: "R1", in: fixture.store.database))
+
+        let rest = try await restorer.run("R1")
+        #expect(rest.total == 18 && rest.restored == 18)
+        rows = try fixture.items()
+        #expect(rows.allSatisfy { $0.fileInfo == .kept })
+    }
+
+    /// A Copied row's own warning (sidecar not copied) survives a restore,
+    /// whether the copy is set or left alone.
+    @Test func restoreKeepsTheRowsOwnReason() async throws {
+        let fixture = try await runThatLostTheDates(count: 2)
+        for var item in try fixture.items() {
+            item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
+            try fixture.store.update(item)
+        }
+        fixture.nas.put("C/IMG_2.JPG", Data(repeating: 1, count: 3))
+
+        try await CommonPhotosInfoRestorer(client: fixture.nas, store: fixture.store).run("R1")
+
+        let rows = try fixture.items()
+        #expect(rows.map(\.fileInfo) == [.kept, .datesNotKept])
+        #expect(rows.allSatisfy { $0.failure?.reason == .sidecarNotCopied })
+    }
+
+    /// A row an undo took back while the restore went is not written back
+    /// as Copied: only a Copied row's File info and Reason change.
+    @Test func restoreNeverRewritesAnUndoneRow() async throws {
+        let fixture = try await runThatLostTheDates(count: 1)
+        var item = try #require(try fixture.items().first)
+        item.status = .undone
+        try fixture.store.update(item)
+
+        #expect(try !fixture.store.setRestoredInfo(runId: "R1", position: item.position, fileInfo: .kept, reason: nil))
+        #expect(try fixture.items().first?.status == .undone)
+        #expect(try fixture.items().first?.fileInfo == .datesNotKept)
+    }
+
+    /// Not beside the run itself (or the helper's runner, which holds the
+    /// same claim).
+    @Test func restoreRefusesAClaimedRun() async throws {
+        let fixture = try await runThatLostTheDates(count: 1)
+        #expect(CommonPhotosRunner.claim(runId: "R1", in: fixture.store.database))
+        defer { CommonPhotosRunner.release(runId: "R1", in: fixture.store.database) }
+        await #expect(throws: CommonPhotosInfoRestorer.Refusal.busy) {
+            try await CommonPhotosInfoRestorer(client: fixture.nas, store: fixture.store).run("R1")
+        }
+    }
+
+    /// Nothing to restore on a Move run, an undo, or rows that kept theirs.
+    @Test func restoreCandidatesAreCopiedRowsWithoutInfo() async throws {
+        let fixture = try CommonPhotosRunnerTests.Fixture(count: 1)
+        fixture.nas.infos["A/IMG_1.JPG"] = RemoteFileInfo(modified: Self.old)
+        try await fixture.start()
+        try await fixture.runner.run("R1")
+        let run = try #require(try fixture.store.run(id: "R1"))
+        #expect(CommonPhotosInfoRestorer.candidates(try fixture.items(), run: run).isEmpty)
+        var moveRun = run
+        moveRun.action = .move
+        var lost = try #require(try fixture.items().first)
+        lost.fileInfo = .datesNotKept
+        #expect(CommonPhotosInfoRestorer.candidates([lost], run: moveRun).isEmpty)
+        #expect(CommonPhotosInfoRestorer.candidates([lost], run: run).count == 1)
+    }
+
     // MARK: Files folder (AC-222)
 
     /// AC-222: a copy given the read-only (locked) flag can still be renamed

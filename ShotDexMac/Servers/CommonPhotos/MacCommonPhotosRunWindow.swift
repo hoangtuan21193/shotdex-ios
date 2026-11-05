@@ -96,6 +96,11 @@ final class MacCommonPhotosLogModel {
     var undoneCount: Int { isUndo ? counts.done : counts.undone }
     /// The store's items as last read — the Move wording counts them.
     private(set) var items: [CommonPhotosItem] = []
+    /// Copies Restore File Info… would set (FS-19.08 §6e), counted once per
+    /// read: those that lost their dates, and those copied before dates
+    /// were kept (a run from before §6e).
+    private(set) var restorableLost = 0
+    private(set) var restorableUnknown = 0
     /// §6d: SHA-256 of the photos the user left out of the run's set — a
     /// ready run's rows show them unchecked, and Move leaves them.
     private(set) var leftOut: Set<String> = []
@@ -206,6 +211,9 @@ final class MacCommonPhotosLogModel {
         runUpdatedAt = run.updatedAt
         isUndo = run.isUndo
         self.items = items
+        let restorable = CommonPhotosInfoRestorer.candidates(items, run: run)
+        restorableLost = restorable.count(where: { $0.fileInfo == .datesNotKept })
+        restorableUnknown = restorable.count(where: { $0.fileInfo == nil })
         if rows != self.rows { self.rows = rows }
     }
 
@@ -238,13 +246,16 @@ final class MacCommonPhotosLogModel {
         } else if item.status == .skipped, item.failure?.0 == .alreadyThere {
             status = String(localized: "Skipped (already there)", comment: "Common photos log status: same bytes in the destination")
         }
+        // Restore File Info… left it alone (changed in Shared, no first copy).
+        let notRestored = item.fileInfo != .kept && (item.failure?.reason).map { CommonPhotosInfoRestorer.ownReasons.contains($0) } == true
         return Row(id: item.position, status: item.status, statusText: status, name: name,
                    from: item.sources.map { place($0.path, run: run, name: name) }.joined(separator: " · "),
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
                    shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
-                   fileInfo: run.state == .ready ? "" : CommonPhotosLog.fileInfo(item.fileInfo),
-                   datesLost: item.fileInfo == .datesNotKept,
+                   fileInfo: run.state == .ready ? "" : notRestored ? String(localized: "Not restored", comment: "Common photos log, File info column: Restore File Info left this copy alone (the Reason says why)")
+                       : CommonPhotosLog.fileInfo(item.fileInfo),
+                   datesLost: item.fileInfo == .datesNotKept || notRestored,
                    csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
                    csvReason: CommonPhotosLog.csvReason(item),
                    csvFileInfo: item.fileInfo?.rawValue ?? "",
@@ -278,6 +289,11 @@ private struct MacCommonPhotosRunContent: View {
     /// rows chosen, nil for the whole run.
     @State private var undoing: Set<Int>??
     @State private var undoProblem: String?
+    /// Restore File Info… asked (FS-19.08 §6e): the rows chosen, nil for
+    /// every copy that needs it.
+    @State private var restoring: Set<Int>??
+    /// How many copies the Restore question is about, fixed when it is asked.
+    @State private var restoreCount = 0
     /// Whether Undo is offered, read from the store when the run's state or
     /// its rows change — never per frame.
     @State private var canUndo = false
@@ -286,6 +302,19 @@ private struct MacCommonPhotosRunContent: View {
     private var run: CommonPhotosRun { entry.run }
     private var progress: CommonPhotosRunner.Progress { entry.progress }
     private var destinationName: String { ServerUploadPath.lastComponent(of: run.destination) }
+    private var restore: MacCommonPhotosRuns.Restore? { runs.restores[run.id] }
+    /// The copies Restore File Info… would set (§6e) — the selection's,
+    /// scanned when the menu or the question asks.
+    private func restorable(_ positions: Set<Int>) -> [CommonPhotosItem] {
+        CommonPhotosInfoRestorer.candidates(log.items, run: run, positions: positions)
+    }
+    private var restorableCount: Int { log.restorableLost + log.restorableUnknown }
+
+    private func askRestore(_ positions: Set<Int>?) {
+        restoreCount = positions.map { restorable($0).count } ?? restorableCount
+        restoring = .some(positions)
+    }
+    private var firstFolderName: String { run.folders.first.map(ServerUploadPath.lastComponent(of:)) ?? "" }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -358,8 +387,25 @@ private struct MacCommonPhotosRunContent: View {
             let arguments = ProcessInfo.processInfo.arguments
             if arguments.contains("-ShotDexCommonPhotosAskUndo") { undoing = .some(nil) }
             if arguments.contains("-ShotDexCommonPhotosUndoAfterRun"), canUndo { startUndo(nil) }
+            // `-ShotDexCommonPhotosRestoreAfterRun`: Restore File Info… at once (§6e), for screenshots.
+            if arguments.contains("-ShotDexCommonPhotosRestoreAfterRun"), restore == nil, restorableCount > 0 {
+                runs.restoreFileInfo(runId: run.id)
+            }
         }
         #endif
+        // Rows Restore File Info… sets show as they land, twice a second at most.
+        .onChange(of: restore?.progress.done) { log.runChanged() }
+        .onChange(of: restore?.isRunning) { log.read() }
+        .alert(restoreTitle, isPresented: Binding(get: { restoring != nil }, set: { if !$0 { restoring = nil } })) {
+            Button(String(localized: "Restore", comment: "Common photos: confirm Restore File Info")) {
+                if let chosen = restoring { runs.restoreFileInfo(runId: run.id, positions: chosen) }
+                restoring = nil
+            }
+            Button(String(localized: "Cancel", comment: "Common photos: cancel Restore File Info"), role: .cancel) { restoring = nil }
+        } message: {
+            Text(String(localized: "Each copy in “\(destinationName)” gets the modified date and read-only mark of the same photo in \(firstFolderName), the first folder. Nothing is copied again; a copy changed since is left as it is.",
+                        comment: "Common photos: what Restore File Info does"))
+        }
         .alert(undoTitle, isPresented: Binding(get: { undoing != nil }, set: { if !$0 { undoing = nil } })) {
             Button(run.action == .move ? String(localized: "Undo Move", comment: "Common photos: confirm undoing a Move")
                                        : String(localized: "Undo Copy", comment: "Common photos: confirm undoing a Copy")) {
@@ -442,6 +488,13 @@ private struct MacCommonPhotosRunContent: View {
                      comment: "Common photos: what undoing a Move does")
             : String(localized: "The copies in “\(destinationName)” are removed. The photos in \(folders) stay where they are.",
                      comment: "Common photos: what undoing a Copy does")
+    }
+
+    private var restoreTitle: String {
+        let count = restoreCount
+        return count == 1
+            ? String(localized: "Restore file info for 1 copy?", comment: "Common photos: Restore File Info question")
+            : String(localized: "Restore file info for \(count.formatted()) copies?", comment: "Common photos: Restore File Info question")
     }
 
     private func startUndo(_ chosen: Set<Int>?) {
@@ -557,6 +610,44 @@ private struct MacCommonPhotosRunContent: View {
                 : String(localized: "\(log.counts.failed.formatted()) not undone — select them and choose Undo Selected… to try again",
                          comment: "Common photos window: how to retry rows an undo left")
         }
+        if let restore {
+            if restore.isStopping {
+                return String(localized: "Stopping after this photo…", comment: "Common photos window: Restore File Info stopping")
+            }
+            if restore.isRunning {
+                return String(localized: "Restoring file info · \(restore.progress.done.formatted()) of \(restore.progress.total.formatted())",
+                              comment: "Common photos window: Restore File Info is going")
+            }
+            let progress = restore.progress
+            var parts = [progress.restored == 1
+                ? String(localized: "File info restored on 1 copy", comment: "Common photos window: what Restore File Info did")
+                : String(localized: "File info restored on \(progress.restored.formatted()) copies", comment: "Common photos window: what Restore File Info did")]
+            if progress.leftAlone > 0 {
+                parts.append(String(localized: "\(progress.leftAlone.formatted()) left as they were", comment: "Common photos window: copies Restore File Info did not touch (changed in Shared, or no first copy)"))
+            }
+            var line = parts.joined(separator: " · ") + "."
+            if progress.refused > 0 {
+                line += " " + String(localized: "The server did not accept the dates of \(progress.refused.formatted()).", comment: "Common photos window: Restore File Info on a server that keeps no dates")
+            }
+            if let problem = restore.problem, progress.done == 0, progress.total == 0 { return problem }
+            if let problem = restore.problem {
+                return problem + " " + line + " " + String(localized: "Restore File Info… continues from here.", comment: "Common photos window: after Restore File Info stopped on an error")
+            }
+            return line + " " + (restore.wasStopped
+                ? String(localized: "Stopped — Restore File Info… does the rest.", comment: "Common photos window: Restore File Info was stopped")
+                : String(localized: "Nothing was copied again.", comment: "Common photos window: Restore File Info copies no bytes"))
+        }
+        if entry.isFinished, log.restorableLost > 0 {
+            return log.restorableLost == 1
+                ? String(localized: "1 copy did not keep its dates. Restore File Info… sets them without copying again.",
+                         comment: "Common photos window: one copy lost its dates (FS-19.08 §6e)")
+                : String(localized: "\(log.restorableLost.formatted()) copies did not keep their dates. Restore File Info… sets them without copying again.",
+                         comment: "Common photos window: copies lost their dates (FS-19.08 §6e)")
+        }
+        if entry.isFinished, log.restorableUnknown > 0 {
+            return String(localized: "These copies were made before ShotDex kept file dates. Restore File Info… sets them without copying again.",
+                          comment: "Common photos window: a run from before FS-19.08 §6e")
+        }
         if canUndo, !run.isUndo {
             return run.action == .move
                 ? String(localized: "Undo Move… puts these photos back where they were.", comment: "Common photos window: what Undo does")
@@ -656,6 +747,12 @@ private struct MacCommonPhotosRunContent: View {
                     undoing = .some(positions)
                 }
                 .disabled(!canUndo || undoable(positions).isEmpty)
+                if entry.isFinished, run.action == .copy, !run.isUndo {
+                    Button(String(localized: "Restore File Info…", comment: "Common photos log: restore the chosen rows' dates")) {
+                        askRestore(positions)
+                    }
+                    .disabled(restore?.isRunning == true || restorable(positions).isEmpty)
+                }
             }
         }
         .overlay {
@@ -790,6 +887,24 @@ private struct MacCommonPhotosRunContent: View {
             }
             .font(.callout).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
+            if entry.isFinished, run.action == .copy, !run.isUndo {
+                if restore?.isRunning == true {
+                    Button(restore?.isStopping == true ? String(localized: "Stopping…", comment: "Common photos window: Restore File Info stopping")
+                                                       : String(localized: "Stop", comment: "Common photos window: stop Restore File Info")) {
+                        runs.stopRestore(runId: run.id)
+                    }
+                    .disabled(restore?.isStopping == true)
+                } else {
+                    Button(String(localized: "Restore File Info…", comment: "Common photos window: set the sources' dates on copies that lost them (FS-19.08 §6e)")) {
+                        askRestore(nil)
+                    }
+                    .disabled(restorableCount == 0)
+                    .help(restorableCount == 0
+                          ? String(localized: "Every copy already has its dates.", comment: "Common photos window: Restore File Info is off")
+                          : String(localized: "Sets the dates of the copies in “\(destinationName)” from \(firstFolderName), without copying again.",
+                                   comment: "Common photos window: Restore File Info tooltip"))
+                }
+            }
             if canUndo, !run.isUndo {
                 Button(run.action == .move ? String(localized: "Undo Move…", comment: "Common photos window: take a Move back")
                                            : String(localized: "Undo Copy…", comment: "Common photos window: take a Copy back")) {

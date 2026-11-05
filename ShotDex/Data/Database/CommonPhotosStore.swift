@@ -22,6 +22,21 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// Restore File Info… (FS-19.08 §6e): only the copy's File info and
+    /// Reason, and only while the row is still Copied — an undo that took it
+    /// back meanwhile keeps its own row. False when it no longer was.
+    @discardableResult
+    func setRestoredInfo(runId: String, position: Int, fileInfo: FileInfoOutcome?, reason: String?,
+                         now: Int = Int(Date().timeIntervalSince1970)) throws -> Bool {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                UPDATE common_photo_items SET fileInfo = ?, reason = ?, updatedAt = ?
+                WHERE runId = ? AND position = ? AND status = ?
+                """, arguments: [fileInfo?.rawValue, reason, now, runId, position, CommonPhotosItem.Status.copied.rawValue])
+            return db.changesCount > 0
+        }
+    }
+
     func update(_ item: CommonPhotosItem, now: Int = Int(Date().timeIntervalSince1970)) throws {
         var item = item
         item.updatedAt = now

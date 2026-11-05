@@ -201,13 +201,16 @@ enum MacDemoLibrary {
     /// `-ShotDexCommonPhotosRunSlow` waits 3 s before each upload and move, so
     /// the window can be caught mid-run; `-ShotDexCommonPhotosFailAfter N`
     /// drops the connection at the upload or move after the N-th.
-    static func commonPhotosRunClient(_ client: any RemoteFileClient) -> any RemoteFileClient {
+    static func commonPhotosRunClient(_ client: any RemoteFileClient, forRestore: Bool = false) -> any RemoteFileClient {
         let arguments = ProcessInfo.processInfo.arguments
         let slow = arguments.contains("-ShotDexCommonPhotosRunSlow")
         let failAfter = arguments.firstIndex(of: "-ShotDexCommonPhotosFailAfter")
             .flatMap { $0 + 1 < arguments.count ? Int(arguments[$0 + 1]) : nil }
-        guard slow || failAfter != nil else { return client }
-        return MacDebugRunClient(base: client, delay: slow ? .seconds(3) : nil, failAfter: failAfter)
+        // `-ShotDexCommonPhotosNoDateKeeping`: a server that sets no dates for
+        // a run; `-ShotDexCommonPhotosRestoreRefuses`: nor for Restore File Info… (§6e).
+        let keepsNoDates = arguments.contains(forRestore ? "-ShotDexCommonPhotosRestoreRefuses" : "-ShotDexCommonPhotosNoDateKeeping")
+        guard slow || failAfter != nil || keepsNoDates else { return client }
+        return MacDebugRunClient(base: client, delay: slow ? .seconds(3) : nil, failAfter: failAfter, keepsNoDates: keepsNoDates)
     }
 
     /// `-ShotDexServerLayout list`: the server browser's view mode.
@@ -560,12 +563,14 @@ private final class MacDebugRunClient: RemoteFileClient, @unchecked Sendable {
     let base: any RemoteFileClient
     let delay: Duration?
     let failAfter: Int?
+    let keepsNoDates: Bool
     private let writes = OSAllocatedUnfairLock(initialState: 0)
 
-    init(base: any RemoteFileClient, delay: Duration?, failAfter: Int?) {
+    init(base: any RemoteFileClient, delay: Duration?, failAfter: Int?, keepsNoDates: Bool = false) {
         self.base = base
         self.delay = delay
         self.failAfter = failAfter
+        self.keepsNoDates = keepsNoDates
     }
 
     /// Before each write: wait, and past the cue, lose the connection.
@@ -614,7 +619,8 @@ private final class MacDebugRunClient: RemoteFileClient, @unchecked Sendable {
     func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }
     func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await base.fileInfo(at: path) }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
-        try await base.setFileInfo(info, at: path)
+        if keepsNoDates { return .unsupported }
+        return try await base.setFileInfo(info, at: path)
     }
 }
 #endif
