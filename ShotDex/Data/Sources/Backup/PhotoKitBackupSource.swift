@@ -40,8 +40,12 @@ struct PhotoKitBackupSource: BackupSourceReading {
             try Task.checkCancellation()
             let modified = Int(asset.modificationDate?.timeIntervalSince1970 ?? 0)
             let created = Int(asset.creationDate?.timeIntervalSince1970 ?? 0)
+            // Every file of a Photos asset is dated by when it was taken, else
+            // when Photos last changed it (§6e) — the same date its folder is
+            // named after. Independent of the stamp, which tracks edits.
+            let info = (asset.creationDate ?? asset.modificationDate).map { RemoteFileInfo(modified: $0, created: $0) }
             let files = PhotoKitOriginalExporter.uploadFiles(for: asset).map { file in
-                BackupSourceFile(file: file, sourceStamp: Self.stamp(for: file, created: created, modified: modified))
+                BackupSourceFile(file: file, sourceStamp: Self.stamp(for: file, created: created, modified: modified), info: info)
             }
             guard !files.isEmpty else { continue }
             items.append(BackupSourceItem(

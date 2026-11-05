@@ -9,6 +9,10 @@ struct AssetUploadEntry: Sendable {
     let assetId: String
     let captureDate: Date
     let files: [AssetUploadFile]
+    /// The date the copy on the server gets (FS-19.08 §6e): when it was
+    /// taken, else when Photos last changed it — never "now", which
+    /// `captureDate` falls back to for the folder name.
+    var takenAt: Date?
 }
 
 /// Reads an asset's files out of Photos for the upload (FS-15.02 §2, §4).
@@ -36,7 +40,8 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
             return AssetUploadEntry(
                 assetId: asset.localIdentifier,
                 captureDate: asset.creationDate ?? Date(),
-                files: files
+                files: files,
+                takenAt: asset.creationDate ?? asset.modificationDate
             )
         }
     }

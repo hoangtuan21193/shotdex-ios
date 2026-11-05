@@ -491,6 +491,78 @@ import Testing
         #expect(CommonPhotosInfoRestorer.candidates([lost], run: run).count == 1)
     }
 
+    // MARK: Server Upload and Backup (T6)
+
+    /// AC-219 (Upload) + AC-220: a Photos photo taken 2025-10-12 14:03:27
+    /// lands created and modified then; the folder's listing shows that
+    /// date, so On Server's check of a listing taken after the upload finds
+    /// the copy the same, never re-dated under it.
+    @Test func uploadCarriesTheCaptureDate() async throws {
+        let taken = Date(timeIntervalSince1970: 1_760_277_807)
+        let fixture = UploadFixture(count: 1, bytes: 2_000)
+        var item = fixture.items[0]
+        item.takenAt = taken
+        let client = InMemoryRemoteFileClient()
+        let recorder = UploadRecorder()
+
+        let result = await makeSession(fixture, client: client, recorder: recorder).run([item])
+
+        #expect(result.outcomes == [.uploaded(remotePath: item.remotePath)])
+        #expect(result.fileInfo == [.kept])
+        #expect(try await client.fileInfo(at: item.remotePath) == RemoteFileInfo(modified: taken, created: taken))
+        let entry = try await client.entries(in: ServerUploadPath.parent(of: item.remotePath)).first { $0.name == item.file.filename }
+        #expect(entry?.modified == taken)
+        // What a listing after the upload records, checked against the server as it is now.
+        #expect(ServerCopyVerification.compare(size: 2_000, modifiedAt: Int(taken.timeIntervalSince1970), entry: entry) == .same)
+        // Dated before the rename: the info lands on the part, never on the real name after it.
+        #expect(!client.commands.contains("info \(item.remotePath)"))
+    }
+
+    /// An upload with no capture date sets nothing — the server's clock.
+    @Test func uploadWithoutACaptureDateSetsNothing() async throws {
+        let fixture = UploadFixture(count: 1, bytes: 2_000)
+        let client = InMemoryRemoteFileClient()
+        let result = await makeSession(fixture, client: client, recorder: UploadRecorder()).run(fixture.items)
+        #expect(!client.commands.contains { $0.hasPrefix("info ") })
+        #expect(result.fileInfo.isEmpty)
+    }
+
+    /// An upload to a server that sets no dates says so in its result:
+    /// what the model records for the connection's next sheet (§6e).
+    @Test func uploadToAServerThatKeepsNoDatesSaysSo() async throws {
+        let fixture = UploadFixture(count: 2, bytes: 2_000)
+        let items = fixture.items.map { var item = $0; item.takenAt = Self.old; return item }
+        let client = InMemoryRemoteFileClient()
+        client.keepsDates = false
+        let result = await makeSession(fixture, client: client, recorder: UploadRecorder()).run(items)
+        #expect(result.datesNotKept == 2)
+        #expect(ServerFileInfoSupport.keepsDates(from: result.fileInfo) == false)
+    }
+
+    /// AC-219 (Backup): a Photos asset's files are dated by when it was
+    /// taken; a folder source's file by its own write time; a RAW's JPEG
+    /// twin, whose own time the listing does not have, gets none.
+    @Test @MainActor func backupCarriesTheSourceDates() async throws {
+        let f = try BackupFixture(photos: 1, videos: 0)
+        let taken = Date(timeIntervalSince1970: 1_643_760_000)
+        let info = RemoteFileInfo(modified: taken, created: taken)
+        f.source.replace(f.source.items.map { item in
+            BackupSourceItem(itemKey: item.itemKey, date: item.date, isVideo: item.isVideo, album: item.album,
+                             files: item.files.map { var file = $0; file.info = info; return file })
+        })
+
+        let result = await f.runner().run()
+
+        #expect(result.stop == .finished)
+        let landed = try #require(f.remoteFiles.keys.first)
+        #expect(try await f.client.fileInfo(at: landed) == info)
+        #expect(try ServerFileInfoSupport.keepsDates(connectionId: f.job.connectionId, in: f.database) == true)
+
+        let own = SourceCopyBackupSource.file(path: "2022/IMG_9.CR3", size: 25_000_000, modified: 1_643_760_000)
+        #expect(own.info == RemoteFileInfo(modified: taken))
+        #expect(SourceCopyBackupSource.file(path: "2022/IMG_9.JPG", size: 0, modified: 1_643_760_000).info == nil)
+    }
+
     // MARK: Files folder (AC-222)
 
     /// AC-222: a copy given the read-only (locked) flag can still be renamed

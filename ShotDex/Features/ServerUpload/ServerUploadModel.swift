@@ -202,7 +202,8 @@ final class ServerUploadModel {
                     remotePath: ServerUploadPath.remotePath(
                         folder: folder, captureDate: entry.captureDate, filename: file.filename,
                         usesDateFolders: usesDateFolders
-                    )
+                    ),
+                    takenAt: entry.takenAt
                 )
             }
         }
@@ -258,6 +259,10 @@ final class ServerUploadModel {
         task = Task { [weak self] in
             let result = await session.run(items)
             try? FileManager.default.removeItem(at: workDirectory)
+            // Whether this server keeps dates, as Common Photos records it (§6e).
+            if let keeps = ServerFileInfoSupport.keepsDates(from: result.fileInfo) {
+                try? ServerFileInfoSupport.record(connectionId: server.id, keepsDates: keeps, in: uploads.database)
+            }
             self?.finish(result, items: items)
         }
     }

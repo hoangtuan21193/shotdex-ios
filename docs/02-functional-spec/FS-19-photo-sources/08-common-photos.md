@@ -554,7 +554,16 @@ Người dùng 2026-11-05: sửa một lần ở client server (`RemoteFileClien
   (Backup) đặt thông tin cho file đẩy lên theo cùng bảng trên, cùng thời điểm (trước đổi tên part), cùng cách báo.
 - File từ **folder/ổ/server** (nguồn FS-19): thông tin của chính file nguồn.
 - File từ **Photos** (không có file nguồn): ngày tạo = ngày sửa = **ngày chụp** (người dùng 2026-11-05) — Finder sắp
-  theo ngày sửa ra đúng thứ tự chụp. Không có ngày chụp → ngày tạo asset.
+  theo ngày sửa ra đúng thứ tự chụp; cả bản sửa (FullSizeRender), RAW+JPEG, video của Live Photo mang cùng ngày đó.
+  Không có ngày chụp → ngày Photos sửa asset lần cuối (cùng ngày folder được đặt tên theo; PhotoKit không có ngày "tạo
+  asset" nào khác) — không bao giờ "bây giờ".
+- File từ folder/ổ (FS-19): ngày sửa mà lần liệt kê nguồn thấy; **không có cờ** (index không lưu cờ của file nguồn). Ảnh
+  JPEG đi kèm RAW (`pairedPath`) không có ngày riêng trong index → không đặt (giờ server).
+- Ngày đặt **trước** khi đổi tên part, nên lần liệt kê đầu tiên đã thấy ngày chụp: On Server (`copy_files.modifiedAt`, do
+  liệt kê ghi) không bao giờ thấy bản đã upload bị đổi ngày sau lưng nó (AC-220).
+- Kết quả: Upload và Backup ghi `server_file_info_support` của connection như Common Photos (sheet Common Photos cảnh
+  báo theo nó); Upload trả số bản `dates not kept` trong kết quả. **Chưa** hiện con số đó trên màn Upload/Backup — việc
+  sau (cần board iPhone/Mac). Ghi đè ảnh khi sửa trên server (`ServerEditWriter`) không đi qua đây — ngoài §6e.
 - File đã đẩy trước đây không được tự sửa; lệnh sửa kiểu Restore File Info… cho Upload/Backup không thuộc §6e.
 
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)

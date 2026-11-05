@@ -5,6 +5,13 @@ struct ServerUploadItem: Hashable, Sendable {
     let assetId: String
     let file: AssetUploadFile
     let remotePath: String
+    /// When the photo was taken, nil when Photos does not know: the copy on
+    /// the server is dated so (FS-19.08 §6e) — created and modified both, so
+    /// Finder sorts the server folder in shooting order.
+    var takenAt: Date?
+
+    /// The dates the copy gets; none without a capture date.
+    var fileInfo: RemoteFileInfo? { takenAt.map { RemoteFileInfo(modified: $0, created: $0) } }
 }
 
 /// Writes one of an asset's files into a local directory — from Photos, and
@@ -76,6 +83,11 @@ struct ServerUploadResult: Equatable, Sendable {
 
     var outcomes: [ServerUploadOutcome]
     var stopReason: StopReason?
+    /// What became of each uploaded copy's dates (FS-19.08 §6e) — how the
+    /// connection's "keeps dates" verdict is written after the batch.
+    var fileInfo: [FileInfoOutcome] = []
+
+    var datesNotKept: Int { fileInfo.count(where: { $0 == .datesNotKept }) }
 }
 
 /// Runs one batch against one server, one file at a time (FS-15.02 §4):
@@ -107,6 +119,7 @@ actor ServerUploadSession {
 
     private var stickyDecision: ServerUploadConflictDecision?
     private var bytesDone: Int64 = 0
+    private var fileInfoOutcomes: [FileInfoOutcome] = []
     private var bytesTotal: Int64 = 0
 
     init(
@@ -141,6 +154,7 @@ actor ServerUploadSession {
         bytesDone = 0
         bytesTotal = items.reduce(0) { $0 + 2 * max(0, $1.file.estimatedBytes) }
         stickyDecision = nil
+        fileInfoOutcomes = []
         try? FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
 
         do {
@@ -178,7 +192,7 @@ actor ServerUploadSession {
         }
 
         await Self.detached { await self.client.disconnect() }
-        return ServerUploadResult(outcomes: outcomes, stopReason: stopReason)
+        return ServerUploadResult(outcomes: outcomes, stopReason: stopReason, fileInfo: fileInfoOutcomes)
     }
 
     // MARK: - One file
@@ -254,7 +268,12 @@ actor ServerUploadSession {
                 await writer.discardPart(for: destination)
                 return .failed(String(localized: "The copy on the server didn't match the original.", comment: "Upload to Server: checksum read back from the server differs"))
             }
-            try await writer.moveIntoPlace(destination, replacing: replacesExisting)
+            // Dated before the rename (§6e), so the first listing of the
+            // folder already sees the capture date and On Server never finds
+            // the copy re-dated under it.
+            if let outcome = try await writer.moveIntoPlace(destination, replacing: replacesExisting, info: item.fileInfo) {
+                fileInfoOutcomes.append(outcome)
+            }
         } catch {
             await writer.discardPart(for: destination)
             throw error

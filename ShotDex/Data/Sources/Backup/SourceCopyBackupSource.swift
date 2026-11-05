@@ -99,13 +99,17 @@ struct SourceCopyBackupSource: BackupSourceReading {
     }
 
     /// The key carries the path so the exporter can find the file again.
-    private static func file(path: String, size: Int64, modified: Int) -> BackupSourceFile {
+    static func file(path: String, size: Int64, modified: Int) -> BackupSourceFile {
         let name = (path as NSString).lastPathComponent
         let file = AssetUploadFile(
             key: "file:\(path)", filename: name,
             isRAW: PairingRule.isRaw(name), role: .original, estimatedBytes: size
         )
-        return BackupSourceFile(file: file, sourceStamp: "\(size):\(modified)")
+        // Its own write time, as the source's listing saw it (§6e); none
+        // known, none set — a RAW's JPEG twin (size 0 here) has only the
+        // RAW's, which is not its own.
+        let info = modified > 0 && size > 0 ? RemoteFileInfo(modified: Date(timeIntervalSince1970: TimeInterval(modified))) : nil
+        return BackupSourceFile(file: file, sourceStamp: "\(size):\(modified)", info: info)
     }
 }
 
