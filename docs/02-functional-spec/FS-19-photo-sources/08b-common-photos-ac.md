@@ -1,6 +1,6 @@
 # FS-19.08b — Gom ảnh chung: tiêu chí nghiệm thu
 
-`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…191, AC-193…219 · cập nhật 2026-11-04 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c; AC-174…191: xem kết quả Scan rồi mới quyết + chạy nhanh hơn, §6d; AC-193…219: folder theo ngày, Organize, giữ thông tin file, §6e — 2026-11-05)
+`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…191, AC-193…226 · cập nhật 2026-11-05 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c; AC-174…191: xem kết quả Scan rồi mới quyết + chạy nhanh hơn, §6d; AC-193…219: folder theo ngày, Organize, giữ thông tin file, §6e — 2026-11-05)
 
 Dữ liệu thử: server cục bộ (impacket smbserver + WebDAV trên Mac, memory `server-upload-fs15`), ảnh phong cảnh không
 có mặt người. Test domain chạy trên client giả của `ShotDexTests/BackupFakes.swift` và GRDB trong bộ nhớ.
@@ -152,3 +152,17 @@ Cùng dữ liệu thử; client giả đếm từng lệnh (`entries`, `readRang
 | AC-217 | lượt Copy cũ (trước §6e) 3 hàng Copied mang giờ chạy; 1 hàng bản ở Shared đã bị đổi cỡ | cửa sổ log › **Restore File Info…** | 2 file nhận ngày/cờ của bản folder đầu; 0 lệnh `upload`/`sha256`; hàng thứ ba ghi "changed in Shared", không đụng | ⚠️ chưa có |
 | AC-218 | Shared có `IMG_3.JPG` Already there (ngày 2019) | Copy | `IMG_3.JPG` không bị đặt lại gì, ngày vẫn 2019 | ⚠️ chưa có |
 | AC-219 | Server Upload (FS-15) một ảnh Photos chụp 2025-10-12 14:03:27; Backup (FS-22) một file nguồn folder ngày sửa 2022-02-02 | đẩy lên SMB ảo | ảnh Upload: ngày tạo = ngày sửa = 2025-10-12 14:03:27; file Backup mang 2022-02-02 | ⚠️ chưa có |
+
+## Thêm sau review T1 (2026-11-05)
+
+Challenger + review giao thức sau spike T1; ngữ cảnh ở plan §7.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-220 | Server Upload một ảnh Photos chụp 2025-10-12 lên SMB ảo; On Server đã ghi bản đó | kiểm On Server (FS-19.07) sau khi file mang ngày chụp | bản trên server vẫn **same**, không `changed` — mọi chỗ ghi `modifiedAt` của bản trên server ghi ngày **sau** khi đặt thông tin | ⚠️ chưa có |
+| AC-221 | bộ đã có danh sách folder đã lưu (trong 24 giờ); một ảnh ở A bị ghi đè tại chỗ cùng tên, folder không đổi giờ sửa | Scan với Action **Move** | mọi folder được liệt kê (0 mục từ danh sách đã lưu); ảnh bị ghi đè không thành Same theo SHA cũ | ⚠️ chưa có |
+| AC-222 | lượt Copy đã đặt cờ chỉ‑đọc cho `Shared/2025/03/15/IMG_5.JPG` (nguồn chỉ‑đọc) | **Undo Copy…** | file được gỡ cờ rồi xoá; Undone, không `Not undone`; part hỏng của một ảnh chỉ‑đọc cũng dọn được | ⚠️ chưa có |
+| AC-223 | 200 ảnh 5 MB, SMB ảo và WebDAV ảo, Copy | chạy với giữ thông tin và với client không hỗ trợ (đối chứng) | thời gian giữ thông tin ≤ 1,25 × đối chứng; số lệnh thêm mỗi ảnh ≤ 3 (đặt thông tin, đặt cờ nếu chỉ‑đọc, kiểm) | ⚠️ chưa có |
+| AC-224 | Move, server từ chối đổi chỗ **và** không giữ được ngày (client giả) | Move | ảnh vẫn Moved (người dùng 2026-11-05); log `dates not kept`; ngày sửa/ngày tạo/cờ của mọi bản bị xoá đã nằm trong hàng log trước lệnh xoá; Undo Move trả đúng ngày đó | ⚠️ chưa có |
+| AC-225 | Restore File Info… trên lượt 300 hàng | bấm **Stop** ở hàng 120 | dừng sau hàng đang làm; 120 hàng đã đặt giữ nguyên, phần còn lại không đụng; dòng phụ ghi số đã làm; chạy lại làm tiếp phần còn lại | ⚠️ chưa có |
+| AC-226 | Same as Source; `Tuấn/2025/03/15/X.CR3` + `Tuấn/2025/03/16/X.JPG` (cùng tên gốc); folder nguồn `Trip. ` (chấm + cách cuối) | Copy | `X.CR3` → `Shared/2025/03/15/`, `X.JPG` → `Shared/2025/03/16/`; ảnh trong `Trip. ` vào folder tên đã sửa như Backup, không lỗi | ⚠️ chưa có |

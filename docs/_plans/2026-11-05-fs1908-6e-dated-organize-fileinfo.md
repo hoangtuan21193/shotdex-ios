@@ -2,7 +2,7 @@
 
 | Trường | Giá trị |
 |---|---|
-| Đặc tả | [`FS-19.08 §6e`](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…219 ở [`08b`](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) · ghi chú ở FS-15.02, FS-22.01 §5 |
+| Đặc tả | [`FS-19.08 §6e`](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-193…226 ở [`08b`](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) · ghi chú ở FS-15.02, FS-22.01 §5 |
 | Intent | [dated-folders-scan](../_intents/2026-11-05-common-photos-dated-folders-scan.md) · [destination-layout](../_intents/2026-11-05-common-photos-destination-layout.md) · [keep-file-dates](../_intents/2026-11-05-common-photos-keep-file-dates.md) |
 | Commit spec | `9fbba089` (intent `1c6ace09`) |
 | Ngày | 2026-11-05 |
@@ -132,15 +132,16 @@ file làm trước: mức độ cao nhất và đổi đường ghi chung mà Or
 |---|---|---|---|
 | T0 | Board: `MAC_CommonPhotos` (ô Quick, dòng Organize + câu "already gathered", câu "does not keep file dates", hàng kế hoạch đường dẫn đủ + nhãn Quick), `MAC_BackupOrganize` (Same as Source khi mở từ Common Photos), `MAC_CommonPhotosRun` (cột Check, File info, Restore File Info…). Đọc canvas trước khi sửa | — | `Tools/design-board render` sáng/tối |
 | T1 | Spike: SMB luồng phụ (impacket + parse `FileStreamInformation`), WebDAV PROPPATCH trên wsgidav. Ghi kết quả vào §6e | (AC-211 phần tag, AC-214) | test probe, xoá sau khi ghi số |
-| T2 | `RemoteFileInfo` + hai lệnh trên protocol, SMB/WebDAV/Files, SFTP báo `dates not kept` + quyền lúc `openFile` (Q1), forwarders, fake ghi lại lệnh đặt; `VerifiedRemoteWrite` đặt + kiểm | AC-211, AC-215, AC-218 | `CommonPhotosSMBTests.copyKeepsFileInfo` (impacket), `VerifiedRemoteWriteTests.infoDriftIsReported`, `CommonPhotosRunnerTests.alreadyThereKeepsItsInfo` |
-| T3 | Runner Copy/Move dùng thông tin bản folder đầu; sidecar; `server_file_info_support`; cột `File info` log/CSV; câu dưới Action | AC-212, AC-213, AC-214 | `CommonPhotosRunnerTests.firstFolderInfoWins`, `moveFallbackKeepsInfo`, `refusedDatesAreRemembered`; `CommonPhotosWebDAVTests` |
+| T2 | `RemoteFileInfo` + hai lệnh trên protocol (**không** mặc định — compiler bắt mọi conformer), SMB (ngày + cờ, thứ tự §6e, READONLY sau đổi tên, gỡ cờ trước xoá)/WebDAV/Files, SFTP báo `dates not kept` + quyền lúc `openFile` (Q1), forwarders, fake ghi lại lệnh đặt; `VerifiedRemoteWrite` đặt + kiểm (một lệnh hỏi một file, ±2 s giây chẵn); **một migration** cho mọi bảng/cột §6e; chạy `swift-concurrency` sau task | AC-211 (ngày, cờ), AC-215, AC-218, AC-222, AC-223 | `CommonPhotosSMBTests.copyKeepsFileInfo` (impacket), `VerifiedRemoteWriteTests.infoDriftIsReported`, `CommonPhotosRunnerTests.alreadyThereKeepsItsInfo` |
+| T3 | Runner Copy/Move dùng thông tin bản folder đầu; sidecar; Move lùi về chép vẫn Move khi không giữ ngày, lưu thông tin bản bị xoá **trước** lệnh xoá; `server_file_info_support` (cập nhật mỗi lượt); cột `File info` log/CSV; câu dưới Action | AC-212, AC-213, AC-214, AC-224 | `CommonPhotosRunnerTests.firstFolderInfoWins`, `moveFallbackKeepsInfo`, `refusedDatesAreRemembered`; `CommonPhotosWebDAVTests` |
 | T4 | Undo Move trả thông tin chính bản đã xoá (`Source.created/attributes`) | AC-216 | `CommonPhotosUndoTests.undoMoveRestoresInfo` |
-| T5 | Restore File Info… (Domain + cửa sổ log + chuột phải) | AC-217 | `CommonPhotosInfoRestorerTests`; ảnh Mac sáng/tối |
-| T6 | Server Upload + Backup truyền `RemoteFileInfo` (Photos: ngày chụp làm ngày tạo = ngày sửa) | AC-219 | `ServerUploadSessionTests.uploadCarriesCaptureDate`, `BackupRunnerTests.folderSourceKeepsDate` |
+| T5 | Restore File Info… (Domain + cửa sổ log + chuột phải, có Stop và làm tiếp) | AC-217, AC-225 | `CommonPhotosInfoRestorerTests`; ảnh Mac sáng/tối |
+| T6 | Server Upload + Backup truyền `RemoteFileInfo` (Photos: ngày chụp làm ngày tạo = ngày sửa); mọi chỗ ghi `modifiedAt` bản trên server (On Server, lịch sử upload) ghi ngày **sau** khi đặt | AC-219, AC-220 | `ServerUploadSessionTests.uploadCarriesCaptureDate`, `BackupRunnerTests.folderSourceKeepsDate` |
 | T7 | Quick Check: Verifier, ô sheet, reset khi sang Move, nhãn Quick, cột Check, bỏ bản không băm khỏi bảng SHA | AC-193…197 | `CommonPhotosQuickCheckTests` (5 test, đếm `rangeReadPaths`/`sha256Paths`/`downloadCount`); ảnh sheet Copy/Move |
-| T8 | Cache danh sách folder (bảng + luật + `CommonPhotosTreeListing`), fake có giờ sửa folder | AC-198…200 | `CommonPhotosListingCacheTests` (đếm `listingCount`) |
-| T9 | Organize Domain: `Levels.sameAsSource`, `sourceFolder`, `CommonPhotosOrganizeDate`, đích theo folder con + Already there theo đường đủ | AC-204…207 | `CommonPhotosOrganizeTests`, `BackupPathPlannerTests` thêm Same as Source |
+| T8 | Cache danh sách folder (bảng + luật + `CommonPhotosTreeListing`), Move không dùng cache, fake có giờ sửa folder | AC-198…200, AC-221 | `CommonPhotosListingCacheTests` (đếm `listingCount`) |
+| T9 | Organize Domain: `Levels.sameAsSource`, `sourceFolder` (tên sửa như Backup), `CommonPhotosOrganizeDate` (EXIF lấy từ mẫu đầu đã đọc), đích theo folder con + Already there theo đường đủ, chỉ liệt kê folder đích của kế hoạch | AC-204…207, AC-226 | `CommonPhotosOrganizeTests`, `BackupPathPlannerTests` thêm Same as Source |
 | T10 | Organize lưu theo bộ + mặc định + trang Organize trong sheet + câu đã gom + tạo/ghi folder con + Undo xoá folder rỗng + tự gom | AC-202, 203, 208, 209, 210 | `CommonPhotosOrganizeTests`, `CommonPhotosUndoTests.undoRemovesEmptyFolders`, `CommonPhotosGatherTests.gatherUsesOrganize`; ảnh Mac |
+| T10b | Luồng phụ SMB (tag Finder, Finder info): liệt kê + chép ≤ 64 KB, tên luồng đúng như server trả, nhớ "không có luồng" theo connection | AC-211 (tag) | `SMBStreamInfoTests` (parse buffer), runner với fake có luồng; NAS ở T11 |
 | T11 | `/verify`: e2e SMB + WebDAV, ảnh Mac sáng/tối so board, đo NAS (chỉ Scan) | AC-201 + tất cả | — |
 
 ## 6. Rủi ro và đánh đổi
@@ -157,9 +158,26 @@ file làm trước: mức độ cao nhất và đổi đường ghi chung mà Or
 | Concurrency: `WatchedClient`, runner là struct gọi async; bảng support ghi từ Upload/Backup/Common Photos cùng lúc | thấp | ghi qua `AppDatabase` writer; agent `swift-concurrency` ở Deploy |
 | Tag/ADS không kiểm được cục bộ | cao | T1; không được thì `tags not kept` (spec cho) |
 
-## 7. Phản biện
+## 7. Phản biện (T1, 2026-11-05: `challenger` + review giao thức SMB/WebDAV)
 
-Chưa chạy `challenger` — chạy sau khi duyệt Q1, trước T2.
+| Phản đối | Trả lời / thay đổi |
+|---|---|
+| Làm Quick Check + cache (T7, T8) trước, giữ thông tin sau | **Giữ thứ tự đã duyệt.** Mức độ cao nhất (intent keep-file-dates) là mất ngày; T7/T8 độc lập nên đổi thứ tự không giảm rủi ro |
+| Tách T6 (Upload/Backup) thành intent riêng | **Không** — người dùng chốt gộp (intent keep-file-dates Q3). T6 vẫn là một commit riêng, lùi được một mình |
+| Đặt ngày khi upload làm On Server thấy `changed` | **Nhận** — AC-220, T6 |
+| Move lùi về chép + không giữ ngày làm mất ngày gốc | **Hỏi người dùng → "Vẫn Move"** (2026-11-05). Thêm: lưu thông tin bản bị xoá trước lệnh xoá — AC-224, T3 |
+| Kiểm ±2 s bằng liệt kê folder mỗi ảnh quá tốn | **Nhận một phần** — kiểm bằng một lệnh hỏi đúng file (SMB `queryInfo`, WebDAV `PROPFIND` Depth 0), không liệt kê folder; ngân sách AC-223; so theo giây chẵn (FAT) |
+| Mặc định no-op trên protocol lặp lỗi `copyOnServer` | **Nhận** — không có mặc định; compiler bắt mọi conformer |
+| ADS khó chứng minh, nhiều rủi ro | **Nhận** — tách T10b sau ngày/cờ; nhớ "không có luồng" theo connection; ≤ 64 KB; NAS ở T11 |
+| Bảng mới: `common_photo_set_settings`, `common_photo_created_folders` thừa; `server_file_info_support` cũ dần | **Nhận** — Organize + Quick thành cột trên hàng bộ (`common_photo_watches`, khớp §8 "cột trong Bộ gom"); folder đã tạo = cột JSON trên hàng run; bảng support cập nhật mỗi lượt chạy; **một migration** ở T2 |
+| Move tin danh sách đã lưu → SHA cũ | **Nhận** — Move luôn liệt kê đủ, AC-221 |
+| Liệt kê cả cây Shared mỗi Scan | **Nhận** — chỉ folder đích của kế hoạch; ảnh đã gom theo log |
+| Same as Source: RAW+JPEG khác ngày, tên folder cấm | **Nhận** — mỗi ảnh theo bản của nó, tên sửa như Backup, AC-226 |
+| EXIF đọc riêng 25 phút trong khi mẫu đầu đã đọc | **Nhận** — EXIF lấy từ mẫu đầu, §6e |
+| Quick bỏ cả mẫu khi cùng mtime | **Không** — ngoài điều người dùng chọn |
+| Chưa có ngân sách ghi, concurrency để muộn | **Nhận** — AC-223; `swift-concurrency` sau T2; test dừng giữa chừng để lại part, không để file tên thật thiếu thông tin |
+| Restore File Info… không có tiến độ/dừng | **Nhận** — AC-225 |
+| Giao thức: READONLY trước đổi tên làm Undo/dọn part hỏng; `FileAttributes` = 0 không xoá cờ; ghi luồng đổi ngày; tên luồng chứa `:`; luồng ≤ 64 KB; bộ đệm 1124 B; 200 của `PROPPATCH` không có nghĩa là giữ | **Nhận hết** — §6e "Thứ tự trên SMB", "Giá trị gửi", "Luồng phụ", "WebDAV"; AC-222 |
 
 ## 8. Cách chứng minh là xong
 

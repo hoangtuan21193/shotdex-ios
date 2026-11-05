@@ -28,12 +28,38 @@ loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
    trong đó mà nó còn bẩn → làm phần khác của task, ghi lại, quay lại sau.
 4. Hỏi người dùng bằng AskUserQuestion có lựa chọn. Trước T2 chạy `challenger` lên plan. Hết task thì dừng loop.
 
+## Server test
+
+- SMB: impacket `127.0.0.1:4450` (cách bật ở `FS1908_LOOP.md`).
+- WebDAV từ chối ngày: `cd build && nohup smb-venv/bin/wsgidav --config wsgidav.yaml > dav-server.log 2>&1 &` (cổng
+  8096, root `dav-share`, `tester` / `secret`; `pip install wsgidav cheroot` vào `smb-venv` nếu thiếu).
+- WebDAV nhận ngày: như trên với `wsgidav-dates.yaml` (cổng 8097, thêm `mutable_live_props: ["{DAV:}getlastmodified"]`
+  và `hotfixes: {emulate_win32_lastmod: true}`). Hai file yaml nằm trong `build/` (không vào git); `wsgidav.yaml`:
+
+```yaml
+host: 127.0.0.1
+port: 8096
+provider_mapping:
+  "/": "dav-share"
+http_authenticator:
+  domain_controller: null
+  accept_basic: true
+  accept_digest: false
+  default_to_digest: false
+simple_dc:
+  user_mapping:
+    "*":
+      "tester":
+        password: "secret"
+verbose: 1
+```
+
 ## Task
 
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
 | T0 | xong | (commit này) | Canvas v127. `MAC_CommonPhotos`: hàng Organize dưới Save to (nút "Same as Source · videos together…" + "e.g. 2025/10/12/DSC04388.ARW"), câu "Changing this affects new photos only…" chỉ khi Organize khác lượt trước (tweak `organizeChanged`), ô **Quick check** một dòng + tooltip nói cái giá, câu cam "does not keep file dates" ngay dưới hàng Save to · Action, hàng kế hoạch ghi đích đủ (bỏ tiền tố Shared/) + nhãn Quick, "Same 282 · 214 quick", trạng thái mới `readingDates`, `quickThenMove` (kết quả bị bỏ, nút Scan). Sheet 640×640: **MAC_STYLE thêm ngoại lệ** cho sheet có danh sách kết quả (560 chỉ còn 1–2 hàng — cả hai review chỉ ra). `MAC_BackupOrganize`: tweak `from=commonPhotos` (Same as Source, câu nói folder đầu, không Folder Names/popover, nền trình duyệt NAS Home). `MAC_CommonPhotosRun`: rộng 1040, cột Check (Quick/Full) + File info (Kept/Dates not kept/Restored), Restore File Info… (bật khi còn hàng chưa Kept, trạng thái `restored`), tên CSV vào tooltip. **Không vẽ menu Levels mở** (luật người dùng: không board menu mở) — review design đề nghị, bỏ qua có lý do. `Tools/design-board render --props` để render từng tweak. §6e + AC-193/208/214 sửa chữ theo review UX. Code (sheet hiện 560) đổi ở T7/T10. Ảnh `build/design/shots/6E-T0/` |
-| T1 | chưa | | spike ADS SMB + WebDAV PROPPATCH |
+| T1 | xong | (commit này) | Spike, không code app. SMB (impacket): `SET_INFO` chỉ đặt mtime khi LastWriteTime **và** ChangeTime ≠ 0 (app gửi ChangeTime = ngày sửa); ngày tạo, cờ, luồng phụ không có trên impacket → NAS ở T11. WebDAV: wsgidav 8096 từ chối (207 + 403 từng thuộc tính, `X-OC-Mtime` bị bỏ qua), 8097 nhận (`mutable_live_props` + `emulate_win32_lastmod`). Review 2: `challenger` (12 phản biện) + review giao thức (12 mục) — cách xử lý ở plan §7; thêm AC-220…226, task T10b (luồng phụ tách riêng); hỏi người dùng Move + không giữ ngày → "Vẫn Move". Không có màn nào đổi → không chụp ảnh (spike + tài liệu) |
 | T2 | chưa | | AC-211, 215, 218 |
 | T3 | chưa | | AC-212, 213, 214 |
 | T4 | chưa | | AC-216 |
@@ -43,4 +69,5 @@ loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi làm.
 | T8 | chưa | | AC-198…200 |
 | T9 | chưa | | AC-204…207 |
 | T10 | chưa | | AC-202, 203, 208, 209, 210 |
+| T10b | chưa | | luồng phụ SMB (tag Finder), AC-211 phần tag |
 | T11 | chưa | | `/verify`, AC-201 đo NAS |

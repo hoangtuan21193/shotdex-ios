@@ -410,7 +410,7 @@ tháng/năm thì không (share Windows NTFS).
   
   thì dùng danh sách đã lưu, không gửi lệnh liệt kê. Folder ngày trong `Năm/Tháng/Ngày` là đúng loại này: Tuan/Hue từ
   ~2.540 lệnh còn ~200 + số ngày đổi mỗi bên, ~9 phút → dưới 1 phút.
-- Không dùng danh sách đã lưu khi: server không trả giờ sửa của folder (một số WebDAV), **Scan Everything**, hay lần
+- Không dùng danh sách đã lưu khi: Action là **Move** (Move luôn liệt kê đủ, review T1), server không trả giờ sửa của folder (một số WebDAV), **Scan Everything**, hay lần
   liệt kê đầy đủ gần nhất của bộ đã quá **24 giờ** (mặc định, đổi được ở `/plan` nếu đo ra lý do). Lý do: NTFS không đổi giờ sửa folder
   khi một file bên trong bị ghi đè tại chỗ cùng tên.
 - Danh sách đã lưu là dữ liệu dẫn xuất; xoá khi xoá bộ hay connection.
@@ -426,21 +426,25 @@ Tuan/Hue. Băm song song — vẫn giữ một lệnh (§6d mục 3); đo lại 
   `BackupPathPlanner`. Không làm cách xếp thứ hai.
 - Levels: mọi mức của Backup trừ **Album** (server không có album), thêm **Same as Source** (đầu danh sách): ảnh nằm ở
   `<folder chung>/<folder con của bản ở folder đầu>/` — `Tuấn/2025/03/15/X.ARW` → `Shared/2025/03/15/X.ARW`. Folder đầu
-  có nhiều bản → bản đầu theo thứ tự đường dẫn.
+  có nhiều bản → bản đầu theo thứ tự đường dẫn. Mỗi ảnh theo bản của chính nó: cặp RAW+JPEG nằm hai ngày khác nhau ở
+  folder đầu thì vào hai folder khác nhau; `.xmp` đi theo ảnh của nó. Tên folder con không hợp lệ trên server (dấu chấm
+  hay khoảng trắng cuối, ký tự cấm) được sửa như tên folder ngày của Backup (`BackupDateName.safeFolderName`); trùng
+  folder khác hoa thường đã có thì dùng folder đã có.
 - Videos, RAW Files (Together · Apart …), File Names (Original · Date and Time · Date and Original), Custom ngày: như
   Backup. Same as Source chỉ có Videos/RAW **Together · Apart at the Top** (như No Folders).
 - **Ngày dùng để xếp** (Levels theo ngày, tên Date and Time):
   - ảnh: ngày chụp từ index (folder là nguồn) → EXIF đọc từ 64 KB đầu (§5 bước 3, đã có thì không đọc lại) → ngày theo
     tên folder nguồn → ngày sửa file trên server. **Chốt (người dùng 2026-11-05): EXIF trước** — chỉ đọc khi Organize
-    dùng ngày, cho ảnh Same chưa có ngày; ~113 ms/ảnh (Tuan/Hue ~13.000 ảnh ≈ 25 phút thêm vào Scan); tiến độ Scan đếm
-    bước này ("Reading dates 120 of 13,000").
+    dùng ngày, cho ảnh Same chưa có ngày. Ảnh đã qua bước đọc 3 mẫu (§5 bước 4) lấy EXIF ngay từ mẫu đầu đã đọc, không
+    đọc thêm; chỉ ảnh không qua bước đó (SHA đã biết) mới đọc riêng ~113 ms/ảnh (trần ước Tuan/Hue ~25 phút); tiến độ
+    Scan đếm bước này ("Reading dates 120 of 13,000").
   - video: tên folder nguồn nếu là ngày (`2025/03/15`, `2025-03-15`, `20250315`, `2025/03` → ngày 1), không thì ngày sửa
     file trên server (người dùng 2026-11-05). Không tải video để lấy ngày.
 - **Mặc định**: bộ mới **Same as Source** (người dùng 2026-11-05); bộ đã từng chạy giữ **No Folders** (đúng như nó đã
   chạy) cho tới khi người dùng đổi.
 - Kế hoạch (§6d) ghi đường dẫn đủ: `→ Shared/2025/03/15/X.ARW`. Already there và tên trống (` (2)`) xét **trong folder
   đích của ảnh**, không ở gốc folder chung.
-- Scan liệt kê folder chung **cả cây** (chỉ lệnh liệt kê; dùng danh sách đã lưu như trên).
+- Scan liệt kê trong folder chung **chỉ các folder đích của ảnh trong kế hoạch** (và gốc), dùng danh sách đã lưu như trên; không liệt kê cả cây.
 - Ảnh đã gom ở lượt trước (§6c) xét theo **đường dẫn đích đã ghi trong log**, không theo cách xếp hiện tại: đổi
   Organize sau khi đã gom thì ảnh cũ **ở nguyên chỗ**, không bị chép lại; chỉ ảnh mới theo cách mới (người dùng
   2026-11-05). Khi bộ đã có lượt và Organize khác cách của lượt trước, sheet ghi dưới Organize: "Changing this affects new
@@ -460,21 +464,61 @@ sửa, ngày tạo, cờ chỉ‑đọc và tag.
 
   | Thông tin | SMB | SFTP | WebDAV |
   |---|---|---|---|
-  | Ngày sửa | ✅ `SET_INFO` FileBasicInformation | ❌ `dates not kept` (Citadel không có `setstat` public; người dùng 2026-11-05) | thử `PROPPATCH` / `X-OC-Mtime` |
-  | Ngày tạo | ✅ cùng lệnh | — (giao thức không có) | thử `PROPPATCH` `Win32CreationTime` |
+  | Ngày sửa | ✅ `SET_INFO` FileBasicInformation (LastWriteTime **và** ChangeTime = ngày sửa nguồn) | ❌ `dates not kept` (Citadel không có `setstat` public; người dùng 2026-11-05) | `X-OC-Mtime` khi `PUT`, rồi `PROPPATCH` |
+  | Ngày tạo | ✅ cùng lệnh | — (giao thức không có) | `PROPPATCH` `Win32CreationTime` (server nào nhận) |
   | Cờ chỉ‑đọc, ẩn, archive | ✅ cùng lệnh | quyền POSIX, đặt lúc `openFile` | — |
-  | Tag Finder, luồng phụ (ADS) | thử ở `/plan` | — | — |
+  | Tag Finder, luồng phụ (ADS) | ✅ chép từng luồng (T1) | — | — |
 
-  **Chốt (người dùng 2026-11-05):**
-  - ADS/tag trên SMB: thử ở `/plan` xem `SMBClient` mở được tên `file:stream` mà **không vá thư viện** (luật
-    2026-11-04) không; được thì chép luồng phụ, không được thì log "tags not kept".
-  - WebDAV: thử `PROPPATCH` `Win32LastModifiedTime`/`Win32CreationTime` (IIS, Synology) và header `X-OC-Mtime`
-    (Nextcloud/ownCloud); server từ chối thì nhớ cho connection đó và báo "dates not kept".
+  **Chốt (người dùng 2026-11-05) và kết quả thử (T1, 2026-11-05):**
+  - **Thứ tự trên SMB** (review giao thức T1): đóng handle đẩy part → ghi và đóng từng luồng phụ → `SET_INFO`
+    FileBasicInformation trên handle riêng (`Session.setInfo(path:)` tự mở/đóng, mở được cả file chỉ‑đọc) với ngày
+    + cờ **trừ READONLY** → đổi tên part thành tên thật → nếu nguồn chỉ‑đọc: `SET_INFO` lần hai chỉ cờ (ngày = 0) →
+    liệt kê lại. Lý do: handle đã ghi khi đóng sẽ ghi đè ngày; ghi luồng phụ làm đổi ngày sửa (NTFS); file chỉ‑đọc
+    không xoá được (Windows `STATUS_CANNOT_DELETE`, Samba `delete readonly = no`) nên part hỏng hay Undo phải gỡ
+    READONLY (`SET_INFO` cờ = NORMAL) **trước** khi xoá.
+  - **Giá trị gửi** (MS‑FSCC 2.4.7): LastAccessTime = 0 (= không đổi); LastWriteTime = ngày sửa nguồn; CreationTime =
+    ngày tạo nguồn (0 nếu không có); ChangeTime = ngày sửa nguồn (chỉ để impacket chịu đặt mtime; Windows/Samba bỏ qua
+    hoặc tự đổi lại — không bao giờ kiểm ChangeTime); cờ = nguồn ∩ {readonly, hidden, archive}, rỗng thì gửi NORMAL
+    (0x80), không gửi 0 (0 = không đổi, không xoá được cờ cũ). Nguồn là file trên Mac: readonly = cờ `uchg`, hidden =
+    `UF_HIDDEN`. `FileBasicInformation` và `FileTime(Date)` của `SMBClient` có init internal → app tự dựng buffer 40
+    byte (FILETIME = (giây Unix + 11 644 473 600) × 10⁷, giữ phần 100 ns) qua `FileBasicInformation(data:)` công khai.
+  - **Luồng phụ (tag Finder, Finder info)**, **không vá thư viện** (luật 2026-11-04):
+    - Liệt kê: `queryInfo(fileInfoClass: .fileStreamInformation)` trả buffer thô, app tự đọc
+      (`FILE_STREAM_INFORMATION`: NextEntryOffset, NameLength, StreamSize, Name UTF‑16; bỏ `::$DATA`). Bộ đệm của
+      thư viện cố định 1124 byte (≈ 9 luồng); tràn (`STATUS_BUFFER_OVERFLOW` thành lỗi) → `tags not kept`.
+    - Tên luồng dùng **đúng tên server trả** (`:com.apple.metadata\u{F022}_kMDItemUserTags:$DATA` — dấu `:` trong tên
+      được macOS/Samba đổi thành U+F022); nguồn là file trên Mac (xattr) thì app tự đổi `:` → U+F022 và thêm `:$DATA`.
+      Không bao giờ gửi `:` trần trong tên luồng.
+    - Mỗi luồng ≤ **64 KB** (xattr của Samba `streams_xattr`; ext4 còn nhỏ hơn); `AFP_AfpInfo` chỉ chép nguyên khi đúng
+      60 byte. Ghi một luồng lỗi → xoá luồng dở, `tags not kept`. Server trả `OBJECT_NAME_INVALID` /
+      `INVALID_PARAMETER` cho tên luồng → nhớ "server không có luồng" cho connection đó như với ngày.
+    - Chỉ hỏi luồng khi connection chưa bị nhớ là không có luồng; file nguồn đầu tiên không có luồng nào thì không
+      hỏi các file sau trong lượt.
+    - Lỗi ở bất kỳ bước luồng nào → `tags not kept`, ảnh vẫn Copied.
+    - Server cục bộ (impacket trên APFS) không có luồng thật (ghi `x:s` thành file riêng, liệt kê ra rỗng) → test cục
+      bộ chỉ chứng minh nhánh "không có luồng / tags not kept"; luồng thật chứng minh trên NAS ở `/verify` (ghi một file
+      tạm, cần người dùng cho phép). Làm ở task riêng sau ngày và cờ.
+  - **SMB đo trên impacket** (T1): impacket lấy `ChangeTime` làm mtime và bỏ qua lệnh khi một trong hai bằng 0. Gửi
+    như trên: ngày sửa ra đúng 2020‑01‑02 03:04:05; ngày tạo và cờ impacket không giữ → chứng minh trên NAS ở `/verify`.
+  - **WebDAV** (wsgidav 4.4 cục bộ, T1; review giao thức):
+    - `X-OC-Mtime` (giây Unix nguyên) + `X-OC-Ctime` khi `PUT`: wsgidav bỏ qua im lặng (201, không có
+      `X-OC-MTime: accepted`); Nextcloud/ownCloud trả header đó.
+    - Không có `accepted` → `PROPPATCH` `Win32LastModifiedTime` + `Win32CreationTime` (RFC 1123, GMT), rồi
+      `getlastmodified` trong **một `PROPPATCH` riêng** (nó là thuộc tính bảo vệ; gộp chung thì 403 của nó làm các cái
+      kia thành 424). wsgidav mặc định: 207 với từng thuộc tính 403; bật `mutable_live_props` +
+      `emulate_win32_lastmod`: 200 và ngày sửa đổi thật.
+    - **Phán quyết chỉ theo liệt kê lại** (`getlastmodified` sau `MOVE` part → tên thật, ±2 s), không theo mã 207:
+      Apache `mod_dav` (Synology, QNAP) lưu Win32* như thuộc tính chết, trả 200 mà ngày không đổi.
+    - Test: wsgidav `127.0.0.1:8096` (từ chối) và `127.0.0.1:8097` (`build/wsgidav-dates.yaml`, nhận); cách bật ở
+      `docs/_plans/FS1908_6E_LOOP.md`.
+  - **So ngày ±2 s**: làm tròn cả hai bên về giây chẵn trước khi so (FAT/exFAT lưu ngày theo bước 2 s).
 - **Lấy của bản nào**: bản ở folder đầu (người dùng 2026-11-05) — cùng bản đặt tên và cấu trúc.
 - **Khi nào đặt**: sau khi đẩy xong file part và đọc lại SHA, **trước** khi đổi tên thành tên thật (đổi tên giữ ngày);
   WebDAV `COPY` trên server (§6d): đặt sau `COPY` như vậy. Sau đổi tên, liệt kê lại ngày sửa: lệch quá 2 giây → ghi
   "file dates not kept". Ảnh **vẫn Copied/Moved** — thông tin file không bao giờ làm hỏng một ảnh đã kiểm SHA.
-- Move bằng đổi chỗ trên server: đã giữ, chỉ kiểm. Move lùi về chép (khác share): đặt như Copy. Sidecar `.xmp`: đặt
+- Move bằng đổi chỗ trên server: đã giữ, chỉ kiểm. Move lùi về chép (khác share): đặt như Copy; server không giữ được
+  ngày thì **vẫn Move** (người dùng 2026-11-05) — bản ở Shared mang ngày hôm nay, log `dates not kept`; thông tin của
+  mọi bản bị xoá (ngày sửa, ngày tạo, cờ) được lưu **trước** khi xoá để Hoàn tác trả lại đúng. Sidecar `.xmp`: đặt
   theo sidecar nguồn của nó.
 - **Hoàn tác Move** (§6b) đẩy lại bản đã xoá: đặt thông tin của **chính bản đó** (lưu khi xoá: ngày sửa, ngày tạo, cờ).
   Bỏ dòng "Trả ngày sửa cũ cho bản được trả về" khỏi §2 Cố ý không có.
