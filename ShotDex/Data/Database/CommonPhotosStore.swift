@@ -234,6 +234,22 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// The photos the set's newest run (not an undo) left Failed — for the
+    /// sheet's Problems (FS-19.08 §6g). Empty for a set that never ran.
+    func lastRunFailures(connectionId: String, folders: [String], destination: String) throws -> [CommonPhotosItem] {
+        let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
+        let newest = try database.reader.read { db in
+            try CommonPhotosRun
+                .filter(Column("connectionId") == connectionId && Column("undoOf") == nil)
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+                .first { $0.isReadable && CommonPhotosIncremental.setKey(connectionId: $0.connectionId, folders: $0.folders,
+                                                                         destination: $0.destination) == key }
+        }
+        guard let newest else { return [] }
+        return try items(runId: newest.id).filter { $0.status == .failed }
+    }
+
     /// The folders under the destination, relative to it, where the set's
     /// runs filed photos (§6e) — what a rescan lists besides its top to see
     /// whether they are still there.

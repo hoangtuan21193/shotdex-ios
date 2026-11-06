@@ -644,6 +644,25 @@ tên ở đích chọn riêng (`IMG_1 (2).HEIC` cạnh `IMG_1.MOV` của ảnh k
 - **Giới hạn đã biết:** ảnh Already there ở đích mà tên video cùng gốc đã có byte khác → video lấy tên trống kế
   (`IMG_1 (2).MOV`), cặp ở đích lệch tên; Copy với ảnh hỏng vẫn chép video (nguồn không mất gì).
 
+## 6g. Lọc kết quả scan (người dùng 2026-11-06)
+
+- Cạnh **Sort** có menu **Show**: **All** · **Photos** · **Videos** · **Live Photos** · **Names Differ** · **Problems**. Một
+  lựa chọn một lúc, không nhớ qua lần mở sheet. Nhãn menu ghi lựa chọn và số hàng ("Problems · 4").
+- Filter chỉ đổi **danh sách đang hiện**: Copy N / Move N vẫn lấy mọi ảnh đã chọn; dòng dưới ghi "Only some photos shown
+  · Copy takes every checked photo."
+- Photos / Videos theo loại file (UTType movie); nửa của Live Photo chỉ nằm ở **Live Photos**.
+- **Names Differ:** các bản cùng byte nhưng không cùng tên (khác hoa thường và dạng Unicode không tính là khác).
+- **Problems** gồm:
+  - hàng Same mà lượt chạy gần nhất của bộ (không tính Undo) ghi **Failed**: nhãn cam "Failed last time", tooltip là lý do
+    như trong log;
+  - hàng Same sẽ **đổi tên** ở đích vì đích có file khác cùng tên (→ `IMG_1 (2).JPG`);
+  - **file scan không đọc được** (server từ chối, đọc ngắn hơn cỡ đã liệt kê): một hàng không ô chọn, "Couldn't read:
+    <lời server>";
+  - khi scan dừng giữa chừng: các file folder đầu **chưa kiểm**, "Not checked: the scan stopped first".
+  Hàng file lỗi không chọn được, không chạy, không Compare.
+- Bỏ cột ghi chú cuối hàng (thường trống): "already in Shared" lên dòng đường dẫn (cả Copy lẫn Move); "Left out from now
+  on" và "Removes N copies" vào tooltip.
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |

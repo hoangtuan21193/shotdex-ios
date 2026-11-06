@@ -79,6 +79,8 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var selectedRows = Set<String>()
     /// How the Same rows are listed; remembered across sheets.
     @AppStorage("commonPhotosRowOrder") private var rowOrder = MacCommonPhotosRowOrder.found
+    /// §6g: what the list shows; the run still takes every checked photo.
+    @State private var rowFilter = CommonPhotosRowFilter.all
 
     /// `-ShotDexCommonPhotosShowLeftOut` (DEBUG): the Left Out list open, for screenshots.
     private static let showsLeftOutAtStart: Bool = {
@@ -501,6 +503,7 @@ private struct MacCommonPhotosSheetContent: View {
                     Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1).truncationMode(.middle)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .help(headline)
+                    if model.sameCount > 0 || !model.problemFiles.isEmpty { filterMenu }
                     if model.sameCount > 1 { sortMenu }
                 }
                 .frame(height: 22)
@@ -564,14 +567,17 @@ private struct MacCommonPhotosSheetContent: View {
                 }
                 if isNothingNew, let gathered = model.lastGathered {
                     nothingNew(since: gathered)
-                } else if model.phase == .done, model.sameCount == 0 {
+                } else if model.phase == .done, model.sameCount == 0, !(rowFilter == .problems && !model.problemFiles.isEmpty) {
                     Text(model.folders.count == 2
                          ? String(localized: "No photos are in both folders.", comment: "Mac common photos sheet: nothing in common, two folders")
                          : String(localized: "No photos are in all \(model.folders.count) folders.", comment: "Mac common photos sheet: nothing in common"))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(rowOrder.sorted(model.rows), selection: $selectedRows) { row in
+                    let shownRows = rowOrder.sorted(model.rows.filter(rowFilter.keeps))
+                    let problemFiles = rowFilter == .problems ? model.problemFiles : []
+                    List(selection: $selectedRows) {
+                      ForEach(shownRows) { row in
                         MacCommonPhotosRow(row: row, destination: model.destination.map(ServerUploadPath.lastComponent(of:)),
                                            action: model.action, database: dependencies.database, sources: sources,
                                            setIncluded: { model.setIncluded($0, rows: [row.id]) },
@@ -592,6 +598,19 @@ private struct MacCommonPhotosSheetContent: View {
                                     }
                                 }
                             }
+                      }
+                      // §6g: files the scan could not decide — shown, never run.
+                      ForEach(problemFiles) { file in
+                          MacCommonPhotosProblemRow(file: file)
+                              .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 12))
+                              .selectionDisabled()
+                      }
+                    }
+                    .overlay {
+                        if shownRows.isEmpty, problemFiles.isEmpty {
+                            Text("No photos match \(rowFilter.title).", comment: "Mac common photos sheet: the Show filter hides every row")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .listStyle(.bordered)
                     .alternatingRowBackgrounds()
@@ -643,6 +662,26 @@ private struct MacCommonPhotosSheetContent: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "Scan progress", comment: "Mac common photos sheet: VoiceOver name of the scan bar"))
         .accessibilityValue(fraction.formatted(.percent.precision(.fractionLength(0))))
+    }
+
+    /// §6g: All · Photos · Videos · Live Photos · Names Differ · Problems.
+    private var filterMenu: some View {
+        let count = model.rows.filter(rowFilter.keeps).count + (rowFilter == .problems ? model.problemFiles.count : 0)
+        let title = rowFilter == .all ? rowFilter.title : "\(rowFilter.title) · \(count.formatted())"
+        return Menu {
+            Picker(selection: $rowFilter) {
+                ForEach(CommonPhotosRowFilter.allCases, id: \.self) { Text($0.title).tag($0) }
+            } label: {
+                Text("Show", comment: "Mac common photos sheet: filter menu")
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(title, systemImage: rowFilter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(String(localized: "Show only some of the photos", comment: "Mac common photos sheet: filter menu tooltip"))
+        .accessibilityLabel(String(localized: "Show, \(title)", comment: "Mac common photos sheet: filter menu, VoiceOver"))
     }
 
     private var sortMenu: some View {
@@ -994,6 +1033,11 @@ private struct MacCommonPhotosSheetContent: View {
         if model.runCount == 0, model.selectableCount > 0 {
             return String(localized: "Nothing selected. Check a photo to include it.", comment: "Mac common photos sheet: footer, every row unchecked")
         }
+        if rowFilter != .all {
+            return model.action == .move
+                ? String(localized: "Only some photos shown · Move takes every checked photo.", comment: "Mac common photos sheet: footer, filtered, Move")
+                : String(localized: "Only some photos shown · Copy takes every checked photo.", comment: "Mac common photos sheet: footer, filtered, Copy")
+        }
         guard model.action == .move else {
             return String(localized: "Space to compare · unchecked photos stay out of this set.", comment: "Mac common photos sheet: footer, Copy")
         }
@@ -1126,6 +1170,18 @@ private struct MacCommonPhotosRow: View {
                             .padding(.vertical, 1)
                             .background(.fill.secondary, in: RoundedRectangle(cornerRadius: 4))
                     }
+                    // §6g: the set's last run could not take it.
+                    if let why = row.failedLastTime {
+                        Label(String(localized: "Failed last time", comment: "Mac common photos sheet: the set's last run failed this photo"),
+                              systemImage: "exclamationmark.triangle")
+                            .labelStyle(.titleAndIcon)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.orange.opacity(0.16), in: RoundedRectangle(cornerRadius: 4))
+                            .help(why)
+                    }
                 }
                 .help(row.isQuick ? String(localized: "Compared by three samples", comment: "Mac common photos sheet: the Quick tag's tooltip") : "")
                 // Where it comes from, then where it goes: the destination name never truncates.
@@ -1137,7 +1193,7 @@ private struct MacCommonPhotosRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            .help(row.fullPaths + (landingText.map { "\n" + $0 } ?? ""))
+            .help(row.fullPaths + (landingText.map { "\n" + $0 } ?? "") + (note.map { "\n" + $0 } ?? ""))
             if isHovered {
                 Button(action: compare) { Image(systemName: "rectangle.split.2x1") }
                     .buttonStyle(.borderless)
@@ -1147,8 +1203,6 @@ private struct MacCommonPhotosRow: View {
             Text(row.size.formatted(.byteCount(style: .file)))
                 .font(.callout).monospacedDigit().foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .trailing)
-            Text(note ?? "").font(.callout).foregroundStyle(.secondary).lineLimit(1)
-                .frame(width: 124, alignment: .leading)
         }
         .frame(height: 40)
         .onHover { isHovered = $0 }
@@ -1163,26 +1217,22 @@ private struct MacCommonPhotosRow: View {
         if case .alreadyThere = row.landing { true } else { false }
     }
 
-    /// " → Shared/IMG_0001 (2).JPG" once planned; on a Move, " → already in
-    /// Shared" (the note column says what it removes).
+    /// " → Shared/IMG_0001 (2).JPG" once planned; " → already in Shared"
+    /// when the destination holds its bytes.
     private var landingText: String? {
         guard let destination, let landing = row.landing else { return nil }
         switch landing {
         case .name(let name): return "\u{00A0}→ " + ServerUploadPath.join(destination, name)
         case .alreadyThere:
-            guard action == .move else { return nil }
-            return "\u{00A0}→ " + String(localized: "already in \(destination)", comment: "Mac common photos sheet: row plan, a Move whose bytes the destination holds")
+            return "\u{00A0}→ " + String(localized: "already in \(destination)", comment: "Mac common photos sheet: row plan, the destination holds these bytes")
         }
     }
 
-    /// Already there (Copy skips it), or on a Move the copies it takes out of
-    /// the folders — already there or not; unchecked, that it stays out.
+    /// For the tooltip (the note column went, §6g): unchecked, that it stays
+    /// out; on a Move, the copies it takes out of the folders.
     private var note: String? {
         if !row.isIncluded, !(isAlreadyThere && action == .copy) {
             return String(localized: "Left out from now on", comment: "Mac common photos sheet: row, unchecked")
-        }
-        if isAlreadyThere, action == .copy {
-            return String(localized: "Already in \(destination ?? "")", comment: "Mac common photos sheet: row, the destination holds these bytes")
         }
         guard action == .move, row.landing != nil else { return nil }
         return row.copies == 1
@@ -1192,6 +1242,57 @@ private struct MacCommonPhotosRow: View {
 
 }
 
+
+/// §6g: a file the scan could not decide — no checkbox, never run.
+private struct MacCommonPhotosProblemRow: View {
+    let file: CommonPhotosScanModel.ProblemFile
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Color.clear.frame(width: 14, height: 14)
+            MacTheme.fill2
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Image(systemName: file.unreadable == nil ? "clock" : "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(file.name).lineLimit(1)
+                Text("\(file.place) · \(reason)", comment: "Mac common photos sheet: problem row, where the file is and why it is listed")
+                    .font(.subheadline).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .help(file.place + "/" + file.name + "\n" + reason)
+            Text(file.size.formatted(.byteCount(style: .file)))
+                .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                .frame(width: 64, alignment: .trailing)
+        }
+        .frame(height: 40)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var reason: String {
+        if let why = file.unreadable {
+            String(localized: "Couldn't read: \(why)", comment: "Mac common photos sheet: problem row, the server refused the file")
+        } else {
+            String(localized: "Not checked: the scan stopped first", comment: "Mac common photos sheet: problem row, a stopped scan never reached it")
+        }
+    }
+}
+
+extension CommonPhotosRowFilter {
+    var title: String {
+        switch self {
+        case .all: String(localized: "All", comment: "Mac common photos sheet: show every row")
+        case .photos: String(localized: "Photos", comment: "Mac common photos sheet: show photos only")
+        case .videos: String(localized: "Videos", comment: "Mac common photos sheet: show videos only")
+        case .live: String(localized: "Live Photos", comment: "Mac common photos sheet: show Live Photo halves only")
+        case .namesDiffer: String(localized: "Names Differ", comment: "Mac common photos sheet: show photos whose copies carry other names")
+        case .problems: String(localized: "Problems", comment: "Mac common photos sheet: show failed, renamed and unreadable photos")
+        }
+    }
+}
 
 /// How the sheet lists the Same photos.
 enum MacCommonPhotosRowOrder: String, CaseIterable {

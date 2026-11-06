@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import Observation
 import os
+import UniformTypeIdentifiers
 
 /// What the Find Common Photos sheet holds (FS-19.08 §4–5, board
 /// `MAC_CommonPhotos`): the folders and where the common photos go, Copy or
@@ -57,6 +58,28 @@ final class CommonPhotosScanModel {
         var isLive = false
         /// Same by Quick Check (§6e): path, size, samples — no SHA-256 yet.
         var isQuick: Bool { sha256.hasPrefix(CommonPhoto.quickPrefix) }
+        /// The copies do not all carry one name (§6g, Names Differ).
+        var namesDiffer = false
+        var isVideo = false
+        /// Why the set's last run left it Failed, worded (§6g, Problems).
+        var failedLastTime: String?
+        /// The destination holds another file of its name: it lands renamed
+        /// (§6g, Problems).
+        var isRenamed: Bool {
+            if case .name(let name)? = landing { name.lowercased() != self.name.lowercased() } else { false }
+        }
+    }
+
+    /// A file the scan could not decide (§6g, Problems): unreadable, or
+    /// never reached when the scan stopped. Listed, never run.
+    struct ProblemFile: Identifiable, Equatable {
+        let id: String
+        let name: String
+        /// "Vo/2025/02/11": its folder's name and subfolder.
+        let place: String
+        let size: Int64
+        /// Nil: not checked — the scan stopped first.
+        let unreadable: String?
     }
 
     let connectionId: String
@@ -70,6 +93,7 @@ final class CommonPhotosScanModel {
             // Another set, another Left Out (§6d), and its own Organize (§6e).
             loadLeftOut()
             loadOrganize()
+            loadLastFailures()
             // A scan whose listing was cut for another set never read what
             // this set needs: scan again. Otherwise the results are cut
             // again from the whole of them, now or when the scan ends
@@ -189,6 +213,12 @@ final class CommonPhotosScanModel {
     /// Why the last results went (FS-19.08 §6c): said where they were.
     enum Notice: Equatable { case otherDestination, quickOff }
     private(set) var notice: Notice?
+    /// Files the scan could not read, with the server's words (§6g).
+    private(set) var unreadable: [CommonPhotosFile: String] = [:]
+    /// Why the set's newest run left each photo Failed, by SHA-256 and by
+    /// "path:" + its first copy's path (a quick row's key is replaced when it
+    /// runs) — §6g.
+    private(set) var lastFailures: [String: String] = [:]
     /// The scan read only the sizes new to its set (its destination was
     /// known when it listed).
     private var listingWasCut = false
@@ -272,6 +302,7 @@ final class CommonPhotosScanModel {
         leftOutPending = [:]
         loadLeftOut()
         loadOrganize()
+        loadLastFailures()
     }
 
     func remove(folder: String) {
@@ -387,6 +418,46 @@ final class CommonPhotosScanModel {
 
     /// The set's stored Left Out, as the scan begins or the destination
     /// changes; what was unchecked before a destination is stored now.
+    private func loadLastFailures() {
+        guard let database, let destination else { lastFailures = [:]; return }
+        let items = (try? CommonPhotosStore(database: database)
+            .lastRunFailures(connectionId: connectionId, folders: folders, destination: destination)) ?? []
+        var out: [String: String] = [:]
+        for item in items {
+            let reason = CommonPhotosLog.reason(item)
+            out[item.sha256] = reason
+            if let first = item.sources.first { out["path:" + first.path] = reason }
+        }
+        lastFailures = out
+    }
+
+    /// Files the scan could not decide: unreadable ones, and — when it
+    /// stopped — the first-folder candidates it never reached (§6g).
+    var problemFiles: [ProblemFile] {
+        guard let preview else { return [] }
+        var out: [ProblemFile] = []
+        var seen = Set<CommonPhotosFile>()
+        func add(_ file: CommonPhotosFile, _ why: String?) {
+            guard seen.insert(file).inserted else { return }
+            out.append(ProblemFile(id: "problem:\(file.folder)/\(file.relativePath)", name: file.name,
+                                   place: ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[file.folder]), file.subfolder),
+                                   size: file.size, unreadable: why))
+        }
+        for (file, why) in unreadable.sorted(by: { ($0.key.folder, $0.key.relativePath) < ($1.key.folder, $1.key.relativePath) }) {
+            add(file, why)
+        }
+        if failure != nil {
+            // Groups are checked in order; those past the decided count were never reached.
+            var decided = 0
+            for group in CommonPhotosVerifier.order(preview) {
+                let first = group.files[0]
+                if decided >= checkedFiles { first.forEach { add($0, nil) } }
+                decided += first.count
+            }
+        }
+        return out
+    }
+
     private func loadLeftOut() {
         guard let setKey, let store = leftOutStore else {
             // No set: only what was unchecked in this sheet stays out.
@@ -500,7 +571,12 @@ final class CommonPhotosScanModel {
     var rows: [Row] {
         guard preview != nil else { return [] }
         return listed.map { photo in
-            row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count, sha256: photo.sha256)
+            var row = row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count, sha256: photo.sha256)
+            let first = photo.files[0][0]
+            row.namesDiffer = photo.files.joined().contains { $0.comparableName != first.comparableName }
+            row.isVideo = UTType(filenameExtension: (first.name as NSString).pathExtension)?.conforms(to: .movie) == true
+            row.failedLastTime = lastFailures[photo.sha256] ?? lastFailures["path:" + row.serverPath]
+            return row
         }
     }
 
@@ -593,6 +669,7 @@ final class CommonPhotosScanModel {
         phase = .idle
         preview = nil
         photos = []
+        unreadable = [:]
         listing = nil
         fileCounts = [:]
         listedFiles = 0
@@ -634,6 +711,9 @@ final class CommonPhotosScanModel {
         placementDates = [:]
         datesRead = nil
         loadLeftOut()
+        // The newest run may have finished since the sheet opened.
+        loadLastFailures()
+        unreadable = [:]
         phase = .listing
         preview = nil
         photos = []
@@ -720,6 +800,12 @@ final class CommonPhotosScanModel {
             let found = try await CommonPhotosVerifier(client: watched).verify(
                 preview, folders: folders, knownHashes: known, trustsCache: true, quick: quickCheck,
                 fullSizes: leftOutSizes,
+                unreadable: { [weak self] file, why in
+                    Task { @MainActor in
+                        guard let self, self.scanId == scanId else { return }
+                        self.unreadable[file] = why
+                    }
+                },
                 hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
                 found: { [weak self] batch in
                 let fresh = CommonPhotosIncremental.newPhotos(batch, folders: folders, seen: seen)
@@ -1232,5 +1318,22 @@ private final class WatchedClient: RemoteFileClient, @unchecked Sendable {
     func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await base.sourceInfo(at: path) }
     func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
         try await base.setFileInfo(info, at: path)
+    }
+}
+
+/// What the results list shows (FS-19.08 §6g). Only the list: the run
+/// takes every checked photo.
+enum CommonPhotosRowFilter: String, CaseIterable, Sendable {
+    case all, photos, videos, live, namesDiffer, problems
+
+    func keeps(_ row: CommonPhotosScanModel.Row) -> Bool {
+        switch self {
+        case .all: true
+        case .photos: !row.isVideo && !row.isLive
+        case .videos: row.isVideo && !row.isLive
+        case .live: row.isLive
+        case .namesDiffer: row.namesDiffer
+        case .problems: row.failedLastTime != nil || row.isRenamed
+        }
     }
 }

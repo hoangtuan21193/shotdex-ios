@@ -58,11 +58,11 @@ struct CommonPhotosVerifier {
                 trustsCache: Bool = false,
                 quick: Bool = false,
                 fullSizes: Set<Int64> = [],
+                unreadable: @Sendable (CommonPhotosFile, String) -> Void = { _, _ in },
                 hashed: @Sendable ([CommonPhotosFile: String]) -> Void = { _ in },
                 found: @Sendable ([CommonPhoto]) -> Void = { _ in },
                 progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws -> [CommonPhoto] {
-        let holdsLikely = { (group: CommonPhotosMatcher.SizeGroup) in group.files.joined().contains(where: preview.likely.contains) }
-        let groups = preview.groups.filter(holdsLikely) + preview.groups.filter { !holdsLikely($0) }
+        let groups = Self.order(preview)
         var state = Progress(totalFiles: preview.candidateCount, totalBytes: preview.candidateBytes)
         var photos: [CommonPhoto] = []
         for group in groups {
@@ -86,7 +86,7 @@ struct CommonPhotosVerifier {
             var samples: [CommonPhotosFile: String] = [:]
             for file in group.files.joined() {
                 try Task.checkCancellation()
-                samples[file] = try await skippingUnreadable { try await sample(file, folders: folders) }
+                samples[file] = try await skippingUnreadable(file, unreadable) { try await sample(file, folders: folders) }
             }
             state.unreadableCount += group.files.joined().count - samples.count
             var candidates = Self.flatten(CommonPhotosMatcher.shared(group.files, keys: samples), folderCount: group.files.count)
@@ -115,7 +115,7 @@ struct CommonPhotosVerifier {
                         continue
                     }
                     try Task.checkCancellation()
-                    let hashed = try await skippingUnreadable { try await fullHash(file, folders: folders, state: state, progress: progress) }
+                    let hashed = try await skippingUnreadable(file, unreadable) { try await fullHash(file, folders: folders, state: state, progress: progress) }
                     if let hashed {
                         hashes[file] = hashed
                         fresh.insert(file)
@@ -132,7 +132,7 @@ struct CommonPhotosVerifier {
                 // Nothing read this time vouches for these bytes: read one
                 // — not when the scan trusts the cache.
                 if !trustsCache, !files.joined().contains(where: fresh.contains) {
-                    let check = try await skippingUnreadable { try await fullHash(files[0][0], folders: folders, state: state, progress: progress) }
+                    let check = try await skippingUnreadable(files[0][0], unreadable) { try await fullHash(files[0][0], folders: folders, state: state, progress: progress) }
                     guard check == sha256 else { continue }
                 }
                 groupPhotos.append(CommonPhoto(sha256: sha256, size: group.size, files: files))
@@ -187,13 +187,24 @@ struct CommonPhotosVerifier {
         return sha256
     }
 
+    /// The size groups in the order they are checked: those holding a
+    /// Likely file first. The sheet counts a stopped scan's Not checked
+    /// files in the same order.
+    static func order(_ preview: CommonPhotosMatcher.Preview) -> [CommonPhotosMatcher.SizeGroup] {
+        let holdsLikely = { (group: CommonPhotosMatcher.SizeGroup) in group.files.joined().contains(where: preview.likely.contains) }
+        return preview.groups.filter(holdsLikely) + preview.groups.filter { !holdsLikely($0) }
+    }
+
     /// The value, or nil when this one file cannot be read (gone since the
-    /// listing, no permission, read back other than listed); failures every
-    /// later file would meet too are thrown.
-    private func skippingUnreadable(_ work: () async throws -> String) async throws -> String? {
+    /// listing, no permission, read back other than listed) — told to
+    /// `unreadable` with the server's words; failures every later file
+    /// would meet too are thrown.
+    private func skippingUnreadable(_ file: CommonPhotosFile, _ unreadable: @Sendable (CommonPhotosFile, String) -> Void,
+                                    _ work: () async throws -> String) async throws -> String? {
         do {
             return try await work()
         } catch let error as RemoteFileError where !error.stopsBatch {
+            unreadable(file, error.errorDescription ?? error.localizedDescription)
             return nil
         }
     }

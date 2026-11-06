@@ -118,6 +118,11 @@ số byte qua mạng.
 | AC-238 | scan Copy xong, 3 Same, SHA đã nhớ từ lần trước (§6c, 2026-11-06) | đổi Action sang Move; đổi giữa lúc đang quét | kết quả giữ nguyên, 3 Same, nút Move 3 bật; quét lại cho Move không đọc byte nào | ✅ `CommonPhotosIncrementalTests.moveKeepsTheScan`, `moveMidScanKeepsScanning` |
 | AC-239 | ảnh quick (hay đã băm) chạy Move sang `C` | lượt chạy xong | bảng SHA đã đọc có hàng `C/X.ARW` với SHA của ảnh — SHA đi theo ảnh sang đích | ✅ `CommonPhotosQuickCheckTests.quickMoveReadsEveryCopy` |
 | AC-240 | ảnh đã index (preview 400 px), Compare mở hàng đó | chờ tải | preview index hiện ngay kèm "Loading full size…"; tải xong thì ảnh đầy đủ (≤ 4.096 px, không dùng thumbnail nhúng 320 px) thay vào | ⚠️ chưa có test tự động — xem bằng mắt trên Mac |
+| AC-241 | Same: `IMG_1.JPG`, `clip.MOV`, `IMG_2.JPG` (bản B tên `2025-06-02 IMG_2.JPG`) | Show Photos / Videos / Names Differ | 2 / 1 / chỉ `IMG_2.JPG`; Problems rỗng | ✅ `CommonPhotosFilterTests.kindAndNames` |
+| AC-242 | bản B của `X.JPG` đọc về ngắn hơn cỡ đã liệt kê | Scan, Show Problems | không hàng Same; một hàng file `X.JPG` ở `B` có lý do | ✅ `CommonPhotosFilterTests.unreadableFileIsListed` |
+| AC-243 | 3 nhóm cỡ, server mất sau nhóm đầu | Scan dừng, Show Problems | 2 file folder đầu "Not checked" | ✅ `CommonPhotosFilterTests.stoppedScanListsWhatItNeverReached` |
+| AC-244 | lượt Copy trước của bộ ghi `IMG_1.JPG` Failed; đích có `IMG_2.JPG` khác byte | Scan, Show Problems | `IMG_1.JPG` nhãn "Failed last time", `IMG_2.JPG` sẽ đổi tên; `IMG_3.JPG` không có | ✅ `CommonPhotosFilterTests.failedLastTimeAndRenamed` |
+| AC-245 | Show khác All | nhìn sheet | dòng dưới "Only some photos shown · Copy takes every checked photo."; Copy N không đổi; cột ghi chú cuối hàng không còn | ⚠️ board `MAC_CommonPhotos` tweak `filter`; chưa chụp app (app của người dùng đang mở) |
 
 ## Folder theo ngày: kiểm nhanh, chạy lại (§6e)
 

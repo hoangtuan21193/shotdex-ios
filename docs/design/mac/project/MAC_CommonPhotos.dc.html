@@ -162,6 +162,8 @@ input{font-family:inherit}
 <!-- Result after Scan -->
 <sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:22px;flex:none">
 <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{headline}}</span>
+<!-- Show (filter): All · Photos · Videos · Live Photos · Names Differ · Problems. Only what the list shows: the run still takes every checked photo -->
+<sc-if value="{{sortable}}" hint-placeholder-val="{{true}}"><button aria-label="Show, {{filterTitle}}" aria-haspopup="menu" title="Show only some of the photos" style="height:22px;border:none;background:none;padding:0;display:flex;align-items:center;gap:4px;color:{{t.accent}};font-size:13px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="{{filterFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"></path></svg>{{filterTitle}}<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
 <!-- Sort: Order Found · Name · Largest First · Smallest First, remembered across sheets -->
 <sc-if value="{{sortable}}" hint-placeholder-val="{{true}}"><button aria-label="Sort By, {{sortTitle}}" aria-haspopup="menu" title="Sort the photos" style="height:22px;border:none;background:none;padding:0;display:flex;align-items:center;gap:4px;color:{{t.accent}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16 M3 8l4-4 4 4 M17 20V4 M13 16l4 4 4-4"></path></svg>{{sortTitle}}<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
 </div>
@@ -200,12 +202,21 @@ input{font-family:inherit}
 <sc-if value="{{m.there}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex:none;width:34px"></span></sc-if>
 <div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}};opacity:{{m.thumbDim}}"></div>
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{m.help}}">
-<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.live}}" hint-placeholder-val="{{false}}"><span title="Half of a Live Photo: its still and video go together" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle></svg>Live</span></sc-if><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if></span>
+<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.live}}" hint-placeholder-val="{{false}}"><span title="Half of a Live Photo: its still and video go together" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle></svg>Live</span></sc-if><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if><sc-if value="{{m.failed}}" hint-placeholder-val="{{false}}"><span title="{{m.failedWhy}}" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{S.orangeSoft}};font-size:10px;font-weight:600;line-height:15px;color:{{S.orangeText}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z M12 10v4 M12 17v0.5"></path></svg>Failed last time</span></sc-if></span>
 <span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="flex:none">{{m.from}}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.to}}</span></span>
 </div>
 <sc-if value="{{m.hover}}" hint-placeholder-val="{{false}}"><button aria-label="Compare" title="Compare (Space)" style="width:28px;height:22px;flex:none;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7v14H3z M14 5h7v14h-7z"></path></svg></button></sc-if>
 <span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{m.size}}</span>
-<span style="width:124px;flex:none;font-size:12px;color:{{t.label2}};white-space:nowrap">{{m.note}}</span>
+</div></sc-for>
+<!-- Problems: files the scan could not read, or never reached when it stopped — listed, no checkbox -->
+<sc-for list="{{problemFiles}}" as="f" hint-placeholder-count="0"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 0;background:{{f.rowBg}}">
+<span aria-hidden="true" style="flex:none;width:34px"></span>
+<div aria-hidden="true" style="flex:none;width:28px;height:28px;border-radius:4px;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{f.icon}}"></path></svg></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{f.path}}">
+<span style="font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.name}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.where}} · {{f.why}}</span>
+</div>
+<span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{f.size}}</span>
 </div></sc-for>
 <div aria-hidden="true" style="position:absolute;right:3px;top:{{scrollTop}};width:5px;height:56px;border-radius:3px;background:{{S.scroller}}"></div>
 </div>
@@ -254,7 +265,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"filter":{"editor":"select","options":["all","photos","videos","live","namesDiffer","problems"],"default":"all"},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -485,8 +496,10 @@ class Component extends DCLogic {
       // §6f: a Live Photo — still, then its motion, one name, one folder, checked together.
       ['IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.HEIC', '3.1 MB', true, 2, true, true],
       ['IMG_4022.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.MOV', '4.4 MB', true, 2, true, true],
-      ['DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', '2025/10/12', 'DSC04388.ARW', '48.6 MB', true, 2, false],
-      ['IMG_0001.JPG', 'Tuấn/2025/06/02 · Vợ/Messages', '2025/06/02', 'IMG_0001 (2).JPG', '1.2 MB', false, 2, false],
+      // Failed last time: the run on Nov 3 found Vợ's copy changed on the server.
+      ['DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', '2025/10/12', 'DSC04388.ARW', '48.6 MB', true, 2, false, false, false, 'Changed on the server since the scan (run of Nov 3)'],
+      // Names differ: Vợ keeps it as "2025-06-02 IMG_0001.JPG"; Shared holds another IMG_0001.JPG, so it is renamed.
+      ['IMG_0001.JPG', 'Tuấn/2025/06/02 · Vợ/Messages as 2025-06-02 IMG_0001.JPG', '2025/06/02', 'IMG_0001 (2).JPG', '1.2 MB', false, 2, false, false, true],
       ['IMG_4107.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4107.MOV', '212.4 MB', false, 2, true],
       ['IMG_4110.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', '2025/03/16', '', '2.7 MB', false, 0, true],
       ['DSC04392.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat ×2', '2025/10/12', 'DSC04392.ARW', '47.9 MB', true, 3, false]
@@ -514,11 +527,13 @@ class Component extends DCLogic {
       const copies = m[6] === 1 ? '1 copy' : m[6] + ' copies';
       const dest = folderOf(m[2]) + m[3]; // under Shared, which Save to names
       // The second line names the folders; the full source paths are in the tooltip, the full destination is shown.
-      const from = m[1].split(' · ').map(p => p.split('/')[0] + (p.indexOf('×') >= 0 ? ' ×' + p.split('×')[1] : '')).join(' · ');
-      return { name:m[0], from, to: there || readingNow ? '' : '\u00a0→ ' + dest, size:m[4],
-        // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
-        note: there ? 'Already in Shared' : !m[5] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
-        help: m[1] + (there ? '' : ' → ' + dest),
+      const from = m[1].split(' · ').map(p => p.split('/')[0] + (p.indexOf('×') >= 0 ? ' ×' + p.split('×')[1] : '') + (p.indexOf(' as ') >= 0 ? ' as ' + p.split(' as ')[1] : '')).join(' · ');
+      // No note column (user 2026-11-06: it was empty on most rows). Already there goes on the path line; a Move's
+      // copies and "left out from now on" go in the tooltip.
+      return { name:m[0], from, to: readingNow ? '' : there ? '\u00a0→ already in Shared' : '\u00a0→ ' + dest, size:m[4],
+        help: m[1] + (there ? ' — already in Shared' : ' → ' + dest) + (move && !there ? '\nRemoves ' + copies : '') + (!m[5] && !there ? '\nLeft out from now on' : ''),
+        failed: !!m[10], failedWhy: m[10] || '', kind: /\.MOV$/.test(m[0]) ? 'video' : 'photo', isLive: !!m[8],
+        namesDiffer: !!m[9], renamed: !there && m[3] !== m[0],
         quick: quickRows && m[7] && !there, live: !!m[8],
         there, hasBox: !there, on, off: !there && !m[5], checkVis: on ? 'visible' : 'hidden',
         thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
@@ -546,8 +561,21 @@ class Component extends DCLogic {
     const order = rows => sort === 'name' ? rows.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       : sort === 'largest' ? rows.slice().sort((a, b) => MB(b.size) - MB(a.size))
       : sort === 'smallest' ? rows.slice().sort((a, b) => MB(a.size) - MB(b.size)) : rows;
-    const shown = order(first ? matches : (nothingNew ? [] : NEW)).map((r, i) => Object.assign({}, r, { rowBg: r.rowBg === t.rowSel ? r.rowBg : (i % 2) ? t.rowAlt : 'transparent' }));
+    // Show: what the list shows; Copy N / Move N still take every checked photo.
+    const filter = this.props.filter || 'all';
+    const keep = r => filter === 'photos' ? r.kind === 'photo' && !r.isLive : filter === 'videos' ? r.kind === 'video' && !r.isLive
+      : filter === 'live' ? r.isLive : filter === 'namesDiffer' ? r.namesDiffer : filter === 'problems' ? r.failed || r.renamed : true;
+    const listedRows = first ? matches : (nothingNew ? [] : NEW);
+    const shown = order(listedRows.filter(keep)).map((r, i) => Object.assign({}, r, { rowBg: r.rowBg === t.rowSel ? r.rowBg : (i % 2) ? t.rowAlt : 'transparent' }));
     const sameN = checkingNow ? '172' : first ? '282' : (nothingNew ? '0' : '3');
+    const PROBLEM_FILES = [
+      ['IMG_3890.HEIC', 'Vợ/2025/02/11', "Couldn't read: access denied", '2.2 MB', 'M12 3l9.5 17h-19z M12 10v4 M12 17v0.5'],
+      ['DSC03977.ARW', 'Tuấn/2025/09/30', 'Not checked: the scan stopped first', '45.3 MB', 'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2']
+    ];
+    const problemFiles = filter === 'problems' && first ? PROBLEM_FILES.map((f, i) => ({ name:f[0], where:f[1], why:f[2], size:f[3], icon:f[4],
+      path: f[1] + '/' + f[0], rowBg: ((shown.length + i) % 2) ? t.rowAlt : 'transparent' })) : [];
+    const FILTERS = { all:'All', photos:'Photos', videos:'Videos', live:'Live Photos', namesDiffer:'Names Differ', problems:'Problems' };
+    const filterTitle = filter === 'all' ? 'All' : FILTERS[filter] + ' · ' + (shown.length + problemFiles.length);
     const verb = move ? 'Move' : 'Copy';
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
@@ -558,6 +586,7 @@ class Component extends DCLogic {
       scanned: !waiting, waiting, listing,
       showsAction: !(before || listing || checkingNow),
       sortable: !waiting && !nothingNew && sameN !== '1',
+      filterTitle, filterFill: filter === 'all' ? 'none' : 'currentColor', problemFiles,
       sortTitle: { found: 'Order Found', name: 'Name', largest: 'Largest First', smallest: 'Smallest First' }[sort],
       moveNote: move,
       sheetH: '640px', // MAC_STYLE: a results-list sheet may be 640 tall
@@ -570,7 +599,7 @@ class Component extends DCLogic {
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
       waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
-      footHint: nothingNew || before ? '' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      footHint: nothingNew || before ? '' : filter !== 'all' && !(listing || checkingNow) ? 'Only some photos shown · ' + (move ? 'Move' : 'Copy') + ' takes every checked photo.' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
       headline: checkingNow ? 'Checking · 172 of 314 confirmed so far' : first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
       runLabel: before ? 'Scan' : listing || checkingNow ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
