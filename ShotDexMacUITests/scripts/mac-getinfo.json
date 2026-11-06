@@ -1,0 +1,222 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No Selection",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.25,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "photoMenu.getInfo",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Caption",
+   "type": "textField",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-info"
+  },
+  {
+   "action": "dump",
+   "name": "01-info"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Title",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "label": "Caption",
+   "text": "Deer crossing the lawn",
+   "type": "textField"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "label": "Add Keyword",
+   "text": "Nara, sunset\n",
+   "type": "textField"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove keyword Nara",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "4 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Pick",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-edited"
+  },
+  {
+   "action": "dump",
+   "name": "02-edited"
+  },
+  {
+   "action": "click",
+   "label": "Remove keyword sunset",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove keyword sunset",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.33,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Caption",
+   "type": "textField",
+   "text": "Deer crossing the lawn"
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "2 Photos",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-two",
+   "window": "Info"
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

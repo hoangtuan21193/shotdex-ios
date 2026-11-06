@@ -109,3 +109,8 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
   khác giá trị ghi **"Mixed"** (chữ phụ); gõ hay chọn giá trị mới thì ghi cho cả N ảnh, ô không chạm giữ nguyên từng ảnh.
 - Keywords nhiều ảnh: hiện mọi chip có trong lựa chọn; thêm chip → thêm cho cả N, × trên chip → gỡ khỏi cả N.
 - EXIF nhiều ảnh: dòng cùng giá trị ghi giá trị, khác nhau ghi "Mixed"; Show All Raw Metadata mờ.
+- Panel mở bằng ⌘I (Image › Get Info) hoặc Get Info trên menu chuột phải (chỉ mở, không đóng); không lấy bàn phím tới khi
+  bấm vào một ô (như Info của Photos). Ảnh chỉ có trong Photos: Title tắt (Photos giữ tiêu đề), ghi "Saved as you type to Photos."
+- Tình trạng 2026-11-07 (Mac loop hàng 9): Creator, Copyright, Date/Location **Adjust…** và **Show All Raw Metadata** chưa có
+  (hàng 9b); EXIF chỉ hiện trường có trong index (Make, Model, Exposure, Aperture, ISO, Focal Length, Lens, Size) — Metering và
+  White Balance chưa được đọc vào index.

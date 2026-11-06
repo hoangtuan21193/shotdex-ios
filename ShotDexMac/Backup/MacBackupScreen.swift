@@ -213,6 +213,8 @@ extension Notification.Name {
     static let macGoTo = Notification.Name("ShotDexMacGoTo")
     /// View › as Grid ⌘1 / as List ⌘2; the object is the mode's raw value.
     static let macViewMode = Notification.Name("ShotDexMacViewMode")
+    /// Image › Get Info ⌘I (FS-18.02 §8).
+    static let macGetInfo = Notification.Name("ShotDexMacGetInfo")
     /// File › Add Source…: the Add a Source sheet.
     static let macShowAddSource = Notification.Name("ShotDexMacShowAddSource")
     /// File › Add Folder… and Add Photos Library….

@@ -137,6 +137,11 @@ final class MacPhotoMenu: NSObject {
         }
         menu.addItem(.separator())
 
+        menu.addItem(item(String(localized: "Get Info", comment: "Mac photo menu"), id: "getInfo") {
+            NotificationCenter.default.post(name: .macGetInfo, object: "show")
+        })
+        menu.addItem(.separator())
+
         let marks = dependencies.photoMarks
         let single = ids.count == 1 ? ids[0] : nil
         let rating = NSMenuItem(title: MarkCopy.rating, action: nil, keyEquivalent: "")

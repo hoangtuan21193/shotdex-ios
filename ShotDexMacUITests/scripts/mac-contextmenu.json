@@ -115,6 +115,77 @@
    "seconds": 1.2
   },
   {
+   "action": "screenshot",
+   "name": "01-menu"
+  },
+  {
+   "action": "dump",
+   "name": "01-menu"
+  },
+  {
+   "action": "assertExists",
+   "label": "Quick Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Add to Album",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Share",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Move to Trash",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Show in Finder",
+   "type": "menuItem"
+  },
+  {
+   "action": "hover",
+   "label": "Rating",
+   "type": "menuItem",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "photoMenu.rating.3",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
    "action": "hover",
    "label": "Rating",
    "type": "menuItem"

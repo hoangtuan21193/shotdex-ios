@@ -155,6 +155,13 @@ struct MacBackupCommands: Commands {
             }
             .keyboardShortcut("f", modifiers: .command)
         }
+        // Image › Get Info ⌘I (FS-18.01b §1); the rest of Image comes with the menu bar pass.
+        CommandMenu(String(localized: "Image", comment: "Mac menu bar: Image menu")) {
+            Button(String(localized: "Get Info", comment: "Mac menu: Image › Get Info")) {
+                NotificationCenter.default.post(name: .macGetInfo, object: nil)
+            }
+            .keyboardShortcut("i", modifiers: .command)
+        }
         CommandMenu(String(localized: "Go", comment: "Mac menu bar: Go menu")) {
             // Go › All Photos ⌥⌘1 … Recently Added ⌥⌘5 (FS-18.01b §2).
             ForEach(Array(MacSidebarItem.library.enumerated()), id: \.offset) { index, item in

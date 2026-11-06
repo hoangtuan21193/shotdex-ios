@@ -135,6 +135,34 @@ struct PhotoUserMarksStore: Sendable {
         }
     }
 
+    /// A file photo's title or caption as typed in Get Info; empty clears it.
+    /// The time stamp makes it win over an older sidecar value (FS-19.02 §6).
+    func setTitle(_ title: String, photoIds: [String], at date: Date = Date()) throws {
+        try setText(title, column: "title", stamp: "titleAt", photoIds: photoIds, at: date)
+    }
+
+    func setCaption(_ caption: String, photoIds: [String], at date: Date = Date()) throws {
+        try setText(caption, column: "caption", stamp: "captionAt", photoIds: photoIds, at: date)
+    }
+
+    private func setText(_ text: String, column: String, stamp: String, photoIds: [String], at date: Date) throws {
+        guard !photoIds.isEmpty else { return }
+        let value: String? = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text
+        let at = Int(date.timeIntervalSince1970)
+        try database.writer.write { db in
+            for id in photoIds {
+                // Typing saves several times a second: a save in the same
+                // second as the last one still wins (`<=`), unlike a sidecar
+                // read, which must be strictly newer (`setField`).
+                try db.execute(sql: """
+                    INSERT INTO photo_user_marks (photoId, \(column), \(stamp)) VALUES (?, ?, ?)
+                    ON CONFLICT(photoId) DO UPDATE SET \(column) = excluded.\(column), \(stamp) = excluded.\(stamp)
+                    WHERE photo_user_marks.\(stamp) IS NULL OR photo_user_marks.\(stamp) <= excluded.\(stamp)
+                    """, arguments: [id, value, at])
+            }
+        }
+    }
+
     /// Takes a keyword off every photo, in any case (`caseKey`).
     func removeKeyword(_ keyword: String, photoIds: [String]) throws {
         guard !photoIds.isEmpty else { return }

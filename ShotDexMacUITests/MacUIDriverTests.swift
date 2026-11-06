@@ -12,7 +12,7 @@ import XCTest
 /// - `launch` `arguments` — always adds `-ApplePersistenceIgnoreState YES`.
 /// - `click` / `rightClick` / `doubleClick` / `hover` — `label` (label, title or
 ///   identifier), optional `type` and `index`; or `x`/`y` normalized to the
-///   front window.
+///   first window, or to the one whose title starts with `window`.
 /// - `menu` `text` — a menu bar path, `"File>New Album…"`.
 /// - `typeText` `text` (into `label` when given), `key` `text` + modifiers in
 ///   `modifiers` (`cmd,shift,option,ctrl`).
@@ -81,6 +81,9 @@ final class MacUIDriverTests: XCTestCase {
         var name: String?
         var arguments: [String]?
         var within: Double?
+        /// For `x`/`y` clicks and `screenshot`: the window whose title starts
+        /// with this; the first window (often a floating panel) otherwise.
+        var window: String?
     }
 
     private struct Script: Decodable { let steps: [Step] }
@@ -192,7 +195,7 @@ final class MacUIDriverTests: XCTestCase {
                 throw DriverError.assertion("\(step.label ?? "?") enabled=\(found.isEnabled)")
             }
         case "screenshot":
-            screenshot(named: step.name ?? "shot-\(results.count)")
+            screenshot(named: step.name ?? "shot-\(results.count)", window: step.window)
         case "dump":
             dump(named: step.name ?? "dump-\(results.count)")
         case "quit":
@@ -235,16 +238,24 @@ final class MacUIDriverTests: XCTestCase {
 
     private func windowPoint(_ step: Step) throws -> XCUICoordinate? {
         guard step.label == nil, let x = step.x, let y = step.y else { return nil }
-        return app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y))
+        return window(step.window).coordinate(withNormalizedOffset: CGVector(dx: x, dy: y))
+    }
+
+    private func window(_ title: String?) -> XCUIElement {
+        guard let title else { return app.windows.firstMatch }
+        return app.windows.matching(NSPredicate(format: "title BEGINSWITH %@ OR label BEGINSWITH %@", title, title)).firstMatch
     }
 
     // MARK: Artifacts
 
-    private func screenshot(named name: String) {
+    private func screenshot(named name: String, window title: String? = nil) {
         // The window, never the screen: the desktop behind it can show the
         // user's real library in the iOS app.
-        let window = app.windows.firstMatch
-        guard window.exists else { return }
+        let window = window(title)
+        guard window.exists else {
+            XCTFail("screenshot \(name): no window\(title.map { " “\($0)”" } ?? "")")
+            return
+        }
         let attachment = XCTAttachment(screenshot: window.screenshot())
         attachment.name = "\(name).png"
         attachment.lifetime = .keepAlways

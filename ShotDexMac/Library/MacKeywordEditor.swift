@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Adds a keyword to, or takes one off, every selected photo (the Mac
-/// inspector, FS-18.02 §2): photos in Photos through Photos itself
+/// inspector, FS-18.02 §2), and writes Get Info's caption and title (§8): photos in Photos through Photos itself
 /// (`CaptionKeywordService`, FS-02.07 §4 — the mirror follows), file photos
 /// into `photo_user_keyword` and on to their `.xmp` sidecars (FS-19.02 §5).
 /// A photo with both kinds of copy gets both. Keywords are matched by case
@@ -49,6 +49,28 @@ struct MacKeywordEditor {
             // Photos removes by exact spelling: every spelling it holds goes.
             let spellings = current.keywords.filter { KeywordInput.caseKey($0) == key }
             return spellings.isEmpty ? nil : CaptionKeywordChange(remove: spellings)
+        }
+    }
+
+    /// Get Info's caption: a file photo's own row (and sidecar), Photos'
+    /// caption for a photo in Photos. Empty clears it.
+    func setCaption(_ text: String, for id: String) async -> Outcome {
+        let caption: CaptionKeywordChange.Caption = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .clear : .set(text)
+        return await write(ids: [id], files: { store, files in try store.setCaption(text, photoIds: files) }) { current in
+            current.caption == (caption == .clear ? nil : text) ? nil : CaptionKeywordChange(caption: caption)
+        }
+    }
+
+    /// A file photo's title (Photos keeps none ShotDex writes).
+    func setTitle(_ text: String, for id: String) async -> Outcome {
+        let store = PhotoUserMarksStore(database: database)
+        do {
+            try await Task.detached(priority: .userInitiated) { try store.setTitle(text, photoIds: [id]) }.value
+            await sidecarQueue.schedule([id])
+            return .done
+        } catch {
+            Self.log.error("title write failed: \(error.localizedDescription, privacy: .public)")
+            return .failed
         }
     }
 
