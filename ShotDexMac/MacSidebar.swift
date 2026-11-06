@@ -26,7 +26,7 @@ struct MacSidebar: View {
             }
             Section {
                 ForEach(sources, id: \.id) { source in
-                    Label(source.name, systemImage: MacSidebar.symbol(forSourceKind: source.kind))
+                    Label { Text(source.name) } icon: { MacSidebar.icon(MacSidebar.symbol(forSourceKind: source.kind)) }
                         .tag(MacSidebarItem.source(source.id))
                 }
             } header: {
@@ -49,7 +49,7 @@ struct MacSidebar: View {
             Section {
                 ForEach(MacSidebarItem.collections) { row($0, count: nil) }
                 ForEach(smartAlbums) { album in
-                    Label(album.name, systemImage: MacSidebarItem.smartAlbum(album.id).systemImage)
+                    Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
                         .tag(MacSidebarItem.smartAlbum(album.id))
                 }
             } header: {
@@ -85,7 +85,7 @@ struct MacSidebar: View {
                 }
             }
         } icon: {
-            Image(systemName: item.systemImage)
+            MacSidebar.icon(item.systemImage)
         }
         .tag(item)
     }
@@ -103,7 +103,7 @@ struct MacSidebar: View {
                 }
             }
         } icon: {
-            Image(systemName: MacSidebarItem.backup.systemImage)
+            MacSidebar.icon(MacSidebarItem.backup.systemImage)
         }
         .tag(MacSidebarItem.backup)
     }
@@ -125,6 +125,19 @@ struct MacSidebar: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
+    }
+
+    /// Board `Main`: a 16pt line glyph in the ShotDex accent on every row,
+    /// whatever the system accent and whether the window is key — the
+    /// default sidebar icon is larger, filled in places and system blue.
+    static func icon(_ name: String) -> some View {
+        Image(systemName: name)
+            .resizable()
+            .scaledToFit()
+            .symbolVariant(.none)
+            .fontWeight(.regular)
+            .foregroundStyle(MacTheme.accent)
+            .frame(width: 16, height: 16)
     }
 
     static func symbol(forSourceKind kind: String) -> String {
@@ -185,7 +198,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
-        case .smartAlbum: "gearshape.2"
+        case .smartAlbum: "sparkles.rectangle.stack"
         case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"
         case .duplicates: "square.on.square"
