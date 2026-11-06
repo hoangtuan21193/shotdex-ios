@@ -57,6 +57,12 @@ real NAS/Windows share or at PhotoKit writes. Code paths that write PhotoKit get
    did not touch this pass belong to someone else; never stage them.
    Then ScheduleWakeup, same /loop prompt. Never clear session.
 
+**Build and test in the private worktree** (other sessions leave half-saved edits that break the shared
+build): `WT=<scratchpad>/wt` — before each pass `/usr/bin/git -C $WT checkout -f --detach main` and
+`/usr/bin/git -C $WT clean -fdq -e '*.mlpackage' -e build`; edit in the main checkout, `cp` the changed files
+into `$WT`, build and run `Tools/mac-ui-drive` from `$WT` (its own `build/mac`). Commit from the main checkout.
+zsh does not split `$VAR` into words: pass path lists as an array (`P=(a b); git add "${P[@]}"`).
+
 Disk: stop if `volumeAvailableCapacityForImportantUsage` < 25 GB. Quit the app by pid, not `pkill`
 (kills the helper). `blocked` rows need the user — write why.
 
