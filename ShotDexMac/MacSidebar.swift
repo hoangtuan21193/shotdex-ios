@@ -6,6 +6,16 @@ struct MacSidebar: View {
     @Binding var selection: MacSidebarItem?
     let library: LibraryModel?
     let sources: [SourceStore.Source]
+    /// The Backup row's count, or a warning dot when a job needs the user
+    /// (FS-22.06 §5.1).
+    var backup: (jobs: Int, needsAttention: Bool) = (0, false)
+    var smartAlbums: [SmartAlbum] = []
+    var newSmartAlbum: () -> Void = {}
+    /// The Sources header's + (board `Main`): a folder or drive, or a server.
+    var addFolder: () -> Void = {}
+    var connectToServer: () -> Void = {}
+    /// A long task's foot (a common-photos run), shown instead of the index line.
+    var busyFooter: AnyView? = nil
 
     var body: some View {
         List(selection: $selection) {
@@ -14,17 +24,52 @@ struct MacSidebar: View {
                     row(item, count: item == .allPhotos ? library?.items.count : nil)
                 }
             }
-            Section(String(localized: "Sources", comment: "Mac sidebar group")) {
+            Section {
                 ForEach(sources, id: \.id) { source in
-                    Label(source.name, systemImage: MacSidebar.symbol(forSourceKind: source.kind))
+                    Label { Text(source.name) } icon: { MacSidebar.icon(MacSidebar.symbol(forSourceKind: source.kind)) }
                         .tag(MacSidebarItem.source(source.id))
                 }
+            } header: {
+                HStack {
+                    Text("Sources", comment: "Mac sidebar group")
+                    Spacer()
+                    Menu {
+                        Button(String(localized: "Add Folder…", comment: "Mac sidebar: add a folder or drive source"), action: addFolder)
+                        Button(String(localized: "Connect to Server…", comment: "Mac sidebar: add a server connection"), action: connectToServer)
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                    .accessibilityLabel(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                }
             }
-            Section(String(localized: "Collections", comment: "Mac sidebar group")) {
+            Section {
                 ForEach(MacSidebarItem.collections) { row($0, count: nil) }
+                ForEach(smartAlbums) { album in
+                    Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
+                        .tag(MacSidebarItem.smartAlbum(album.id))
+                }
+            } header: {
+                HStack {
+                    Text("Collections", comment: "Mac sidebar group")
+                    Spacer()
+                    Button(action: newSmartAlbum) { Image(systemName: "plus") }
+                        .buttonStyle(.borderless)
+                        .help(String(localized: "New Smart Album… (⌥⌘N)", comment: "Mac sidebar: add a smart album"))
+                        .accessibilityLabel(String(localized: "New Smart Album", comment: "Mac sidebar: add a smart album"))
+                }
             }
             Section(String(localized: "Utilities", comment: "Mac sidebar group")) {
-                ForEach(MacSidebarItem.utilities) { row($0, count: nil) }
+                ForEach(MacSidebarItem.utilities) { item in
+                    if item == .backup {
+                        backupRow
+                    } else {
+                        row(item, count: nil)
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) { status }
@@ -40,14 +85,34 @@ struct MacSidebar: View {
                 }
             }
         } icon: {
-            Image(systemName: item.systemImage)
+            MacSidebar.icon(item.systemImage)
         }
         .tag(item)
     }
 
+    private var backupRow: some View {
+        Label {
+            HStack {
+                Text(MacSidebarItem.backup.title)
+                Spacer(minLength: 4)
+                if backup.needsAttention {
+                    Circle().fill(.orange).frame(width: 8, height: 8)
+                        .accessibilityLabel(String(localized: "Needs attention", comment: "Mac sidebar: a backup job has a problem"))
+                } else if backup.jobs > 0 {
+                    Text(backup.jobs.formatted()).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            MacSidebar.icon(MacSidebarItem.backup.systemImage)
+        }
+        .tag(MacSidebarItem.backup)
+    }
+
     @ViewBuilder
     private var status: some View {
-        if let library {
+        if let busyFooter {
+            busyFooter
+        } else if let library {
             HStack(spacing: 6) {
                 Image(systemName: library.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark")
                 Text(library.isIndexing
@@ -60,6 +125,19 @@ struct MacSidebar: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
+    }
+
+    /// Board `Main`: a 16pt line glyph in the ShotDex accent on every row,
+    /// whatever the system accent and whether the window is key — the
+    /// default sidebar icon is larger, filled in places and system blue.
+    static func icon(_ name: String) -> some View {
+        Image(systemName: name)
+            .resizable()
+            .scaledToFit()
+            .symbolVariant(.none)
+            .fontWeight(.regular)
+            .foregroundStyle(MacTheme.accent)
+            .frame(width: 16, height: 16)
     }
 
     static func symbol(forSourceKind kind: String) -> String {
@@ -77,16 +155,18 @@ enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
     case onThisDay, albums
-    case statistics, duplicates, collages, videoProjects, onServer
+    case smartAlbum(String)
+    case backup, statistics, duplicates, collages, videoProjects, onServer
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
+        if case .smartAlbum(let id) = self { return "smart-" + id }
         return title
     }
 
     static let library: [MacSidebarItem] = [.allPhotos, .favorites, .videos, .raw, .recentlyAdded]
     static let collections: [MacSidebarItem] = [.onThisDay, .albums]
-    static let utilities: [MacSidebarItem] = [.statistics, .duplicates, .collages, .videoProjects, .onServer]
+    static let utilities: [MacSidebarItem] = [.backup, .statistics, .duplicates, .collages, .videoProjects, .onServer]
 
     var title: String {
         switch self {
@@ -98,6 +178,8 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: String(localized: "Source", comment: "Mac sidebar: a photo source")
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
+        case .smartAlbum: String(localized: "Smart Album", comment: "Mac sidebar: a smart album")
+        case .backup: String(localized: "Backup", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
         case .duplicates: String(localized: "Duplicates", comment: "Mac sidebar")
         case .collages: String(localized: "Collages", comment: "Mac sidebar")
@@ -116,6 +198,8 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
+        case .smartAlbum: "sparkles.rectangle.stack"
+        case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"
         case .duplicates: "square.on.square"
         case .collages: "square.grid.2x2"

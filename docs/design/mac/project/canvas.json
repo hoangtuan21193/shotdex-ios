@@ -342,8 +342,8 @@
    "x": 0,
    "y": 6710,
    "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Chung; tab AI mới sau General (FS-23, 14/10)",
+   "h": 920,
+   "title": "Mac · Cài đặt › Chung; nhóm Indexing (2/11)",
    "radius": 16
   },
   "MAC_SettingsSources.dc.html": {
@@ -470,8 +470,8 @@
    "x": 15700,
    "y": 1510,
    "w": 420,
-   "h": 640,
-   "title": "Mac · Get Info một ảnh: tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF",
+   "h": 728,
+   "title": "Mac · Get Info một ảnh: tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF + On Server (FS-19.07 §11)",
    "radius": 16
   },
   "MAC_SettingsSourcesCache.dc.html": {
@@ -505,6 +505,70 @@
    "radius": 16,
    "x": 3040,
    "y": 1510
+  },
+  "MAC_SmartAlbum.dc.html": {
+   "x": 14480,
+   "y": 2810,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Smart album On NAS — Shared: chip Source is NAS Home › Shared, dòng Checking, glyph trên server ở ô lưới (FS-19.07 §11)",
+   "radius": 16
+  },
+  "MAC_Backup.dc.html": {
+   "x": 16000,
+   "y": 2810,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Backup: danh sách 3 job, inspector phải là 5/5 của job đang chọn (vòng 34%, Pause, đếm), chấm cảnh báo ở sidebar (FS-22.06)",
+   "radius": 16
+  },
+  "MAC_BackupNew.dc.html": {
+   "x": 17520,
+   "y": 2810,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · New Backup: sheet 640×560, chưa chọn Folder nên Start mờ, không có Only on Wi‑Fi (FS-22.06 §5.3)",
+   "radius": 16
+  },
+  "MAC_BackupOrganize.dc.html": {
+   "x": 19040,
+   "y": 2810,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Organize trang 2 của sheet New Backup + popover Custom… cạnh popup Day (FS-22.06 §5.3)",
+   "radius": 16
+  },
+  "MAC_CommonPhotos.dc.html": {
+   "x": 10280,
+   "y": 6710,
+   "w": 1440,
+   "h": 900,
+   "radius": 16,
+   "title": "Mac · Find Common Photos: sheet trước Scan / đang liệt kê / sau Scan — §6d chỉ Same, mỗi hàng ô chọn + kế hoạch (→ Shared/tên, Already in Shared, Move: Removes N copies), hàng bỏ = Left out from now on, nút Compare khi rê chuột, Left Out (2) + Include, 278 of 282 selected · Copy 278 / Move 278… (FS-19.08)"
+  },
+  "MAC_CommonPhotosRun.dc.html": {
+   "x": 11800,
+   "y": 6710,
+   "w": 1440,
+   "h": 900,
+   "radius": 16,
+   "title": "Mac · Common Photos đang chạy: cửa sổ log từng file, Copying 120 of 280, Pause/Stop, lọc trạng thái (FS-19.08 §7); readyToMove có ô chọn, Move 3… (§6d)"
+  },
+  "MAC_Activity.dc.html": {
+   "x": 13320,
+   "y": 6710,
+   "w": 900,
+   "h": 560,
+   "title": "Mac · Cửa sổ Activity ⌥⌘0: mỗi việc chạy lâu một kiểu hàng — Common photos đang chạy (Show Log), bị gián đoạn (Try Again), đã xong (Clear); index/backup chưa có nguồn dữ liệu trên Mac; tweak empty = No Activity",
+   "radius": 16
+  },
+  "MAC_CommonPhotosCompare.dc.html": {
+   "x": 14300,
+   "y": 6710,
+   "w": 1180,
+   "h": 760,
+   "radius": 16,
+   "title": "Mac · Common Photos Compare (tier D): hai bản cạnh nhau, SHA trùng, ô Include in Copy, ↑↓ sang hàng; tweak photo · video (một Play, tua chung) · loading · waiting (chờ Scan) · noPreview (RAW) · error (Try Again) · threeFolders (popup chọn bản) — FS-19.08 §6d"
   }
  },
  "order": [
@@ -569,7 +633,15 @@
   "MAC_GetInfoSingle.dc.html",
   "MAC_SettingsSourcesCache.dc.html",
   "MAC_SettingsAI.dc.html",
-  "MAC_SettingsAIProvider.dc.html"
+  "MAC_SettingsAIProvider.dc.html",
+  "MAC_SmartAlbum.dc.html",
+  "MAC_Backup.dc.html",
+  "MAC_BackupNew.dc.html",
+  "MAC_BackupOrganize.dc.html",
+  "MAC_CommonPhotos.dc.html",
+  "MAC_CommonPhotosRun.dc.html",
+  "MAC_Activity.dc.html",
+  "MAC_CommonPhotosCompare.dc.html"
  ],
  "notes": {
   "row_lib": {
@@ -590,8 +662,8 @@
    "kind": "title1",
    "x": 0,
    "y": 2550,
-   "text": "Mac · Album · thống kê",
-   "maxW": 16000
+   "text": "Mac · Album · thống kê · Backup",
+   "maxW": 20000
   },
   "row_edit": {
    "kind": "title1",

@@ -18,9 +18,21 @@ struct PhotosFileHashPass: Sendable {
     var download: @Sendable (_ assetId: String, _ fileKey: String, _ directory: URL) async throws -> URL = Self.liveDownloader()
     var workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexOnServer", isDirectory: true)
     var freeBytes: @Sendable () -> Int64? = { DiskSpace.availableBytes() }
+    /// The Mac hashing for every device (FS-19.07 §12.1): every file, not
+    /// only those with a file of the same size on a server.
+    var hashesEverything = false
+    /// Fills the just-listed copies' files from other devices' hashes
+    /// (`SharedHashExchange`); returns how many. Nil while the index is
+    /// not shared.
+    var adoptListed: (@Sendable (_ copyIds: [String], _ now: Date) async -> Int)?
+
+    /// Room kept for a file whose size Photos did not report.
+    static let unknownSizeAllowance: Int64 = 2 << 30
 
     struct Summary: Equatable, Sendable {
         var listed = 0
+        /// Filled from another device's hash right after listing (§12.3).
+        var adopted = 0
         var seeded = 0
         var hashed = 0
         var failed = 0
@@ -35,23 +47,42 @@ struct PhotosFileHashPass: Sendable {
     @discardableResult
     func run(limit: Int = 200, now: Date = Date()) async throws -> Summary {
         var summary = Summary()
+        var listedIds: [String] = []
         for copy in try store.photosCopiesNeedingListing(limit: limit) {
             try Task.checkCancellation()
             // An asset gone from the library since the index: the indexer
             // removes its copy; nothing to list.
-            guard let files = try? await listFiles(copy.assetId) else { continue }
+            let files: [PhotosFile]
+            do {
+                files = try await listFiles(copy.assetId)
+            } catch PhotosFileHashPass.ListError.missingAsset {
+                // PhotoKit cannot fetch it (hidden, Recently Deleted, another
+                // library): listed as having no files until it changes, so
+                // it does not sit at the head of the queue every round.
+                files = []
+            } catch {
+                continue
+            }
             try store.saveListing(copyId: copy.copyId, stamp: copy.stamp, files: files, at: now)
+            listedIds.append(copy.copyId)
             summary.listed += 1
+        }
+        // What another device already hashed is taken before choosing what
+        // to download here (FS-19.07 §12.3).
+        if let adoptListed, !listedIds.isEmpty, !Task.isCancelled {
+            summary.adopted = await adoptListed(listedIds, now)
         }
         summary.seeded = try store.seedFromBackupLedger(at: now)
 
-        let candidates = try store.photosCandidates(triedBefore: now, limit: limit)
+        let candidates = try store.photosCandidates(triedBefore: now, limit: limit, everything: hashesEverything)
         guard !candidates.isEmpty else { return summary }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         for file in candidates {
             try Task.checkCancellation()
             // The same rule as Backup: never fill the device (FS-22.02 §2).
-            if let free = freeBytes(), free - (file.size ?? 0) < BackupRunner.minimumFreeBytes {
+            // A size Photos did not give counts as 2 GB more: the download
+            // is not watched while it runs.
+            if let free = freeBytes(), free - (file.size ?? Self.unknownSizeAllowance) < BackupRunner.minimumFreeBytes {
                 summary.waitingForSpace = true
                 break
             }
@@ -73,6 +104,17 @@ struct PhotosFileHashPass: Sendable {
 
 extension PhotosFileHashPass {
     enum ListError: Error { case missingAsset }
+
+    /// One file read here on its own — the random check (FS-19.07 §12.4).
+    /// Nil when it would leave the device short of space, as for any
+    /// candidate.
+    func hashOne(assetId: String, fileKey: String, size: Int64?) async throws -> String? {
+        if let free = freeBytes(), free - (size ?? Self.unknownSizeAllowance) < BackupRunner.minimumFreeBytes { return nil }
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        let url = try await download(assetId, fileKey, workDirectory)
+        defer { try? FileManager.default.removeItem(at: url) }
+        return try FileChecksum.sha256(of: url)
+    }
 
     /// One original out of Photos into the folder, streamed — fetched from
     /// iCloud when the device holds only the Optimize Storage proxy.

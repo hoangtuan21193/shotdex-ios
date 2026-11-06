@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Find Common Photos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
+<!-- Column browser: the folders above the open one -->
+<div role="tree" aria-label="Folders on NAS Home" style="position:absolute;left:252px;top:60px;bottom:44px;width:372px;border-radius:12px;border:1px solid {{t.sep}};background:{{t.content}};display:flex;overflow:hidden">
+<sc-for list="{{columns}}" as="c" hint-placeholder-count="2"><div style="width:186px;flex:none;border-right:{{c.edge}};display:flex;flex-direction:column;box-sizing:border-box">
+<div style="height:30px;display:flex;align-items:center;padding:0 12px;font-size:11px;font-weight:600;color:{{t.label2}};border-bottom:1px solid {{t.sep}}">{{c.title}}</div>
+<div style="padding:4px;display:flex;flex-direction:column">
+<sc-for list="{{c.items}}" as="f" hint-placeholder-count="6"><div role="treeitem" aria-selected="{{f.sel}}" style="height:26px;border-radius:6px;background:{{f.bg}};display:flex;align-items:center;gap:7px;padding:0 6px 0 8px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="{{f.d}}"></path></svg>
+<span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:{{f.w}}">{{f.name}}</span>
+<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{f.count}}</span>
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M9 6l6 6-6 6"></path></svg>
+</div></sc-for>
+</div>
+<div style="flex:1"></div>
+<div style="height:28px;display:flex;align-items:center;padding:0 12px;font-size:11px;color:{{t.label2}};border-top:1px solid {{t.sep}};font-variant-numeric:tabular-nums">{{c.foot}}</div>
+</div></sc-for>
+</div><!-- Files in the open folder -->
+<!-- Contents of Family: four folders, Tuấn and Vợ selected with ⌘-click -->
+<div style="position:absolute;left:636px;right:16px;top:60px;bottom:32px;overflow:hidden">
+<div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px 8px;box-sizing:border-box">
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">Family</span><span style="font-size:13px;color:{{t.label2}};font-variant-numeric:tabular-nums">4 folders</span></div>
+<button aria-label="Sort By Name" style="border:none;background:none;display:flex;align-items:center;gap:4px;font-size:12px;color:{{t.label2}}">Name<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg></button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:2px">
+<sc-for list="{{folderTiles}}" as="p" hint-placeholder-count="4"><div aria-label="{{p.label}}" aria-selected="{{p.selA}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{p.bg}}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:{{t.accent}}"><svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="font-size:12px;color:{{t.label}}">{{p.name}}</span><span style="font-size:11px;color:{{t.label2}};margin-top:-6px;font-variant-numeric:tabular-nums">{{p.meta}}</span></div>
+<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div></sc-if>
+</div></sc-for>
+</div>
+</div>
+<!-- Path bar -->
+<div style="position:absolute;left:244px;right:0;bottom:0;height:32px;border-top:1px solid {{t.sep}};background:{{t.content}};display:flex;align-items:center;gap:6px;padding:0 16px;font-size:12px;color:{{t.label}}">
+<nav aria-label="Path" style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+<sc-for list="{{crumbs}}" as="b" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:5px;white-space:nowrap"><sc-if value="{{b.sep}}" hint-placeholder-val="{{false}}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M9 6l6 6-6 6"></path></svg></sc-if><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.accent}}"><path d="{{b.d}}"></path></svg><span style="color:{{t.label}};font-weight:{{b.w}}">{{b.name}}</span></span></sc-for>
+</nav>
+<span style="font-size:11px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{pathStatus}}</span>
+</div>
+<!-- Scroll-edge fade under the toolbar -->
+<div style="position:absolute;left:244px;right:0;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<!-- TOOLBAR (unified, no title bar) -->
+<div style="position:absolute;left:256px;right:16px;top:8px;height:44px;display:flex;align-items:center;gap:12px">
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px">
+<button aria-label="Back" style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button aria-label="Forward" disabled style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+<div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">{{title}}</div>
+<div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">{{subtitle}}</div>
+</div>
+<div style="flex:1"></div>
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Icons" aria-pressed="true" style="width:36px;height:32px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="false" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button></div><div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="New Folder" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M12 10.5v5 M9.5 13h5"></path></svg></button><button aria-label="Rescan" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6 M20 4v5h-5"></path></svg></button><button aria-label="Show Inspector" aria-pressed="false" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div><label style="width:200px;height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5"></path></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search</span><input placeholder="Search NAS Home" style="flex:1;min-width:0;border:none;background:none;outline:none;font-size:13px;color:{{t.label}}"></label><button aria-label="Upload to Server…" style="height:36px;border-radius:18px;background:{{t.accentFill}};border:1px solid {{t.accentFill}};box-shadow:{{t.glassShadow}};display:flex;align-items:center;gap:6px;padding:0 14px;color:{{t.onAccentFill}};font-size:13px;font-weight:600;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9 M7 14l5-5 5 5 M5 4h14"></path></svg>Upload…</button>
+</div>
+<!-- SIDEBAR: canonical (Library · Sources · Collections · Utilities), floating glass panel -->
+<nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:228px;border-radius:18px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
+<div style="position:absolute;left:14px;top:16px;display:flex;gap:8px">
+<div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+</div>
+<button aria-label="Hide Sidebar" style="position:absolute;right:10px;top:9px;width:28px;height:28px;border-radius:8px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label2}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M9 5v14"></path></svg></button>
+<div style="position:absolute;left:8px;right:8px;top:48px;bottom:60px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:0">
+<sc-if value="{{g.hasTitle}}" hint-placeholder-val="{{true}}"><div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:11px;font-weight:600;color:{{t.label2}}"><span>{{g.title}}</span><sc-if value="{{g.addable}}" hint-placeholder-val="{{false}}"><button aria-label="{{g.addLabel}}" style="width:20px;height:20px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg></button></sc-if></div></sc-if>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div role="treeitem" aria-selected="{{r.selA}}" style="height:28px;border-radius:8px;background:{{r.bg}};display:flex;align-items:center;gap:8px;padding:0 8px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{r.iconColor}}"><path d="{{r.d}}"></path></svg>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:{{r.textColor}}">{{r.name}}</span>
+<sc-if value="{{r.chev}}" hint-placeholder-val="{{false}}"><button aria-label="Show Albums" aria-expanded="false" style="width:16px;height:16px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
+<sc-if value="{{r.offline}}" hint-placeholder-val="{{false}}"><span style="height:16px;padding:0 6px;border-radius:8px;background:{{t.fill}};font-size:10px;font-weight:600;line-height:16px;color:{{t.label2}}">Offline</span></sc-if>
+<sc-if value="{{r.progress}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="{{r.progLabel}}" width="14" height="14" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{r.dash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg></sc-if>
+<sc-if value="{{r.access}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Needs access" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{t.orange}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg></sc-if>
+<sc-if value="{{r.eject}}" hint-placeholder-val="{{false}}"><button aria-label="Eject {{r.name}}" style="width:18px;height:18px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6l6 7H6z M6 17h12"></path></svg></button></sc-if>
+<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.count}}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<!-- Sidebar foot: idle status; progress only on boards about a running task -->
+<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:16px;height:28px;display:flex;align-items:center;gap:6px;font-size:11px;color:{{t.label2}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
+<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">{{foot.pct}}</span></div>
+<div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
+</div></sc-if>
+</nav>
+<div style="position:absolute;inset:0;background:{{t.scrim}};z-index:20"></div>
+<!-- SHEET 640×560 Find Common Photos (FS-19.08 §4), states via the state tweak: listing (bar, no Action), checking (bar with percent, Same so far, no Action, Stop), first (scan done: Action appears, Copy 278) -->
+<div role="dialog" aria-label="Find Common Photos" style="position:absolute;left:400px;top:52px;width:640px;height:{{sheetH}};border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};border:1px solid {{t.glassStroke}};padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;z-index:25">
+<div style="font-size:15px;font-weight:600;line-height:18px;flex:none">Find Common Photos</div>
+<div style="height:14px;flex:none"></div>
+<!-- Folders -->
+<div style="display:flex;align-items:flex-start;gap:8px;flex:none">
+<span style="width:64px;flex:none;text-align:right;font-size:13px;line-height:28px">Folders:</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div role="list" aria-label="Folders" style="border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};overflow:hidden">
+<sc-for list="{{srcFolders}}" as="f" hint-placeholder-count="2"><div role="listitem" style="height:28px;display:flex;align-items:center;gap:8px;padding:0 4px 0 10px;background:{{f.rowBg}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+<span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.path}}</span>
+<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums;white-space:nowrap">{{f.count}}</span>
+<button aria-label="{{f.remove}}" style="width:22px;height:22px;border-radius:6px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label2}};flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+</div></sc-for>
+</div>
+<div><button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:inline-flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap">Add Folder…</button></div>
+</div>
+</div>
+<div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
+<!-- Save to + Action on one row -->
+<div style="display:flex;align-items:center;gap:8px;height:28px;flex:none">
+<span style="width:64px;flex:none;text-align:right;font-size:13px">Save to:</span>
+<button aria-label="Save to" aria-haspopup="menu" style="width:168px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;color:{{saveToFg}}">{{saveTo}}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></button>
+<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">New Folder…</button>
+<div style="flex:1"></div>
+<!-- No Action switch (user 2026-11-06): one scan serves both; Copy N and Move N… are the two run buttons below -->
+</div>
+<!-- §6e: a server that refused to set dates on an earlier run on this connection -->
+<sc-if value="{{noDates}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;padding:6px 0 0 72px;font-size:12px;color:{{S.orangeText}};flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg>This server does not keep file dates: copies show the day they were copied.</div></sc-if>
+<!-- §6e Organize: how photos are laid out under Save to; opens Backup's Organize page -->
+<div style="display:flex;align-items:center;gap:8px;height:28px;margin-top:8px;flex:none">
+<span style="width:64px;flex:none;text-align:right;font-size:13px">Organize:</span>
+<button aria-label="Organize, {{organizeSummary}}" title="Opens Organize" style="max-width:300px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{organizeSummary}}…</span></button>
+<span title="{{organizeSample}}" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{organizeSample}}</span>
+</div>
+<sc-if value="{{gatheredNote}}" hint-placeholder-val="{{false}}"><div style="padding:6px 0 0 72px;font-size:12px;line-height:16px;color:{{t.label2}};flex:none">Changing this affects new photos only. The 280 already gathered stay where they are.</div></sc-if>
+<!-- Move: what it does, under the row (the server has no Trash) -->
+<sc-if value="{{moveNote}}" hint-placeholder-val="{{false}}"><div style="padding:6px 0 0 72px;font-size:12px;color:{{t.label2}};flex:none">Moved photos are removed from every folder above. The server has no Trash.</div></sc-if>
+<!-- §6e Quick Check: Copy only, off by default -->
+<sc-if value="{{quickRow}}" hint-placeholder-val="{{true}}"><label title="Photos at the same path with the same size are compared by sampling, not read in full, so a file changed in the middle could be missed. Move always reads every byte." style="position:relative;display:flex;align-items:center;gap:8px;height:22px;margin-top:6px;padding-left:72px;flex:none;font-size:13px">
+<span aria-hidden="true" style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{quickBorder}};background:{{quickBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{quickVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+<sc-if value="{{quick}}" hint-placeholder-val="{{false}}"><input type="checkbox" checked aria-label="Quick check for photos in the same place" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<sc-if value="{{quickOff}}" hint-placeholder-val="{{true}}"><input type="checkbox" aria-label="Quick check for photos in the same place" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<span style="flex:none">Quick check</span>
+<span style="min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Faster: same path and size are sampled. Move reads every byte.</span>
+</label></sc-if>
+
+<div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
+<!-- While the scan checks: a bar of bytes read, the percent and what is left beside it -->
+<sc-if value="{{progress}}" hint-placeholder-val="{{false}}"><div role="progressbar" aria-label="Scan progress" aria-valuenow="61" aria-valuemin="0" aria-valuemax="100" style="display:flex;align-items:center;gap:10px;height:20px;margin-bottom:8px;flex:none">
+<div style="flex:1;height:6px;border-radius:3px;background:{{t.track}};overflow:hidden"><div style="width:61%;height:6px;border-radius:3px;background:{{t.accentFill}}"></div></div>
+<span style="flex:none;font-size:12px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">61% · 1.6 GB left</span>
+</div></sc-if>
+<!-- Result after Scan -->
+<sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:22px;flex:none">
+<span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{headline}}</span>
+<!-- Show (filter): All · Photos · Videos · Live Photos · Names Differ · Problems. Only what the list shows: the run still takes every checked photo -->
+<sc-if value="{{sortable}}" hint-placeholder-val="{{true}}"><button aria-label="Show, {{filterTitle}}" aria-haspopup="menu" title="Show only some of the photos" style="height:22px;border:none;background:none;padding:0;display:flex;align-items:center;gap:4px;color:{{t.accent}};font-size:13px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="{{filterFill}}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"></path></svg>{{filterTitle}}<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+<!-- Sort: Order Found · Name · Largest First · Smallest First, remembered across sheets -->
+<sc-if value="{{sortable}}" hint-placeholder-val="{{true}}"><button aria-label="Sort By, {{sortTitle}}" aria-haspopup="menu" title="Sort the photos" style="height:22px;border:none;background:none;padding:0;display:flex;align-items:center;gap:4px;color:{{t.accent}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16 M3 8l4-4 4 4 M17 20V4 M13 16l4 4 4-4"></path></svg>{{sortTitle}}<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+</div>
+<!-- The counts on their own line: beside the headline they squeezed each other to "S… 2…" -->
+<div style="display:flex;align-items:center;gap:16px;height:22px;margin-top:4px;flex:none">
+<span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span><sc-if value="{{quickN}}" hint-placeholder-val="{{false}}"><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">· {{quickN}} quick</span></sc-if></span>
+<sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 142" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">142</span></span></sc-if>
+<!-- §6e: the plan reads each photo's date for Organize; the rows' → paths follow -->
+<sc-if value="{{readingDates}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Reading dates 120 of 282" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg>Reading dates 120 of 282</span></sc-if>
+<!-- §6f: Live Photos whose still and video are not both Same — neither is gathered -->
+<sc-if value="{{liveLeftOut}}" hint-placeholder-val="{{false}}"><span role="status" aria-label="Live halves left out, 2" title="The still and the video of these Live Photos are not both the same in every folder, so neither is gathered." style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{t.label2}}" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle><path d="M4 4l16 16"></path></svg><span style="color:{{t.label2}}">Live halves left out</span><span style="font-weight:600;font-variant-numeric:tabular-nums">2</span></span></sc-if>
+</div></sc-if>
+<!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
+<sc-if value="{{againRow}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;flex:none">
+<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2"></path></svg>
+<span style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{againLine}}</span>
+<button style="height:24px;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 10px;font-size:12px;white-space:nowrap;flex:none">Scan Everything</button>
+</div></sc-if>
+<div style="height:8px;flex:none"></div>
+<!-- Before Scan, and while it lists the folders: one line in the middle, nothing to choose yet -->
+<sc-if value="{{waiting}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 40px;text-align:center">
+<sc-if value="{{listing}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="width:280px;height:6px;border-radius:3px;background:{{t.track}};position:relative;overflow:hidden"><div style="position:absolute;left:30%;width:28%;height:6px;border-radius:3px;background:{{t.accentFill}}"></div></div></sc-if>
+<div style="font-size:13px;line-height:17px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{waitingLine}}</div>
+</div></sc-if>
+<!-- §6d: the plan — only Same rows, each with its checkbox and what it becomes in the destination.
+     Unchecking leaves the photo out of this set for good (Left Out, Include brings it back). Space or a double-click
+     on one row opens Compare; the hovered row shows the same as a button. -->
+<sc-if value="{{hasMatches}}" hint-placeholder-val="{{true}}"><div role="list" aria-label="Photos in both folders" style="flex:1;min-height:0;position:relative;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:1;min-height:0;overflow:hidden;position:relative">
+<sc-for list="{{matches}}" as="m" hint-placeholder-count="7"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 0;background:{{m.rowBg}}">
+<sc-if value="{{m.hasBox}}" hint-placeholder-val="{{true}}"><label style="position:relative;flex:none;width:34px;height:40px;display:flex;align-items:center;justify-content:center">
+<span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{m.boxBorder}};background:{{m.boxBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{m.checkVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+<sc-if value="{{m.on}}" hint-placeholder-val="{{true}}"><input type="checkbox" checked aria-label="{{m.boxLabel}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<sc-if value="{{m.off}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="{{m.boxLabel}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+</label></sc-if>
+<sc-if value="{{m.there}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex:none;width:34px"></span></sc-if>
+<div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}};opacity:{{m.thumbDim}}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{m.help}}">
+<span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span><sc-if value="{{m.live}}" hint-placeholder-val="{{false}}"><span title="Half of a Live Photo: its still and video go together" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="7" stroke-dasharray="2 2.4"></circle><circle cx="12" cy="12" r="10.5"></circle></svg>Live</span></sc-if><sc-if value="{{m.quick}}" hint-placeholder-val="{{false}}"><span title="Compared by three samples" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};font-size:10px;font-weight:600;line-height:15px;color:{{t.label}}">Quick</span></sc-if><sc-if value="{{m.failed}}" hint-placeholder-val="{{false}}"><span title="{{m.failedWhy}}" style="flex:none;height:15px;padding:0 5px;border-radius:4px;background:{{S.orangeSoft}};font-size:10px;font-weight:600;line-height:15px;color:{{S.orangeText}};display:flex;align-items:center;gap:3px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z M12 10v4 M12 17v0.5"></path></svg>Failed last time</span></sc-if></span>
+<span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="flex:none">{{m.from}}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.to}}</span></span>
+</div>
+<sc-if value="{{m.hover}}" hint-placeholder-val="{{false}}"><button aria-label="Compare" title="Compare (Space)" style="width:28px;height:22px;flex:none;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7v14H3z M14 5h7v14h-7z"></path></svg></button></sc-if>
+<span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{m.size}}</span>
+</div></sc-for>
+<!-- Problems: files the scan could not read, or never reached when it stopped — listed, no checkbox -->
+<sc-for list="{{problemFiles}}" as="f" hint-placeholder-count="0"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 0;background:{{f.rowBg}}">
+<span aria-hidden="true" style="flex:none;width:34px"></span>
+<div aria-hidden="true" style="flex:none;width:28px;height:28px;border-radius:4px;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{f.icon}}"></path></svg></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{f.path}}">
+<span style="font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.name}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.where}} · {{f.why}}</span>
+</div>
+<span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{f.size}}</span>
+</div></sc-for>
+<div aria-hidden="true" style="position:absolute;right:3px;top:{{scrollTop}};width:5px;height:56px;border-radius:3px;background:{{S.scroller}}"></div>
+</div>
+
+</div></sc-if>
+<!-- Left Out closed: one line below the list -->
+<sc-if value="{{leftOutClosed}}" hint-placeholder-val="{{true}}"><div style="height:28px;flex:none;display:flex;align-items:center;gap:6px;padding:0 12px 0 2px">
+<button aria-label="Show Left Out" aria-expanded="false" style="border:none;background:none;padding:0;display:flex;align-items:center;gap:6px;color:{{t.label}};font-size:12px;font-weight:600"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>Left Out (2)</button>
+<span style="font-size:11px;color:{{t.label2}}">{{leftOutLine}}</span>
+</div></sc-if>
+<!-- Left Out (§6d): below the list, not in it — open: the earlier left-out photos with Include -->
+<sc-if value="{{leftOutOpen}}" hint-placeholder-val="{{false}}"><div style="height:28px;display:flex;align-items:center;gap:6px;padding:0 12px 0 2px">
+<button aria-label="Hide Left Out" aria-expanded="true" style="border:none;background:none;padding:0;display:flex;align-items:center;gap:6px;color:{{t.label}};font-size:12px;font-weight:600"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Left Out (2)</button>
+<span style="font-size:11px;color:{{t.label2}}">{{leftOutLine}}</span>
+</div>
+<sc-for list="{{leftOut}}" as="l" hint-placeholder-count="2"><div role="listitem" style="height:36px;display:flex;align-items:center;gap:10px;padding:0 12px 0 22px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+<span style="font-size:13px;line-height:16px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{l.name}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{l.when}}</span>
+</div>
+<span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{l.size}}</span>
+<span style="width:124px;flex:none;display:flex"><button style="height:22px;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 10px;font-size:12px;white-space:nowrap">Include</button></span>
+</div></sc-for></sc-if>
+
+<!-- §6c: nothing new since the set last gathered -->
+<sc-if value="{{nothingNew}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;min-height:0;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 40px;text-align:center">
+<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{{t.label2}}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<div style="font-size:13px;font-weight:600">Nothing new since Nov 3, 2:30 PM</div>
+<div style="font-size:12px;line-height:16px;color:{{t.label2}}">The 280 photos these folders share are already in “Shared”.</div>
+<button style="margin-top:6px;height:24px;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 10px;font-size:12px;white-space:nowrap">Scan Everything</button>
+</div></sc-if>
+<div style="height:12px;flex:none"></div>
+<!-- §6c: Keep gathering — the helper runs this set again every 15 minutes (off by default) -->
+<label style="display:flex;align-items:center;gap:8px;height:22px;flex:none;font-size:13px">
+<span aria-hidden="true" style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:1px solid {{t.checkboxStroke}};background:{{t.field}};opacity:{{keepOpacity}}"></span>
+<input type="checkbox" aria-label="Keep gathering new photos" style="position:absolute;opacity:0;width:1px;height:1px">
+<span style="opacity:{{keepOpacity}}">Keep gathering new photos</span>
+<span style="font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Every 15 minutes while this Mac is plugged in.</span>
+</label>
+<div style="height:8px;flex:none"></div>
+<div style="display:flex;align-items:center;gap:8px;height:28px;flex:none">
+<span style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{footHint}}</span>
+<button style="width:84px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};font-size:13px;white-space:nowrap;flex:none">Cancel</button>
+<sc-if value="{{showsAction}}" hint-placeholder-val="{{true}}"><button title="Asks first: the copies in the folders are removed" style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{moveFg}};padding:0 14px;font-size:13px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums">{{moveLabel}}</button></sc-if>
+<button style="height:28px;border-radius:8px;border:none;background:{{runBg}};color:{{runFg}};padding:0 14px;font-size:13px;font-weight:600;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums">{{runLabel}}</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"filter":{"editor":"select","options":["all","photos","videos","live","namesDiffer","problems"],"default":"all"},"$preview":{"width":1440,"height":900}}'>
+const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
+  sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
+  glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
+  sidebar:'rgba(244,244,247,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.12)', rowSel:'rgba(0,0,0,0.08)',
+  accent:'#C6730E', onAccent:'#FFFFFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accentFill:'#A35E0A', onAccentFill:'#FFFFFF', accentText:'#A35E0A', accentSoft:'rgba(198,115,14,0.14)', focusRing:'rgba(198,115,14,0.45)',
+  menu:'rgba(246,246,248,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#F6F6F8', sheetShadow:'0 24px 60px rgba(0,0,0,0.28)', scrim:'rgba(0,0,0,0.18)', rowAlt:'rgba(0,0,0,0.03)',
+  field:'#FFFFFF', redText:'#C4001A', greenText:'#1F7A35', orangeText:'#9A5200',
+  segOn:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)', checkboxStroke:'rgba(0,0,0,0.25)' };
+const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(255,255,255,0.58)', label3:'rgba(255,255,255,0.28)',
+  sep:'rgba(255,255,255,0.10)', fill:'rgba(255,255,255,0.07)', fill2:'#2C2C2E', pressed:'rgba(255,255,255,0.12)', track:'rgba(255,255,255,0.14)',
+  glass:'rgba(50,50,54,0.72)', glassStroke:'rgba(255,255,255,0.10)', glassShadow:'0 2px 12px rgba(0,0,0,0.45)',
+  sidebar:'rgba(38,38,42,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.5)', rowSel:'rgba(255,255,255,0.10)',
+  accent:'#EB9526', onAccent:'#000000', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accentFill:'#EB9526', onAccentFill:'#000000', accentText:'#EB9526', accentSoft:'rgba(235,149,38,0.18)', focusRing:'rgba(235,149,38,0.50)',
+  menu:'rgba(40,40,44,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#2A2A2D', sheetShadow:'0 24px 60px rgba(0,0,0,0.60)', scrim:'rgba(0,0,0,0.35)', rowAlt:'rgba(255,255,255,0.04)',
+  field:'#1C1C1E', redText:'#FF6961', greenText:'#30D158', orangeText:'#FFB340',
+  segOn:'rgba(255,255,255,0.20)', segShadow:'0 1px 2px rgba(0,0,0,0.30)', checkboxStroke:'rgba(255,255,255,0.30)' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8',
+ 'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
+const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
+const DUR=['0:42','1:08','0:17','2:31'];
+const I = {
+  all:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5',
+  fav:'M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z',
+  video:'M3 7h12v10H3z M15 10.5l6-3v9l-6-3',
+  raw:'M12 3a9 9 0 1 0 0.01 0z M9.5 3.4l2.5 8.6 M20.6 9.6L12 12 M14.5 20.6L12 12 M3.4 14.4L12 12',
+  recent:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  library:'M7 7h13v12H7z M4 16V4h13',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  drive:'M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01',
+  server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
+  onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
+  album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
+  smart:'M4 9h16v11H4z M6.5 6h11 M9 3h6 M12 12v5 M9.5 14.5h5',
+  backup:'M12 3a9 9 0 1 1-8.5 6 M3.5 4v5h5 M12 7.5V12l3 2',
+  stats:'M3 20h18 M6.5 16.5v-5 M11.5 16.5V6 M16.5 16.5v-8',
+  places:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
+  trips:'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8.5v.01',
+  dup:'M8 8h12v12H8z M4 16V4h12',
+  collage:'M4 4h16v16H4z M12 4v16 M12 12h8',
+  film:'M4 4h16v16H4z M8 4v16 M16 4v16 M4 9h4 M4 15h4 M16 9h4 M16 15h4',
+  onserver:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z M12 16v-5 M9.5 13.5L12 11l2.5 2.5',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
+  lens:'M12 3a9 9 0 1 0 0.01 0z M12 7.5a4.5 4.5 0 1 0 0.01 0z',
+  clock:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  search:'M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5',
+  sliders:'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M14 5v4 M8 15v4',
+  photo:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01'
+};
+// Rating / flag / favorite per photo (FS-01.12 §7). Deterministic from the tile seed; o.marks overrides by index.
+const RATES=[0,0,3,0,0,4,0,2,0,0,5,0,1,0,3,0,0];
+function markFor(k, isVideo){
+  return { r: RATES[k%RATES.length], f: isVideo?'':((k%7)===3?'p':((k%11)===8?'x':'')), fav: (k%9)===5 };
+}
+function tiles(n, seed, o){
+  o=o||{}; const out=[];
+  for(let i=0;i<n;i++){
+    const k=i+seed; const isVideo=!o.noVideo && (k%11)===4;
+    const pending=(o.pendingFrom!=null && i>=o.pendingFrom); const off=!!o.offline;
+    const meta=o.meta?o.meta[k%o.meta.length]:META[k%META.length];
+    const mk=(o.marks && o.marks[i])?o.marks[i]:markFor(k,isVideo);
+    const words=[]; if(mk.r) words.push(mk.r+(mk.r===1?' star':' stars')); if(mk.f==='p') words.push('Picked'); if(mk.f==='x') words.push('Rejected'); if(mk.fav) words.push('Favorite');
+    out.push({ bg: tile(k*5+3), ft: isVideo?'MOV':(o.ft?o.ft[k%o.ft.length]:FT[k%FT.length]), isVideo, dur: DUR[k%DUR.length],
+      meta: isVideo?'4K · 24 fps':meta, sel:(o.sel||[]).indexOf(i)>=0, hover:(o.hover===i), offline: off,
+      op: mk.f==='x'?'0.45':'1', pick: mk.f==='p', rej: mk.f==='x', fav: !!mk.fav, rated: mk.r>0, stars: String(mk.r),
+      loaded: !pending, pending,
+      label: pending?'Photo, loading':((isVideo?'Video':'Photo')+', '+(isVideo?'4K':meta)+(words.length?', '+words.join(', '):'')+(off?', offline':'')) });
+  }
+  return out;
+}
+// Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
+function sidebar(t, o){
+  o=o||{};
+  const row=(name,d,count,x)=>{x=x||{};const s=(o.sel===name);const dim=!!(x.off||x.access);
+    return {name,d,count:(x.off||x.prog||x.access)?'':(count||''),eject:!!x.eject,chev:!!x.chev,selA:s?'true':'false',
+      bg:s?t.rowSel:'transparent', iconColor:dim?t.label2:t.accent, textColor:dim?t.label2:t.label,
+      offline:!!x.off, progress:!!x.prog, progLabel:x.progLabel||'', dash:x.dash||'0 100', access:!!x.access};};
+  const t7 = o.offline ? row('T7 RAW Archive',I.drive,'',{off:true}) : row('T7 RAW Archive',I.drive,'26,107',{eject:true});
+  const sources=[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),t7,row('NAS Home',I.server,'1,102')];
+  if(o.newFolder) sources.push(row('Client Shoots 2026',I.folder,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
+  return [
+    {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
+    {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
+    {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Backup',I.backup,'2'),row('Statistics',I.stats),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+  ];
+}
+const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
+// Menu rows: '-' separator, {h:'Header'}, or [label, shortcut, flags]; flags: h highlighted, s submenu, c checked, d disabled.
+// keys:false drops the shortcut column (context menus). Highlight = accentFill + onAccentFill.
+function menu(t, arr, keys){
+  const showKeys = keys!==false;
+  return arr.map(x=>{
+    if(x==='-') return {sep:true};
+    if(x && x.h) return {head:true, l:x.h};
+    const f=x[2]||''; const hi=f.indexOf('h')>=0, dis=f.indexOf('d')>=0; const k=showKeys?(x[1]||''):'';
+    return {item:true, l:x[0], k, kp:k?'16px':'0', sub:f.indexOf('s')>=0, check:f.indexOf('c')>=0?'✓':'', dis:dis?'true':'false',
+      bg:hi?t.accentFill:'transparent', fg:hi?t.onAccentFill:(dis?t.label3:t.label), kc:hi?t.onAccentFill:(dis?t.label3:t.label2)};
+  });
+}
+function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' }; }
+
+const X = {
+  gear:'M12 9a3 3 0 1 0 0.01 0z M12 2.8v2.6 M12 18.6v2.6 M2.8 12h2.6 M18.6 12h2.6 M5.5 5.5l1.8 1.8 M16.7 16.7l1.8 1.8 M5.5 18.5l1.8-1.8 M16.7 7.3l1.8-1.8',
+  sliders:'M4 7h9 M17 7h3 M15 4.5v5 M4 12h3 M11 12h9 M9 9.5v5 M4 17h11 M19 17h1 M17 14.5v5',
+  upload:'M12 15V4 M8 8l4-4 4 4 M5 14v6h14v-6',
+  download:'M12 4v11 M8 11l4 4 4-4 M5 14v6h14v-6',
+  trash:'M5 7h14 M10 7V4.5h4V7 M7 7l1 13h8l1-13 M10.5 11v6 M13.5 11v6',
+  laptop:'M5 6h14v10H5z M3 19h18',
+  desktop:'M3 4h18v12H3z M9 20h6 M12 16v4',
+  nas:'M6 3h12v18H6z M9 7h6 M9 11h6 M12 16.5h.01',
+  pc:'M4 4h16v11H4z M8 20h8 M12 15v5',
+  lock:'M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3',
+  warn:'M12 4l9 16H3z M12 10v4 M12 17h.01',
+  bell:'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z M10 20.5h4',
+  widget:'M4 4h7v7H4z M13 4h7v7h-7z M4 13h16v7H4z',
+  play:'M7 5l12 7-12 7z',
+  camera:'M4 8h4l2-3h4l2 3h4v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
+  chevUD:'M8 9l4-4 4 4 M8 15l4 4 4-4',
+  chevR:'M9 6l6 6-6 6',
+  chevD:'M6 9l6 6 6-6',
+  plus:'M12 5v14 M5 12h14',
+  minus:'M5 12h14',
+  check:'M5 12.5l4.5 4.5L19 7.5',
+  bubble:'M4 5h16v11H9l-5 4z',
+  bug:'M8 9h8v7a4 4 0 0 1-8 0z M9 9V7.5a3 3 0 0 1 6 0V9 M4 12h4 M16 12h4 M5 7l3 2 M19 7l-3 2 M5 18l3-2 M19 18l-3-2',
+  bulb:'M9 18h6 M10 21h4 M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z',
+  arrowUp:'M12 19V6 M6.5 11.5L12 6l5.5 5.5',
+  folderPlus:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M12 10.5v5 M9.5 13h5',
+  refresh:'M20 12a8 8 0 1 1-2.3-5.6 M20 4v5h-5',
+  sort:'M7 4v16 M3.5 16.5L7 20l3.5-3.5 M17 20V4 M13.5 7.5L17 4l3.5 3.5',
+  inLib:'M3 6h13v11H3z M3 14l3.5-3 3 2.5 2-1.5 M14 17.5l2.5 2.5 4.5-5',
+  globe:'M12 3a9 9 0 1 0 0.01 0z M3 12h18 M12 3c3 3.5 3 14.5 0 18 M12 3c-3 3.5-3 14.5 0 18',
+  lan:'M2.5 9a14 14 0 0 1 19 0 M5.5 12.5a9.5 9.5 0 0 1 13 0 M8.8 16a5 5 0 0 1 6.4 0 M12 19.5h.01',
+  info:'M12 3a9 9 0 1 0 0.01 0z M12 11v5 M12 7.5h.01',
+  shield:'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
+  frames:'M3 5h18v14H3z M7.5 8.5h9v7h-9z',
+  sun:'M12 8a4 4 0 1 0 0.01 0z M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5.3 5.3l1.4 1.4 M17.3 17.3l1.4 1.4 M5.3 18.7l1.4-1.4 M17.3 6.7l1.4-1.4',
+  person:'M12 4a3.5 3.5 0 1 0 0.01 0z M5 20c.8-3.8 3.6-6 7-6s6.2 2.2 7 6',
+  text:'M5 6h14 M12 6v13 M9 19h6',
+  pencil:'M4 20l1-4L16 5l3 3L8 19z M14 7l3 3',
+  tray:'M3 13l3-8h12l3 8v6H3z M3 13h5l1.5 2.5h5L16 13h5',
+  collage:'M4 4h7v16H4z M13 4h7v7h-7z M13 13h7v7h-7z',
+  onThisDay:'M4 6h16v14H4z M4 10h16 M8 3.5v4 M16 3.5v4 M12 13.5v3.5',
+  pause:'M8 5v14 M16 5v14',
+  stop:'M6 6h12v12H6z',
+  photoFolder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
+};
+// System colours for Settings icon tiles (FS-08.01b §2: per-section colour, not amber; glyph white)
+const TILE = { blue:'#0A84FF', gray:'#8E8E93', indigo:'#5E5CE6', pink:'#FF375F', teal:'#30B0C7', green:'#34C759' };
+function ui(dark){
+  const t = dark ? DARK : LIGHT;
+  const S = dark ? { win:'#1E1E20', bar:'rgba(36,36,40,0.96)', box:'#2A2A2D', boxStroke:'rgba(255,255,255,0.06)',
+      fieldBg:t.field, segSel:'rgba(255,255,255,0.20)', segShadow:'none', redText:'#FF6961',
+      orangeText:'#FFB340', greenText:'#30D158', orangeDot:'#FF9F0A', dim:t.scrim, sheet:t.sheet,
+      sheetShadow:'0 24px 60px rgba(0,0,0,0.6)', accentSoft:'rgba(235,149,38,0.18)', accentText:'#EB9526',
+      greenSoft:'rgba(48,209,88,0.18)', redSoft:'rgba(255,69,58,0.18)', orangeSoft:'rgba(255,159,10,0.18)', tableHead:'rgba(255,255,255,0.04)',
+      lightOff:'#4A4A4E', scroller:'rgba(255,255,255,0.32)', panel:'#262629', panelBar:'#2E2E32' }
+    : { win:'#EFEFF2', bar:'rgba(246,246,248,0.96)', box:'#FFFFFF', boxStroke:'rgba(0,0,0,0.06)',
+      fieldBg:t.field, segSel:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)', redText:'#C4001A',
+      orangeText:'#9A5200', greenText:'#1F7A35', orangeDot:'#FF9500', dim:t.scrim, sheet:t.sheet,
+      sheetShadow:'0 24px 60px rgba(0,0,0,0.28)', accentSoft:'rgba(198,115,14,0.14)', accentText:'#A35E0A',
+      greenSoft:'rgba(52,199,89,0.16)', redSoft:'rgba(255,59,48,0.12)', orangeSoft:'rgba(255,149,0,0.16)', tableHead:'rgba(0,0,0,0.03)',
+      lightOff:'#D0D0D3', scroller:'rgba(0,0,0,0.30)', panel:'#F6F6F8', panelBar:'#ECECEF' };
+  const seg = (labels, idx) => labels.map((l, i) => ({ label:l, pressed: i===idx ? 'true' : 'false',
+      bg: i===idx ? S.segSel : 'transparent', shadow: i===idx ? S.segShadow : 'none', fg: t.label }));
+  const btn = (label, kind, o) => { o = o || {}; const k = kind || 'bordered';
+    return { label, aria: o.aria || label, disabled: !!o.disabled,
+      bg: k==='default' ? t.accentFill : (k==='plain' ? 'transparent' : t.fill),
+      fg: o.disabled ? t.label3 : (k==='default' ? t.onAccentFill : (k==='destructive' ? S.redText : t.label)),
+      weight: k==='default' ? '600' : '400', icon: o.icon || null, w: o.w || 'auto' }; };
+  const chk = (label, on) => ({ label, on: !!on, bg: on ? t.accentFill : S.fieldBg, border: on ? 'none' : '1px solid ' + t.label3 });
+  const sw = (on) => ({ sw:true, on: !!on, swBg: on ? t.accentFill : t.track, knob: on ? '16px' : '2px' });
+  const status = (kind, text) => ({ status:text,
+      statusColor: kind==='ok' ? S.greenText : kind==='warn' ? S.orangeText : kind==='err' ? S.redText : t.label2,
+      statusDot: kind==='ok' ? t.green : kind==='warn' ? S.orangeDot : kind==='err' ? t.red : t.label3 });
+  const row = (o) => Object.assign({ label:'', sub:null, status:null, statusColor:t.label2, statusDot:t.label3, value:null,
+      icon:null, iconBg:TILE.blue, iconFg:'#FFFFFF', iconSize:'28px', iconRadius:'8px', glyph:'16',
+      sw:false, on:false, swBg:t.track, knob:'2px', popup:null, popupW:'auto', seg:null, btns:null, checks:null,
+      field:null, fieldW:'160px', bar:null, tag:null, tagBg:t.fill, tagFg:t.label2, labelColor:t.label,
+      weight:'400', h:'34px', sepTop:false, swatch:null }, o);
+  const sections = (list) => list.map(s => Object.assign({ title:null, aside:null, foot:null }, s,
+      { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
+  return { t, S, seg, btn, chk, sw, status, row, sections };
+}
+const PANES = [['General', X.gear], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
+function panes(t, active){
+  return PANES.map(p => ({ name:p[0], d:p[1], sel: p[0]===active ? 'true' : 'false',
+    bg: p[0]===active ? t.rowSel : 'transparent', fg: p[0]===active ? t.accent : t.label2, lc: p[0]===active ? t.label : t.label2 }));
+}
+
+
+class Component extends DCLogic {
+  renderVals() {
+    const dark = !!this.props.dark;
+    const k = ui(dark); const t = k.t; const S = k.S;
+
+    const groups = sidebar(t, {sel:'NAS Home'});
+    const foot = IDLE_FOOT;
+    const fi = (name, count, d, sel, cur) => ({ name, count, d: d || I.folder, sel: sel ? 'true' : 'false', bg: sel ? (cur ? S.accentSoft : t.rowSel) : 'transparent', w: cur ? '600' : '400' });
+    // ⌘-click: Tuấn and Vợ both selected in the Family column (FS-19.08 §3)
+    const columns = [
+      { title:'NAS Home', edge:'1px solid ' + t.sep, foot:'3 folders', items:[ fi('Family', '', null, true), fi('Photos'), fi('Scans') ] },
+      { title:'Family', edge:'none', foot:'4 folders · 2 selected', items:[ fi('Tuấn', '18,240', null, true, true), fi('Vợ', '15,902', null, true, true), fi('Shared'), fi('Phone Backup', '4,311') ] }
+    ];
+    const ft = (name, meta, sel) => ({ name, meta, sel, selA: sel ? 'true' : 'false', bg: t.fill2, label: 'Folder, ' + name + ', ' + meta + (sel ? ', selected' : '') });
+    const folderTiles = [ ft('Tuấn', '18,240 files', true), ft('Vợ', '15,902 files', true), ft('Shared', 'Empty', false), ft('Phone Backup', '4,311 files', false) ];
+    const crumbs = [ { name:'NAS Home', d:I.server, sep:false, w:'400' }, { name:'Family', d:I.folder, sep:true, w:'600' } ];
+
+    const srcFolders = [
+      { path:'NAS Home › Family › Tuấn', count:'18,240 files', remove:'Remove Tuấn', rowBg:'transparent' },
+      { path:'NAS Home › Family › Vợ', count:'15,902 files', remove:'Remove Vợ', rowBg:t.rowAlt }
+    ];
+    // Copy and Move share one scan: switching keeps the results (quick rows keep their tag; Move reads them in full when it runs).
+    const move = this.props.action === 'move';
+    const action = k.seg(['Copy', 'Move'], move ? 1 : 0);
+    const leftOutOpen = !!this.props.leftOut;
+    // §6d: only Same rows. [name, sources, first folder's subfolder, name in Shared ('' = already there), size, checked,
+    // copies Move removes, same path in both (§6e Quick Check)]
+    const PLAN = [
+      ['IMG_4021.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4021.HEIC', '2.9 MB', true, 2, true],
+      // §6f: a Live Photo — still, then its motion, one name, one folder, checked together.
+      ['IMG_4022.HEIC', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.HEIC', '3.1 MB', true, 2, true, true],
+      ['IMG_4022.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4022.MOV', '4.4 MB', true, 2, true, true],
+      // Failed last time: the run on Nov 3 found Vợ's copy changed on the server.
+      ['DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', '2025/10/12', 'DSC04388.ARW', '48.6 MB', true, 2, false, false, false, 'Changed on the server since the scan (run of Nov 3)'],
+      // Names differ: Vợ keeps it as "2025-06-02 IMG_0001.JPG"; Shared holds another IMG_0001.JPG, so it is renamed.
+      ['IMG_0001.JPG', 'Tuấn/2025/06/02 · Vợ/Messages as 2025-06-02 IMG_0001.JPG', '2025/06/02', 'IMG_0001 (2).JPG', '1.2 MB', false, 2, false, false, true],
+      ['IMG_4107.MOV', 'Tuấn/2025/03/15 · Vợ/2025/03/15', '2025/03/15', 'IMG_4107.MOV', '212.4 MB', false, 2, true],
+      ['IMG_4110.HEIC', 'Tuấn/2025/03/16 · Vợ/2025/03/16', '2025/03/16', '', '2.7 MB', false, 0, true],
+      ['DSC04392.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat ×2', '2025/10/12', 'DSC04392.ARW', '47.9 MB', true, 3, false]
+    ];
+    const NEWPLAN = [
+      ['IMG_4512.HEIC', 'Tuấn/2025/11/02 · Vợ/2025/11/02', '2025/11/02', 'IMG_4512.HEIC', '3.0 MB', true, 2, true],
+      ['IMG_4513.HEIC', 'Tuấn/2025/11/02 · Vợ/2025/11/02', '2025/11/02', 'IMG_4513.HEIC', '2.8 MB', true, 2, true],
+      ['DSC04501.ARW', 'Tuấn/2025/11/04 · Vợ/Hội An', '2025/11/04', 'DSC04501.ARW', '49.2 MB', true, 2, false]
+    ];
+    // §6e Organize: an old set keeps No Folders; a new one starts at Same as Source.
+    const organize = this.props.organize || 'sameAsSource';
+    const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const folderOf = (sub) => {
+      if (organize === 'noFolders') return '';
+      if (organize === 'sameAsSource') return sub + '/';
+      const p = sub.split('/');
+      return p[0] + '/' + MON[+p[1] - 1] + '/' + p[0] + '.' + p[1] + '.' + p[2] + '/';
+    };
+    const quickOn = !!this.props.quick && !move;
+    const quickRows = !!this.props.quick;
+    // §6e: while the plan reads dates, rows show without their → path yet.
+    const readingNow = this.props.state === 'readingDates';
+    const row = (m, i, seed) => {
+      const there = m[3] === '', on = m[5] && !there;
+      const copies = m[6] === 1 ? '1 copy' : m[6] + ' copies';
+      const dest = folderOf(m[2]) + m[3]; // under Shared, which Save to names
+      // The second line names the folders; the full source paths are in the tooltip, the full destination is shown.
+      const from = m[1].split(' · ').map(p => p.split('/')[0] + (p.indexOf('×') >= 0 ? ' ×' + p.split('×')[1] : '') + (p.indexOf(' as ') >= 0 ? ' as ' + p.split(' as ')[1] : '')).join(' · ');
+      // No note column (user 2026-11-06: it was empty on most rows). Already there goes on the path line; a Move's
+      // copies and "left out from now on" go in the tooltip.
+      return { name:m[0], from, to: readingNow ? '' : there ? '\u00a0→ already in Shared' : '\u00a0→ ' + dest, size:m[4],
+        help: m[1] + (there ? ' — already in Shared' : ' → ' + dest) + (move && !there ? '\nRemoves ' + copies : '') + (!m[5] && !there ? '\nLeft out from now on' : ''),
+        failed: !!m[10], failedWhy: m[10] || '', kind: /\.MOV$/.test(m[0]) ? 'video' : 'photo', isLive: !!m[8],
+        namesDiffer: !!m[9], renamed: !there && m[3] !== m[0],
+        quick: quickRows && m[7] && !there, live: !!m[8],
+        there, hasBox: !there, on, off: !there && !m[5], checkVis: on ? 'visible' : 'hidden',
+        thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
+        boxBg: on ? t.accentFill : t.field, boxBorder: on ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
+        boxLabel: m[0],
+        hover: i === 1 && seed === 4,
+        bg: tile(i*5+seed), rowBg: i === 1 && seed === 4 ? t.rowSel : (i % 2) ? t.rowAlt : 'transparent' };
+    };
+    const matches = PLAN.map((m, i) => row(m, i, 4));
+    const leftOut = [['IMG_3954.HEIC', 'Left out Nov 3', '2.6 MB'], ['DSC03310.ARW', 'Left out Nov 3', '46.1 MB']]
+      .map((l, i) => ({ name:l[0], when:l[1], size:l[2], bg: tile(i*3+11), rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
+
+    // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
+    const state = this.props.state || 'first';
+    const reading = state === 'readingDates';
+    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing;
+    const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
+    const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
+    // Left Out open: the list scrolled to its end, the last photos then the section.
+    // "checking": the scan still reading — Same so far listed, the bar above, Stop.
+    const checkingNow = state === 'checking';
+    const first = state === 'first' || reading || checkingNow;
+    const MB = s => parseFloat(s) * (/GB/.test(s) ? 1024 : /kB/.test(s) ? 1 / 1024 : 1);
+    const sort = this.props.sort || 'found';
+    const order = rows => sort === 'name' ? rows.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+      : sort === 'largest' ? rows.slice().sort((a, b) => MB(b.size) - MB(a.size))
+      : sort === 'smallest' ? rows.slice().sort((a, b) => MB(a.size) - MB(b.size)) : rows;
+    // Show: what the list shows; Copy N / Move N still take every checked photo.
+    const filter = this.props.filter || 'all';
+    const keep = r => filter === 'photos' ? r.kind === 'photo' && !r.isLive : filter === 'videos' ? r.kind === 'video' && !r.isLive
+      : filter === 'live' ? r.isLive : filter === 'namesDiffer' ? r.namesDiffer : filter === 'problems' ? r.failed || r.renamed : true;
+    const listedRows = first ? matches : (nothingNew ? [] : NEW);
+    const shown = order(listedRows.filter(keep)).map((r, i) => Object.assign({}, r, { rowBg: r.rowBg === t.rowSel ? r.rowBg : (i % 2) ? t.rowAlt : 'transparent' }));
+    const sameN = checkingNow ? '172' : first ? '282' : (nothingNew ? '0' : '3');
+    const PROBLEM_FILES = [
+      ['IMG_3890.HEIC', 'Vợ/2025/02/11', "Couldn't read: access denied", '2.2 MB', 'M12 3l9.5 17h-19z M12 10v4 M12 17v0.5'],
+      ['DSC03977.ARW', 'Tuấn/2025/09/30', 'Not checked: the scan stopped first', '45.3 MB', 'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2']
+    ];
+    const problemFiles = filter === 'problems' && first ? PROBLEM_FILES.map((f, i) => ({ name:f[0], where:f[1], why:f[2], size:f[3], icon:f[4],
+      path: f[1] + '/' + f[0], rowBg: ((shown.length + i) % 2) ? t.rowAlt : 'transparent' })) : [];
+    const FILTERS = { all:'All', photos:'Photos', videos:'Videos', live:'Live Photos', namesDiffer:'Names Differ', problems:'Problems' };
+    const filterTitle = filter === 'all' ? 'All' : FILTERS[filter] + ' · ' + (shown.length + problemFiles.length);
+    const verb = move ? 'Move' : 'Copy';
+    return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
+      groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
+      leftOut, leftOutOpen: leftOutOpen && state === 'first', leftOutClosed: !leftOutOpen && state !== 'nothingNew',
+      leftOutLine: 'Skipped by every scan and gather of this set',
+      scrollTop: '4px',
+      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: checkingNow, progress: checkingNow, readingDates: reading, liveLeftOut: state === 'first', sameN,
+      scanned: !waiting, waiting, listing,
+      showsAction: !(before || listing || checkingNow),
+      sortable: !waiting && !nothingNew && sameN !== '1',
+      filterTitle, filterFill: filter === 'all' ? 'none' : 'currentColor', problemFiles,
+      sortTitle: { found: 'Order Found', name: 'Name', largest: 'Largest First', smallest: 'Smallest First' }[sort],
+      moveNote: move,
+      sheetH: '640px', // MAC_STYLE: a results-list sheet may be 640 tall
+      organizeSummary: organize === 'noFolders' ? 'No Folders' : (organize === 'sameAsSource' ? 'Same as Source' : 'Year › Month › Day') + ' · videos together',
+      organizeSample: before ? '' : 'e.g. ' + folderOf('2025/10/12') + 'DSC04388.ARW',
+      gatheredNote: again && !!this.props.organizeChanged,
+      quickRow: !move, quickN: quickRows && state === 'first' ? '214' : (quickRows && state === 'again' ? '2' : ''), quick: quickOn, quickOff: !quickOn, quickVis: quickOn ? 'visible' : 'hidden',
+      quickBg: quickOn ? t.accentFill : t.field, quickBorder: quickOn ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
+      noDates: !!this.props.noDates,
+      // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
+      saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
+      waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
+      footHint: nothingNew || before ? '' : filter !== 'all' && !(listing || checkingNow) ? 'Only some photos shown · ' + (move ? 'Move' : 'Copy') + ' takes every checked photo.' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      headline: checkingNow ? 'Checking · 172 of 314 confirmed so far' : first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
+      againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
+      runLabel: before ? 'Scan' : listing || checkingNow ? 'Stop' : first ? 'Copy 278' : (nothingNew ? 'Copy' : 'Copy 3'),
+      // Move takes the photos already in Shared too: their copies in the folders go.
+      moveLabel: first ? 'Move 280…' : (nothingNew ? 'Move' : 'Move 3…'), moveFg: nothingNew ? t.label3 : t.label,
+      runBg: nothingNew || listing || checkingNow ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing || checkingNow ? t.label : t.onAccentFill,
+      title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
+  }
+}
+</script>
+</body>
+</html>

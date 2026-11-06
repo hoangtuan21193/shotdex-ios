@@ -16,6 +16,9 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
     private let lock = NSLock()
     /// Why the last request's TLS handshake was refused, if it was.
     private var trustRejection: RemoteFileError?
+    /// How this server took a file's dates the first time one held, or
+    /// that none did (FS-19.08 §6e); nil until a file has been tried.
+    private var datesVerdict: DatesVerdict?
 
     /// `configuration` is the tests' seam: a stub `URLProtocol` stands in
     /// for the server there.
@@ -135,6 +138,11 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         try check(response, path: path, allow: [200])
         try? FileManager.default.removeItem(at: localURL)
         try FileManager.default.moveItem(at: location, to: localURL)
+        // The task's last write callback does not always come before the
+        // reply: the file on disk is what was read. Callers check this
+        // count against the listed size (the Common Photos verifier skips a
+        // file read short as changed), so it must end at the whole file.
+        if let size = try? localURL.resourceValues(forKeys: [.fileSizeKey]).fileSize { progress(Int64(size)) }
         return try FileChecksum.sha256(of: localURL)
     }
 
@@ -143,8 +151,15 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         get.setValue("bytes=\(offset)-\(offset + Int64(length) - 1)", forHTTPHeaderField: "Range")
         let (bytes, response) = try await perform { try await self.session.bytes(for: get) }
         try check(response, path: path, allow: [200, 206])
-        // A server that ignores Range sends the whole file from byte 0.
-        let skip = (response as? HTTPURLResponse)?.statusCode == 200 ? Int(offset) : 0
+        // A server that ignores Range sends the whole file from byte 0; one
+        // that answers 206 must answer for the bytes asked, or the caller
+        // would hash the wrong part of the file.
+        let http = response as? HTTPURLResponse
+        if http?.statusCode == 206, let start = Self.rangeStart(http?.value(forHTTPHeaderField: "Content-Range")), start != offset {
+            bytes.task.cancel()
+            throw RemoteFileError.other("server sent bytes from \(start), not \(offset)")
+        }
+        let skip = http?.statusCode == 200 ? Int(offset) : 0
         var result = Data()
         result.reserveCapacity(length)
         var skipped = 0
@@ -157,12 +172,39 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         return result
     }
 
+    /// The first byte of a `Content-Range: bytes 100-199/1000` answer.
+    static func rangeStart(_ header: String?) -> Int64? {
+        guard let header, let range = header.split(separator: " ").last,
+              let first = range.split(separator: "-").first else { return nil }
+        return Int64(first)
+    }
+
     func move(_ source: String, to destination: String) async throws {
         var move = request("MOVE", url(source))
         move.setValue(url(destination).absoluteString, forHTTPHeaderField: "Destination")
         move.setValue("F", forHTTPHeaderField: "Overwrite")
         let (_, response) = try await send(move)
         try check(response, path: destination, allow: [201, 204])
+    }
+
+    /// RFC 4918 §9.8. 201 or 204: copied. A wrong password or a full disk
+    /// stops the run as any write would; every other answer (405, 501, 403,
+    /// 423, 502, a proxy's 400…) is a no, and the photo goes the long way —
+    /// falling back costs time, failing would cost the photo.
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        var copy = request("COPY", url(source))
+        copy.setValue(url(destination).absoluteString, forHTTPHeaderField: "Destination")
+        copy.setValue("T", forHTTPHeaderField: "Overwrite")
+        copy.setValue("0", forHTTPHeaderField: "Depth")
+        // The reply comes only when the NAS has copied the whole file: a
+        // 4 GB video on one disk takes minutes, not the 30 s of a request.
+        copy.timeoutInterval = 3600
+        let (_, response) = try await send(copy)
+        switch (response as? HTTPURLResponse)?.statusCode {
+        case 201, 204: return true
+        case 401, 507, nil: try check(response, path: destination, allow: []); return false
+        default: return false
+        }
     }
 
     func remove(_ path: String) async throws {
@@ -185,7 +227,103 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         return StorageSpaceReading.webdavQuota(data)
     }
 
+    // MARK: File info (FS-19.08 §6e)
+
+    /// The ways WebDAV servers take a file's dates, in the order they are
+    /// tried: IIS and wsgidav's Windows emulation honour the `Win32*`
+    /// properties, a server that lets `getlastmodified` be written takes
+    /// that, Nextcloud and ownCloud take `lastmodified` as Unix seconds. Each
+    /// is its own `PROPPATCH` — a protected property's 403 would turn the
+    /// others in the same request into 424 (RFC 4918 §9.2).
+    private enum DatesMethod: CaseIterable {
+        case win32, getLastModified, lastModifiedSeconds
+    }
+
+    private enum DatesVerdict {
+        case takes(DatesMethod)
+        /// Every way failed on this many files in a row; at two the server
+        /// counts as refusing — one slow read-back is not a verdict.
+        case failed(Int)
+        case refuses
+    }
+
+    /// No streams here: what a copy carries is the file's info.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        let (data, response) = try await send(propfind(url(path), depth: 0))
+        if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }
+        try check(response, path: path, allow: [207])
+        guard let item = PropfindParser.parse(data).first, !item.isCollection else { return nil }
+        return RemoteFileInfo(modified: item.modified ?? .distantPast)
+    }
+
+    /// Whether a date held is read back, never taken from the 207: Apache
+    /// `mod_dav` (Synology, QNAP) stores `Win32*` as dead properties and
+    /// answers 200 with the date unchanged. The first file tries each way;
+    /// the rest of the connection uses the one that held, or none.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        switch lock.withLock({ datesVerdict }) {
+        case .refuses:
+            return .unsupported
+        case .takes(let method):
+            try await patchDates(info, at: path, method)
+            return .applied
+        case nil, .failed:
+            // A file already at that time proves nothing either way.
+            if let before = try await fileInfo(at: path), before.hasSameModified(as: info) { return .applied }
+            for method in DatesMethod.allCases {
+                try await patchDates(info, at: path, method)
+                if let now = try await fileInfo(at: path), now.hasSameModified(as: info) {
+                    lock.withLock { datesVerdict = .takes(method) }
+                    return .applied
+                }
+            }
+            lock.withLock {
+                if case .failed(let count) = datesVerdict, count >= 1 {
+                    datesVerdict = .refuses
+                } else {
+                    datesVerdict = .failed(1)
+                }
+            }
+            return .unsupported
+        }
+    }
+
+    private func patchDates(_ info: RemoteFileInfo, at path: String, _ method: DatesMethod) async throws {
+        let props: String
+        switch method {
+        case .win32:
+            let created = info.created.map { "<z:Win32CreationTime>\(Self.httpDate($0))</z:Win32CreationTime>" } ?? ""
+            props = "<z:Win32LastModifiedTime>\(Self.httpDate(info.modified))</z:Win32LastModifiedTime>" + created
+        case .getLastModified:
+            props = "<d:getlastmodified>\(Self.httpDate(info.modified))</d:getlastmodified>"
+        case .lastModifiedSeconds:
+            props = "<d:lastmodified>\(Int(info.modified.timeIntervalSince1970))</d:lastmodified>"
+        }
+        var patch = request("PROPPATCH", url(path))
+        patch.setValue("application/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        patch.httpBody = Data("""
+            <?xml version="1.0" encoding="utf-8"?>
+            <d:propertyupdate xmlns:d="DAV:" xmlns:z="urn:schemas-microsoft-com:"><d:set><d:prop>\(props)</d:prop></d:set></d:propertyupdate>
+            """.utf8)
+        let (_, response) = try await send(patch)
+        // A lost login throws (a caller that swallows it meets the 401 again
+        // on its next request); any other answer is the re-read's to judge.
+        if (response as? HTTPURLResponse)?.statusCode == 401 { try check(response, path: path, allow: []) }
+    }
+
+    /// RFC 1123 in GMT, as WebDAV dates are written.
+    private static func httpDate(_ date: Date) -> String {
+        date.formatted(Date.VerbatimFormatStyle(
+            format: "\(weekday: .abbreviated), \(day: .twoDigits) \(month: .abbreviated) \(year: .defaultDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) GMT",
+            locale: Locale(identifier: "en_US_POSIX"), timeZone: .gmt, calendar: Calendar(identifier: .gregorian)))
+    }
+
     func removeEmptyDirectory(_ path: String) async throws {
+        // A collection's DELETE takes what is in it: refused unless the
+        // listing just now found it empty (FS-19.08 §6e, Undo's folders).
+        guard try await entries(in: path).isEmpty else { throw RemoteFileError.other("not empty") }
         let (_, response) = try await send(request("DELETE", url(path, isDirectory: true)))
         try check(response, path: path, allow: [200, 204, 404])
     }

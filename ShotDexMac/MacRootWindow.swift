@@ -5,18 +5,204 @@ import SwiftUI
 /// over the content; the grid under it.
 struct MacRootWindow: View {
     @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @State private var selection: MacSidebarItem? = .allPhotos
     @State private var library: LibraryModel?
     @State private var searchText = ""
     @State private var showsInspector = false
+    @State private var showsBackupInspector = true
+    /// File › New Backup… asked for the sheet; the Backup screen opens it.
+    @State private var opensNewBackup = false
+    @State private var serverForm: MacServerFormRequest?
+    @State private var smartAlbumForm: MacSmartAlbumFormRequest?
+    @State private var smartAlbums: [SmartAlbum] = []
+    /// Why the sidebar's Add Folder… could not add (Settings shows its own).
+    @State private var addFolderFailure: SourcesModel.Failure?
     @State private var viewMode = MacViewMode.grid
+    /// The sidebar's sources, read when they change — not on every body.
+    @State private var sources: [SourceStore.Source] = []
+    /// Filter and Sort (FS-18.02 §5): the popover, its Advanced Filter…
+    /// sheet, and the bar of chips under the toolbar.
+    @State private var showsFilterPopover = false
+    @State private var showsAdvancedFilter = false
+    @AppStorage(MacFilterBar.visibilityKey) private var showsFilterBar = true
+    /// The whole library, the M of "N of M photos": the grid's count when
+    /// nothing narrows it.
+    @State private var libraryTotal: Int?
+    /// The unfiltered library holds a video: the filtered line says items.
+    @State private var libraryHasVideos = false
+    /// The filtered grid's last settled count, shown while a reload runs —
+    /// so the line and the empty state do not flicker on each one.
+    @State private var settledMatchCount: Int?
 
     var body: some View {
         NavigationSplitView {
-            MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [])
-                .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
+            sidebar
         } detail: {
-            content
+            if selection == .backup {
+                MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else if let source = serverSource {
+                MacServerBrowserScreen(source: source)
+            } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
+                MacSmartAlbumScreen(album: album, edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) })
+            } else {
+                libraryDetail
+            }
+        }
+        .tint(MacTheme.accent)
+        .onAppear { reloadSources() }
+        .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
+        .onChange(of: selection) { reloadSources() }
+        // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
+        // browser goes to the destination.
+        .onChange(of: dependencies.commonPhotos.browserRequest?.path) {
+            guard let request = dependencies.commonPhotos.browserRequest else { return }
+            // One source per connection; sorted, so two would pick the same one every time.
+            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
+                .filter({ $0.value == request.connectionId }).keys.sorted().first
+            else {
+                dependencies.commonPhotos.browserRequest = nil
+                return
+            }
+            selection = .source(sourceId)
+        }
+        // Keep gathering's notice clicked (FS-19.08 §6c): the run's window.
+        .onChange(of: dependencies.commonPhotos.logRequest?.runId, initial: true) {
+            guard let request = dependencies.commonPhotos.logRequest else { return }
+            dependencies.commonPhotos.logRequest = nil
+            guard Date().timeIntervalSince(request.at) < 60 else { return }
+            openWindow(id: MacCommonPhotosRunWindow.id, value: request.runId)
+        }
+        // Run Again (FS-19.08 §6c): the run's source opens; its browser
+        // opens the sheet on the run's set.
+        .onChange(of: dependencies.commonPhotos.runAgainRequest?.id, initial: true) {
+            guard let run = dependencies.commonPhotos.runAgainRequest else { return }
+            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
+                .filter({ $0.value == run.connectionId }).keys.sorted().first
+            else {
+                dependencies.commonPhotos.runAgainRequest = nil
+                return
+            }
+            selection = .source(sourceId)
+        }
+        .background(MacMainWindowMarker())
+        .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
+        .task { await start() }
+        .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            dependencies.backupControl.appBecameActive()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
+            serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
+        }
+        .sheet(item: $smartAlbumForm) { request in
+            MacSmartAlbumEditorSheet(existing: request.editing, initialQuery: request.query, onSaved: { album in
+                smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+                selection = .smartAlbum(album.id)
+            })
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
+        .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
+        .sheet(item: $serverForm) { request in
+            MacServerFormSheet(editing: request.editing) { _ in
+                NotificationCenter.default.post(name: .macServersChanged, object: nil)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
+            selection = .backup
+            opensNewBackup = true
+        }
+        // Settings › General › Indexing: "Index Now" reads what originals-only
+        // skipped, with iCloud allowed; a changed switch starts a fresh run.
+        .onReceive(NotificationCenter.default.publisher(for: .macIndexMissingNow)) { _ in
+            library?.reindexIncompleteAssets(manual: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macIndexSettingsChanged)) { _ in
+            library?.startIndexing()
+        }
+    }
+
+    /// The server source picked in the sidebar: its browser fills the
+    /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
+    /// The sidebar, with what its + › Add Folder… could not add.
+    private var sidebar: some View {
+        MacSidebar(selection: $selection, library: library, sources: sources,
+                   backup: backupBadge, smartAlbums: smartAlbums,
+                   newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
+                   addFolder: addFolderFromSidebar,
+                   connectToServer: { serverForm = MacServerFormRequest() },
+                   busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
+            .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
+            .alert(addFolderFailure?.title ?? "",
+                   isPresented: Binding(get: { addFolderFailure != nil }, set: { if !$0 { addFolderFailure = nil } })) {
+                Button(String(localized: "OK", comment: "Mac alert: dismiss")) {}
+            } message: {
+                Text(addFolderFailure?.message ?? "")
+            }
+    }
+
+    private var serverSource: SourceStore.Source? {
+        guard case .source(let id) = selection else { return nil }
+        return sources.first { $0.id == id && $0.kind == "server" }
+    }
+
+    private func reloadSources() {
+        sources = (try? dependencies.sources.sources()) ?? []
+    }
+
+    /// The sidebar's + › Add Folder…: what Settings › Sources adds, the
+    /// failure said here rather than in a Settings window that may be shut.
+    private func addFolderFromSidebar() {
+        MacPhotoSourcesSection.chooseFolder { folder in
+            let model = dependencies.sourcesModel
+            Task {
+                await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true)
+                if let failure = model.failure {
+                    model.failure = nil
+                    addFolderFailure = failure
+                }
+            }
+        }
+    }
+
+    /// Jobs, or a warning when one is stuck on something only the user can
+    /// fix (FS-22.06 §5.1).
+    private var backupBadge: (jobs: Int, needsAttention: Bool) {
+        let coordinator = dependencies.backupCoordinator
+        let stuck: Set<BackupJobState.Status> = [.unreachable, .destinationFull, .signInFailed, .noPhotosAccess]
+        return (coordinator.jobs.count, coordinator.states.values.contains { stuck.contains($0.status) })
+    }
+
+    private var libraryDetail: some View {
+            VStack(spacing: 0) {
+                if let library, showsFilterBar, library.hasActiveQuery {
+                    MacFilterBar(library: library)
+                }
+                content
+            }
+                .onChange(of: library.map { "\($0.items.count)-\($0.isLoading)-\($0.hasActiveQuery)" }, initial: true) {
+                    guard let library, !library.isLoading else { return }
+                    if library.hasActiveQuery {
+                        settledMatchCount = library.items.count
+                    } else {
+                        settledMatchCount = nil
+                        libraryTotal = library.items.count
+                        libraryHasVideos = library.videoCount > 0
+                    }
+                }
+                // While filtered, M follows the library: a change in Photos,
+                // an index run ending — read from the unfiltered grid's source.
+                .task(id: "\(library?.hasActiveQuery == true)-\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)") {
+                    guard let library, library.hasActiveQuery else { return }
+                    if let total = await library.unfilteredCount(), !Task.isCancelled { libraryTotal = total }
+                }
+                .macWatchesOriginalOnDevice(library?.criteria.originalOnDeviceOnly == true) { library?.reload() }
+                .onReceive(NotificationCenter.default.publisher(for: .macShowFilterPopover)) { _ in showsFilterPopover = true }
+                .sheet(isPresented: $showsAdvancedFilter) {
+                    MacSmartAlbumEditorSheet(initialQuery: libraryQuery,
+                                             applyFilter: { library?.advancedQuery = $0.isEmpty ? nil : $0 })
+                }
                 .navigationTitle(selection?.title ?? "ShotDex")
                 .navigationSubtitle(subtitle)
                 .toolbar { toolbar }
@@ -27,9 +213,6 @@ struct MacRootWindow: View {
                         .foregroundStyle(.secondary)
                         .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
                 }
-        }
-        .tint(MacTheme.accent)
-        .task { await start() }
     }
 
     @ViewBuilder
@@ -37,6 +220,42 @@ struct MacRootWindow: View {
         if let library, !library.items.isEmpty {
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
                          picture: Self.demoPicture)
+        } else if let library, let error = library.loadError {
+            ContentUnavailableView {
+                Label(error, systemImage: "exclamationmark.triangle")
+            } actions: {
+                Button(String(localized: "Try Again", comment: "Mac library: load the grid again")) { library.reload() }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let library, library.criteria.originalOnDeviceOnly,
+                  let line = dependencies.originalPresenceCheck.partialLine {
+            // Unchecked photos match neither way (FS-06.10 §3): the grid is
+            // filling, not empty.
+            ContentUnavailableView {
+                Label(String(localized: "Checking Originals", comment: "Mac library: Original on This Mac, check still running"),
+                      systemImage: "desktopcomputer")
+            } description: {
+                Text(line).monospacedDigit()
+            } actions: {
+                Button(MacFilterCopy.resetFilters) {
+                    library.criteria = .empty
+                    library.advancedQuery = nil
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let library, library.hasActiveQuery, !library.isLoading || settledMatchCount == 0 {
+            ContentUnavailableView {
+                Label(String(localized: "No Photos Match", comment: "Mac library: the filter leaves nothing"),
+                      systemImage: "line.3.horizontal.decrease")
+            } description: {
+                Text("No photo matches the current filters.", comment: "Mac library: empty filtered grid")
+            } actions: {
+                Button(MacFilterCopy.resetFilters) {
+                    library.criteria = .empty
+                    library.advancedQuery = nil
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dependencies.photoLibrary.authorizationState == .denied {
             ContentUnavailableView(String(localized: "No Access to Photos", comment: "Mac library: Photos access denied"),
                                    systemImage: "photo.on.rectangle",
@@ -47,18 +266,22 @@ struct MacRootWindow: View {
         }
     }
 
-    /// "54,027 photos · 1,204 videos".
+    /// "54,027 photos · 1,204 videos", or "212 of 55,231 photos" while a
+    /// filter is on (FS-18.02 §5).
     private var subtitle: String {
         guard let library else { return "" }
-        let videos = library.videoCount
-        let photos = library.items.count - videos
-        var parts = [photos == 1 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
-                                 : String(localized: "\(photos.formatted()) photos", comment: "Mac toolbar subtitle")]
-        if videos > 0 {
-            parts.append(videos == 1 ? String(localized: "1 video", comment: "Mac toolbar subtitle")
-                                     : String(localized: "\(videos.formatted()) videos", comment: "Mac toolbar subtitle"))
-        }
-        return parts.joined(separator: " · ")
+        let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
+        return LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
+                                     isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
+    }
+
+    /// What narrows the grid as rules: the Advanced Filter, or the quick
+    /// filters converted — the starting point of Advanced Filter… and of
+    /// Save as Smart Album….
+    private var libraryQuery: SmartAlbumQuery? {
+        guard let library else { return nil }
+        if let advanced = library.advancedQuery, !advanced.isEmpty { return advanced }
+        return library.criteria.isEmpty ? nil : .migrating(library.criteria)
     }
 
     @ToolbarContentBuilder
@@ -77,8 +300,26 @@ struct MacRootWindow: View {
                 Text("View", comment: "Mac toolbar view mode picker")
             }
             .pickerStyle(.segmented)
-            Button { } label: {
-                Label(String(localized: "Filter", comment: "Mac toolbar"), systemImage: "line.3.horizontal.decrease")
+            Button { showsFilterPopover.toggle() } label: {
+                // Filled while something narrows the grid, as in Photos.
+                // One symbol, its variant switched: a new image would rebuild
+                // the item and close a popover open on it.
+                Label(String(localized: "Filter and Sort", comment: "Mac toolbar"), systemImage: "line.3.horizontal.decrease.circle")
+                    .symbolVariant(library?.hasActiveQuery == true ? .fill : .none)
+            }
+            .help(String(localized: "Filter and Sort", comment: "Mac toolbar"))
+            .popover(isPresented: $showsFilterPopover, arrowEdge: .bottom) {
+                if let library {
+                    MacFilterPopover(library: library, countLine: subtitle,
+                                     advancedFilter: {
+                                         showsFilterPopover = false
+                                         showsAdvancedFilter = true
+                                     },
+                                     saveAsSmartAlbum: {
+                                         showsFilterPopover = false
+                                         smartAlbumForm = MacSmartAlbumFormRequest(query: libraryQuery)
+                                     })
+                }
             }
         }
         ToolbarItemGroup(placement: .primaryAction) {
@@ -90,16 +331,85 @@ struct MacRootWindow: View {
     }
 
     private func start() async {
-        if library == nil { library = LibraryModel(dependencies: dependencies) }
+        // One model for every Library window, so a window reopened during a
+        // run shows that run and Settings reads the same progress.
+        if library == nil { library = dependencies.library ?? LibraryModel(dependencies: dependencies) }
+        dependencies.library = library
         #if DEBUG
+        if MacDemoLibrary.section == "backup" { selection = .backup }
+        if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
+        if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
+        if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
+        if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
+        if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
+        if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
+        if MacDemoLibrary.section == "settings" { openSettings() }
+        // With `-ShotDexOriginalCheck`: the album on the Original rule, or its editor.
+        if MacDemoLibrary.section == "originalAlbum" { selection = .smartAlbum(MacDemoLibrary.originalAlbumId) }
+        if MacDemoLibrary.section == "editOriginalAlbum" {
+            selection = .smartAlbum(MacDemoLibrary.originalAlbumId)
+            smartAlbumForm = MacSmartAlbumFormRequest(editing: (try? dependencies.smartAlbums.fetchAllOrdered())?
+                .first { $0.id == MacDemoLibrary.originalAlbumId })
+        }
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
+        // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                for item in NSApp.mainMenu?.items ?? [] where item.title == "Window" {
+                    for entry in item.submenu?.items ?? [] where !entry.isSeparatorItem {
+                        let mods = entry.keyEquivalentModifierMask
+                        let keys = (mods.contains(.control) ? "⌃" : "") + (mods.contains(.option) ? "⌥" : "")
+                            + (mods.contains(.shift) ? "⇧" : "") + (mods.contains(.command) ? "⌘" : "") + entry.keyEquivalent
+                        MacAgentProbe.log.notice("window menu: \(entry.title, privacy: .public) \(entry.keyEquivalent.isEmpty ? "" : keys, privacy: .public)")
+                    }
+                }
+            }
+        }
+        if MacDemoLibrary.section == "serverBrowser", let item = await MacDemoLibrary.seedServerSource(dependencies) {
+            reloadSources()
+            selection = item
+        }
         if MacDemoLibrary.isOn {
+            library?.readsGridFromIndex = true
             library?.loadIfNeeded()
+            // `filterPopover` (default), `filterSet` (conditions + popover),
+            // `filterBar` (conditions, popover closed) — board `MAC_FilterPopover`;
+            // `filterSet` wants `-ShotDexOriginalCheck checked` for its Storage row.
+            // `filterAdvanced`: the same conditions as an Advanced Filter.
+            if let section = MacDemoLibrary.section, ["filterPopover", "filterSet", "filterBar", "filterAdvanced"].contains(section) {
+                try? await Task.sleep(for: .seconds(1))
+                if section != "filterPopover" {
+                    var criteria = FilterCriteria()
+                    criteria.cameraBodies = ["EOS R6m2"]
+                    criteria.isoRange = NumericRangeFilter(lowerBound: 400, upperBound: 3200)
+                    criteria.apertureRange = NumericRangeFilter(lowerBound: 1.2, upperBound: 2)
+                    criteria.originalOnDeviceOnly = true
+                    if section == "filterAdvanced" {
+                        library?.advancedQuery = .migrating(criteria)
+                    } else {
+                        library?.criteria = criteria
+                    }
+                }
+                showsFilterPopover = section != "filterBar"
+            }
             return
         }
         #endif
         if dependencies.photoLibrary.authorizationState == .notDetermined {
             await dependencies.photoLibrary.requestAuthorization()
         }
+        // The helper runs the jobs and the On Server check, or the app while
+        // it is open (FS-22.06 §2, FS-19.07 §11); appStarted starts this
+        // side's pass when the app is the runner.
+        dependencies.backupControl.appStarted()
+        #if DEBUG
+        MacAgentProbe.runIfAsked(dependencies)
+        MacSMBProbe.runIfAsked(dependencies) { item in
+            smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+            selection = item
+        }
+        #endif
         guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
         library.loadIfNeeded()
         library.startIndexing()
@@ -107,6 +417,20 @@ struct MacRootWindow: View {
 }
 
 enum MacViewMode: Hashable { case grid, list }
+
+/// New Smart Album… or editing one.
+struct MacSmartAlbumFormRequest: Identifiable {
+    let id = UUID()
+    var editing: SmartAlbum?
+    /// A new album's conditions: the Library's, from Save as Smart Album….
+    var query: SmartAlbumQuery?
+}
+
+/// Add a Server… or Edit Server for one connection.
+struct MacServerFormRequest: Identifiable {
+    let id = UUID()
+    var editing: FileServer?
+}
 
 extension MacRootWindow {
     /// The demo library's pictures; nil outside it.

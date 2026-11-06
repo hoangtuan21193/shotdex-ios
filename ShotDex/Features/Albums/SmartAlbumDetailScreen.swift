@@ -16,6 +16,8 @@ struct SmartAlbumDetailScreen: View {
     @Environment(AppNavigation.self) private var navigation
 
     let album: SmartAlbum
+    /// When the original check last reloaded the grid (throttle, FS-06.10).
+    @State private var lastOriginalReload = Date.distantPast
 
     @State private var model: SmartAlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
@@ -83,10 +85,13 @@ struct SmartAlbumDetailScreen: View {
         }
         .onAppear {
             if isSelecting { navigation.selectionBar = selectionBarModel() }
+            // An album on the Original rule asks for fresh answers (FS-06.10 §4).
+            if album.query.usesOriginal { dependencies.originalPresenceCheck.screenOpened() }
         }
         .onDisappear {
             navigation.hidesTabBar = false
             if isSelecting { navigation.selectionBar = nil }
+            if album.query.usesOriginal { dependencies.originalPresenceCheck.screenClosed() }
         }
         .safeAreaInset(edge: .top) {
             topAccessories
@@ -110,6 +115,26 @@ struct SmartAlbumDetailScreen: View {
             guard let model else { return }
             await model.refreshOnServer(dependencies.onServerCheck, isLimited: photoLibrary.authorizationState == .limited)
             if !model.onServerLines.isEmpty, !isSelecting { await model.load() }
+        }
+        // Each batch of the original check can move photos in or out of an
+        // `Original is …` album (FS-06.10 §3). At most one reload every 3 s:
+        // a pass runs ~275 batches, and a grid reloading on each one
+        // flickers. Other albums never read the check's generation.
+        .task(id: "\(album.query.usesOriginal ? dependencies.originalPresenceCheck.generation : 0)-\(model != nil)-\(isSelecting)") {
+            guard album.query.usesOriginal, let model, !isSelecting else { return }
+            let wait = 3 - Date().timeIntervalSince(lastOriginalReload)
+            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+            guard !Task.isCancelled else { return }
+            lastOriginalReload = Date()
+            // Not tied to this task: the next batch re-keys it, and a load
+            // cut off half-way would drop the rows it had not read yet.
+            Task { await model.load() }
+        }
+        // The Filter menu's "Original on This iPhone" on an album whose own
+        // query does not already use the rule (that case is handled above).
+        .watchesOriginalOnDevice(filter.criteria.originalOnDeviceOnly && !album.query.usesOriginal,
+                                 isPaused: isSelecting) {
+            await model?.load()
         }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
@@ -229,6 +254,14 @@ struct SmartAlbumDetailScreen: View {
             }
     }
 
+    /// The original check's progress, for an album on the Original rule.
+    private var originalLine: String? {
+        guard album.query.usesOriginal || filter.criteria.originalOnDeviceOnly else { return nil }
+        let check = dependencies.originalPresenceCheck
+        return OriginalPresenceProgressLine.text(checked: check.progress.checked, total: check.progress.total,
+                                                 finishedAt: check.pass?.finishedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })
+    }
+
     /// Library's Limited Access banner, then the saved conditions with the
     /// Filter menu's chips on the same row (FS-06.09 §4).
     private var topAccessories: some View {
@@ -247,6 +280,7 @@ struct SmartAlbumDetailScreen: View {
                     filterChips: filterChips,
                     sourceNames: model?.sourceNames ?? [:],
                     statusLines: model?.onServerLines ?? [],
+                    originalLine: originalLine,
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )
@@ -660,5 +694,12 @@ struct SmartAlbumDetailScreen: View {
                 }
             }
         }
+    }
+}
+
+extension SmartAlbumDetailModel {
+    convenience init(album: SmartAlbum, dependencies: AppDependencies) {
+        self.init(album: album, libraryQueries: dependencies.libraryQueries, metadataStore: dependencies.metadataStore,
+                  photoLibrary: dependencies.photoLibrary, pipeline: dependencies.indexPipeline, database: dependencies.database)
     }
 }

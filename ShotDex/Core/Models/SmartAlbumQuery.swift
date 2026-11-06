@@ -68,6 +68,9 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Statistics card that names one keeps it whatever the screen's Source
     /// popup says (FS-18 04 §2).
     case source
+    /// Whether every original file is on this device (FS-06.10): read from
+    /// the offline check's table, so an unchecked photo matches neither value.
+    case original
 
     var id: String { rawValue }
 
@@ -92,6 +95,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .keyword: String(localized: "Keyword", table: KeywordCopy.table, comment: "Rule field: a Photos keyword")
         case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
         case .source: String(localized: "Source", comment: "Rule field: the photo library, folder, drive or server a copy lives in")
+        case .original: String(localized: "Original", comment: "Rule field: whether the photo's original files are on this device or only in iCloud")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         }
     }
@@ -99,7 +103,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
-        case .sensorFormat, .fileType, .mediaType, .flag, .source: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -129,6 +133,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
         case .flag:
             SmartAlbumFlagValue.allCases.map { ($0.rawValue, $0.label) }
+        case .original:
+            OriginalPresence.allCases.map { ($0.rawValue, $0.label) }
         default:
             []
         }
@@ -460,13 +466,102 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
             rules.append(SmartAlbumRule(field: .favorite, boolValue: true))
         }
 
+        // "Original on This iPhone" saves as the rule it is short for (FS-06.10 §4).
+        if criteria.originalOnDeviceOnly {
+            rules.append(SmartAlbumRule(field: .original, op: .isExactly, text: OriginalPresence.onDevice.rawValue))
+        }
+
         if let month = criteria.captureMonth {
             rules.append(SmartAlbumRule(
                 field: .dateTaken, op: .inMonth, number: month.anchorDate().timeIntervalSince1970
             ))
         }
 
+        // Rating ▸ (FS-01.12 §7): "★★★ & Up" is at least 3, Unrated is 0.
+        switch criteria.ratingFilter {
+        case .atLeast(let stars)?:
+            rules.append(SmartAlbumRule(field: .rating, op: .atLeast, number: Double(stars)))
+        case .unrated?:
+            rules.append(SmartAlbumRule(field: .rating, op: .equalTo, number: 0))
+        case nil:
+            break
+        }
+
+        // Flags OR together; rules under `.all` cannot. One flag is its rule;
+        // two are "not the third" — the same photos; all three constrain nothing.
+        let flagValue: (PhotoFlagFilter) -> SmartAlbumFlagValue = {
+            switch $0 {
+            case .picks: .pick
+            case .rejected: .reject
+            case .unflagged: .unflagged
+            }
+        }
+        switch criteria.flags.count {
+        case 1:
+            rules.append(SmartAlbumRule(field: .flag, op: .isExactly, text: flagValue(criteria.flags.first!).rawValue))
+        case 2:
+            if let missing = PhotoFlagFilter.allCases.first(where: { !criteria.flags.contains($0) }) {
+                rules.append(SmartAlbumRule(field: .flag, op: .isNot, text: flagValue(missing).rawValue))
+            }
+        default:
+            break
+        }
+
+        // A search: the parts a rule says the same way (LibraryQueries'
+        // search SQL). Focal length and bare numbers OR across columns and
+        // have no rule — `migrationGaps` names them.
+        if let text = criteria.searchText, !text.isEmpty {
+            let parsed = SearchParser.parse(text)
+            if let iso = parsed.iso {
+                rules.append(SmartAlbumRule(field: .iso, op: .equalTo, number: Double(iso)))
+            }
+            if let aperture = parsed.aperture {
+                rules.append(SmartAlbumRule(field: .aperture, op: .inRange, number: aperture - 0.05, numberUpper: aperture + 0.05))
+            }
+            if let shutter = parsed.shutterSeconds {
+                rules.append(SmartAlbumRule(field: .shutter, op: .inRange, number: shutter * 0.9, numberUpper: shutter * 1.1))
+            }
+            if let format = parsed.sensorFormat {
+                rules.append(SmartAlbumRule(field: .sensorFormat, op: .isExactly, text: format.rawValue))
+            }
+            for term in parsed.freeTextTerms {
+                rules.append(SmartAlbumRule(field: .anyText, op: .contains, text: term))
+            }
+        }
+
         return SmartAlbumQuery(matchMode: .all, rules: rules)
+    }
+
+    /// The quick-filter conditions `migrating` cannot say as rules, in the
+    /// words a reason line uses ("Capture Kind") — empty when the converted
+    /// query matches exactly the photos the filter shows. Save as Smart
+    /// Album… and Advanced Filter… stay off while it is not empty, rather
+    /// than save an album that quietly matches more.
+    static func migrationGaps(_ criteria: FilterCriteria) -> [String] {
+        var gaps: [String] = []
+        if !criteria.mediaSubtypes.isEmpty {
+            gaps.append(String(localized: "Capture Kind", comment: "A filter condition a smart album cannot save"))
+        }
+        // Several values OR together in the filter; rules under All would AND them.
+        if criteria.cameraBrands.count > 1 || criteria.cameraBrandTerms.count > 1 {
+            gaps.append(String(localized: "several camera brands", comment: "A filter condition a smart album cannot save"))
+        }
+        if criteria.cameraBodies.count > 1 || criteria.cameraBodyTerms.count > 1 {
+            gaps.append(String(localized: "several cameras", comment: "A filter condition a smart album cannot save"))
+        }
+        if criteria.lenses.count > 1 || criteria.lensTerms.count > 1 {
+            gaps.append(String(localized: "several lenses", comment: "A filter condition a smart album cannot save"))
+        }
+        if criteria.sensorFormats.count > 1 {
+            gaps.append(String(localized: "several sensor formats", comment: "A filter condition a smart album cannot save"))
+        }
+        if let text = criteria.searchText, !text.isEmpty {
+            let parsed = SearchParser.parse(text)
+            if parsed.focalLength != nil || !parsed.bareNumbers.isEmpty {
+                gaps.append(String(localized: "a focal length or bare number in the search", comment: "A filter condition a smart album cannot save"))
+            }
+        }
+        return gaps
     }
 }
 
@@ -492,4 +587,10 @@ extension SmartAlbumQuery {
     var pinnedSourceId: String? {
         rules.first { $0.field == .source && $0.op == .isExactly && !$0.text.isEmpty }?.text
     }
+}
+
+extension SmartAlbumQuery {
+    /// Whether a condition reads the original-on-device check (FS-06.10):
+    /// a screen showing it keeps the check going while it is open.
+    var usesOriginal: Bool { rules.contains { $0.field == .original } }
 }

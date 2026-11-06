@@ -13,15 +13,7 @@ enum SettingsSummary {
 
     // MARK: Library and viewing
 
-    static func accessTitle(_ access: PhotoAuthorizationState) -> String {
-        switch access {
-        case .notDetermined: String(localized: "Not Requested", comment: "Settings → Photo Library: photo access not asked for yet")
-        case .authorized: String(localized: "Full Access", comment: "Settings → Photo Library: photo access")
-        case .limited: String(localized: "Limited Access", comment: "Settings → Photo Library: photo access")
-        case .denied: String(localized: "Denied", comment: "Settings → Photo Library: photo access")
-        case .restricted: String(localized: "Restricted", comment: "Settings → Photo Library: photo access")
-        }
-    }
+    static func accessTitle(_ access: PhotoAuthorizationState) -> String { access.title }
 
     /// "Full Access · indexing on Wi-Fi only" — the access, then the one
     /// condition that decides whether indexing runs away from Wi-Fi.

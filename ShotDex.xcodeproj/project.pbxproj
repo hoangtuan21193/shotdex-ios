@@ -25,6 +25,7 @@
 		FA0000142D00000100000001 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000132D00000100000001 /* DequeModule */; };
 		FA0000422D00000100000001 /* SMBClient in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000412D00000100000001 /* SMBClient */; };
 		FA0000442D00000100000001 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000432D00000100000001 /* Citadel */; };
+		FA0000522D00000100000001 /* com.hoangtuan.shotdex.agent.plist in Copy Launch Agent */ = {isa = PBXBuildFile; fileRef = FA0000512D00000100000001 /* com.hoangtuan.shotdex.agent.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -148,6 +149,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FA0000532D00000100000001 /* Copy Launch Agent */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LaunchAgents;
+			dstSubfolderSpec = 1;
+			files = (
+				FA0000522D00000100000001 /* com.hoangtuan.shotdex.agent.plist in Copy Launch Agent */,
+			);
+			name = "Copy Launch Agent";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -162,6 +174,7 @@
 		EE0002022D00000100000001 /* ShotDexEditAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexEditAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF0003022D00000100000001 /* ShotDexAddLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexAddLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA0000022D00000100000001 /* ShotDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA0000512D00000100000001 /* com.hoangtuan.shotdex.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = com.hoangtuan.shotdex.agent.plist; sourceTree = "<group>"; };
 		FF0001022D00000100000001 /* ShotDexUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShotDexUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -217,8 +230,6 @@
 				App/AssetActionsCoordinator.swift,
 				App/BackgroundIndexService.swift,
 				App/BackupBackgroundService.swift,
-				App/BackupCoordinator.swift,
-				"App/BackupCoordinator+Live.swift",
 				App/BackupUploadExtensionSync.swift,
 				App/Glass/GlassBackground.swift,
 				App/Glass/GlassIconButton.swift,
@@ -228,6 +239,7 @@
 				App/IngestBackgroundService.swift,
 				App/Intents/ShotDexAppIntents.swift,
 				App/Intents/SpotlightIndexer.swift,
+				App/OnServerBackgroundService.swift,
 				App/OnThisDayNotificationScheduler.swift,
 				App/OnThisDayNotificationService.swift,
 				App/OriginalDownloadModel.swift,
@@ -262,11 +274,8 @@
 				Features/Albums/OnThisDayModel.swift,
 				Features/Albums/OnThisDayScreen.swift,
 				Features/Albums/SmartAlbumConditionsBar.swift,
-				Features/Albums/SmartAlbumDetailModel.swift,
 				Features/Albums/SmartAlbumDetailScreen.swift,
 				Features/Albums/SmartAlbumEditorSheet.swift,
-				Features/Albums/SmartAlbumRuleRow.swift,
-				Features/Backup/BackupFormModel.swift,
 				Features/Backup/BackupFormSheet.swift,
 				Features/Backup/BackupListScreen.swift,
 				Features/Backup/BackupOrganizeScreen.swift,
@@ -417,7 +426,6 @@
 				Features/ServerUpload/FileServerFormScreen.swift,
 				Features/ServerUpload/FileServerListScreen.swift,
 				Features/ServerUpload/SaveConnectionSheet.swift,
-				Features/ServerUpload/ServerDiscoveryModel.swift,
 				Features/ServerUpload/ServerSignIn.swift,
 				Features/ServerUpload/ServerUploadIndex.swift,
 				Features/ServerUpload/ServerUploadModel.swift,
@@ -477,14 +485,13 @@
 				Features/Shared/ShareLevelRow.swift,
 				Features/Shared/ShareWatermarkContext.swift,
 				Features/Shared/SizeMeasurement.swift,
-				Features/Shared/SourceDeletionFlow.swift,
+				"Features/Shared/SourceDeletionFlow+App.swift",
 				Features/Shared/ToolChromeEnvironment.swift,
 				Features/Shared/UnsupportedRAWBatchPrompt.swift,
 				Features/Sources/AddSourceSheet.swift,
 				Features/Sources/CloudDownloadPanel.swift,
 				Features/Sources/SourceRowView.swift,
 				Features/Sources/SourcesGroup.swift,
-				Features/Sources/SourcesModel.swift,
 				Features/Statistics/ChartCard.swift,
 				Features/Statistics/ChartEditorSheet.swift,
 				Features/Statistics/DateRangePickerSheet.swift,
@@ -779,6 +786,7 @@
 			isa = PBXGroup;
 			children = (
 				FA0000012D00000100000001 /* ShotDexMac */,
+				FA0000542D00000100000001 /* ShotDexMacLaunchAgent */,
 				AA0000012D00000100000001 /* ShotDex */,
 				AB0001052D00000100000001 /* WidgetShared */,
 				BB0001052D00000100000001 /* ShotDexWidget */,
@@ -810,6 +818,14 @@
 				FF0001022D00000100000001 /* ShotDexUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FA0000542D00000100000001 /* ShotDexMacLaunchAgent */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000512D00000100000001 /* com.hoangtuan.shotdex.agent.plist */,
+			);
+			path = ShotDexMacLaunchAgent;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1020,6 +1036,7 @@
 				FA0000052D00000100000001 /* Frameworks */,
 				FA0000062D00000100000001 /* Resources */,
 				FA0000072D00000100000001 /* Embed Frameworks */,
+				FA0000532D00000100000001 /* Copy Launch Agent */,
 			);
 			buildRules = (
 			);
@@ -1937,6 +1954,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ShotDexMac/ShotDexMac-Debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1947,6 +1965,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ShotDex;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favorites, albums and videos you make back to your library. Your photos stay on this Mac; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1968,6 +1987,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShotDexMac/ShotDexMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1978,6 +1998,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ShotDex;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favorites, albums and videos you make back to your library. Your photos stay on this Mac; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

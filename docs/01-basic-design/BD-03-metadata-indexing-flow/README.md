@@ -15,6 +15,7 @@ EXIF, sống với iCloud, báo tiến độ, và chạy tiếp ở nền.
 | 02 | [Đọc EXIF](02-exif-read.md) | hai pha, thang lấy dữ liệu, ba kết cục, luật không đè dữ liệu cũ |
 | 03 | [Mạng, iCloud, nhiệt](03-network-thermal-and-gate.md) | giới hạn tải, cầu dao, đồng hồ canh, chính sách cellular, nhiệt, nhường cho viewer |
 | 04 | [Tiến độ và chạy nền](04-progress-and-background.md) | chỉ báo, huỷ, số cộng dồn, tự thử lại, chạy nền |
+| 05 | [Chỉ đọc bản gốc, index dùng chung](05-shared-index.md) | Mac chỉ đọc ảnh đã tải về; mỗi ảnh một máy đọc, các máy khác lấy qua CloudKit |
 
 ## Quy tắc cốt lõi
 

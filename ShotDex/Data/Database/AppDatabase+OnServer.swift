@@ -51,4 +51,107 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.07 §12: hashes another device worked out — over iCloud or from
+    /// a ledger on the NAS. `copy_files.sharedFrom` names the device, so a
+    /// random check that finds one wrong drops that device's hashes and
+    /// nothing else. A ledger segment read is remembered by size, as Backup
+    /// does; a device caught wrong is remembered with when.
+    static func registerSharedHashes(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v48-sharedHashes") { db in
+            try db.alter(table: "copy_files") { t in
+                // The device whose hash this is, when it is not this one's.
+                t.add(column: "sharedFrom", .text)
+            }
+            // A distrust drops one device's hashes without a full scan.
+            try db.execute(sql: "CREATE INDEX copy_files_sharedFrom ON copy_files(sharedFrom) WHERE sharedFrom IS NOT NULL")
+            try db.create(table: "hash_index_segments") { t in
+                t.column("sourceId", .text).notNull()
+                t.column("segment", .text).notNull()
+                // The size read, so a segment grown since is read again.
+                t.column("size", .integer).notNull()
+                t.primaryKey(["sourceId", "segment"])
+            }
+            // Learned, not derived: Clear Local Metadata Index keeps it, or a
+            // device caught wrong would be believed again.
+            try db.create(table: "distrusted_hash_devices") { t in
+                t.primaryKey("device", .text)
+                // When a hash from it was found wrong: what it sent up to
+                // then is never used again.
+                t.column("since", .integer).notNull()
+            }
+        }
+    }
+
+    /// FS-19.07 §12.2: the lines of the NAS ledgers this device read, kept
+    /// so a file listed later still finds its line, and this device's own
+    /// lines, so what it already wrote is not written again — as Backup
+    /// keeps its shared index (FS-22.05 §2).
+    static func registerHashIndexLines(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v49-hashIndexLines") { db in
+            try db.create(table: "hash_index_lines") { t in
+                t.column("sourceId", .text).notNull()
+                // `FolderSourceIndexer.pathKey` of the path under the source's root.
+                t.column("pathKey", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("modifiedAt", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("recordedAt", .integer).notNull()
+                t.primaryKey(["sourceId", "pathKey", "device"])
+            }
+        }
+    }
+
+    /// FS-19.07 §12.3: hashes that travel through iCloud — this device's
+    /// own, queued for upload (`origin = local`), and other devices', as
+    /// pulled (`origin = cloud`). One row per device and file, named as its
+    /// CloudKit record.
+    static func registerSharedHashCache(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v50-sharedHashCache") { db in
+            try db.create(table: "shared_photo_hashes") { t in
+                t.primaryKey("recordName", .text)
+                t.column("cloudId", .text).notNull()
+                // `type:name`, as Backup's ledger keys a resource.
+                t.column("fileKey", .text).notNull()
+                // The asset's modification date when hashed, seconds.
+                t.column("assetModified", .integer)
+                t.column("size", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("hashedAt", .integer).notNull()
+                t.column("origin", .text).notNull()
+            }
+            try db.create(index: "shared_photo_hashes_cloud", on: "shared_photo_hashes", columns: ["cloudId"])
+            try db.create(table: "shared_server_hashes") { t in
+                t.primaryKey("recordName", .text)
+                // `ServerIdentity.key`: the same files whatever the connection's name.
+                t.column("serverKey", .text).notNull()
+                // `FolderSourceIndexer.pathKey` of the path on the server.
+                t.column("pathKey", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("modifiedAt", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("hashedAt", .integer).notNull()
+                t.column("origin", .text).notNull()
+            }
+            try db.create(index: "shared_server_hashes_path", on: "shared_server_hashes", columns: ["serverKey", "pathKey"])
+            // When this device's own hash was queued for the others; NULL =
+            // not yet, and every new hash of the file clears it.
+            try db.alter(table: "copy_files") { t in t.add(column: "sharedAt", .integer) }
+        }
+    }
+
+    /// FS-19.07 §12.4: the names other devices sent with their hashes, so a
+    /// mismatch can say whose hashes were wrong ("Tuấn's MacBook").
+    static func registerHashDeviceNames(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v51-hashDeviceNames") { db in
+            try db.create(table: "hash_device_names") { t in
+                t.primaryKey("device", .text)
+                t.column("name", .text).notNull()
+            }
+        }
+    }
 }
+

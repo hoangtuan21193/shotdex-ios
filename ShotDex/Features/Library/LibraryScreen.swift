@@ -140,6 +140,11 @@ struct LibraryScreen: View {
             navigation.hidesTabBar = false
             if isSelecting { navigation.selectionBar = nil }
         }
+        // "Original on This iPhone" keeps the original check running and the
+        // grid following it (FS-06.10 §4).
+        .watchesOriginalOnDevice(model?.criteria.originalOnDeviceOnly == true, isPaused: isSelecting) {
+            model?.reload()
+        }
         // Inline (not the default large-title) mode: keeps the bar a thin
         // translucent strip the grid scrolls under, instead of a tall empty
         // band. Matches Album Detail.

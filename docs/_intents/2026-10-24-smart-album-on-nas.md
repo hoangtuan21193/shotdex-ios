@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-10-24 |
 | Trạng thái | accepted (2026-10-25) |
-| Tiến độ | **đang làm** (2026-10-26) — task 21/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt, T10 liệt kê lại mỗi lần về trước mặt, T11 dòng tiến độ, T12 cổng xoá, T13 harness spike, T14 kiểm đợt 1 trên iPhone 26.5, T16 ghép Live Photo, T17 gộp hiển thị, T18 dấu lưới, T19 Photo Info On Server, T20 cổng ở mọi lối xoá, T15 tác vụ nền), 29/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 86, 87, 88, 89, 90, 91, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106; AC-74, 93 trừ so board; AC-85 phần hash; AC-92 trừ ảnh); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
+| Tiến độ | **đang làm** (2026-10-26) — task 21/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt, T10 liệt kê lại mỗi lần về trước mặt, T11 dòng tiến độ, T12 cổng xoá, T13 harness spike, T14 kiểm đợt 1 trên iPhone 26.5, T16 ghép Live Photo, T17 gộp hiển thị, T18 dấu lưới, T19 Photo Info On Server, T20 cổng ở mọi lối xoá, T15 tác vụ nền), 29/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 86, 87, 88, 89, 90, 91, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106; AC-74, 93 trừ so board; AC-85 phần hash; AC-92 trừ ảnh); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md); **Mac** (2026-11-02): **chưa làm** — spec [FS-19.07 §11](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md#11-mac-2026-11-02), 7 AC (AC-107…113) |
 | Nguồn | phản hồi người dùng (2026-10-24, review giải pháp "ảnh gia đình" trong phiên) |
 | Spec sinh ra từ đây | [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 
@@ -17,6 +17,7 @@ Hai vợ chồng, hai Apple Account, cùng chụp ảnh con; ảnh gửi qua l�
 1. Trên NAS có folder gốc (ví dụ `iCloud Photo/`) với ba folder thật `Tuấn/`, `Vợ/`, `Shared/`.
 2. Mỗi iPhone dùng Backup của ShotDex (FS-22) chép bản gốc vào folder của người đó.
 3. **Một script riêng của người dùng, không phải ShotDex**, tìm ảnh trùng giữa hai folder và dời/gộp chúng vào `Shared/`.
+   *(2026-11-02: bước này vào ShotDex trên Mac — [common-photos-across-folders](2026-11-02-common-photos-across-folders.md), FS-19.08.)*
 4. Trên mỗi iPhone, một smart album gom những ảnh **đã có trên một folder NAS chỉ định** (ví dụ `Shared/`) → xoá trên
    máy để giải phóng iCloud, an toàn vì bản gốc đã nằm trên NAS.
 5. Khi iCloud có chỗ: tạo iCloud Shared Library, đưa ảnh từ `Shared/` về.

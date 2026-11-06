@@ -44,12 +44,20 @@ enum AlbumFilterPredicate {
         for criteria: FilterCriteria,
         stitchedPanoramaIds: [String] = [],
         unsupportedRAWIds: [String] = [],
+        originalOnDeviceIds: [String] = [],
         marks: MarkFilterSnapshot = .empty
     ) -> NSPredicate? {
         var parts: [NSPredicate] = []
 
         if criteria.favoritesOnly {
             parts.append(NSPredicate(format: "favorite == YES"))
+        }
+
+        // Photos cannot say where an original lives without a network-off
+        // request per asset, so the original check's answers come by
+        // identifier (FS-06.10 §4). None checked yet → matches none.
+        if criteria.originalOnDeviceOnly {
+            parts.append(identifierPredicate(originalOnDeviceIds) ?? NSPredicate(value: false))
         }
 
         // Both kinds, or none, constrain nothing — as in the index query.
@@ -148,6 +156,8 @@ enum AlbumFilterPredicate {
     static func needsIndex(_ criteria: FilterCriteria) -> Bool {
         var photosOnly = FilterCriteria()
         photosOnly.favoritesOnly = criteria.favoritesOnly
+        // Answered by identifier from the original check.
+        photosOnly.originalOnDeviceOnly = criteria.originalOnDeviceOnly
         photosOnly.mediaKinds = criteria.mediaKinds
         photosOnly.mediaSubtypes = criteria.mediaSubtypes
         // Stars and flags are answered by identifier from `PhotoMarks`.

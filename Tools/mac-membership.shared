@@ -3,3 +3,12 @@
 # iOS-only services (BGTask, widgets, Spotlight), so the Mac composes its own
 # root from the shared data layer (FS-18 T1).
 Features/Library/LibraryModel.swift
+Features/Backup/BackupFormModel.swift
+Features/Backup/BackupOrganizeText.swift
+Features/ServerUpload/ServerDiscoveryModel.swift
+Features/Sources/SourcesModel.swift
+Features/Albums/SmartAlbumDetailModel.swift
+Features/Albums/AlbumSortOrder.swift
+Features/Albums/SmartAlbumRuleRow.swift
+Features/Shared/PhotoDeletionFlow.swift
+Features/Shared/SourceDeletionFlow.swift

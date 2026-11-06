@@ -9,6 +9,8 @@ struct AddSourceSheet: View {
     @Environment(\.isDuoInner) private var isDuoInner
     @State private var includesSubfolders = true
     @State private var pairsRawAndJpeg = true
+    /// The folder picked is a source already, or inside or around one (FS-19 AC-45).
+    @State private var overlapRefusal: String?
     @State private var isPickingFolder = false
     @State private var kind: Kind = .folder
     @State private var isShowingServers = false
@@ -105,6 +107,12 @@ struct AddSourceSheet: View {
                     Button(String(localized: "Cancel")) { dismiss() }
                 }
             }
+            .alert(String(localized: "Can’t Add This Folder", comment: "Add a Source: the folder overlaps a source"),
+                   isPresented: Binding(get: { overlapRefusal != nil }, set: { if !$0 { overlapRefusal = nil } })) {
+                Button(String(localized: "OK", comment: "Add a Source: dismiss the refusal")) {}
+            } message: {
+                Text(overlapRefusal ?? "")
+            }
             .navigationDestination(isPresented: $isShowingServers) {
                 FileServerListScreen()
             }
@@ -116,6 +124,11 @@ struct AddSourceSheet: View {
             .fileImporter(isPresented: $isPickingFolder, allowedContentTypes: [.folder]) { result in
                 guard case .success(let url) = result else { return }
                 let sources = dependencies.sources
+                // Said here, before the sheet goes: nothing would show it after.
+                if let refusal = sources.overlap(url) {
+                    overlapRefusal = refusal
+                    return
+                }
                 let (subfolders, pairs) = (includesSubfolders, pairsRawAndJpeg)
                 dismiss()
                 Task { await sources.addFolder(url, includesSubfolders: subfolders, pairsRawAndJpeg: pairs) }

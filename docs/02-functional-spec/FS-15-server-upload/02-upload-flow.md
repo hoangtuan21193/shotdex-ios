@@ -141,3 +141,5 @@ Màn mỗi file:
 ## 8. Sau khi đẩy
 
 Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo Info: [FS-15.02c](02c-after-upload.md).
+
+> **Giữ thông tin file (2026-11-05):** file đẩy lên mang ngày/cờ theo [FS-19.08 §6e “Giữ thông tin file”](../FS-19-photo-sources/08-common-photos.md#6e-folder-theo-ngày-quét-nhanh-hơn--xếp-folder-chung--giữ-thông-tin-file-người-dùng-2026-11-05), đặt trước khi đổi tên part; ảnh Photos theo quyết ở đó. AC-219.

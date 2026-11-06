@@ -53,8 +53,14 @@ actor IndexPipeline {
     /// cloud original that just hasn't downloaded yet).
     static let maxReadAttempts = 5
     /// EXIF reads within a batch run concurrently — indexing time is
-    /// dominated by per-asset PhotoKit round-trips, not CPU.
+    /// dominated by per-asset PhotoKit round-trips, not CPU. The Mac reads
+    /// mostly local originals off a fast disk with many cores and no thermal
+    /// ceiling worth the name, so it runs twice as wide.
+    #if os(macOS)
+    static let readConcurrency = 24
+    #else
     static let readConcurrency = 12
+    #endif
 
     /// Target reader fan-out from thermal state + Low Power Mode. A long
     /// EXIF pass (12-way PhotoKit XPC + ImageIO) can heat the device;
@@ -140,6 +146,12 @@ actor IndexPipeline {
     /// boundaries — no notification observers needed.
     private let thermalState: @Sendable () -> ProcessInfo.ThermalState
     private let isLowPowerMode: @Sendable () -> Bool
+    /// Results other devices on this iCloud account already read; nil when
+    /// sharing is not wired (tests, previews).
+    private let sharedIndex: (any SharedIndexSource)?
+    /// Read only local originals when the network is not allowed
+    /// (`IndexReadPolicy.readsOriginalsOnly`). Re-read per batch.
+    private let readsOriginalsOnly: @Sendable () -> Bool
 
     private var isCancelled = false
     private var isRunning = false
@@ -157,8 +169,12 @@ actor IndexPipeline {
          sensorDatabaseLoader: SensorDatabaseLoader = SensorDatabaseLoader(),
          interactionGate: IndexInteractionGate? = nil,
          thermalState: @escaping @Sendable () -> ProcessInfo.ThermalState = { ProcessInfo.processInfo.thermalState },
-         isLowPowerMode: @escaping @Sendable () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled }) {
+         isLowPowerMode: @escaping @Sendable () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled },
+         sharedIndex: (any SharedIndexSource)? = nil,
+         readsOriginalsOnly: @escaping @Sendable () -> Bool = { false }) {
         self.metadataStore = metadataStore
+        self.sharedIndex = sharedIndex
+        self.readsOriginalsOnly = readsOriginalsOnly
         self.exifReader = exifReader
         self.sensorDatabaseLoader = sensorDatabaseLoader
         self.interactionGate = interactionGate
@@ -299,6 +315,7 @@ actor IndexPipeline {
             switch await exifReader.readExif(for: asset, resource: resource, allowNetwork: true) {
             case .success(let exif):
                 record = composer.compose(asset: info, exif: exif, exifStatus: .indexed)
+                await sharedIndex?.share([SharedIndexRead(key: Self.sharedKey(for: asset), exif: exif)])
             case .unreadable:
                 // Viewer downloaded the full image but ImageIO can't parse it —
                 // deterministically no readable EXIF. Resolve the row to
@@ -436,11 +453,24 @@ actor IndexPipeline {
         )
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
 
-        // Phase 1 — fast pass over brand-new assets.
-        try fastPass(
+        // Phase 1 — fast pass over brand-new assets. It walks every asset, so
+        // it also says which rows' assets left the library: they go now, not
+        // after the EXIF pass — on a first index that waits on iCloud for
+        // hours, and the gone photos sat in the grid and in smart albums as
+        // blank tiles the whole time (measured 2026-11-02, Mac, 453 rows).
+        let libraryIds = try fastPass(
             fetchResult: fetchResult, existingStates: existingStates,
             composer: composer, clock: clock, onWorkFound: signalWork
         )
+        var deletedIds: [String] = []
+        if let libraryIds, !fullReindex {
+            deletedIds = existing.keys.filter { !libraryIds.contains($0) }
+            if !deletedIds.isEmpty {
+                signalWork()
+                try metadataStore.deleteAssets(ids: deletedIds)
+                summary.deleted = deletedIds.count
+            }
+        }
 
         // Phase 2 — EXIF enrichment.
         //
@@ -455,7 +485,6 @@ actor IndexPipeline {
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
 
-        var seenAssetIds = Set<String>(minimumCapacity: total)
         var batch: [PHAsset] = []
         batch.reserveCapacity(Self.batchSize)
 
@@ -495,7 +524,6 @@ actor IndexPipeline {
         for index in 0..<total {
             if isCancelled { break }
             let asset = fetchResult.object(at: index)
-            seenAssetIds.insert(asset.localIdentifier)
 
             // Incremental diff: skip unchanged assets with a complete read.
             // Skipped assets are already counted in `baseline`, so they need
@@ -547,17 +575,6 @@ actor IndexPipeline {
             try metadataStore.updateAssetFacts(Dictionary(uniqueKeysWithValues: slice.map { ($0.key, $0.value) }))
         }
 
-        // Remove rows for assets that vanished from the library
-        // (only safe to compute after a full, uncancelled walk).
-        var deletedIds: [String] = []
-        if !isCancelled && !fullReindex {
-            deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
-            if !deletedIds.isEmpty {
-                signalWork()
-                try metadataStore.deleteAssets(ids: deletedIds)
-                summary.deleted = deletedIds.count
-            }
-        }
         await runObservers.deliver(IndexRunChanges(
             changed: readIds.union(drifted.keys),
             deleted: Set(deletedIds),
@@ -584,6 +601,38 @@ actor IndexPipeline {
         onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
         Self.logSummary("run", summary: summary, elapsed: clock.now - runStart, timings: timings.withLock { $0 })
         return summary
+    }
+
+    /// Fills rows still waiting for a read (`pendingICloud`, `error`) from
+    /// results another device on this iCloud account shared — no file is
+    /// opened. A run that only reads local originals leaves those rows alone,
+    /// so this is how they fill once the Mac (or an iPhone) has read them.
+    /// Returns how many rows it filled; 0 when another run owns the pipeline.
+    @discardableResult
+    func adoptSharedResults() async throws -> Int {
+        guard let sharedIndex, !isRunning else { return 0 }
+        isRunning = true
+        isCancelled = false
+        defer { isRunning = false }
+
+        let ids = try metadataStore.retryableAssetIds()
+        guard !ids.isEmpty else { return 0 }
+        let assets = PhotoLibraryService.fetchAssets(ids: ids)
+        let composer = makeComposer()
+        let timings = OSAllocatedUnfairLock(initialState: StageTotals())
+        var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
+        for chunk in stride(from: 0, to: assets.count, by: Self.batchSize) {
+            if isCancelled { break }
+            let batch = Array(assets[chunk..<min(chunk + Self.batchSize, assets.count)])
+            let shared = await sharedIndex.sharedExif(for: batch.map(Self.sharedKey(for:)))
+            let hits = batch.filter { shared[$0.localIdentifier] != nil }
+            guard !hits.isEmpty else { continue }
+            try await processBatch(hits, composer: composer, allowNetwork: false, timings: timings, summary: &summary)
+        }
+        if summary.indexed > 0 {
+            IndexTrafficMonitor.health("adoptSharedResults: \(summary.indexed) rows filled from other devices")
+        }
+        return summary.indexed
     }
 
     /// Re-reads only the assets whose EXIF is incomplete (`pendingICloud` or
@@ -928,8 +977,8 @@ actor IndexPipeline {
         composer: MetadataComposer,
         clock: ContinuousClock,
         onWorkFound: () -> Void
-    ) throws {
-        guard !isCancelled else { return }
+    ) throws -> Set<String>? {
+        guard !isCancelled else { return nil }
         let start = clock.now
         let signpostState = Self.signposter.beginInterval("fastPass")
         defer { Self.signposter.endInterval("fastPass", signpostState) }
@@ -937,9 +986,11 @@ actor IndexPipeline {
         var rows: [PhotoMetadata] = []
         rows.reserveCapacity(Self.fastPassBatchSize)
         var written = 0
+        var libraryIds = Set<String>(minimumCapacity: fetchResult.count)
         for index in 0..<fetchResult.count {
             if isCancelled { break }
             let asset = fetchResult.object(at: index)
+            libraryIds.insert(asset.localIdentifier)
             guard existingStates[asset.localIdentifier] == nil else { continue }
             rows.append(composer.compose(
                 asset: Self.assetInfo(for: asset, fileSize: nil),
@@ -964,6 +1015,7 @@ actor IndexPipeline {
         IndexTrafficMonitor.health(
             "fast pass: \(written) placeholder rows, scanned \(fetchResult.count) in \(Self.milliseconds(clock.now - start))ms"
         )
+        return isCancelled ? nil : libraryIds
     }
 
     // MARK: Batch processing
@@ -982,6 +1034,8 @@ actor IndexPipeline {
         let outcome: Outcome
         /// For removal from the in-flight list on completion.
         let filename: String?
+        /// A file read this device made, to offer to the other devices.
+        var sharedRead: SharedIndexRead? = nil
     }
 
     /// Shared between concurrent reads and the completion loop; throttles
@@ -1007,6 +1061,7 @@ actor IndexPipeline {
         onAssetProcessed: (@Sendable (Int, [String]) -> Void)? = nil
     ) async throws -> Int {
         var results = [PhotoMetadata?](repeating: nil, count: assets.count)
+        var sharedReads = [SharedIndexRead?](repeating: nil, count: assets.count)
         // Assets whose read came back with no bytes — their rows must keep the
         // EXIF a previous run wrote (see `MetadataStore.saveBatch`).
         var unreadAssetIds = Set<String>()
@@ -1030,6 +1085,11 @@ actor IndexPipeline {
         let progressState = OSAllocatedUnfairLock(
             initialState: BatchProgressState(lastEmit: progressClock.now - .seconds(1))
         )
+
+        // What other devices already read for these photos: those are composed
+        // from the shared result and never opened here.
+        let shared = await sharedIndex?.sharedExif(for: assets.map(Self.sharedKey(for:))) ?? [:]
+        let originalsOnly = !allowNetwork && readsOriginalsOnly()
 
         await withTaskGroup(of: BatchItem.self) { group in
             let exifReader = self.exifReader
@@ -1076,11 +1136,15 @@ actor IndexPipeline {
                 if Self.shouldSkipExifRead(mediaType: asset.mediaType.rawValue, mediaSubtypes: asset.mediaSubtypes) {
                     // Composer turns indexed + empty EXIF into `noExif`.
                     exifResult = .success(.empty)
+                } else if let sharedExif = shared[asset.localIdentifier] {
+                    exifResult = .success(sharedExif)
                 } else {
                     mark = clock.now
                     let signpostId = Self.signposter.makeSignpostID()
                     let signpostState = Self.signposter.beginInterval("exifRead", id: signpostId)
-                    exifResult = await exifReader.readExif(for: asset, resource: resource, allowNetwork: allowNetwork)
+                    exifResult = await exifReader.readExif(
+                        for: asset, resource: resource, allowNetwork: allowNetwork, originalsOnly: originalsOnly
+                    )
                     Self.signposter.endInterval("exifRead", signpostState)
                     exifTime = clock.now - mark
                     hasReadExif = true
@@ -1094,7 +1158,10 @@ actor IndexPipeline {
                     item = BatchItem(index: index,
                                      record: composer.compose(asset: info, exif: exif, exifStatus: .indexed),
                                      outcome: .indexed,
-                                     filename: filename)
+                                     filename: filename,
+                                     // Only a file this device opened is news to the others.
+                                     sharedRead: hasReadExif
+                                        ? SharedIndexRead(key: Self.sharedKey(for: asset), exif: exif) : nil)
                 case .pendingICloud:
                     // Couldn't download (in iCloud, or the network failed).
                     // ALWAYS retryable — a flaky link must never end with a
@@ -1181,6 +1248,7 @@ actor IndexPipeline {
             for await item in group {
                 inFlight -= 1
                 results[item.index] = item.record
+                sharedReads[item.index] = item.sharedRead
                 switch item.outcome {
                 case .indexed: summary.indexed += 1
                 case .pendingICloud:
@@ -1257,6 +1325,9 @@ actor IndexPipeline {
         )
         Self.signposter.endInterval("dbWrite", signpostState)
         timings.withLock { $0.dbWrite += batchClock.now - mark }
+        if let sharedIndex {
+            await sharedIndex.share(sharedReads.prefix(records.count).compactMap { $0 })
+        }
         Self.logBatch(
             assets.count, elapsed: batchClock.now - batchStart,
             before: timingsBefore, after: timings.withLock { $0 },
@@ -1268,6 +1339,13 @@ actor IndexPipeline {
             outcomes: summary
         )
         return doneCount
+    }
+
+    private static func sharedKey(for asset: PHAsset) -> SharedIndexKey {
+        SharedIndexKey(
+            assetId: asset.localIdentifier,
+            modificationDate: asset.modificationDate.map { Int($0.timeIntervalSince1970) }
+        )
     }
 
     private static func assetInfo(for asset: PHAsset, fileSize: Int?, originalFilename: String? = nil) -> AssetInfo {

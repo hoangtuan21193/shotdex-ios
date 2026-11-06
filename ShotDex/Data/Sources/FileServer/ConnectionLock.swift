@@ -7,7 +7,9 @@ import Foundation
 /// an original downloads from iCloud.
 actor ConnectionLock {
     enum Priority: Int, Comparable, Sendable {
-        case normal, backup
+        /// Looking at a file (FS-19.08 §6d Compare): after everyone else.
+        case compare = -1
+        case normal = 0, backup = 1
 
         static func < (lhs: Priority, rhs: Priority) -> Bool { lhs.rawValue < rhs.rawValue }
     }
@@ -129,10 +131,18 @@ final class LockedRemoteFileClient: RemoteFileClient {
     }
 
     func move(_ source: String, to destination: String) async throws { try await locked { try await $0.move(source, to: destination) } }
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        try await locked { try await $0.copyOnServer(source, to: destination) }
+    }
     func remove(_ path: String) async throws { try await locked { try await $0.remove(path) } }
     func removeEmptyDirectory(_ path: String) async throws { try await locked { try await $0.removeEmptyDirectory(path) } }
     func removeFolderTree(_ path: String) async throws { try await locked { try await $0.removeFolderTree(path) } }
     func storageSpace(at path: String) async throws -> StorageSpace? { try await locked { try await $0.storageSpace(at: path) } }
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? { try await locked { try await $0.fileInfo(at: path) } }
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await locked { try await $0.sourceInfo(at: path) } }
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        try await locked { try await $0.setFileInfo(info, at: path) }
+    }
 
     var peeksWithSystemThumbnails: Bool { base.peeksWithSystemThumbnails }
 

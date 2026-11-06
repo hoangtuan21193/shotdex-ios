@@ -27,9 +27,16 @@ struct ShotDexApp: App {
         dependencies.fileServerCatalog.reload()
         dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
         dependencies.onServerCheck.appBecameActive()
+        // Not for a launch into the background (a background task): the
+        // check is foreground work.
+        if UIApplication.shared.applicationState != .background {
+            dependencies.originalPresenceCheck.appBecameActive()
+        }
         #if DEBUG
         // FS-19.07b §1 spikes, on a real iPhone: `-ShotDexOnServerSpike S1|S2|S4`.
         OnServerSpike.runIfAsked()
+        // FS-06.10 AC-1, on a real iPhone: `-ShotDexOriginalSpike [count]`.
+        OriginalPresenceSpike.runIfAsked()
         #endif
         // UIKit-presented controls (alerts, menus, share sheets) take the
         // window's tint; SwiftUI controls take `.tint` below.
@@ -52,6 +59,7 @@ struct ShotDexApp: App {
                         dependencies.backupBackground.appDidEnterBackground()
                         dependencies.ingestBackground.appDidEnterBackground()
                         dependencies.onServerCheck.appDidEnterBackground()
+                        dependencies.originalPresenceCheck.appDidEnterBackground()
                         dependencies.onServerBackground.appDidEnterBackground()
                     }
                     if phase == .active {
@@ -71,6 +79,9 @@ struct ShotDexApp: App {
                         // Whether Photos items are on the servers, from where
                         // the last pass stopped (FS-19.07 §6).
                         dependencies.onServerCheck.appBecameActive()
+                        // New and changed Photos items: are their originals
+                        // here (FS-06.10 §4)?
+                        dependencies.originalPresenceCheck.appBecameActive()
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

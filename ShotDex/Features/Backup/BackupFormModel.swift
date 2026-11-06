@@ -1,7 +1,9 @@
 import Foundation
 import GRDB
 import Observation
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// New Backup and Edit (FS-22.01 §2): what the sheet edits, the choices it
 /// offers, and the checks before Start.
@@ -172,9 +174,13 @@ final class BackupFormModel {
     }
 }
 
-/// The device's kind as a folder name: `iPhone`, `iPad`.
+/// The device's kind as a folder name: `iPhone`, `iPad`, `Mac`.
 enum BackupDevice {
     @MainActor static var kindName: String {
+        #if os(macOS)
+        "Mac"
+        #else
         UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        #endif
     }
 }

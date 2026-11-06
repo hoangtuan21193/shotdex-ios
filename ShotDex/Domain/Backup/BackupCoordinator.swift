@@ -19,6 +19,13 @@ struct BackupEnvironment: Sendable {
     var power: PowerMonitor?
 }
 
+/// Something that keeps the screen from locking while it is held.
+@MainActor
+protocol ScreenHolding: AnyObject {
+    func beginHold()
+    func endHold()
+}
+
 /// Keeps every backup watching its source (FS-22.02): turns library changes,
 /// the app coming forward, the 5-minute tick, network changes and the
 /// buttons into runs, one job at a time, and owns each job's status line.
@@ -176,6 +183,16 @@ final class BackupCoordinator {
         guard runningJobId != nil else { return }
         stopReason = .pausedBySystem
         current?.cancel()
+    }
+
+    /// Another process runs the jobs (the Mac's helper, FS-22.06 §2): show
+    /// its run as if it were this one's. nil = nothing running there.
+    func showRemoteRun(jobId: String?, progress live: BackupProgress?, bytesPerSecond speed: Double?) {
+        runningJobId = jobId
+        if let jobId {
+            progress[jobId] = live
+            bytesPerSecond[jobId] = speed
+        }
     }
 
     /// Settles once the queue is empty — tests and background tasks wait on it.

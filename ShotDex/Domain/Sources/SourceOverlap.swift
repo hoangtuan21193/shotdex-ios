@@ -39,9 +39,11 @@ enum SourceOverlap: Equatable, Sendable {
     }
 
     /// Path components, normalized the way the file systems compare them:
-    /// NFC, case folded (APFS, exFAT and SMB shares are case-insensitive).
+    /// links followed (a symlinked alias, /var vs /private/var), NFC, case
+    /// folded (APFS, exFAT and SMB shares are case-insensitive by default; a
+    /// case-sensitive volume is refused one folder too many, not one too few).
     private static func components(_ path: String) -> [String] {
-        URL(fileURLWithPath: path).standardizedFileURL.pathComponents
+        URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.pathComponents
             .map { $0.precomposedStringWithCanonicalMapping.lowercased() }
             .filter { $0 != "/" }
     }

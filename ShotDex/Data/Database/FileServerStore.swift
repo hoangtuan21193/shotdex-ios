@@ -91,7 +91,20 @@ struct FileServerStore: Sendable {
     /// foreign key nulls the id and the row keeps the name.
     func delete(id: String) throws {
         _ = try database.writer.write { db in
-            try FileServer.deleteOne(db, key: id)
+            // What Common Photos read of its files (FS-19.08 §6c) is of no
+            // use without it.
+            try CommonPhotosScanRecords.forget(connectionId: id, in: db)
+            // Nor what the user left out of its sets (§6d).
+            try CommonPhotosLeftOutStore.forget(connectionId: id, in: db)
+            // Nor what its folders held, nor whether it keeps dates (§6e).
+            try db.execute(sql: "DELETE FROM common_photo_folder_listings WHERE connectionId = ?", arguments: [id])
+            try db.execute(sql: "DELETE FROM server_file_info_support WHERE connectionId = ?", arguments: [id])
+            // Photos ready to move through it never can be (§6c).
+            for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE connectionId = ? AND state = ?",
+                                             arguments: [id, CommonPhotosRun.State.ready.rawValue]) {
+                try CommonPhotosStore.dropReady(runId: runId, in: db)
+            }
+            return try FileServer.deleteOne(db, key: id)
         }
         passwords.removePassword(for: id)
     }

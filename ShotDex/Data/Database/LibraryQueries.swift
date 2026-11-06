@@ -246,6 +246,17 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// PhotoKit ids the original check found with every original on this
+    /// device — how an album's Photos fetch answers the Filter menu's
+    /// "Original on This iPhone" (FS-06.10 §4). Sorted, so two reads of the
+    /// same answer compare equal.
+    func originalOnDeviceIds() async throws -> [String] {
+        try await database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT photoKitId FROM original_presence WHERE state = ? ORDER BY photoKitId",
+                                arguments: [OriginalPresence.onDevice.rawValue])
+        }
+    }
+
     static func combinedWhere(
         _ filters: [IndexFilter],
         restrictedTo assetIds: [String]?
@@ -417,6 +428,14 @@ struct LibraryQueries: Sendable {
 
         if criteria.favoritesOnly {
             conditions.append("isFavorite = 1")
+        }
+
+        // The same positive match as the Original rule (FS-06.10 §3): only
+        // photos the check found on this device; unchecked ones are left out.
+        if criteria.originalOnDeviceOnly {
+            let (sql, bound) = SmartAlbumSQLBuilder.originalClause(.onDevice)
+            conditions.append(sql)
+            values.append(contentsOf: bound)
         }
 
         if let rating = criteria.ratingFilter {

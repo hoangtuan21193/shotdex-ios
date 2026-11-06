@@ -102,11 +102,21 @@ struct BackupDateName: Sendable {
 
     /// A name from outside (an album title, a source folder) made safe for a
     /// NAS folder: forbidden characters become `-`, never `/`.
+    /// Windows and SMB also refuse a name ending in a dot or a space
+    /// (FS-19.08 §6e: a source folder `Trip. ` made on a Mac).
     static func safeFolderName(_ name: String) -> String {
-        let cleaned = String(name.map { forbiddenCharacters.contains($0) ? "-" : $0 })
+        var cleaned = String(name.map { forbiddenCharacters.contains($0) ? "-" : $0 })
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return cleaned.isEmpty ? "-" : cleaned
+        while cleaned.hasSuffix(".") || cleaned.hasSuffix(" ") { cleaned.removeLast() }
+        if cleaned.isEmpty { return "-" }
+        // Names Windows keeps for devices (`CON`, `aux.jpg`, `COM1`).
+        let stem = cleaned.split(separator: ".", maxSplits: 1).first.map { String($0).uppercased() } ?? ""
+        if reservedNames.contains(stem) { cleaned += "-" }
+        return cleaned
     }
+
+    private static let reservedNames: Set<String> = Set(["CON", "PRN", "AUX", "NUL"]
+        + (1...9).flatMap { ["COM\($0)", "LPT\($0)"] })
 
     private func monthName(_ month: Int, abbreviated: Bool) -> String {
         let names = abbreviated ? calendar.shortStandaloneMonthSymbols : calendar.standaloneMonthSymbols

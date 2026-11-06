@@ -4,6 +4,10 @@ import Foundation
 /// runs (FS-19.07 §7): `Checking · 12,408 of 54,920 · 38 GB to download`,
 /// the reason it waits, or `Checked 3 min ago` once it is done.
 enum OnServerProgressLine {
+    /// Which device the words are on — the one that reads again what another
+    /// device got wrong.
+    enum ThisDevice: Equatable, Sendable { case iPhone, iPad, mac }
+
     struct Input: Equatable, Sendable {
         var progress: OnServerProgress
         var wait: OnServerSchedule.Wait?
@@ -11,6 +15,10 @@ enum OnServerProgressLine {
         var sourceName: String
         /// Photos access is `.limited`.
         var isLimited = false
+        /// Devices whose hashes the random check found wrong (§12.4), by
+        /// name; nil for one that sent none.
+        var mismatchFrom: [String?] = []
+        var thisDevice: ThisDevice
     }
 
     /// One line per fact, top first.
@@ -32,6 +40,9 @@ enum OnServerProgressLine {
             }
         }
         var out = [first]
+        if !input.mismatchFrom.isEmpty {
+            out.append(mismatch(input.mismatchFrom, on: input.thisDevice))
+        }
         if p.editedOnlyMissing > 0 {
             out.append(String(localized: "\(p.editedOnlyMissing.formatted()) Edited — edit not on \(input.sourceName)",
                               comment: "On-server check: items edited in Photos whose edit is not on the server"))
@@ -41,6 +52,25 @@ enum OnServerProgressLine {
                               comment: "On-server check: Photos access is limited"))
         }
         return out
+    }
+
+    /// `Hashes from Tuấn's MacBook didn't match — checking on this iPhone.`
+    static func mismatch(_ names: [String?], on device: ThisDevice) -> String {
+        let named = names.map {
+            $0 ?? String(localized: "another device",
+                         comment: "On-server check: stands for a device's name after \"Hashes from\" when the device sent none")
+        }
+        let from = Array(Set(named)).sorted { $0.localizedStandardCompare($1) == .orderedAscending }.formatted(.list(type: .and))
+        // Three whole sentences, not one with a device word: "this iPhone /
+        // iPad / Mac" takes a different form in languages with gender.
+        return switch device {
+        case .iPhone: String(localized: "Hashes from \(from) didn't match — checking on this iPhone.",
+                             comment: "On-server check, a caption that may wrap to two lines: another device's file hashes were wrong and this iPhone reads the files itself. The argument is one or more device names as a list, e.g. \"Tuấn's MacBook and iPad\".")
+        case .iPad: String(localized: "Hashes from \(from) didn't match — checking on this iPad.",
+                           comment: "On-server check, a caption that may wrap to two lines: another device's file hashes were wrong and this iPad reads the files itself. The argument is one or more device names as a list, e.g. \"Tuấn's MacBook and iPhone\".")
+        case .mac: String(localized: "Hashes from \(from) didn't match — checking on this Mac.",
+                          comment: "On-server check, a caption that may wrap to two lines: another device's file hashes were wrong and this Mac reads the files itself. The argument is one or more device names as a list, e.g. \"Tuấn's iPhone and iPad\".")
+        }
     }
 
     static func text(for wait: OnServerSchedule.Wait) -> String {

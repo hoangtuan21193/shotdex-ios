@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {"action": "launch"},
+    {"action": "wait", "seconds": 8},
+    {"action": "tap", "label": "Filter and sort"},
+    {"action": "wait", "seconds": 2},
+    {"action": "dump", "name": "DI_FilterMenu"},
+    {"action": "wait", "seconds": 20},
+    {"action": "tap", "label": "Original on This iPhone"},
+    {"action": "wait", "seconds": 4},
+    {"action": "dump", "name": "DI_LibraryOriginalOnDevice"},
+    {"action": "wait", "seconds": 25}
+  ]
+}

@@ -152,8 +152,16 @@ struct MetadataStore: Sendable {
         _ = try database.writer.write { db in
             // The copy goes; the photo row stays, so its user data is still
             // anchored (the 30-day orphan rule, FS-19.05 §5).
+            try CopyFileStore.deletePhotosFiles(db, assetIds: ids)
             try db.execute(
                 sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
+                arguments: StatementArguments(ids)
+            )
+            // The original-on-device answer belongs to the Photos copy that
+            // just went (FS-06.10 §5); a PhotoKit id that comes back is
+            // checked afresh.
+            try db.execute(
+                sql: "DELETE FROM original_presence WHERE photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
                 arguments: StatementArguments(ids)
             )
             // A photo with a copy elsewhere — a NAS file it was uploaded to —
@@ -415,7 +423,13 @@ struct MetadataStore: Sendable {
     /// Clears the whole index (Settings → Clear local metadata index).
     func deleteAll() throws {
         try database.writer.write { db in
-            _ = try PhotoMetadata.deleteAll(db)
+            // Only what an index run reads back from Photos. A file or server
+            // photo's row is written by its source's read, which skips files
+            // that did not change — cleared, it would never come back.
+            try db.execute(sql: """
+                DELETE FROM photo_metadata
+                WHERE assetId NOT IN (SELECT photoId FROM photo_copies WHERE kind IN ('file', 'server'))
+                """)
             // The caption/keyword mirror is a copy of Photos and is read again;
             // stars and flags (user data) stay.
             try PhotoKeywordStore.deleteAll(db)
@@ -713,6 +727,22 @@ struct MetadataStore: Sendable {
     func customMappings() throws -> [CustomCameraMapping] {
         try database.reader.read { db in
             try CustomCameraMapping.fetchAll(db)
+        }
+    }
+
+    /// Reset Custom Mappings (Mac Settings › Cameras, FS-18.04 §3 AC-79):
+    /// the formats picked by hand are forgotten, and their cameras' photos go
+    /// back to what the bundled database says — Unknown with no equivalent
+    /// when it knows nothing — in the same write, so no photo keeps a
+    /// hand-picked format the list no longer shows.
+    func resetCustomMappings(to bundled: SensorLookup) throws {
+        try database.writer.write { db in
+            let models = try String.fetchAll(db, sql: "SELECT normalizedCameraModel FROM custom_camera_mappings")
+            _ = try CustomCameraMapping.deleteAll(db)
+            for model in models {
+                let info = bundled.lookup(normalizedModel: model)
+                try Self.rewriteRows(db, model: model, format: info.sensorFormat.rawValue, crop: info.cropFactor)
+            }
         }
     }
 

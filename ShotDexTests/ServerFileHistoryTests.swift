@@ -73,6 +73,83 @@ import Testing
         let known = try stores.downloads.knownFiles(serverId: a.id, paths: ["photos/Beach.JPG", "photos/A.JPG"])
         #expect(known.map(\.remotePath) == ["photos/Beach.JPG"])
     }
+
+    /// FS-19.08 §6: a run's moves in one write; an SFTP login with another
+    /// home is other files, so its history stays where it was.
+    @Test func batchMoveFollowsEveryChangeOnTheSameFilesOnly() throws {
+        let stores = try makeStores()
+        let me = FileServer(name: "Me", transferProtocol: .sftp, host: "nas.local", username: "me")
+        let alsoMe = FileServer(name: "Me again", transferProtocol: .sftp, host: "NAS.local", username: "me")
+        let you = FileServer(name: "You", transferProtocol: .sftp, host: "nas.local", username: "you")
+        for server in [me, alsoMe, you] { try stores.servers.save(server, password: "p") }
+        try stores.uploads.record(upload("1", "A/IMG_1.JPG", on: me))
+        try stores.uploads.record(upload("2", "B/IMG_2.JPG", on: alsoMe))
+        try stores.uploads.record(upload("3", "A/IMG_1.JPG", on: you))
+
+        try stores.history.move([(from: "A/IMG_1.JPG", to: "C/IMG_1.JPG"), (from: "B/IMG_2.JPG", to: "C/IMG_2.JPG")], on: me)
+
+        #expect(try stores.uploads.uploads(assetId: "1").map(\.remotePath) == ["C/IMG_1.JPG"])
+        #expect(try stores.uploads.uploads(assetId: "2").map(\.remotePath) == ["C/IMG_2.JPG"])
+        #expect(try stores.uploads.uploads(assetId: "3").map(\.remotePath) == ["A/IMG_1.JPG"])
+    }
+
+    @Test func sameFilesNeedsTheSameLoginOnSFTPAndTheSameBaseOnWebDAV() {
+        let smb = FileServer(name: "a", transferProtocol: .smb, host: "nas.local", port: 445, username: "me")
+        #expect(ServerIdentity.sameFiles(smb, FileServer(name: "b", transferProtocol: .smb, host: "NAS.local", port: 445, username: "you")))
+        #expect(!ServerIdentity.sameFiles(smb, FileServer(name: "c", transferProtocol: .smb, host: "nas.local", port: 4450, username: "me")))
+        let sftp = FileServer(name: "s", transferProtocol: .sftp, host: "nas.local", username: "me")
+        #expect(!ServerIdentity.sameFiles(sftp, FileServer(name: "t", transferProtocol: .sftp, host: "nas.local", username: "you")))
+        let dav = FileServer(name: "d", transferProtocol: .webdav, host: "nas.local", username: "me", share: "/dav/")
+        #expect(ServerIdentity.sameFiles(dav, FileServer(name: "e", transferProtocol: .webdav, host: "nas.local", username: "x", share: "dav")))
+        #expect(!ServerIdentity.sameFiles(dav, FileServer(name: "f", transferProtocol: .webdav, host: "nas.local", username: "me", share: "other")))
+    }
+
+    /// AC-141: a Move's finish records which history row came from which
+    /// copy; undo puts each row back where it was — A's to A, B's to B — and
+    /// a copy not written back keeps its rows at the destination.
+    @Test(arguments: [true, false])
+    func undoPutsEachRowBack(bothBack: Bool) throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let uploads = ServerUploadStore(database: database)
+        let nas = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", folder: "photos")
+        try servers.save(nas, password: "pw")
+        try uploads.record(upload("1", "A/IMG_1.JPG", on: nas))
+        try uploads.record(upload("2", "B/IMG_1.JPG", on: nas))
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO backup_jobs (id, sourceId, connectionId, folder, sourceFolder, settings, sortOrder, createdAt)
+                VALUES ('J1', 'photos-library', ?, 'B', '', '{}', 0, 1)
+                """, arguments: [nas.id])
+            try db.execute(sql: """
+                INSERT INTO backup_ledger (jobId, itemKey, resourceKey, sourceStamp, remotePath, outcome, attempts, recordedAt)
+                VALUES ('J1', 'b', 'photo', 's', 'B/IMG_1.JPG', 'uploaded', 1, 1)
+                """)
+        }
+        let store = CommonPhotosStore(database: database)
+        try store.start(CommonPhotosRun(id: "R1", connectionId: nas.id, folders: ["A", "B"], destination: "C", action: .move), items: [])
+        let history = ServerFileHistory(database: database)
+
+        let moved = try history.move([(from: "A/IMG_1.JPG", to: "C/IMG_1.JPG"), (from: "B/IMG_1.JPG", to: "C/IMG_1.JPG")], on: nas) { db, rows in
+            try CommonPhotosStore.recordHistoryMoves(db, runId: "R1", rows: rows)
+        }
+
+        #expect(moved.count == 3)
+        #expect(Set(moved.map(\.sourcePath)) == ["A/IMG_1.JPG", "B/IMG_1.JPG"])
+        #expect(try store.historyMoves(runId: "R1").count == 3)
+        #expect(try uploads.uploads(assetId: "2").map(\.remotePath) == ["C/IMG_1.JPG"])
+
+        let restored: Set<String> = bothBack ? ["A/IMG_1.JPG", "B/IMG_1.JPG"] : ["A/IMG_1.JPG"]
+        try store.restoreHistory(runId: "R1", restored: restored, history: history)
+        // Again, as after a quit between the restore and the cleanup.
+        try store.restoreHistory(runId: "R1", restored: restored, history: history)
+
+        let ledger = try database.reader.read { db in try String.fetchOne(db, sql: "SELECT remotePath FROM backup_ledger") }
+        #expect(try uploads.uploads(assetId: "1").map(\.remotePath) == ["A/IMG_1.JPG"])
+        #expect(try uploads.uploads(assetId: "2").map(\.remotePath) == [bothBack ? "B/IMG_1.JPG" : "C/IMG_1.JPG"])
+        #expect(ledger == (bothBack ? "B/IMG_1.JPG" : "C/IMG_1.JPG"))
+        #expect(try store.historyMoves(runId: "R1").count == (bothBack ? 0 : 2))
+    }
 }
 
 /// FS-15.02 §8 — FS-15 AC-49: Uploaded to Server lists where the copies are.
@@ -93,5 +170,30 @@ import Testing
         #expect(places[1].assetIds == ["A"])
         // Nothing left in the library for a place: it goes.
         #expect(UploadDestinations.group(rows, present: ["C"]).map(\.folder) == [""])
+    }
+
+    /// FS-19.08 §6: a Move takes Backup's ledger along, for every job on a
+    /// connection to the same files.
+    @Test func moveTakesTheBackupLedgerAlong() throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let nas = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", folder: "photos")
+        try servers.save(nas, password: "pw")
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO backup_jobs (id, sourceId, connectionId, folder, sourceFolder, settings, sortOrder, createdAt)
+                VALUES ('J1', 'photos-library', ?, 'photos/Tuan', '', '{}', 0, 1)
+                """, arguments: [nas.id])
+            try db.execute(sql: """
+                INSERT INTO backup_ledger (jobId, itemKey, resourceKey, sourceStamp, remotePath, outcome, attempts, recordedAt)
+                VALUES ('J1', 'a', 'photo', 's', 'photos/Tuan/IMG_1.JPG', 'uploaded', 1, 1),
+                       ('J1', 'b', 'photo', 's', 'photos/Tuan/IMG_2.JPG', 'uploaded', 1, 1)
+                """)
+        }
+
+        try ServerFileHistory(database: database).move("photos/Tuan/IMG_1.JPG", to: "photos/Shared/IMG_1.JPG", on: nas)
+
+        let paths = try database.reader.read { db in try String.fetchAll(db, sql: "SELECT remotePath FROM backup_ledger ORDER BY itemKey") }
+        #expect(paths == ["photos/Shared/IMG_1.JPG", "photos/Tuan/IMG_2.JPG"])
     }
 }

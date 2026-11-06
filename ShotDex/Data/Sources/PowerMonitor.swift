@@ -24,6 +24,12 @@ final class PowerMonitor: Sendable {
         (@Sendable (Bool, Bool) -> Void)?
     >(initialState: nil)
     private let tokens = OSAllocatedUnfairLock<[NSObjectProtocol]>(initialState: [])
+    #if !canImport(UIKit)
+    /// A Mac's adapter coming or going (IOKit): macOS posts no notification
+    /// for it, and Pause Indexing on Battery Power needs to know (AC-75).
+    /// Written once in `init`, read once in `deinit`: no other access.
+    nonisolated(unsafe) private var adapterSource: CFRunLoopSource?
+    #endif
 
     init() {
         #if canImport(UIKit)
@@ -52,6 +58,15 @@ final class PowerMonitor: Sendable {
         tokens.withLock { $0 = [powerToken, batteryToken] }
         #else
         tokens.withLock { $0 = [powerToken] }
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        if let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            Unmanaged<PowerMonitor>.fromOpaque(context).takeUnretainedValue().refresh()
+        }, context)?.takeRetainedValue() {
+            // Common modes: an adapter change during a menu or a scroll still arrives.
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+            adapterSource = source
+        }
         #endif
     }
 
@@ -95,6 +110,10 @@ final class PowerMonitor: Sendable {
     }
 
     deinit {
+        #if !canImport(UIKit)
+        // Invalidated, not only removed: no callback reaches a freed monitor.
+        if let adapterSource { CFRunLoopSourceInvalidate(adapterSource) }
+        #endif
         let center = NotificationCenter.default
         for token in tokens.withLock({ $0 }) {
             center.removeObserver(token)

@@ -33,9 +33,16 @@ struct SourceRowText: Equatable, Sendable {
     var badge: String {
         switch kind {
         case .photos: String(localized: "Photos", comment: "Sources: badge of the Photos library row")
+        #if os(macOS)
+        case .onDevice: String(localized: "This Mac", comment: "Mac Sources: badge of a folder on this Mac")
+        case .drive: String(localized: "External", comment: "Mac Sources: badge of an external drive")
+        #else
         case .onDevice: String(localized: "On My iPhone", comment: "Sources: badge of a folder on this device")
+        #endif
         case .iCloudDrive: String(localized: "iCloud Drive", comment: "Sources: badge of a folder in iCloud Drive")
+        #if !os(macOS)
         case .drive: String(localized: "USB-C Drive", comment: "Sources: badge of an external drive")
+        #endif
         case .server: String(localized: "Server", comment: "Sources: badge of a server source")
         }
     }
@@ -53,7 +60,11 @@ struct SourceRowText: Equatable, Sendable {
                 ? String(localized: "Not connected · \(count) photos kept", comment: "Sources: an unplugged drive, its photos stay")
                 : String(localized: "Not reachable · \(count) photos kept", comment: "Sources: a server that does not answer")
         case .needsAccess:
+            #if os(macOS)
+            return String(localized: "ShotDex needs permission to read this folder.", comment: "Mac Sources: a folder whose permission was lost")
+            #else
             return String(localized: "Choose the folder again in Files to let ShotDex read it.", comment: "Sources: a folder whose permission was lost")
+            #endif
         case .passwordRejected:
             return String(localized: "Password rejected", comment: "Sources: the server refused the saved password")
         case .online:

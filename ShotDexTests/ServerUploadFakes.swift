@@ -16,6 +16,11 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Called at the start of every upload with its 1-based number — where a
     /// test cancels the batch.
     var onUpload: (@Sendable (Int) -> Void)?
+    /// Awaited at the start of every upload — where a test does async work
+    /// while a run is held mid-photo.
+    var whileUploading: (@Sendable (Int) async -> Void)?
+    /// Runs inside each `sha256(of:)`, with how many it has been asked for.
+    var whileHashing: (@Sendable (Int) async -> Void)?
     private(set) var uploadCount = 0
     /// Segments of the Backup shared index (`.shotdex/`) written — kept out
     /// of `uploadCount`, which counts the user's files.
@@ -31,6 +36,14 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 directories.insert(dir)
                 dir = ServerUploadPath.parent(of: dir)
             }
+        }
+    }
+
+    /// A folder and everything in it gone, as if removed on the server.
+    func removeDirectory(_ path: String) {
+        lock.withLock {
+            directories = directories.filter { $0 != path && !$0.hasPrefix(path + "/") }
+            storage = storage.filter { !$0.key.hasPrefix(path + "/") }
         }
     }
 
@@ -56,7 +69,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func disconnect() async {}
 
     func fileSize(at path: String) async throws -> Int64? {
-        lock.withLock { storage[path].map { Int64($0.count) } }
+        try countRead()
+        return lock.withLock { storage[path].map { Int64($0.count) } }
     }
 
     func directoryExists(_ path: String) async throws -> Bool {
@@ -69,8 +83,12 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// Thrown by every `folderNames(in:)` while set.
+    var folderNamesError: RemoteFileError?
+
     func folderNames(in directory: String) async throws -> Set<String> {
-        lock.withLock {
+        if let folderNamesError { throw folderNamesError }
+        return lock.withLock {
             Set(directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map(ServerUploadPath.lastComponent(of:)))
         }
     }
@@ -91,8 +109,10 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             try put(path, Data(contentsOf: localURL))
             return
         }
-        let number = lock.withLock { uploadCount += 1; return uploadCount }
+        let number = lock.withLock { uploadCount += 1; commands.append("upload \(path)"); return uploadCount }
+        let failsAfter = try countWrite()
         onUpload?(number)
+        await whileUploading?(number)
         try Task.checkCancellation()
         let data = try Data(contentsOf: localURL)
         guard lock.withLock({ directories.contains(ServerUploadPath.parent(of: path)) }) else {
@@ -103,7 +123,10 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             throw RemoteFileError.connectionLost
         }
         put(path, data)
+        // A new file: whatever info the path had is gone.
+        lock.withLock { infos[path] = nil }
         progress(Int64(data.count))
+        if failsAfter { throw RemoteFileError.connectionLost }
     }
 
     /// Every path `sha256(of:)` read, in order — how a test proves a file on
@@ -111,7 +134,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     private(set) var sha256Paths: [String] = []
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
-        lock.withLock { sha256Paths.append(path) }
+        let count = lock.withLock { sha256Paths.append(path); commands.append("sha256 \(path)"); return sha256Paths.count }
+        await whileHashing?(count)
+        try countRead()
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing \(path)") }
         let original = String(path.dropLast(ServerUploadPath.partSuffix.count))
         if corruptReadBack.contains(path) || corruptReadBack.contains(original), !data.isEmpty {
@@ -123,6 +148,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     /// Write times by path; files without one list a nil date.
     var modified: [String: Date] = [:]
+    /// Folders' write times by path, as their parent lists them; nil when
+    /// absent — a server that gives folders no time.
+    var folderModified: [String: Date] = [:]
     /// Bytes handed out by `readRange` and `download` — how a test proves a
     /// thumbnail read only the head of a file.
     private(set) var bytesRead = 0
@@ -154,7 +182,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 RemoteEntry(name: ServerUploadPath.lastComponent(of: path), isDirectory: false, size: Int64(data.count), modified: modified[path])
             }
             let folders = directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map {
-                RemoteEntry(name: ServerUploadPath.lastComponent(of: $0), isDirectory: true, size: 0, modified: nil)
+                RemoteEntry(name: ServerUploadPath.lastComponent(of: $0), isDirectory: true, size: 0, modified: folderModified[$0])
             }
             return files + folders
         }
@@ -171,6 +199,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// After this many range reads, every read fails as if the server went
     /// away (nil = never) — a NAS switched off mid-download.
     var failRangeReadsAfter: Int?
+    /// Paths whose range reads come back half as long as asked — a read the
+    /// server cut short without an error.
+    var shortRangeReads: Set<String> = []
 
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         try lock.withLock {
@@ -178,14 +209,16 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             rangeReadPaths.append(path)
             guard let data = storage[path] else { throw RemoteFileError.other("missing \(path)") }
             let start = min(Int(offset), data.count)
-            let slice = data.subdata(in: start..<min(data.count, start + length))
+            var slice = data.subdata(in: start..<min(data.count, start + length))
+            if shortRangeReads.contains(path) { slice = slice.prefix(slice.count / 2) }
             bytesRead += slice.count
             return slice
         }
     }
 
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
-        let number = lock.withLock { downloadCount += 1; return downloadCount }
+        let number = lock.withLock { downloadCount += 1; commands.append("download \(path)"); return downloadCount }
+        try countRead()
         try Task.checkCancellation()
         if dropConnectionOnDownload == number { throw RemoteFileError.connectionLost }
         if let refuseDownload, refuseDownload.number == number { throw refuseDownload.error }
@@ -203,8 +236,72 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Every path removed, in order.
     private(set) var removed: [String] = []
 
-    func move(_ source: String, to destination: String) async throws {
+    /// Refuses a rename whose two paths start in different top folders — the
+    /// way SMB refuses one across shares.
+    var refusesMovesAcrossTopFolders = false
+    /// Every server command that reads, writes or removes a file, in order —
+    /// `download A/x`, `upload C/x.shotdex-part`, `sha256 …`, `move a → b`,
+    /// `remove …` — how a test proves the order of a Move.
+    private(set) var commands: [String] = []
+
+    func log(_ command: String) {
+        lock.withLock { commands.append(command) }
+    }
+
+    /// The write (upload, move or remove, counted from 1 since it was set)
+    /// that loses the connection — before the server does it, or after.
+    /// How a test stops an operation at every step in turn.
+    var failOnWrite: (number: Int, afterDoing: Bool)? {
+        get { lock.withLock { failingWrite } }
+        set { lock.withLock { failingWrite = newValue; writeCount = 0 } }
+    }
+    private var failingWrite: (number: Int, afterDoing: Bool)?
+    private(set) var writeCount = 0
+
+    /// The read (size, SHA-256 or download, counted from 1 since it was
+    /// set) that loses the connection.
+    var failOnRead: Int? {
+        get { lock.withLock { failingRead } }
+        set { lock.withLock { failingRead = newValue; readCount = 0 } }
+    }
+    private var failingRead: Int?
+    private(set) var readCount = 0
+
+    private func countRead() throws {
         try lock.withLock {
+            readCount += 1
+            if failingRead == readCount { throw RemoteFileError.connectionLost }
+        }
+    }
+
+    /// Counts a write; throws before it when it is the one to fail first.
+    /// Returns whether to throw after doing it.
+    private func countWrite() throws -> Bool {
+        try lock.withLock {
+            writeCount += 1
+            guard let failing = failingWrite, failing.number == writeCount else { return false }
+            if !failing.afterDoing { throw RemoteFileError.connectionLost }
+            return true
+        }
+    }
+
+    /// Called after a rename lands — where a test makes two paths one file
+    /// (the destination vanishing when a source is set aside).
+    var onMove: (@Sendable (String, String) -> Void)?
+    /// The next rename is done on the server and then reported as failed —
+    /// a reply lost on the way.
+    var failMoveAfterDoing = false
+
+    func move(_ source: String, to destination: String) async throws {
+        log("move \(source) → \(destination)")
+        let failsAfter = try countWrite()
+        defer { onMove?(source, destination) }
+        if refusesMovesAcrossTopFolders, source.split(separator: "/").first != destination.split(separator: "/").first {
+            throw RemoteFileError.other("cross-share rename refused")
+        }
+        try refuseIfReadOnly(source)
+        try lock.withLock {
+            guard storage[source] != nil || directories.contains(source) else { throw RemoteFileError.other("missing \(source)") }
             guard storage[destination] == nil, !directories.contains(destination) else { throw RemoteFileError.other("exists") }
             if directories.contains(source) {
                 let prefix = source + "/"
@@ -217,15 +314,101 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 }
             } else {
                 storage[destination] = storage.removeValue(forKey: source)
+                // A rename keeps the write time, as SMB and WebDAV MOVE do.
+                if let date = modified.removeValue(forKey: source) { modified[destination] = date }
+                if let info = infos.removeValue(forKey: source) { infos[destination] = info }
             }
+        }
+        if failMoveAfterDoing {
+            failMoveAfterDoing = false
+            throw RemoteFileError.other("gateway timeout")
+        }
+        if failsAfter { throw RemoteFileError.connectionLost }
+    }
+
+    // MARK: File info (FS-19.08 §6e)
+
+    /// Dates and flags by path, as `setFileInfo` left them; a file without
+    /// an entry has its `modified` time and nothing else.
+    var infos: [String: RemoteFileInfo] = [:]
+    /// Off: `setFileInfo` answers unsupported, as SFTP does.
+    var keepsDates = true
+    /// Seconds a set write time lands off by — a server that takes the
+    /// request and keeps another date.
+    var dateDrift: TimeInterval = 0
+    /// Read-only files refuse a rename and a delete, as Windows does; the
+    /// flag has to be cleared first.
+    var readOnlyRefusesChanges = false
+    /// Off: streams (Finder tags) are not written — an SMB server with none.
+    var keepsStreams = true
+
+    /// The fake keeps streams in `infos`, as SMB keeps them on the file.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        lock.withLock {
+            guard storage[path] != nil else { return nil }
+            return infos[path] ?? RemoteFileInfo(modified: modified[path] ?? .distantPast)
         }
     }
 
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        log("info \(path)\(info.isReadOnly ? " read-only" : "")")
+        guard keepsDates else { return .unsupported }
+        let streamsWritten = keepsStreams || info.streams.isEmpty
+        try lock.withLock {
+            guard storage[path] != nil else { throw RemoteFileError.other("missing \(path)") }
+            var landed = info
+            landed.modified += dateDrift
+            // A request without streams leaves the file's own, as SMB does.
+            landed.streams = streamsWritten && !info.streams.isEmpty ? info.streams : (infos[path]?.streams ?? [])
+            landed.hasUnreadStreams = false
+            infos[path] = landed
+            modified[path] = landed.modified
+        }
+        return streamsWritten ? .applied : .appliedWithoutStreams
+    }
+
+    private func refuseIfReadOnly(_ path: String) throws {
+        if readOnlyRefusesChanges, lock.withLock({ infos[path]?.isReadOnly == true }) {
+            throw RemoteFileError.permissionDenied(path)
+        }
+    }
+
+    /// Answers `copyOnServer` the way a WebDAV server with `COPY` does;
+    /// off, the way SMB and SFTP do (false, nothing written).
+    var copiesOnServer = false
+    /// How many times `copyOnServer` was asked, refused or not.
+    private(set) var copyAsks = 0
+
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool {
+        lock.withLock { copyAsks += 1 }
+        guard copiesOnServer else { return false }
+        log("copy \(source) → \(destination)")
+        let failsAfter = try countWrite()
+        try lock.withLock {
+            guard let bytes = storage[source] else { throw RemoteFileError.folderMissing(source) }
+            storage[destination] = bytes
+        }
+        if failsAfter { throw RemoteFileError.connectionLost }
+        return true
+    }
+
+    /// Deletes a file behind the client's back, without logging it.
+    func drop(_ path: String) {
+        lock.withLock { _ = storage.removeValue(forKey: path) }
+    }
+
     func remove(_ path: String) async throws {
+        log("remove \(path)")
+        let failsAfter = try countWrite()
+        try refuseIfReadOnly(path)
         try lock.withLock {
             if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
             if storage.removeValue(forKey: path) != nil { removed.append(path) }
+            infos[path] = nil
         }
+        if failsAfter { throw RemoteFileError.connectionLost }
     }
 
     func removeEmptyDirectory(_ path: String) async throws {

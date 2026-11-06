@@ -100,6 +100,13 @@ enum SmartAlbumSQLBuilder {
             case .source:
                 guard !rule.text.isEmpty else { return nil }
                 return sourceClause(rule)
+            case .original:
+                guard let value = OriginalPresence(rawValue: rule.text) else { return nil }
+                switch rule.op {
+                case .isExactly: return originalClause(value)
+                case .isNot: return originalClause(value == .onDevice ? .iCloudOnly : .onDevice)
+                default: return nil
+                }
             default:
                 return nil
             }
@@ -223,6 +230,16 @@ enum SmartAlbumSQLBuilder {
         default:
             return nil
         }
+    }
+
+    /// Photos items the offline check found in `state` (FS-06.10 §3). *is
+    /// not* asks for the other answer rather than `NOT IN`, so an item not
+    /// checked yet — no row, or a row marked for a recheck — is in neither.
+    static func originalClause(_ state: OriginalPresence) -> (sql: String, values: [DatabaseValueConvertible]) {
+        ("""
+            assetId IN (SELECT pc.photoId FROM photo_copies pc JOIN original_presence o ON o.photoKitId = pc.photoKitId
+                WHERE pc.kind = 'photos' AND o.state = ?)
+            """, [state.rawValue])
     }
 
     /// Text clause across one or more columns (normalized + raw for

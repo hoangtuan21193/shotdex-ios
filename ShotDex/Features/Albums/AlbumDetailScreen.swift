@@ -175,6 +175,9 @@ struct AlbumDetailScreen: View {
             model?.setFilter(filter)
             pruneSelectionToFilter()
         }
+        .watchesOriginalOnDevice(filter.criteria.originalOnDeviceOnly, isPaused: isSelecting) {
+            await model?.refreshOriginalOnDevice()
+        }
         // An index-served list (capture kind, Advanced) arrives later.
         .onChange(of: model?.isFilterSettled) {
             pruneSelectionToFilter()

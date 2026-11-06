@@ -168,7 +168,12 @@ struct ExifReader: Sendable {
     ///
     /// Local-first: stream from disk (no network); if the original is
     /// iCloud-only and `allowNetwork`, stream the file header from iCloud.
-    func readExif(for asset: PHAsset, resource: PHAssetResource?, allowNetwork: Bool) async -> ExifReadResult {
+    ///
+    /// `originalsOnly` stops after the local original: no derivative, no
+    /// network. A photo whose original is not on this device comes back
+    /// `pendingICloud` — waiting for another device's read or "Index Now"
+    /// (`IndexReadPolicy`).
+    func readExif(for asset: PHAsset, resource: PHAssetResource?, allowNetwork: Bool, originalsOnly: Bool = false) async -> ExifReadResult {
         guard let resource else {
             Self.logger.info("readExif \(asset.localIdentifier, privacy: .public): no photo resource — failure")
             return .failure
@@ -330,6 +335,12 @@ struct ExifReader: Sendable {
             // deliver nothing, not a complete unparseable buffer.
             Self.logger.info("readExif \(name, privacy: .public): local bytes unparseable — unreadable")
             return .unreadable
+        case .failure where originalsOnly, .needsNetwork where originalsOnly:
+            // Indistinguishable from an offloaded original here, and this
+            // mode never reads anything else. Never counted as a failure, so a
+            // photo waiting for its original is not marked no-EXIF.
+            Self.logger.info("readExif \(name, privacy: .public): no local original — originals-only skip")
+            return .pendingICloud
         case .failure:
             // iCloud-offloaded originals don't reliably fail the local read
             // with `.networkAccessRequired` — the error domain varies across

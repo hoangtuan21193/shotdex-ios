@@ -42,6 +42,8 @@ final class AppDependencies {
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
+    /// Index results shared over iCloud; nil in previews and tests.
+    let indexShare: IndexShareService?
     let indexInteractionGate: IndexInteractionGate
     let placeStore: PlaceStore
     let placeGeocoding: PlaceGeocodingService
@@ -214,6 +216,8 @@ final class AppDependencies {
     /// Whether Photos items are on the server sources (FS-19.07), checked
     /// while the app is in front.
     let onServerCheck: OnServerCheck
+    /// Which Photos items have every original on this device (FS-06.10).
+    let originalPresenceCheck: OriginalPresenceCheck
     /// Every Photos deletion that relies on a server copy asks it first
     /// (FS-19.07 §9).
     let photoDeletionGate: PhotoDeletionGate
@@ -228,14 +232,18 @@ final class AppDependencies {
     /// iOS 26's continued processing for a card import (FS-20 AC-26).
     @ObservationIgnored lazy var ingestBackground = IngestBackgroundService(center: ingest)
 
-    init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
+    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
         let metadataStore = MetadataStore(database: database)
         let indexTraffic = IndexTrafficMonitor()
         let indexInteractionGate = IndexInteractionGate()
+        let indexShare = sharesIndex ? IndexShareService(store: SharedIndexStore(database: database)) : nil
+        self.indexShare = indexShare
         let indexPipeline = IndexPipeline(
             metadataStore: MetadataStore(database: database),
             exifReader: ExifReader(trafficMonitor: indexTraffic),
-            interactionGate: indexInteractionGate
+            interactionGate: indexInteractionGate,
+            sharedIndex: indexShare,
+            readsOriginalsOnly: { IndexReadPolicy.readsOriginalsOnly }
         )
         self.database = database
         self.metadataStore = metadataStore
@@ -592,13 +600,22 @@ final class AppDependencies {
         self.sources = sources
         self.onServerCheck = OnServerCheck(environment: .live(
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            // Only the Mac hashes everything for the other devices (FS-19.07 §12.1).
+            hashesEverything: { false },
+            indexShare: indexShare,
             listingChanged: { await sources.serverListingChanged() }
         ))
+        let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: indexInteractionGate))
+        self.originalPresenceCheck = originalPresenceCheck
+        photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
         // The grid's "on server" glyph follows each batch of the check.
         let presence = OnServerProgressQueries(database: database)
         let uploadIndex = serverUploadIndex
         onServerCheck.onBatch = { uploadIndex.reloadPresence { try presence.presentAnywhere() } }
         uploadIndex.reloadPresence { try presence.presentAnywhere() }
+        #if DEBUG
+        OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
+        #endif
         self.photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in
@@ -752,7 +769,7 @@ final class AppDependencies {
             assertionFailure("Failed to open database: \(error)")
             database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         }
-        return AppDependencies(database: database, photoLibrary: PhotoLibraryService())
+        return AppDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true)
     }
 
     static func preview() -> AppDependencies {

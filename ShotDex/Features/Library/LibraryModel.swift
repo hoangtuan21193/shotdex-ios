@@ -60,6 +60,7 @@ final class LibraryModel {
     private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
     private let placeIndexPass: PlaceIndexPass
+    private let indexShare: IndexShareService?
     private let keywordMirror: ExtendedMetadataMirrorPass?
     private let unsupportedRAWIndex: UnsupportedRAWIndex
     private let backgroundIndex: any IndexRunAssertion
@@ -125,9 +126,10 @@ final class LibraryModel {
     /// reentrancy, not this.
     private(set) var isIndexing = false
     /// A pipeline run is in flight, whether or not it has found work — the
-    /// reentrancy guard for every start path. Not observed: no UI depends on a
-    /// run that may turn out to have nothing to do.
-    @ObservationIgnored private var isIndexRunActive = false
+    /// reentrancy guard for every start path. Observed for Mac Settings'
+    /// Clear Local Metadata Index, which must not land under a run still
+    /// walking the library (it changes at a run's start and end only).
+    private(set) var isIndexRunActive = false
     /// Bumped once per run. A run abandoned by the unwind watchdog compares
     /// this against the generation it started with, so if it ever does unwind it
     /// keeps its hands off state a newer run now owns.
@@ -154,6 +156,10 @@ final class LibraryModel {
     /// Whether the system is in Low Power Mode. Drives keep-awake suppression
     /// and the automatic-indexing guard.
     private(set) var isLowPowerMode = false
+    /// Why automatic indexing is waiting for power, if it is (Low Power Mode,
+    /// or a Mac on battery with Pause Indexing on Battery Power on, AC-75).
+    private(set) var powerHold = IndexPowerPolicy.Hold.none
+    @ObservationIgnored private var isOnAdapter = true
     /// True while the current run was started by an explicit user action
     /// (Settings re-index / retry). Automatic runs (library change, resume,
     /// charger auto-start) leave it false. In Low Power Mode only a manual run
@@ -244,6 +250,7 @@ final class LibraryModel {
         self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
         self.placeIndexPass = dependencies.placeIndexPass
+        self.indexShare = dependencies.indexShare
         self.keywordMirror = dependencies.keywordMirror
         self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
         self.backgroundIndex = dependencies.indexRunAssertion
@@ -252,6 +259,10 @@ final class LibraryModel {
         self.powerStatus = dependencies.powerStatus
         self.indexTraffic = dependencies.indexTraffic
         self.isLowPowerMode = dependencies.powerStatus.isLowPowerMode
+        self.isOnAdapter = dependencies.powerStatus.isCharging
+        self.powerHold = IndexPowerPolicy.hold(lowPower: dependencies.powerStatus.isLowPowerMode,
+                                               onAdapter: dependencies.powerStatus.isCharging,
+                                               pausesOnBattery: IndexPowerPolicy.pausesOnBattery())
         self.wasCharging = dependencies.powerStatus.isCharging
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
@@ -302,6 +313,10 @@ final class LibraryModel {
 
     // MARK: Loading
 
+    /// Drives the grid from the index even when PhotoKit could serve it —
+    /// the Mac demo library, whose rows are not in Photos.
+    var readsGridFromIndex = false
+
     /// Newest slice shown at first paint on the PhotoKit fast path, before
     /// the full-library enumeration lands. Covers the visible grid plus a
     /// few screens of scroll headroom at the densest column setting.
@@ -328,7 +343,7 @@ final class LibraryModel {
         // back to the DB query.
         // PhotoKit only knows Photos: with a folder, drive or server photo in
         // the library the grid comes from the index (FS-19.05 §3).
-        let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
+        let usePhotoKit = !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
             && !((try? libraryQueries.hasPhotosOutsidePhotos()) ?? false)
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
@@ -479,6 +494,26 @@ final class LibraryModel {
             return try await photoKitGridItems(sort: sort, libraryQueries: libraryQueries)
         }
         return anchorSlice + rows.dropFirst(anchorSlice.count)
+    }
+
+    /// How many items the grid shows with nothing narrowing it — the M of
+    /// the Mac's "212 of 55,231 photos" (FS-18.02 §5) — read from the same
+    /// source the unfiltered grid would use: PhotoKit's browsable assets, or
+    /// the index plus its cloud-only files.
+    func unfilteredCount() async -> Int? {
+        let queries = libraryQueries
+        let photoKitPath = !readsGridFromIndex && sort.photoKitSortKey != nil
+            && !((try? queries.hasPhotosOutsidePhotos()) ?? false)
+        if photoKitPath {
+            let sort = self.sort
+            return await Task.detached(priority: .utility) {
+                PHAsset.fetchAssets(with: Self.browsableFetchOptions(sort: sort)).count
+            }.value
+        }
+        guard let indexed = try? await Task.detached(priority: .utility, operation: { try queries.count(matching: .empty) }).value
+        else { return nil }
+        let cloud = (try? await queries.cloudPlaceholderItems().count) ?? 0
+        return indexed + cloud
     }
 
     /// Every browsable-asset fetch in this type uses these: same predicate and
@@ -675,6 +710,7 @@ final class LibraryModel {
             )
             guard let self else { return }
             self.placeLookupRemaining = nil
+            if summary.didWork { self.pushSharedIndex() }
             // New place names mean new search vocabulary and new autosuggest
             // entries; without this refresh they only appear on the next launch.
             if summary.didWork { self.refreshFilterOptions(force: true) }
@@ -705,6 +741,15 @@ final class LibraryModel {
         return result
     }
 
+    // MARK: Shared index
+
+    /// Uploads what this device read since the last push. Its own task: the
+    /// run's indicator must not wait on CloudKit.
+    private func pushSharedIndex() {
+        guard let indexShare else { return }
+        Task(priority: .utility) { await indexShare.push() }
+    }
+
     // MARK: Indexing
 
     /// Streaming EXIF from iCloud is allowed on Wi-Fi; on cellular only when
@@ -715,7 +760,10 @@ final class LibraryModel {
     private var allowNetworkForIndexing: @Sendable () -> Bool {
         let networkStatus = self.networkStatus
         return {
-            !networkStatus.isExpensivePath
+            // Originals-only (the Mac's switch, or an iPhone the Mac indexes
+            // for) never streams from iCloud on its own — only "Index Now".
+            guard !IndexReadPolicy.readsOriginalsOnly else { return false }
+            return !networkStatus.isExpensivePath
                 || UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
         }
     }
@@ -749,7 +797,7 @@ final class LibraryModel {
         // No automatic indexing in Low Power Mode. The user can still start it
         // by hand (`manual`), and a charger connecting resumes it through
         // `resumeIndexingForCharger` (which drives `runPipeline` directly).
-        guard manual || !isLowPowerMode else { return }
+        guard manual || powerHold == .none else { return }
         let allowNetwork = allowNetworkForIndexing
         runPipeline(
             allowsNetwork: allowNetwork,
@@ -774,7 +822,7 @@ final class LibraryModel {
             if manual { enqueueManualRun(.incomplete) }
             return
         }
-        guard manual || !isLowPowerMode else { return }
+        guard manual || powerHold == .none else { return }
         runPipeline(
             allowsNetwork: { true },
             manual: manual,
@@ -905,6 +953,11 @@ final class LibraryModel {
                 // needs an early out — so the rest lives in a method.
                 self.finishRun(trigger: trigger, seconds: seconds, generation: generation)
             }
+            // Other devices' results first (at most 30 s): every photo they
+            // already read is then composed from theirs instead of opened here.
+            if let indexShare = self.indexShare {
+                await indexShare.pull(waitingAtMost: .seconds(30))
+            }
             var summary: IndexRunSummary?
             do {
                 summary = try await operation(
@@ -929,6 +982,13 @@ final class LibraryModel {
                 )
             } catch {
                 self.loadError = "Indexing failed."
+            }
+            // Rows this run left waiting (no local original, or the network
+            // was off) take what other devices shared, and this run's reads go
+            // up for them.
+            if self.indexShare != nil, summary?.didNotStart != true {
+                _ = try? await pipeline.adoptSharedResults()
+                self.pushSharedIndex()
             }
             self.reload()
             self.refreshFilterOptions(force: true)
@@ -979,6 +1039,8 @@ final class LibraryModel {
         indexNetworkStatus = nil
         indexDiagnostics = nil
         backgroundIndex.endRunAssertion()
+        // New rows are in: the original check looks at them (FS-06.10 §4).
+        NotificationCenter.default.post(name: .indexRunEnded, object: nil)
         startPendingRequestAfterRun()
     }
 
@@ -1435,15 +1497,32 @@ final class LibraryModel {
     /// entering LPM stops any running index; connecting a charger while in LPM
     /// auto-resumes it. The user may always start indexing by hand in LPM.
     private func handlePowerChange(lowPower: Bool, charging: Bool) {
-        let enteredLowPower = lowPower && !isLowPowerMode
         let pluggedIn = charging && !wasCharging
         isLowPowerMode = lowPower
         wasCharging = charging
-
-        if enteredLowPower, isIndexRunActive {
-            cancelIndexing()
-        } else if pluggedIn, lowPower, !isIndexRunActive {
+        isOnAdapter = charging
+        applyPowerHold()
+        // A charger in Low Power Mode lets one run go, as before.
+        if pluggedIn, lowPower, !isIndexRunActive {
             resumeIndexingForCharger()
+        }
+    }
+
+    /// Mac Settings changed Pause Indexing on Battery Power.
+    func powerSettingsChanged() {
+        applyPowerHold()
+    }
+
+    /// Entering a hold stops an automatic run; leaving the battery hold
+    /// picks indexing up again (AC-75).
+    private func applyPowerHold() {
+        let previous = powerHold
+        powerHold = IndexPowerPolicy.hold(lowPower: isLowPowerMode, onAdapter: isOnAdapter,
+                                          pausesOnBattery: IndexPowerPolicy.pausesOnBattery())
+        switch IndexPowerPolicy.step(from: previous, to: powerHold, isRunActive: isIndexRunActive, isManualRun: isManualIndexRun) {
+        case .cancel: cancelIndexing()
+        case .resume: resumeIndexingForCharger()
+        case .none: break
         }
     }
 

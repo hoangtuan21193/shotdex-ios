@@ -3,7 +3,7 @@ import ImageIO
 import UniformTypeIdentifiers
 
 /// One item a server folder listing returns.
-struct RemoteEntry: Hashable, Sendable {
+struct RemoteEntry: Hashable, Codable, Sendable {
     let name: String
     let isDirectory: Bool
     let size: Int64

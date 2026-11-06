@@ -24,7 +24,7 @@ actor FolderSourceRunner {
     func add(folder: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool, at now: Date = Date()) throws -> String {
         let isAccessing = folder.startAccessingSecurityScopedResource()
         defer { if isAccessing { folder.stopAccessingSecurityScopedResource() } }
-        let bookmark = try folder.bookmarkData()
+        let bookmark = try SourceBookmark.make(for: folder)
         let isInternal = (try? folder.resourceValues(forKeys: [.volumeIsInternalKey]).volumeIsInternal) ?? true
         return try SourceStore(database: database).addFolder(name: folder.lastPathComponent, bookmark: bookmark,
                                                             includesSubfolders: includesSubfolders, pairsRawAndJpeg: pairsRawAndJpeg,

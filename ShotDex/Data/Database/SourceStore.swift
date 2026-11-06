@@ -54,6 +54,10 @@ struct SourceStore: Sendable {
             try FileCopyWriter.markMissing(db, copies, at: Int(now.timeIntervalSince1970))
             try db.execute(sql: "DELETE FROM pending_sidecar WHERE copyId IN (SELECT id FROM photo_copies WHERE sourceId = ?)", arguments: [sourceId])
             try db.execute(sql: "DELETE FROM sources WHERE id = ?", arguments: [sourceId])
+            // Its NAS ledger as read here (FS-19.07 §12.2): keyed by the
+            // source, gone with it; a source added again reads it afresh.
+            try db.execute(sql: "DELETE FROM hash_index_lines WHERE sourceId = ?", arguments: [sourceId])
+            try db.execute(sql: "DELETE FROM hash_index_segments WHERE sourceId = ?", arguments: [sourceId])
         }
     }
 

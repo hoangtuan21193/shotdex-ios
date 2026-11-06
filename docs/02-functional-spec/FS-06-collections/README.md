@@ -20,6 +20,8 @@ nơi chụp — FS-01.04)
 | 07 | [On This Day](07-on-this-day.md) | hero, màn chi tiết, reminder 7 ngày |
 | 08 | [Smart Album](08-smart-albums.md) | model rule, editor, compile SQL, tương thích ngược |
 | 09 | [Menu Filter trong album](09-album-filter-menu.md) | Filter/Sort giống Library ở Album Detail và Smart Album, Advanced trong album |
+| 10 | [Bản gốc trên máy](10-original-on-device.md) | điều kiện Original on This iPhone, lượt kiểm nền, bảng trạng thái riêng (14 AC) |
+| 11 | [Shared Library](11-shared-library.md) | điều kiện Library Personal/Shared + cảnh báo xoá — chờ spike API (7 AC) |
 
 ## Quy tắc chung
 

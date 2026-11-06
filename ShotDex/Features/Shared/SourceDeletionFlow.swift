@@ -1,6 +1,16 @@
 import Photos
 import SwiftUI
 
+/// What a deletion through the sources needs from the composition root, so
+/// the iOS app and the Mac run the same flow (FS-19.04 §2).
+struct SourceDeletionContext {
+    let makeService: () -> DeletionService
+    let makeQueries: () -> DeletionTargetQueries
+    /// Shows the summary once the run is done; nil where there is no banner
+    /// (the Mac: the confirmation already said where each photo goes).
+    let showBanner: ((String) -> Void)?
+}
+
 /// The ShotDex confirmation and run of a deletion that reaches past Photos
 /// (FS-19.04 §2): one alert naming where each photo goes, a second red one
 /// for a volume with no Trash, then `DeletionService` — files to their
@@ -9,10 +19,10 @@ import SwiftUI
 /// and the order never differ between the grid, an album and the viewer.
 struct SourceDeletionFlow: ViewModifier {
     @Binding var request: DeletionTargetQueries.Request?
+    let context: SourceDeletionContext
     /// After the run: the ids no screen shows any more, and the summary.
     let onFinished: (_ removed: Set<String>, DeletionService.Summary) -> Void
 
-    @Environment(AppDependencies.self) private var dependencies
     @State private var permanent: DeletionTargetQueries.Request?
     @State private var failure: String?
 
@@ -58,10 +68,9 @@ struct SourceDeletionFlow: ViewModifier {
     }
 
     private func run(_ pending: DeletionTargetQueries.Request) {
-        let service = dependencies.makeDeletionService()
-        let roots = dependencies.folderRoots
-        let queries = DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
-        let banner = dependencies.banner
+        let service = context.makeService()
+        let queries = context.makeQueries()
+        let showBanner = context.showBanner
         Task {
             do {
                 let summary = try await service.run(pending.targets, alsoPhotos: pending.photosOnly)
@@ -74,7 +83,7 @@ struct SourceDeletionFlow: ViewModifier {
                     failure = reason
                 } else {
                     let text = summary.banner(trashName: pending.plan.trashName)
-                    if !text.isEmpty { banner.show(text) }
+                    if !text.isEmpty { showBanner?(text) }
                 }
             } catch {
                 failure = error.localizedDescription
@@ -85,8 +94,8 @@ struct SourceDeletionFlow: ViewModifier {
 
 extension View {
     /// Presents `request`'s confirmation and runs it through the sources.
-    func sourceDeletion(_ request: Binding<DeletionTargetQueries.Request?>,
+    func sourceDeletion(_ request: Binding<DeletionTargetQueries.Request?>, context: SourceDeletionContext,
                         onFinished: @escaping (_ removed: Set<String>, DeletionService.Summary) -> Void) -> some View {
-        modifier(SourceDeletionFlow(request: request, onFinished: onFinished))
+        modifier(SourceDeletionFlow(request: request, context: context, onFinished: onFinished))
     }
 }

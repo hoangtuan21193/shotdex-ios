@@ -173,6 +173,15 @@ Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư
   lại được; nguồn chỉ đang rút → vẫn đã nhập.
 - Chỉ mục: (tên gốc, byte, giờ chụp) cho màn Import; (thẻ, đường dẫn gốc) cho ghi backup.
 
+## 3d. Những gì Common Photos đã đọc (`v52-commonPhotosScanRecords`, [FS-19.08 §6c](../02-functional-spec/FS-19-photo-sources/08-common-photos.md))
+
+- `common_photo_scan_records`: một dòng mỗi **file server** một lượt quét đã đọc. Khoá chính là (connection, đường dẫn
+  chính xác); thêm cỡ, ngày sửa (giây), SHA-256, khoá ngày chụp (`""` = đã đọc đầu file, không có khoá) và lúc đọc.
+- Dùng được khi cỡ + ngày sửa còn trùng. Dữ liệu dẫn xuất, đọc lại file là dựng lại được. Clear Local Metadata Index
+  không đụng tới, vì nó tả file trên server chứ không phải thư viện.
+- Mất đi khi: lần liệt kê sau không còn file đó (prune theo khoảng `folder/`…`folder0` trên khoá chính); xoá
+  connection; 180 ngày không lượt quét nào chạm tới.
+
 ## 4. Gỡ một tính năng thì phải dọn cả truy vấn đã lưu
 
 Bất kỳ thay đổi nào **bỏ một trường điều kiện** đều phải viết lại phần truy vấn đã lưu của smart album.

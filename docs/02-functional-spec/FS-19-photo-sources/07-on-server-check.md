@@ -2,7 +2,7 @@
 
 `FS-19.07` · tier B (smart album, lưới, Photo Info) · mã có sẵn: `Data/Sources/PhotosContentHashPass.swift`,
 `Data/Sources/FileServer/ServerSourceIndexer.swift`, `Data/Database/SmartAlbumSQLBuilder.swift`,
-`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-10-25
+`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-11-03 (§12 băm dùng chung)
 
 **Một câu:** ShotDex biết chắc từng ảnh/video trong Photos có bản **giống hệt từng byte** trên một folder của nguồn
 server hay chưa — kể cả file do công cụ khác chép, hay bị script dời, đổi tên — và kiểm lại NAS trước khi xoá.
@@ -54,7 +54,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
   file đó là ứng viên khi nguồn server có file nào đó.
 - Tải: thư mục tạm, **một file một lúc**, băm theo khối 1 MB, xoá ngay; không giữ cả file trong RAM; video đọc luồng.
 - Còn trống − cỡ file < 2 GB → chờ, `Waiting for space` (luật FS-22).
-- Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Mục mới nhất trước. Đọc hỏng → ghi lỗi, đi tiếp, lượt sau
+- Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Thứ tự liệt kê: **mục vào thư viện gần nhất trước** — theo lúc ShotDex index mục đó (`indexedAt`), rồi ngày chụp mới nhất
+  (đổi 2026-11-02: theo ngày chụp thì ảnh vừa nhập mà ngày chụp cũ nằm cuối hàng đợi 55k mục, lượt đầu ~55 phút). Đọc hỏng → ghi lỗi, đi tiếp, lượt sau
   mới thử lại — mục hỏng không chặn hàng.
 - `.limited`: chỉ mục được cấp; dòng tiến độ thêm "Only photos ShotDex can access are checked."
 
@@ -141,3 +142,130 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Source: `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
 2026-10-25). Alert sau xoá và alert *Delete Anyway* là alert hệ thống, không vẽ — chữ ghi trong comment của
 `PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info: `PH_/IP_/DI_/DC_Metadata` (vẽ 2026-10-26, dưới Shutter Count).
+
+## 11. Mac (2026-11-02)
+
+Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã có trên NAS" có trên Mac, kiểm chạy cả khi app đã Quit.
+
+- Quy tắc khớp, hash, smart album, xoá (§3–§9) **giữ nguyên**; code `OnServerCheck`, `OnServerPresenceSQL`,
+  `PhotoDeletionGate` đã build cho macOS.
+- **Ai chạy:** helper `ShotDexMacAgent` của [FS-22.06 §2](../FS-22-backup/06-mac.md#2-helper) — một người chạy cho cả
+  Backup và kiểm; Backup đi trước, cùng khoá connection §5. Thay BGProcessingTask của §6 (đợt 2) trên Mac.
+  Helper tắt → kiểm chạy khi app mở; lý do chờ `Open ShotDex to continue` giữ nguyên.
+- **Khi nào:** cổng §6 giữ nguyên, với hàng điều kiện đổi tên theo FS-22.06 §4. Liệt kê server lại: mỗi lần app về trước
+  mặt (§5) **và** mỗi 30 phút trong helper — *vì* trên Mac không có "về trước mặt" khi app đã Quit.
+  Code (2026-11-02): `MacAgent` chạy `OnServerCheck` lúc khởi động, sau khi máy thức, mỗi 30 phút và khi app về trước
+  mặt (lệnh `checkOnServer`; đến giữa lượt thì chạy lại ngay khi lượt xong). Helper đăng waits/finishedAt qua defaults
+  nhóm app + thông báo Darwin; app hiện bằng `OnServerCheck.showRemote`, số đếm đọc từ database chung. Không còn nguồn
+  server → lượt dừng giữa batch; không còn job lẫn nguồn → helper thoát.
+- **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Source với nguồn server có dòng **Folder** (popup + Choose…
+  mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Source và dòng tiến độ §7 nằm ở thanh
+  dưới toolbar, cùng hàng với số mục. Lưới phẳng 7 cột, mới nhất trước, không tiêu đề ngày (như iOS). Không ảnh nào
+  khớp → thanh điều kiện giữ nguyên, giữa màn là *No Photos Match* + nút **Edit Smart Album…** (tweak `empty`).
+- **Dấu lưới và Get Info:** glyph "trên server" ở góc ô lưới Mac như iOS; Get Info (`MAC_GetInfoSingle`) thêm mục
+  **On Server** — mỗi file một dòng `NAS Home` + đường dẫn.
+- **Xoá:** chọn trong album → Delete (⌘⌫) hoặc chuột phải › Delete N Photos… — đi qua `PhotoDeletionGate` như ba lối
+  đợt 1; alert là `NSAlert` (Delete Anyway đỏ, Cancel mặc định). Mọi lối xoá Photos khác trên Mac cũng qua cổng (N2).
+  Lựa chọn có ảnh mang bản sao thư mục hoặc server (không có PHAsset) đi qua nguồn như iOS
+  ([FS-19.04 §2](04-deleting-and-duplicates.md)): file vào Thùng rác, bản trên NAS chỉ **Hide** trong ShotDex — không bao giờ xoá trên
+  server. Trước đây (tới 2026-11-04) Mac chỉ gọi PhotoKit, nên ảnh chỉ có trên NAS bị bỏ qua mà vẫn báo xong.
+- **Ngoài phạm vi trên Mac lúc này:** Free Up Space (FS-15.02c) — chưa có màn Mac.
+
+AC: [07b §3](07b-on-server-check-ac.md#3-mac).
+
+## 12. Băm dùng chung — Mac băm hộ, máy khác chỉ đọc (2026-11-03)
+
+Nguồn: [intent 2026-11-03-mac-hashes-for-on-server-check](../../_intents/2026-11-03-mac-hashes-for-on-server-check.md).
+Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi **ai băm** và **SHA đi đường nào**.
+
+### 12.1 Mac băm
+
+- **Phía Photos:** helper Mac băm SHA-256 mọi file gốc (§3: ảnh, RAW, video Live Photo, video, bản sửa) của **mọi**
+  mục Photos có `cloudIdentifier`, không chỉ mục có ứng viên cùng cỡ trên NAS. Mục mới vào thư viện được băm trước, như
+  §4.
+  - Bản gốc chưa có trên Mac (Mac cũng bật Optimize Storage): tải về thư mục tạm, băm, **xoá ngay**, một file một lúc
+    như §4. Photos có giữ bản gốc vừa tải trên Mac hay không thì PhotoKit không cho điều khiển: đo bằng spike S9 trước
+    khi hứa "vẫn tối ưu". Luật chỗ trống (§4) giữ nguyên; file không rõ cỡ tính thêm 2 GB. File hỏng 5 lần thì thôi băm
+    hết cho nó (vẫn băm khi có file server cùng cỡ).
+- **Phía NAS:** helper băm **mọi** file ảnh và video (các đuôi FS-19.01 nhận) trong mọi nguồn server, không chỉ ứng
+  viên (§5). File có SHA sẵn (sổ Backup, sổ dưới đây, cache theo đường dẫn + cỡ + ngày sửa) thì không đọc lại.
+- **Thứ tự và cổng:** cùng khoá connection §5 (Backup đi trước, một lệnh một lúc), cùng cổng §6/§11.
+- **Công tắc:** Mac băm cả thư viện và cả NAS khi công tắc có sẵn *Share Index Across Devices* (BD-03.05) bật
+  (người dùng 2026-11-03). Không có màn hay công tắc mới.
+
+### 12.2 Sổ SHA trên NAS (A)
+
+- **Ngoại lệ có chủ ý** của luật "không ghi gì lên nguồn server" (§3, FS-19.04 D6), người dùng 2026-11-03: một sổ ở
+  **gốc mỗi nguồn server**, thư mục ẩn **`.shotdex/hash-index/`**, cho cả cây folder của nguồn.
+- Định dạng và luật ghi **giống sổ Backup** ([FS-22.05 §2](../FS-22-backup/05-duplicates-across-devices.md)):
+  - Mỗi máy chỉ ghi các đoạn của chính nó, `<mã máy>-<số>.jsonl`, mỗi lượt có SHA mới thì thêm một đoạn.
+  - Ghi qua file part, đọc lại SHA rồi mới đổi tên.
+  - Một dòng = một file: đường dẫn tương đối với gốc nguồn, cỡ, ngày sửa, SHA-256, máy ghi, lúc ghi.
+  - Mọi máy đã băm file NAS (Mac là chính, iPhone cũng có) đều ghi đoạn của mình.
+- **Đọc:** sau mỗi lần liệt kê nguồn, đọc các đoạn chưa đọc. Một dòng gắn SHA cho file đã liệt kê chỉ khi **đường
+  dẫn + cỡ + ngày sửa đều khớp**; listing không có ngày sửa thì bỏ dòng đó. Dòng lệch hay dòng hỏng thì bỏ, không dừng
+  lượt.
+- `.shotdex/` ẩn với mọi phía: không liệt kê thành ảnh, không băm, không tính vào số ảnh của nguồn, FS-19.08 bỏ qua.
+  ShotDex không bao giờ sửa hay xoá file ảnh của người dùng vì sổ này.
+- Ghi lỗi (quyền ghi, server đầy): thử lại lượt sau, kiểm vẫn chạy.
+
+### 12.3 Chia sẻ qua iCloud (C)
+
+- Đi trong index dùng chung BD-03.05 (container `iCloud.com.hoangtuan.shotdex`, private database, zone `SharedIndex`),
+  thêm hai loại record:
+  - **`PhotoFileHash`**: tên = SHA-256 của (máy, cloud id, khoá file) — mỗi máy một record, tên luôn dưới 255 byte. Trường: cloud id, khoá file (`type:name` như sổ Backup), ngày
+    sửa ảnh (giây), cỡ, SHA-256, máy.
+  - **`ServerFileHash`**: tên = SHA-256 của (máy, danh tính server, đường dẫn). Trường: danh tính server
+    (`ServerIdentity.key`: giao thức, host, cổng, user SFTP, share và http/https của WebDAV), đường dẫn đầy đủ trên server, cỡ, ngày sửa, SHA-256, máy.
+- **Dùng khi:**
+  - Photos: cloud id ánh xạ ra ảnh trên máy, **ngày sửa ảnh trùng**, cỡ file trùng.
+  - NAS: connection trên máy cùng danh tính, file đã liệt kê có **đường dẫn + cỡ + ngày sửa** trùng.
+  - Lệch thì máy tự băm như §4–§5.
+  - Danh tính khác nhau giữa các máy (một máy `nas.local`, máy kia IP) thì không khớp: giới hạn đã biết.
+- **Thứ tự trong một lượt:** kéo record (chờ tối đa 10 giây, phần về muộn dùng ở lượt sau) → khớp → băm phần còn
+  lại. Ảnh Photos mới liệt kê được khớp ngay sau khi liệt kê, trước khi chọn file để tải, nên lượt đầu cũng không tải
+  file máy khác đã băm.
+- **Hai chiều:** máy nào băm trước thì đẩy lên, mỗi lượt tối đa 2.000 SHA của chính máy và 5 lô đẩy; phần còn lại đi ở
+  lượt sau. SHA gửi kèm **lúc băm**, không phải lúc gửi (§12.4 so theo lúc băm). Gửi lại khi máy băm lại file đó.
+  Record của máy khác không bao giờ đè record của máy này; SHA nhận về chỉ điền file chưa có SHA.
+- Lưu trên máy: SHA nhận được ghi vào `copy_files` với `origin = shared` và mã máy gửi, để §12.4 xoá được theo máy.
+- Tắt *Share Index Across Devices*, không có iCloud, hoặc bản Mac thiếu entitlement: không kéo, không đẩy, chạy như hôm
+  nay.
+
+### 12.4 Tin SHA từ máy khác — kiểm ngẫu nhiên
+
+- SHA nhận từ máy khác (qua iCloud hay sổ NAS) dùng cho §7 (smart album) và §9 (xoá) như SHA tự băm.
+- **Kiểm ngẫu nhiên** (người dùng 2026-11-03): mỗi lượt kiểm, mỗi máy gửi, iPhone/iPad tự băm lại **K** file chọn
+  ngẫu nhiên trong những file mà SHA từ máy đó đang làm một mục khớp **is**. Đó là file NAS hoặc file Photos.
+  **K = 10** mỗi máy gửi mỗi lượt (người dùng 2026-11-03); ít hơn 10 file như vậy thì kiểm hết.
+  - Chạy sau vòng băm, trước gộp ảnh (merge). Chỉ chọn file đọc được lúc này: ảnh iCloud khi luật Wi‑Fi/sạc cho phép,
+    file NAS của nguồn đang mở; ảnh Photos phải có danh sách file còn mới (chưa sửa sau lần liệt kê); file > 1 GB
+    không đưa vào mẫu. Đọc không được thì bỏ qua, không tính là lệch.
+  - File đọc lại khớp thì từ đó là SHA của máy này.
+- **Lệch một file:**
+  - Bỏ **mọi** SHA nhận từ máy đó và chưa được tự băm lại, ở cả hai kênh. Các mục đó quay về "chưa kiểm xong" rồi máy
+    tự băm.
+  - Ghi dòng tiến độ: `Hashes from Tuấn's MacBook didn't match — checking on this iPhone.` (`this iPad` / `this
+    Mac` theo máy đang xem; nhiều máy thì nối tên kiểu danh sách). Tên là tên máy gửi kèm record iCloud (trường
+    `deviceName`, giữ trong bảng `hash_device_names`). Máy không gửi tên (chỉ qua sổ NAS) → `another device`.
+    iPhone/iPad không có entitlement tên máy chỉ gửi được `iPhone`/`iPad`: giới hạn đã biết. Câu này được xuống
+    dòng, không cắt chữ; nó mất khi lần kiểm sau đọc file của máy đó và thấy đúng.
+  - Tin lại: SHA máy đó gửi **sau** lúc lệch được tin lại, vẫn kèm kiểm ngẫu nhiên (người dùng 2026-11-03). SHA gửi
+    trước lúc lệch thì không bao giờ được dùng lại.
+- Xoá vẫn hỏi lại server từng file ngay trước khi gọi Photos (§9), dù SHA đến từ đâu.
+
+### 12.5 Máy nhận
+
+- iPhone/iPad/Duo: lấy SHA dùng chung trước, rồi mới tự băm phần còn thiếu, theo đúng thứ tự §4–§5. Mac chưa băm tới thì
+  máy tự băm như hôm nay (người dùng 2026-11-03), rồi đẩy kết quả lên.
+- Dòng tiến độ (§7) giữ nguyên, chỉ thêm câu lệch ở §12.4; không có câu "checked on Mac" (người dùng 2026-11-03).
+- Chỉ phục vụ §7–§9 (người dùng 2026-11-03, phạm vi v1). Duplicates "trùng byte" và FS-19.08 chưa đọc SHA dùng chung.
+
+### 12.6 Board
+
+- Câu lệch ở §12.4 nằm trong dòng tiến độ có sẵn của `PH_/IP_/DI_/DC_SmartAlbum` và `MAC_SmartAlbum`: vẽ thêm trạng
+  thái này (tweak) trên từng board khi làm.
+- Không có màn mới.
+
+AC và spike: [07b §1 (S5–S8), §4](07b-on-server-check-ac.md#4-băm-dùng-chung-12).
+

@@ -334,18 +334,6 @@ extension BackupStatusText.Tone {
     }
 }
 
-extension BackupStatusText.Action {
-    var title: String {
-        switch self {
-        case .pause: String(localized: "Pause", comment: "Backup: pause the job")
-        case .resume: String(localized: "Resume", comment: "Backup: resume the job")
-        case .retry: String(localized: "Retry", comment: "Backup: try again")
-        case .openSettings: String(localized: "Open Settings", comment: "Backup: open the Settings app")
-        case .editServer: String(localized: "Edit Server", comment: "Backup: fix the connection")
-        }
-    }
-}
-
 /// Icon in secondary, name in primary — the card title's two names.
 private struct BackupTitleLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {

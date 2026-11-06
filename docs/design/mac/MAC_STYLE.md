@@ -130,7 +130,7 @@ Foot: idle "Up to date · indexed 2 min ago"; progress only on boards about a ru
   search, then ONE prominent action at the far right. Never a destructive prominent action. Text buttons 36 tall.
 - **Nothing actionable in the bottom 60pt** of a window except the filmstrip/timeline themselves; bottom bars carry
   status text. (Cull/Compare key legends: keep for now — pending user decision.)
-- Sheets ≤ **640×560** (body scrolls); popovers ≤ **360×480** with a 12px arrow; bigger content = panel/sheet.
+- Sheets ≤ **640×560** (body scrolls) — except a sheet whose body is a results list the user reviews before acting (Find Common Photos): up to **640×640**, so the list keeps at least four rows under its options; popovers ≤ **360×480** with a 12px arrow; bigger content = panel/sheet.
   Long-running work (upload, merge render) = Activity panel / sidebar foot, never a modal sheet.
 - Context menus: no shortcut column, hide unavailable items, ≤ 12 rows + submenus.
 - No iOS controls: no `− n +` steppers (use field + NSStepper arrows), no 40–50pt tile pickers for >5 choices (pop-up

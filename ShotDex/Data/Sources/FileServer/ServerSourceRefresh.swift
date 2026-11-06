@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import OSLog
 
 /// When a server source's listing is compared again (FS-19.03 §3, FS-19.07
 /// §5): each time the app comes to the foreground — `OnServerCheck` asks,
@@ -8,14 +9,17 @@ import GRDB
 /// whole tree on the NAS, and SMB, SFTP and WebDAV say nothing reliable
 /// about changes in between. A pass already running is not started again.
 actor ServerSourceRefresh {
+    nonisolated static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "ServerSource")
+
     let database: AppDatabase
     let servers: FileServerStore
     let composer: MetadataComposer
     let thumbnails: FolderThumbnails?
     let makeClient: @Sendable (FileServer, String) -> any RemoteFileClient
 
-    /// Sources mid-pass: a second trigger while one runs is the same pass.
-    private var running: Set<String> = []
+    /// Sources mid-pass: a second trigger while one runs is the same pass,
+    /// and waits for its result.
+    private var running: [String: Task<ServerSourceIndexer.Summary?, Never>] = [:]
 
     init(database: AppDatabase, servers: FileServerStore, composer: MetadataComposer, thumbnails: FolderThumbnails? = nil,
          makeClient: @escaping @Sendable (FileServer, String) -> any RemoteFileClient = { RemoteFileClientFactory.make(for: $0, password: $1) }) {
@@ -50,8 +54,16 @@ actor ServerSourceRefresh {
 
     /// Rescan in the source's browse toolbar.
     @discardableResult
-    func rescan(sourceId: String) async -> ServerSourceIndexer.Summary? {
-        await refresh(sourceId)
+    /// `fresh`: a pass already running may have listed before the change
+    /// the caller just made (a common-photos run, FS-19.08 §6) — it is
+    /// waited for, then a new pass starts.
+    func rescan(sourceId: String, fresh: Bool = false) async -> ServerSourceIndexer.Summary? {
+        guard fresh, let earlier = running[sourceId] else { return await refresh(sourceId) }
+        _ = await earlier.value
+        // Still the earlier pass on record (its starter has not cleared it
+        // yet): start past it. A pass begun meanwhile began after the
+        // change, and is joined.
+        return await refresh(sourceId, joining: running[sourceId] != earlier)
     }
 
     private func serverSourceIds() throws -> [String] {
@@ -60,9 +72,18 @@ actor ServerSourceRefresh {
         }
     }
 
-    private func refresh(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
-        guard running.insert(sourceId).inserted else { return nil }
-        defer { running.remove(sourceId) }
+    private func refresh(_ sourceId: String, joining: Bool = true) async -> ServerSourceIndexer.Summary? {
+        if joining, let pass = running[sourceId] { return await pass.value }
+        let pass = Task { await self.pass(sourceId) }
+        running[sourceId] = pass
+        // The caller that started the pass still stops it by cancelling, as
+        // when the pass ran in its own task; one that joined only waits.
+        let summary = await withTaskCancellationHandler { await pass.value } onCancel: { pass.cancel() }
+        if running[sourceId] == pass { running[sourceId] = nil }
+        return summary
+    }
+
+    private func pass(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
         let found: (connectionId: String?, pairs: Bool)? = try? await database.reader.read { db in
             try Row.fetchOne(db, sql: "SELECT connectionId, pairsRawAndJpeg FROM sources WHERE id = ?", arguments: [sourceId])
                 .map { ($0["connectionId"], $0["pairsRawAndJpeg"]) }
@@ -72,6 +93,12 @@ actor ServerSourceRefresh {
         else { return nil }
         let client = makeClient(server, servers.password(for: server.id) ?? "")
         let indexer = ServerSourceIndexer(database: database, composer: composer, client: client, thumbnails: thumbnails)
-        return try? await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: found.pairs)
+        do {
+            return try await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: found.pairs)
+        } catch {
+            // The caller only learns the pass did not finish; why goes here.
+            Self.logger.error("server pass \(sourceId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 }

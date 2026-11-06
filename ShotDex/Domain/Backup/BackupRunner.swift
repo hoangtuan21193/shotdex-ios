@@ -17,6 +17,10 @@ struct BackupSourceFile: Sendable {
     /// Size and modification time at the source (`"<bytes>:<epoch>"`): a
     /// changed file is a new ledger entry, not a match (FS-22.02 §1).
     let sourceStamp: String
+    /// The dates its copy on the server gets (FS-19.08 §6e): a Photos
+    /// asset's capture date, created and modified both; a folder or server
+    /// file's own write time. Nil: the server's clock.
+    var info: RemoteFileInfo?
 }
 
 /// What the runner already knows, so a source can skip reading files of
@@ -109,6 +113,8 @@ actor BackupRunner {
     private let destination: BackupDestination
     private let client: any RemoteFileClient
     private let store: BackupStore
+    /// Each copy's date outcome this run (§6e).
+    private var fileInfoOutcomes: [FileInfoOutcome] = []
     private let source: any BackupSourceReading
     private let exporter: any AssetFileExporting
     private let planner: BackupPathPlanner
@@ -232,7 +238,12 @@ actor BackupRunner {
             return BackupRunResult(stop: Self.stop(for: error), progress: progress)
         }
 
+        fileInfoOutcomes = []
         let stop = await copyAll(pending)
+        // Whether the server kept the dates, as Common Photos records it (§6e).
+        if let keeps = ServerFileInfoSupport.keepsDates(from: fileInfoOutcomes) {
+            try? ServerFileInfoSupport.record(connectionId: job.connectionId, keepsDates: keeps, in: store.database)
+        }
         switch stop {
         case .finished, .blocked(.waitingForWiFi), .blocked(.waitingToCharge), .blocked(.waitingForStorage):
             // Still connected: tell the other devices what this run learned.
@@ -385,7 +396,10 @@ actor BackupRunner {
                 await writer.discardPart(for: destination)
                 throw RemoteFileError.other(String(localized: "The copy on the server didn't match the original.", comment: "Backup: checksum read back from the server differs"))
             }
-            try await writer.moveIntoPlace(destination, replacing: false)
+            // Dated before the rename, as an upload is (§6e).
+            if let outcome = try await writer.moveIntoPlace(destination, replacing: false, info: planned.file.info) {
+                fileInfoOutcomes.append(outcome)
+            }
         } catch {
             await writer.discardPart(for: destination)
             throw error

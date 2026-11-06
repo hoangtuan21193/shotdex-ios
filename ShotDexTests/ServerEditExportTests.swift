@@ -196,6 +196,9 @@ import Testing
         private(set) var removed: [String] = []
         func remove(_ path: String) async throws { removed.append(path) }
         func removeEmptyDirectory(_ path: String) async throws {}
+        func fileInfo(at path: String) async throws -> RemoteFileInfo? { nil }
+        func sourceInfo(at path: String) async throws -> RemoteFileInfo? { nil }
+        func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport { .unsupported }
     }
 
     /// A server that is gone.

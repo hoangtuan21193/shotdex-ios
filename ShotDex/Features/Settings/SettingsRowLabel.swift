@@ -35,6 +35,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     case useCellularData
     case keepScreenAwake
     case lookUpPlaceNames
+    case shareIndexAcrossDevices
+    case indexOnThisDevice
 
     // Notifications
     case dailyOnThisDayReminder
@@ -117,6 +119,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .useCellularData: "Use Cellular Data for Indexing"
         case .keepScreenAwake: "Keep Screen Awake While Indexing"
         case .lookUpPlaceNames: "Look Up Place Names"
+        case .shareIndexAcrossDevices: "Share Index Across Devices"
+        case .indexOnThisDevice: "Index on This Device"
         case .dailyOnThisDayReminder: "Daily On This Day Reminder"
         case .remindMeAt: "Remind Me At"
         case .notificationsDenied: "Notifications"
@@ -162,7 +166,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .sources
         case .access, .manageSelectedPhotos, .openPhotoSettings, .indexedPhotosAndVideos,
              .lastIndexed, .continueIndexing, .reindexLibrary,
-             .useCellularData, .keepScreenAwake, .lookUpPlaceNames:
+             .useCellularData, .keepScreenAwake, .lookUpPlaceNames,
+             .shareIndexAcrossDevices, .indexOnThisDevice:
             .photoLibrary
         case .dailyOnThisDayReminder, .remindMeAt, .notificationsDenied, .openNotificationSettings:
             .notifications
@@ -211,6 +216,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .useCellularData: "antenna.radiowaves.left.and.right"
         case .keepScreenAwake: "sun.max"
         case .lookUpPlaceNames: "mappin.and.ellipse"
+        case .shareIndexAcrossDevices: "icloud"
+        case .indexOnThisDevice: "laptopcomputer.and.iphone"
         case .dailyOnThisDayReminder: "bell"
         case .remindMeAt: "clock"
         case .notificationsDenied: "bell.slash"
@@ -252,6 +259,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .access, .useCellularData: .green
         case .keepScreenAwake: .blue
         case .lookUpPlaceNames: .teal
+        case .shareIndexAcrossDevices, .indexOnThisDevice: .blue
         case .photosAndVideos, .measured, .openPhotoSettings, .openNotificationSettings: .gray
         case .clearScanResults, .resetCustomMappings, .clearLocalMetadataIndex: .red
         case .resizePresets: .purple

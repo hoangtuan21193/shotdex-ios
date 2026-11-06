@@ -14,7 +14,7 @@ button{font-family:inherit;padding:0;margin:0;cursor:default}
 input{font-family:inherit}
 </style>
 </helmet>
-<div style="width: 420px; height: 640px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; box-shadow: inset 0 0 0 1px {{t.sep}}">
+<div style="width: 420px; height: 728px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; box-shadow: inset 0 0 0 1px {{t.sep}}">
 
 <!-- Title bar (Info panel: follows the selection, minimize and zoom disabled) -->
 <div style="position:absolute;left:14px;top:14px;display:flex;gap:8px">
@@ -99,9 +99,21 @@ input{font-family:inherit}
 <div style="height:20px;display:flex;align-items:center;gap:8px;min-width:0"><span style="width:76px;flex:none;font-size:11px;color:{{t.label2}};white-space:nowrap">{{e.k}}</span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;user-select:text">{{e.v}}</span></div>
 </sc-for>
 </div>
+
+<div style="position:absolute;left:16px;right:16px;top:646px;height:1px;background:{{t.sep}}"></div>
+
+<!-- ON SERVER (FS-19.07 §8/§11): one row per matching file, connection name + path from the server root; read-only -->
+<div style="position:absolute;left:16px;right:16px;top:650px;height:22px;display:flex;align-items:center;justify-content:space-between">
+<button aria-label="On Server" aria-expanded="true" style="border:none;background:none;color:{{t.label2}};font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>On Server</button>
+</div>
+<div role="list" aria-label="On Server" style="position:absolute;left:16px;right:16px;top:674px;display:flex;flex-direction:column">
+<sc-for list="{{onServer}}" as="o" hint-placeholder-count="2">
+<div role="listitem" aria-label="{{o.k}}, {{o.v}}" style="height:20px;display:flex;align-items:center;gap:8px;min-width:0"><span style="width:76px;flex:none;font-size:11px;color:{{t.label2}};white-space:nowrap">{{o.k}}</span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:text">{{o.v}}</span></div>
+</sc-for>
+</div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":420,"height":640}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":420,"height":728}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -130,7 +142,8 @@ class Component extends DCLogic {
       keywords:['Nara','sunset','deer park','portfolio','Japan 2026'],
       flags:[flag('None','Clear Flag (U)',false),flag('Pick','Pick (P)',true),flag('Reject','Reject (X)',false)],
       exif:[{k:'Make',v:'SONY'},{k:'Model',v:'ILCE-7M4'},{k:'Exposure',v:'1/250 s'},{k:'Aperture',v:'f/2.8'},
-            {k:'ISO',v:'400'},{k:'Focal Length',v:'35 mm (35 mm)'},{k:'Metering',v:'Multi-segment'},{k:'White Balance',v:'Auto'}] };
+            {k:'ISO',v:'400'},{k:'Focal Length',v:'35 mm (35 mm)'},{k:'Metering',v:'Multi-segment'},{k:'White Balance',v:'Auto'}],
+      onServer:[{k:'NAS Home',v:'iCloud Photo/Shared/2025/DSC04512.ARW'},{k:'NAS Home',v:'iCloud Photo/Shared/2025/DSC04512.JPG'}] };
   }
 }
 </script>

@@ -42,6 +42,13 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// Renames a file or folder within the server. The destination must not
     /// exist.
     func move(_ source: String, to destination: String) async throws
+    /// Copies a file within the server, its bytes never leaving it (FS-19.08
+    /// §6d) — WebDAV `COPY`. Replaces what is at `destination`, so it is only
+    /// ever given a part path. False when the server will not (no such
+    /// command, refused, another share); the caller then downloads and
+    /// uploads. SMB and SFTP say false. A client that wraps another must
+    /// forward it: the default here would quietly send every photo the long way.
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool
     /// Deletes a file; a missing one is not an error.
     func remove(_ path: String) async throws
     /// Deletes a folder that has nothing in it; a missing one is not an
@@ -61,9 +68,25 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// The system's thumbnail of a file (QuickLook — the service supplies
     /// it without downloading); nil when it has none.
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage?
+    /// The dates and flags of the file at `path` (FS-19.08 §6e); nil when
+    /// nothing is there. A server that does not say a creation date or a
+    /// flag leaves it nil or false.
+    func fileInfo(at path: String) async throws -> RemoteFileInfo?
+    /// The info a copy of the file carries: `fileInfo`, plus its Finder tags
+    /// and Finder info where the server keeps them in streams (SMB). Asked
+    /// only of a file about to be copied — the streams cost a round trip
+    /// each. Not a default either, for the same reason as `setFileInfo`.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo?
+    /// Gives the file at `path` the dates and flags in `info`, as far as the
+    /// protocol lets it (FS-19.08 §6e). `.unsupported` when this server will
+    /// not set dates at all — the caller reports "dates not kept" rather than
+    /// failing the file. Never part of the protocol's defaults: a wrapper that
+    /// forgot to forward it would quietly lose every date.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport
 }
 
 extension RemoteFileClient {
+    func copyOnServer(_ source: String, to destination: String) async throws -> Bool { false }
     func storageSpace(at path: String) async throws -> StorageSpace? { nil }
     var peeksWithSystemThumbnails: Bool { false }
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage? { nil }
@@ -82,6 +105,82 @@ extension RemoteFileClient {
         }
         try await removeEmptyDirectory(path)
     }
+}
+
+/// A file's dates and flags as a server keeps them (FS-19.08 §6e): what a
+/// copy carries over from its source so the server shows the same file —
+/// the bytes are checked separately, by SHA-256.
+struct RemoteFileInfo: Hashable, Codable, Sendable {
+    var modified: Date
+    var created: Date?
+    var isReadOnly = false
+    var isHidden = false
+    var isArchive = false
+    /// The file's alternate data streams (SMB): Finder tags, Finder info
+    /// (FS-19.08 §6e) — each by the name the server gave it, at most
+    /// `RemoteFileStream.maximumSize`. Read for a copy, never stored: Undo
+    /// puts dates back, a rename keeps a file's streams.
+    var streams: [RemoteFileStream] = []
+    /// The streams could not all be read (too many for the reply, one too
+    /// big): a copy cannot carry them — its tags are not kept.
+    var hasUnreadStreams = false
+
+    private enum CodingKeys: String, CodingKey { case modified, created, isReadOnly, isHidden, isArchive }
+
+    /// The dates and flags alone, for a second request after the streams
+    /// went with the first.
+    var withoutStreams: RemoteFileInfo {
+        var copy = self
+        copy.streams = []
+        copy.hasUnreadStreams = false
+        return copy
+    }
+
+    /// The same info without the read-only flag: what a part file gets before
+    /// it is renamed, since a read-only file cannot be renamed over or
+    /// deleted everywhere (§6e "Thứ tự trên SMB").
+    var writable: RemoteFileInfo {
+        var copy = self
+        copy.isReadOnly = false
+        return copy
+    }
+
+    /// Whether `other`'s write time is this one's within 2 seconds — FAT and
+    /// exFAT shares keep times in 2-second steps, and servers round.
+    func hasSameModified(as other: RemoteFileInfo) -> Bool {
+        abs(modified.timeIntervalSince(other.modified)) <= 2
+    }
+}
+
+/// One alternate data stream of a file, as the server names it
+/// (`:AFP_AfpInfo:$DATA`).
+struct RemoteFileStream: Hashable, Sendable {
+    /// Samba keeps streams in extended attributes of 64 KB at most; a bigger
+    /// one is no tag, and is not read.
+    static let maximumSize = 64 * 1024
+
+    let name: String
+    let data: Data
+}
+
+/// Whether a server took a `setFileInfo` request.
+enum FileInfoSupport: Equatable, Sendable {
+    /// Sent; whether it held is for a re-read to say.
+    case applied
+    /// Dates and flags sent, but the file's streams (Finder tags) could
+    /// not be written: its tags are not kept.
+    case appliedWithoutStreams
+    /// This server does not set dates (SFTP here, a WebDAV server that
+    /// refused every way).
+    case unsupported
+}
+
+/// What became of a file's info after a write (FS-19.08 §6e); the raw
+/// values are the CSV's words.
+enum FileInfoOutcome: String, Codable, Sendable {
+    case kept
+    case datesNotKept = "dates not kept"
+    case tagsNotKept = "tags not kept"
 }
 
 /// Why a server operation failed, in the terms the user can act on.

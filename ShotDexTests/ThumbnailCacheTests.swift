@@ -42,6 +42,17 @@ import Testing
         #expect(none.image == nil && none.hasThumbnailResult)
     }
 
+    /// A record whose picture was trimmed or cleared is a miss, not "no preview".
+    @Test func recordWithoutPictureIsAMiss() throws {
+        let image = try #require(Self.image())
+        let folder = directory()
+        let cache = RemoteThumbnailCache(directory: folder)
+        cache.store(RemoteThumbnailResult(thumbnail: .init(image: image, sourceLongSide: 400), captureDate: nil), for: key("E.CR3"))
+        let pictures = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil).filter { $0.pathExtension == "jpg" }
+        for picture in pictures { try FileManager.default.removeItem(at: picture) }
+        #expect(cache.entry(for: key("E.CR3")) == nil)
+    }
+
     @Test func evictsLeastRecentlyUsedOverTheLimit() throws {
         let image = try #require(Self.image())
         let folder = directory()

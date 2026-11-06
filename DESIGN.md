@@ -502,6 +502,8 @@ Token của app macOS native (FS-18). Số lấy từ `docs/design/mac/MAC_STYLE
 | `sep` | `rgba(0,0,0,0.10)` | `rgba(255,255,255,0.10)` | nét ngăn |
 | `fill` | `rgba(0,0,0,0.05)` | `rgba(255,255,255,0.07)` | nền control phẳng |
 | `rowSel` | `rgba(0,0,0,0.08)` | `rgba(255,255,255,0.10)` | hàng chọn không focus (sidebar, bảng) |
+| `accentSoft` | `rgba(198,115,14,0.14)` | `rgba(235,149,38,0.18)` | folder đang mở trong cột của màn duyệt server (`MAC_ServerBrowser`) |
+| `fill2` | `#F2F2F4` | `#2C2C2E` | ô lưới trống, trước hoặc không có ảnh (`MAC_ServerBrowser`) |
 | đèn tắt (cửa sổ phụ) | `#D0D0D3` | `#4A4A4E` | nút thu nhỏ/phóng to vẽ tắt |
 
 - **Accent luôn là amber của ShotDex**, không theo accent hệ thống, không có hàng Accent Color trong Settings. Bản đậm (`accentFill`) cho mảng tô; accent thường cho nét và glyph. Tầng D: highlight menu `#EB9526` chữ đen.

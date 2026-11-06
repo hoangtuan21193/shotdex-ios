@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Network
+import os
 import SMBClient
 
 /// `RemoteFileClient` over SMB 2/3 (SMBClient, MIT). Paths start at the
@@ -16,6 +17,11 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     private var client: SMBClient?
     /// The share the session's tree is connected to.
     private var connectedShare: String?
+    /// Which login is current, and whether the server has ended it — a NAS
+    /// drops one left idle for about 50 minutes. The next call then logs in
+    /// again instead of failing on the dead session. Written on the
+    /// connection's queue; a report from an earlier login is ignored.
+    private let login = OSAllocatedUnfairLock(initialState: (current: 0, attempts: 0, wasDropped: false))
 
     init(server: FileServer, password: String) {
         self.server = server
@@ -24,13 +30,23 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     func connect() async throws {
         let client = SMBClient(host: server.host, port: server.port)
+        // Numbered per attempt, so a failed one can never pass for the login in use.
+        let number = login.withLock { $0.attempts += 1; return $0.attempts }
+        // Set before the connection starts, so its queue never reads it mid-write.
+        client.onDisconnected = { [login] _ in
+            login.withLock { if $0.current == number { $0.wasDropped = true } }
+        }
         do {
             _ = try await withConnectTimeout(host: server.host) {
                 try await client.login(username: self.server.username, password: self.password)
             }
         } catch {
+            client.session.disconnect()
             throw Self.map(error, host: server.host, path: "")
         }
+        let previous = self.client
+        login.withLock { $0.current = number; $0.wasDropped = false }
+        previous?.session.disconnect()
         self.client = client
         connectedShare = nil
     }
@@ -57,18 +73,37 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         if connectedShare != nil { _ = try? await client.disconnectShare() }
         connectedShare = nil
         _ = try? await client.logoff()
+        client.session.disconnect()
     }
 
-    private func connected() throws -> SMBClient {
+    /// The logged-in client; a login the server ended is replaced first.
+    private func connected() async throws -> SMBClient {
+        guard client != nil else { throw RemoteFileError.connectionLost }
+        // The dead login stays until a new one succeeds, so a failed
+        // attempt is tried again on the next call.
+        if login.withLock({ $0.wasDropped }) { try await connect() }
         guard let client else { throw RemoteFileError.connectionLost }
         return client
+    }
+
+    /// A read the server cut off midway runs once more on a new login: a NAS
+    /// resets a busy login now and then (seen 2026-11-06, eight minutes into
+    /// a scan), and a scan of 15,000 photos should not stop for it. Reads
+    /// only — a write cut off may have landed.
+    private func readingAgain<T>(_ work: () async throws -> T) async throws -> T {
+        do {
+            return try await work()
+        } catch RemoteFileError.connectionLost where client != nil {
+            try await connect()
+            return try await work()
+        }
     }
 
     /// The client with `path`'s share connected, and the path inside that
     /// share; nil for the machine's root. Moving to another share swaps the
     /// tree within the same login.
     private func open(_ path: String) async throws -> (client: SMBClient, rest: String)? {
-        let client = try connected()
+        let client = try await connected()
         guard let (share, rest) = SMBPath.split(path) else { return nil }
         if share != connectedShare {
             if connectedShare != nil { _ = try? await client.disconnectShare() }
@@ -104,6 +139,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func fileSize(at path: String) async throws -> Int64? {
+        try await readingAgain { try await fileSizeOnce(at: path) }
+    }
+
+    private func fileSizeOnce(at path: String) async throws -> Int64? {
         do {
             guard let (client, rest) = try await open(path), !rest.isEmpty else { return nil }
             let stat = try await client.fileStat(path: rest)
@@ -116,6 +155,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func directoryExists(_ path: String) async throws -> Bool {
+        try await readingAgain { try await directoryExistsOnce(path) }
+    }
+
+    private func directoryExistsOnce(_ path: String) async throws -> Bool {
         do {
             guard let (client, rest) = try await open(path) else { return true }
             if rest.isEmpty { return true }
@@ -177,6 +220,20 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        // Read again from the start, the bar does not go back.
+        let reported = OSAllocatedUnfairLock(initialState: Int64(0))
+        let onward: @Sendable (Int64) -> Void = { bytes in
+            let isNew = reported.withLock { last in
+                guard bytes > last else { return false }
+                last = bytes
+                return true
+            }
+            if isNew { progress(bytes) }
+        }
+        return try await readingAgain { try await sha256Once(of: path, progress: onward) }
+    }
+
+    private func sha256Once(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         do {
             let (client, rest) = try await openInShare(path)
             let size = try await client.fileStat(path: rest).size
@@ -201,6 +258,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func entries(in directory: String) async throws -> [RemoteEntry] {
+        try await readingAgain { try await entriesOnce(in: directory) }
+    }
+
+    private func entriesOnce(in directory: String) async throws -> [RemoteEntry] {
         do {
             guard let (client, rest) = try await open(directory) else { return try await shareEntries() }
             let files = try await client.listDirectory(path: rest)
@@ -214,6 +275,10 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        try await readingAgain { try await readRangeOnce(path, offset: offset, length: length) }
+    }
+
+    private func readRangeOnce(_ path: String, offset: Int64, length: Int) async throws -> Data {
         do {
             let (client, rest) = try await openInShare(path)
             let reader = client.fileReader(path: rest)
@@ -280,15 +345,188 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// A read-only file cannot be deleted (Windows `STATUS_CANNOT_DELETE`,
+    /// Samba's `delete readonly = no`): when the delete is refused, the flag
+    /// is cleared and the delete tried once more (FS-19.08 §6e).
     func remove(_ path: String) async throws {
         do {
             let (client, rest) = try await openInShare(path)
             guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
-            try await client.deleteFile(path: rest)
+            do {
+                try await client.deleteFile(path: rest)
+            } catch where Self.refusesDeleting(error) {
+                // Only a read-only file is unlocked, and only that flag goes:
+                // anything else refused stays exactly as it was.
+                guard let stat = try? await client.fileStat(path: rest), stat.isReadOnly else { throw error }
+                var kept: FileAttributes = []
+                if stat.isHidden { kept.insert(.hidden) }
+                if stat.isArchive { kept.insert(.archive) }
+                if stat.isSystem { kept.insert(.system) }
+                _ = try await client.session.setInfo(path: Self.smbName(rest), Self.basicInformation(attributesOnly: kept))
+                try await client.deleteFile(path: rest)
+            }
         } catch {
             if Self.isNotFound(error) { return }
             throw Self.map(error, host: server.host, path: path)
         }
+    }
+
+    // MARK: - File info (FS-19.08 §6e)
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        try await readingAgain { try await fileInfoOnce(at: path) }
+    }
+
+    private func fileInfoOnce(at path: String) async throws -> RemoteFileInfo? {
+        do {
+            let (client, rest) = try await openInShare(path)
+            guard !rest.isEmpty else { return nil }
+            let stat = try await client.fileStat(path: rest)
+            guard !stat.isDirectory else { return nil }
+            return RemoteFileInfo(modified: stat.lastWriteTime, created: stat.creationTime,
+                                  isReadOnly: stat.isReadOnly, isHidden: stat.isHidden, isArchive: stat.isArchive)
+        } catch {
+            if Self.isNotFound(error) { return nil }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// One `SET_INFO` FileBasicInformation on a handle of its own, so it
+    /// lands after the upload's handle has closed.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        do {
+            let (client, rest) = try await openInShare(path)
+            guard !rest.isEmpty else { throw RemoteFileError.permissionDenied(path) }
+            // Streams first: writing one changes the file's write time,
+            // which the dates then set right (§6e "Thứ tự trên SMB").
+            let streamsWritten = await writeStreams(info.streams, to: rest, client: client)
+            _ = try await client.session.setInfo(path: Self.smbName(rest), Self.basicInformation(info))
+            return streamsWritten ? .applied : .appliedWithoutStreams
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// The info a copy carries (FS-19.08 §6e): dates and flags, and the
+    /// file's Finder tags and Finder info streams.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? {
+        guard var info = try await fileInfo(at: path) else { return nil }
+        do {
+            let (client, rest) = try await openInShare(path)
+            await readStreams(of: rest, client: client, into: &info)
+        } catch {
+            info.hasUnreadStreams = true
+        }
+        return info
+    }
+
+    /// Finder tags and Finder info, each up to 64 KB, by the names the
+    /// server gives them; Finder info only whole (60 bytes). Other streams
+    /// are not ShotDex's to carry and are left out without a word. A server
+    /// with no streams lists none; anything else that goes wrong — a reply
+    /// too long for SMBClient's fixed buffer, a stream that cannot be read —
+    /// marks them unread: the copy's tags are not kept, its dates still are.
+    private func readStreams(of rest: String, client: SMBClient, into info: inout RemoteFileInfo) async {
+        let listed: [SMBStreamInformation.Stream]
+        do {
+            let response = try await client.session.queryInfo(path: Self.smbName(rest), fileInfoClass: .fileStreamInformation)
+            listed = SMBStreamInformation.streams(in: response.buffer)
+        } catch let response as ErrorResponse where Self.hasNoStreams(response) {
+            return
+        } catch {
+            info.hasUnreadStreams = true
+            return
+        }
+        for stream in listed where stream.isCarried {
+            guard stream.size <= Int64(RemoteFileStream.maximumSize) else {
+                info.hasUnreadStreams = true
+                continue
+            }
+            let reader = client.fileReader(path: rest + stream.name)
+            do {
+                let data = stream.size == 0 ? Data() : try await reader.read(offset: 0, length: UInt32(stream.size))
+                try? await reader.close()
+                guard !stream.isFinderInfo || data.count == SMBStreamInformation.finderInfoSize else {
+                    info.hasUnreadStreams = true
+                    continue
+                }
+                info.streams.append(RemoteFileStream(name: stream.name, data: data))
+            } catch {
+                try? await reader.close()
+                info.hasUnreadStreams = true
+            }
+        }
+    }
+
+    /// Writes each stream onto `rest` on a handle of its own, replacing a
+    /// stream of that name; false when one could not be written — the
+    /// copy's tags are not kept. Nothing is ever removed: a stream already
+    /// there is the user's.
+    private func writeStreams(_ streams: [RemoteFileStream], to rest: String, client: SMBClient) async -> Bool {
+        for stream in streams {
+            // Checked again before any write: never the file's own bytes.
+            guard SMBStreamInformation.Stream(name: stream.name, size: Int64(stream.data.count)).isCarried else { return false }
+            do {
+                let created = try await client.session.create(
+                    desiredAccess: [.writeData, .writeAttributes, .synchronize], fileAttributes: [],
+                    shareAccess: [.read, .write], createDisposition: .overwriteIf, createOptions: [.nonDirectoryFile],
+                    name: Self.smbName(rest) + stream.name)
+                var failed = false
+                if !stream.data.isEmpty {
+                    do { try await client.session.write(data: stream.data, fileId: created.fileId, offset: 0) } catch { failed = true }
+                }
+                _ = try? await client.session.close(fileId: created.fileId)
+                if failed { return false }
+            } catch {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// `FileBasicInformation` as MS-FSCC 2.4.7 lays it out. SMBClient keeps
+    /// the memberwise init and its `FileTime(Date)` internal, so the 40 bytes
+    /// are built here: LastAccessTime 0 leaves it alone; ChangeTime carries
+    /// the write time too, because some servers (impacket) take the file's
+    /// mtime from it and ignore a request where it is 0 — Windows and Samba
+    /// overwrite it anyway. Attributes 0 would mean "leave them", so a file
+    /// with none gets NORMAL.
+    static func basicInformation(_ info: RemoteFileInfo) -> FileBasicInformation {
+        var attributes: UInt32 = 0
+        if info.isReadOnly { attributes |= 0x01 }
+        if info.isHidden { attributes |= 0x02 }
+        if info.isArchive { attributes |= 0x20 }
+        let written = fileTime(info.modified)
+        return basic(created: info.created.map(fileTime) ?? 0, written: written, changed: written,
+                     attributes: attributes == 0 ? 0x80 : attributes)
+    }
+
+    /// Only the flags, times untouched — clearing read-only before a delete.
+    static func basicInformation(attributesOnly attributes: FileAttributes) -> FileBasicInformation {
+        basic(created: 0, written: 0, changed: 0, attributes: attributes.rawValue == 0 ? 0x80 : attributes.rawValue)
+    }
+
+    private static func basic(created: UInt64, written: UInt64, changed: UInt64, attributes: UInt32) -> FileBasicInformation {
+        var data = Data()
+        for value in [created, 0, written, changed] {
+            withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+        }
+        withUnsafeBytes(of: attributes.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: UInt32(0)) { data.append(contentsOf: $0) }
+        return FileBasicInformation(data: data)
+    }
+
+    /// FILETIME: 100-nanosecond steps since 1601-01-01 UTC.
+    static func fileTime(_ date: Date) -> UInt64 {
+        let steps = (date.timeIntervalSince1970 + 11_644_473_600) * 10_000_000
+        return steps > 0 ? UInt64(steps.rounded()) : 0
+    }
+
+    /// A path inside the share as SMB names it: backslashes, no leading one.
+    /// SMBClient's own calls normalize this way; `Session` ones take the
+    /// name as given.
+    private static func smbName(_ rest: String) -> String {
+        rest.split(separator: "/").joined(separator: "\\")
     }
 
     /// The share's size and what this account may still write
@@ -325,8 +563,22 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
 
     // MARK: - Errors
 
+    /// A server with no alternate data streams answers a stream listing
+    /// with `NOT_SUPPORTED` or `INVALID_INFO_CLASS`: its files have none.
+    private static func hasNoStreams(_ response: ErrorResponse) -> Bool {
+        [0xC000_00BB, 0xC000_0003].contains(response.header.status)
+    }
+
     /// `STATUS_DISK_FULL`; SMBClient's enum does not name it.
     private static let diskFull: UInt32 = 0xC000_007F
+
+    /// `STATUS_ACCESS_DENIED` or `STATUS_CANNOT_DELETE` (0xC0000121, which
+    /// SMBClient's enum does not name) — what a delete of a read-only file
+    /// gets.
+    private static func refusesDeleting(_ error: Error) -> Bool {
+        guard let response = error as? ErrorResponse else { return false }
+        return NTStatus(response.header.status) == .accessDenied || response.header.status == 0xC000_0121
+    }
 
     private static func isNotFound(_ error: Error) -> Bool {
         guard let response = error as? ErrorResponse else { return false }

@@ -23,6 +23,8 @@ Nguồn: [intent Mac](../../_intents/2026-10-04-macos-app.md) · [intent iPad](.
 | 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-73 |
 | 07 | [Ảnh Photos đã có trên server chưa](07-on-server-check.md) | SHA-256 cả file từng file gốc (cả bản sửa), lấy lại SHA của Backup, lọc theo cỡ, Folder trong điều kiện Source, chưa kiểm, kiểm lại trước khi xoá; hai đợt |
 | 07b | [07 — spike và AC](07b-on-server-check-ac.md) | S1–S4 trên máy thật, AC-74…AC-106 |
+| 08 | [Gom ảnh chung của nhiều folder server (Mac)](08-common-photos.md) | chọn ≥ 2 folder, lọc cỡ → Likely → SHA-256, Copy/Move vào folder chung, kiểm trước khi xoá, log + CSV |
+| 08b | [08 — AC](08b-common-photos-ac.md) | AC-115…AC-130 |
 
 Board: Mac `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_SettingsSources` · `MAC_SettingsServers` · `MAC_ServerBrowser`
 · `MAC_Duplicates` · `MAC_Cull` · `MAC_EmptyLibrary` · `MAC_GetInfo` (`docs/design/mac/project/`). iPad `IP_AddSource` ·
@@ -49,7 +51,7 @@ album của ShotDex chứa ảnh mọi nguồn ([05 §6](05-data.md)).
 **Cố ý không có:**
 - Sửa nội dung file ảnh (kể cả nhúng XMP vào JPEG/DNG) — vì câu cam kết "ShotDex never edits file contents".
 - Chép/chuyển file khi thêm nguồn — "Photos stay where they are. Nothing is copied or moved."
-- Xoá file trên NAS — D6, chỉ Hide.
+- Xoá file trên NAS — D6, chỉ Hide. Ngoại lệ duy nhất: Move của [08](08-common-photos.md) (Mac), có kiểm SHA trước khi xoá.
 - **Import to Library** từ server — server là nguồn; ai cần ảnh trong Photos dùng lệnh xuất **Save to Photos** ([03 §4](03-servers-as-sources.md)).
 - Nhập từ thẻ nhớ — D8, [FS-20](../FS-20-card-ingest/README.md); ảnh nhập xong là ảnh của một nguồn thư mục ở đây.
 - Đồng bộ recipe hay rating giữa các máy ngoài đường file/sidecar/Photos — intent ghi "để sau".

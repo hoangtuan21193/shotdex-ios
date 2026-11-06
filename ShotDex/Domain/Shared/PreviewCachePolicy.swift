@@ -19,6 +19,14 @@ enum PreviewCachePolicy {
         #endif
     }
 
+    /// Cache Size Limit as Settings stored it (Mac Settings › Sources ›
+    /// Previews, FS-18.04 §3 AC-76); the platform default when unset or not
+    /// one of the choices.
+    static func limit(from defaults: UserDefaults = .standard) -> Int {
+        let stored = defaults.integer(forKey: SettingsKeys.previewCacheLimitGB)
+        return limitChoices.contains(stored) ? stored : defaultLimit
+    }
+
     /// Gigabytes the way Finder and Settings count them.
     static func bytes(gigabytes: Int) -> Int64 {
         Int64(gigabytes) * 1_000_000_000

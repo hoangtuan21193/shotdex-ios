@@ -22,18 +22,66 @@ final class MacDependencies: LibraryServices {
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
+    /// Index results shared over iCloud; nil in the demo library.
+    let indexShare: IndexShareService?
     let sources: SourceStore
+    /// The Library window's model, for Settings › Sources › Index to read
+    /// progress from; nil until the window has opened.
+    var library: LibraryModel?
+    let fileServers: FileServerStore
+    let folderRoots: FolderSourceRoots
+    /// One server call at a time per connection for Backup and the On Server
+    /// check (FS-19.07 §5).
+    let connectionLock: ConnectionLock
+    /// Backup jobs and their ledger (FS-22).
+    let backups: BackupStore
+    /// Runs the jobs while the app is open — until the login-item helper
+    /// takes them over (FS-22.06 §2).
+    let backupCoordinator: BackupCoordinator
+    /// Sends job commands to the helper, or to `backupCoordinator` when the
+    /// app runs the jobs itself (FS-22.06 §2).
+    let backupControl: MacBackupControl
+    let folderSources: FolderSourceRunner
+    let serverSources: ServerSourceRefresh
+    /// Sources in the sidebar: adding a server source, rescans (FS-19).
+    let sourcesModel: SourcesModel
+    /// Whether each Photos item has a byte-identical copy on a server
+    /// source (FS-19.07, §11 for the Mac).
+    let onServerCheck: OnServerCheck
+    /// Which Photos items have every original on this Mac (FS-06.10). The
+    /// app runs it while it is in front; the helper never starts it.
+    let originalPresenceCheck: OriginalPresenceCheck
+    /// Asks the server again before a Photos item that relies on it is
+    /// deleted (FS-19.07 §9).
+    let photoDeletionGate: PhotoDeletionGate
+    let smartAlbums: SmartAlbumStore
+    /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
+    /// read their progress here.
+    let commonPhotos: MacCommonPhotosRuns
+    /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
+    /// the helper does not run jobs.
+    let gatherer: MacCommonPhotosGatherer
+    /// The Compare window's row and scan (FS-19.08 §6d), set by the sheet
+    /// that opens it.
+    var commonPhotosCompare: MacCommonPhotosCompareModel?
 
-    init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
+    /// `originalCheck`: the demo library's stand-in for the PhotoKit probe;
+    /// nil everywhere else.
+    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false,
+         originalCheck: OriginalPresenceCheck.Environment? = nil, watchesOriginals: Bool = true) {
         self.database = database
         self.photoLibrary = photoLibrary
         metadataStore = MetadataStore(database: database)
         let indexTraffic = IndexTrafficMonitor()
         self.indexTraffic = indexTraffic
+        let indexShare = sharesIndex ? IndexShareService(store: SharedIndexStore(database: database)) : nil
+        self.indexShare = indexShare
         indexPipeline = IndexPipeline(
             metadataStore: MetadataStore(database: database),
             exifReader: ExifReader(trafficMonitor: indexTraffic),
-            interactionGate: IndexInteractionGate()
+            interactionGate: IndexInteractionGate(),
+            sharedIndex: indexShare,
+            readsOriginalsOnly: { IndexReadPolicy.readsOriginalsOnly }
         )
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
@@ -44,9 +92,147 @@ final class MacDependencies: LibraryServices {
         networkStatus = NetworkMonitor()
         powerStatus = PowerMonitor()
         sources = SourceStore(database: database)
+        let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        self.fileServers = fileServers
+        let folderRoots = FolderSourceRoots(database: database)
+        self.folderRoots = folderRoots
+        let connectionLock = ConnectionLock()
+        self.connectionLock = connectionLock
+        let backups = BackupStore(database: database)
+        self.backups = backups
+        backupCoordinator = BackupCoordinator(store: backups, environment: .live(
+            database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
+        ))
+        let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
+        self.folderSources = folderSources
+        let serverSources = ServerSourceRefresh(database: database, servers: fileServers,
+                                                composer: MetadataComposer(sensorLookup: SensorLookup(
+                                                    records: (try? SensorDatabaseLoader().loadRecords()) ?? [],
+                                                    customMappings: (try? metadataStore.customMappings()) ?? [])),
+                                                thumbnails: .standard,
+                                                makeClient: { server, password in
+                                                    LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: password),
+                                                                           lock: connectionLock, connectionId: server.id, priority: .normal)
+                                                })
+        self.serverSources = serverSources
+        let sourcesModel = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
+        // Thumbnails written since the last launch may have passed Cache Size
+        // Limit (AC-76): held to it once per launch, off the main actor.
+        Task.detached(priority: .background) {
+            PreviewCacheStore.standard.trim(to: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()))
+        }
+        self.sourcesModel = sourcesModel
+        onServerCheck = OnServerCheck(environment: .live(
+            database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            // FS-19.07 §12.1: the Mac hashes everything for the other devices
+            // while it shares the index.
+            hashesEverything: { [hasIndexShare = indexShare != nil] in hasIndexShare && IndexShareService.sharesIndex },
+            indexShare: indexShare,
+            listingChanged: { await sourcesModel.serverListingChanged() }
+        ))
+        backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary,
+                                         onServerCheck: onServerCheck, database: database)
+        #if DEBUG
+        OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
+        #endif
+        let originalPresenceCheck = OriginalPresenceCheck(environment: originalCheck ?? .live(database: database, gate: nil))
+        self.originalPresenceCheck = originalPresenceCheck
+        // The app's own: the login-item helper never runs the check, so it
+        // must not write its tables behind the app's back either.
+        if watchesOriginals {
+            photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
+        }
+        photoDeletionGate = PhotoDeletionGate(
+            database: database,
+            connect: { connectionId in
+                guard let server = try? fileServers.fetch(id: connectionId) else { return nil }
+                let client = LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                                    lock: connectionLock, connectionId: server.id, priority: .normal)
+                return (client, server.folder)
+            },
+            relist: { sourceId in _ = await serverSources.rescan(sourceId: sourceId) }
+        )
+        photoLibrary.deletionGate = photoDeletionGate
+        smartAlbums = SmartAlbumStore(database: database)
+        commonPhotos = MacCommonPhotosRuns(database: database, servers: fileServers, refresh: serverSources) { server in
+            LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                   lock: connectionLock, connectionId: server.id, priority: .normal)
+        }
+        gatherer = MacCommonPhotosGatherer(database: database, servers: fileServers, runs: commonPhotos) { server in
+            LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                   lock: connectionLock, connectionId: server.id, priority: .normal)
+        }
     }
 
-    static func live() -> MacDependencies {
+    private var gathersInApp = false
+
+    /// The app's side of Keep gathering (FS-19.08 §6c), once: its own
+    /// passes while the helper does not run jobs, and what the helper
+    /// changed read again. Never in the helper, which starts its own.
+    func startGatheringInApp() {
+        guard !gathersInApp else { return }
+        gathersInApp = true
+        let runs = commonPhotos
+        gatherer.isOn = { !MacAgentLink.agentRunsJobs }
+        #if DEBUG
+        // The demo library's database is not the helper's: the app gathers.
+        if MacDemoLibrary.isOn { gatherer.isOn = { true } }
+        #endif
+        gatherer.onChange = { runs.storeChanged() }
+        MacAgentLink.observe(MacAgentLink.commonPhotosChanged) { runs.storeChanged() }
+        gatherer.start()
+    }
+
+    /// Run Now (Activity): the helper's pass when it runs jobs, else ours.
+    func gatherNow(watchId: String) {
+        if MacAgentLink.agentRunsJobs {
+            MacAgentLink.post(.init(action: .gatherNow, jobId: watchId))
+        } else {
+            gatherer.gatherNow(watchId: watchId)
+        }
+    }
+
+    /// A set was turned on or off: the helper starts for it, or re-reads.
+    func watchesChanged() {
+        #if DEBUG
+        // The demo database is not the helper's: never register it for one.
+        if MacDemoLibrary.isOn { return }
+        #endif
+        MacAgentLink.ensureAgent(hasWork: MacCommonPhotosGatherer.hasWork(database))
+        MacAgentLink.post(.init(action: .watchesChanged, jobId: nil))
+    }
+
+    /// A client for `server` whose every call waits its turn on the
+    /// connection's lock (FS-19.07 §5) — what anything browsing a
+    /// connection uses, never a bare `RemoteFileClientFactory.make`.
+    func lockedClient(for server: FileServer, priority: ConnectionLock.Priority = .normal) -> any RemoteFileClient {
+        LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                               lock: connectionLock, connectionId: server.id, priority: priority)
+    }
+
+    /// Move / Delete / Hide across sources (FS-19.04), as on iOS: Photos
+    /// through PhotoKit's dialog, files to the Trash of their volume, NAS
+    /// copies hidden — never deleted on the server.
+    var sourceDeletion: SourceDeletionContext {
+        let database = database
+        let photoLibrary = photoLibrary
+        let roots = folderRoots
+        return SourceDeletionContext(
+            makeService: {
+                DeletionService(
+                    database: database,
+                    deletePhotosAssets: { ids in try await photoLibrary.deleteAssetsCheckingServer(PhotoLibraryService.fetchAssets(ids: ids)) },
+                    root: { roots.root($0) }
+                )
+            },
+            makeQueries: { DeletionTargetQueries(database: database, hasTrash: { roots.hasTrash($0) }) },
+            showBanner: nil
+        )
+    }
+
+    /// `inHelper`: the login-item helper's copy, which leaves the
+    /// original check alone (FS-06.10).
+    static func live(inHelper: Bool = false) -> MacDependencies {
         let database: AppDatabase
         do {
             database = try AppDatabase.makeShared()
@@ -54,7 +240,8 @@ final class MacDependencies: LibraryServices {
             assertionFailure("Failed to open database: \(error)")
             database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         }
-        return MacDependencies(database: database, photoLibrary: PhotoLibraryService())
+        return MacDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true,
+                               watchesOriginals: !inHelper)
     }
 }
 
@@ -66,7 +253,11 @@ final class MacIndexActivity: IndexRunAssertion {
 
     func beginRunAssertion(onExpiry: @escaping @MainActor () -> Void) {
         guard activity == nil else { return }
-        activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled],
+        // App Nap never throttles a run; the Mac stays awake for it only when
+        // Settings › Sources › Prevent Sleep While Indexing is on.
+        // On unless turned off (an overnight index of a whole library should finish).
+        let preventsSleep = UserDefaults.standard.object(forKey: SettingsKeys.preventsSleepWhileIndexing) as? Bool ?? true
+        activity = ProcessInfo.processInfo.beginActivity(options: preventsSleep ? .userInitiated : .userInitiatedAllowingIdleSystemSleep,
                                                          reason: "Indexing the photo library")
     }
 

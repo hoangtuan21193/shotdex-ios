@@ -67,6 +67,11 @@ struct PhotoFilterMenu<SortContent: View>: View {
             Toggle(isOn: criteria.favoritesOnly) {
                 Label("Favorites", systemImage: "heart")
             }
+            // Right after Favorites, as the board draws it (FS-06.10 §4): the
+            // same one-tap narrowing, answered by the original check.
+            Toggle(isOn: criteria.originalOnDeviceOnly) {
+                Label(OriginalPresence.filterTitle, systemImage: "iphone")
+            }
             // Two flat rows right after Favorites — one tap, like Favorites —
             // and the stars as a submenu (FS-01.12 §7).
             Toggle(isOn: flagBinding(criteria, .picks)) {
@@ -151,5 +156,57 @@ struct PhotoFilterMenu<SortContent: View>: View {
                 }
             }
         )
+    }
+}
+
+private struct OriginalOnDeviceWatch: ViewModifier {
+    @Environment(AppDependencies.self) private var dependencies
+    var isActive: Bool
+    /// Selection is in progress: a reload would pull tiles out from under it.
+    var isPaused: Bool
+    var reload: @MainActor () async -> Void
+
+    @State private var reloader: OriginalOnDeviceReloader?
+    @State private var isOnScreen = false
+
+    func body(content: Content) -> some View {
+        let generation = dependencies.originalPresenceCheck.generation
+        return content
+            .onAppear {
+                isOnScreen = true
+                sync()
+            }
+            .onDisappear {
+                isOnScreen = false
+                sync()
+            }
+            .onChange(of: isActive) { sync() }
+            .onChange(of: isPaused) { sync() }
+            .onChange(of: generation) { sync() }
+    }
+
+    private func sync() {
+        let check = dependencies.originalPresenceCheck
+        let hooks = OriginalOnDeviceReloader.Hooks(
+            open: { check.screenOpened() },
+            close: { check.screenClosed() },
+            reload: reload
+        )
+        let reloader = reloader ?? OriginalOnDeviceReloader(hooks: hooks)
+        if self.reloader == nil { self.reloader = reloader }
+        // The screen's closure captures its current model; keep the latest.
+        reloader.hooks = hooks
+        reloader.update(isActive: isActive, isOnScreen: isOnScreen, isPaused: isPaused, generation: check.generation)
+    }
+}
+
+extension View {
+    /// See `OriginalOnDeviceReloader`.
+    func watchesOriginalOnDevice(
+        _ isActive: Bool,
+        isPaused: Bool = false,
+        reload: @escaping @MainActor () async -> Void
+    ) -> some View {
+        modifier(OriginalOnDeviceWatch(isActive: isActive, isPaused: isPaused, reload: reload))
     }
 }

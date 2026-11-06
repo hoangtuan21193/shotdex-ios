@@ -40,6 +40,8 @@ final class SmartAlbumDetailModel {
     /// list so the grid animates the tiles out instead of reloading.
     private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoading = false
+    /// Which `load()` is the latest; earlier ones finishing late are dropped.
+    @ObservationIgnored private var loadToken = 0
     /// Source names by id, for the Source chip (FS-19.07 §7).
     private(set) var sourceNames: [String: String] = [:]
     /// The on-server check's line under the conditions, when a condition
@@ -52,15 +54,16 @@ final class SmartAlbumDetailModel {
     /// Library). Cache misses paint placeholders while the chunk resolves.
     @ObservationIgnored private let assetCache: AsyncChunkedLookupCache<PHAsset>
 
-    init(album: SmartAlbum, dependencies: AppDependencies) {
-        self.libraryQueries = dependencies.libraryQueries
-        self.metadataStore = dependencies.metadataStore
-        self.photoLibrary = dependencies.photoLibrary
-        self.pipeline = dependencies.indexPipeline
+    init(album: SmartAlbum, libraryQueries: LibraryQueries, metadataStore: MetadataStore,
+         photoLibrary: PhotoLibraryService, pipeline: IndexPipeline, database: AppDatabase) {
+        self.libraryQueries = libraryQueries
+        self.metadataStore = metadataStore
+        self.photoLibrary = photoLibrary
+        self.pipeline = pipeline
         self.query = album.query
         self.albumId = album.id
-        self.sourceStore = SourceStore(database: dependencies.database)
-        self.database = dependencies.database
+        self.sourceStore = SourceStore(database: database)
+        self.database = database
         self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
@@ -89,13 +92,25 @@ final class SmartAlbumDetailModel {
         }
         let queries = OnServerProgressQueries(database: database)
         let folder = rule.folder
+        let caught = check.caughtDevices
+        let shared = SharedIndexStore(database: database)
         let progress = (try? await Task.detached { try queries.progress(sourceId: rule.text, folder: folder) }.value)
             ?? OnServerProgress()
+        let names = (try? await Task.detached { try shared.deviceNames(caught) }.value) ?? [:]
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
         onServerLines = OnServerProgressLine.lines(.init(
             progress: progress, wait: wait, finishedAt: check.finishedAt,
-            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited
+            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited,
+            mismatchFrom: caught.map { names[$0] }, thisDevice: Self.thisDevice
         ))
+    }
+
+    private static var thisDevice: OnServerProgressLine.ThisDevice {
+        #if os(macOS)
+        .mac
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? .iPad : .iPhone
+        #endif
     }
 
     func setSortOrder(_ order: AlbumSortOrder) async {
@@ -119,6 +134,8 @@ final class SmartAlbumDetailModel {
 
     func load() async {
         isLoading = true
+        loadToken &+= 1
+        let token = loadToken
         sourceNames = Dictionary(((try? sourceStore.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
         var filters: [LibraryQueries.IndexFilter] = [.query(query)]
         if let advanced = filter.advancedQuery {
@@ -134,9 +151,11 @@ final class SmartAlbumDetailModel {
         let total = filter.isActive
             ? ((try? await libraryQueries.count(matchingAll: [.query(query)])) ?? 0)
             : rows.count
-        // A newer filter or order has started its own load, and that load —
-        // not this one — says when loading is over.
-        guard requested == (filter, sortOrder) else { return }
+        // A newer load has started — a new filter or order, or a reload for
+        // fresh data (an original-check batch, FS-06.10) — and that load, not
+        // this one, says what the grid shows and when loading is over. Without
+        // the token an older load finishing last would put stale rows back.
+        guard token == loadToken, requested == (filter, sortOrder) else { return }
         isLoading = false
         unfilteredCount = total
         // The library-change reload after our own delete returns the list we

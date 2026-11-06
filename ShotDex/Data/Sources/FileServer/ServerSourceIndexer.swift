@@ -139,26 +139,9 @@ struct ServerSourceIndexer: Sendable {
         return summary
     }
 
-    /// Every photo and sidecar under `folder`, depth first; dot names are
-    /// dropped, as on a drive (FS-19.03 §2).
+    /// Every photo and sidecar under `folder` (`ServerTreeListing`).
     func list(_ folder: String) async throws -> [FolderEnumeration.Entry] {
-        var out: [FolderEnumeration.Entry] = []
-        var pending = [""]
-        while let relative = pending.popLast() {
-            try Task.checkCancellation()
-            for entry in try await client.entries(in: ServerUploadPath.join(folder, relative)) where !entry.name.hasPrefix(".") {
-                let path = relative.isEmpty ? entry.name : relative + "/" + entry.name
-                if entry.isDirectory {
-                    pending.append(path)
-                    continue
-                }
-                let url = URL(fileURLWithPath: entry.name)
-                let isSidecar = url.pathExtension.lowercased() == "xmp"
-                guard isSidecar || FolderEnumeration.isReadable(url) else { continue }
-                out.append(FolderEnumeration.Entry(relativePath: path, size: entry.size, modified: entry.modified, isSidecar: isSidecar))
-            }
-        }
-        return out.sorted { $0.relativePath < $1.relativePath }
+        try await ServerTreeListing.list(folder, client: client)
     }
 
     /// The unit's files for the on-server check (FS-19.07 §5): the primary,

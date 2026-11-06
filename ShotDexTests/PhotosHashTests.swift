@@ -42,6 +42,45 @@ import UniformTypeIdentifiers
         #expect(try store.photosCopiesNeedingHash(limit: 10).map(\.assetId) == ["gone"])
     }
 
+    /// FS-19.07 AC-114: the Photos side lists what joined the library last
+    /// first — a picture imported today with a 2017 capture date must not
+    /// wait behind 55,000 older shots — then newest capture first.
+    @Test func listsRecentlyAddedFirst() throws {
+        let database = try AppDatabase.makeEmpty()
+        var imported = PhotoMarksStoreTests.record("A", created: 1_500_000_000)
+        imported.indexedAt = 1_800_000_000
+        var recentShot = PhotoMarksStoreTests.record("B", created: 1_750_000_000)
+        recentShot.indexedAt = 1_700_000_000
+        var olderShot = PhotoMarksStoreTests.record("C", created: 1_600_000_000)
+        olderShot.indexedAt = 1_700_000_000
+        try MetadataStore(database: database).saveBatch([olderShot, imported, recentShot], cursorAssetId: nil)
+
+        let queue = try CopyFileStore(database: database).photosCopiesNeedingListing(limit: 10)
+        #expect(queue.map(\.assetId) == ["A", "B", "C"])
+    }
+
+    /// A photo deleted from Photos takes its listed files and hashes with
+    /// it — they were left behind, unreachable, for every deleted photo.
+    @Test func deletedPhotoTakesItsFiles() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadata = MetadataStore(database: database)
+        try metadata.saveBatch(["A", "B"].map { PhotoMarksStoreTests.record($0) }, cursorAssetId: nil)
+        let store = CopyFileStore(database: database)
+        for copy in try store.photosCopiesNeedingListing(limit: 10) {
+            try store.saveListing(copyId: copy.copyId, stamp: copy.stamp,
+                                  files: [PhotosFile(fileKey: "1:\(copy.assetId).HEIC", role: .photo, size: 4_000, stamp: "s")])
+        }
+
+        try metadata.deleteAssets(ids: ["A"])
+
+        let left = try database.reader.read { db in
+            (try String.fetchAll(db, sql: "SELECT fileKey FROM copy_files ORDER BY fileKey"),
+             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_file_listings") ?? 0)
+        }
+        #expect(left.0 == ["1:B.HEIC"])
+        #expect(left.1 == 1)
+    }
+
     /// FS-19.07 AC-100: assets Backup already copied, whose files still
     /// carry the stamp the ledger recorded, get the ledger's SHA-256 for
     /// every file — listed from PhotoKit, nothing downloaded, though the NAS
@@ -105,6 +144,53 @@ import UniformTypeIdentifiers
         #expect(summary.hashed == 10)
         #expect(downloads.ids == (0..<10).map { "P\($0 * 7)" }.reversed())
         #expect(try CopyFileStore(database: database).photosCandidates(triedBefore: .distantFuture, limit: 1_000).isEmpty)
+    }
+
+    /// FS-19.07 AC-144 (§12.1): the Mac hashing for every device takes every
+    /// file — none has a file of its size on a server here — newest first,
+    /// one temporary file at a time, nothing left after. Off, none is taken.
+    @Test func macHashesEveryItem() async throws {
+        let (database, base, downloads) = try Self.library(count: 4)
+        var pass = base
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("OnServer-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        pass.workDirectory = work
+        #expect(try await pass.run().hashed == 0)
+        // Indexed in the opposite order to capture, P3 with no metadata: the
+        // last indexed goes first, the one without a row last.
+        try await database.writer.write { db in
+            for n in 0..<3 { try db.execute(sql: "UPDATE photo_metadata SET indexedAt = ? WHERE assetId = ?", arguments: [2_000 - n, "P\(n)"]) }
+            try db.execute(sql: "DELETE FROM photo_metadata WHERE assetId = 'P3'")
+        }
+
+        pass.hashesEverything = true
+        let summary = try await pass.run(now: Date().addingTimeInterval(1))
+
+        #expect(summary.hashed == 4)
+        #expect(downloads.ids == ["P0", "P1", "P2", "P3"])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: work.path).isEmpty)
+        #expect(try (0..<4).allSatisfy { try CopyFileStore(database: database).files(copyId: "photos:P\($0)").first?.origin == .hashed })
+    }
+
+    /// FS-19.07 AC-149 (§12.3): on the very first pass, what another device
+    /// hashed is taken right after listing — before the pass picks what to
+    /// download — so the first round downloads only the rest.
+    @Test func adoptsBeforeDownloading() async throws {
+        let (database, base, downloads) = try Self.library(count: 2)
+        var pass = base
+        pass.hashesEverything = true
+        let sha = String(repeating: "c", count: 64)
+        pass.adoptListed = { copyIds, now in
+            #expect(Set(copyIds) == ["photos:P0", "photos:P1"])
+            let filled = try? CopyFileStore(database: database).saveHash(sha, copyId: "photos:P0", fileKey: "1:IMG_0.HEIC",
+                                                                       origin: .shared, sharedFrom: "MAC", at: now)
+            return filled == true ? 1 : 0
+        }
+
+        let summary = try await pass.run()
+
+        #expect(summary.adopted == 1 && summary.hashed == 1)
+        #expect(downloads.ids == ["P1"])
     }
 
     /// FS-19.07 AC-82: three candidates are downloaded one temporary file at

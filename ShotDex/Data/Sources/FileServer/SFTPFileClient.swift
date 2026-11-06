@@ -267,6 +267,27 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// No streams here: what a copy carries is the file's info.
+    func sourceInfo(at path: String) async throws -> RemoteFileInfo? { try await fileInfo(at: path) }
+
+    func fileInfo(at path: String) async throws -> RemoteFileInfo? {
+        do {
+            let attributes = try await connected().getAttributes(at: path)
+            if let permissions = attributes.permissions, permissions & 0o170000 == 0o040000 { return nil }
+            return RemoteFileInfo(modified: attributes.accessModificationTime?.modificationTime ?? .distantPast,
+                                  isReadOnly: attributes.permissions.map { $0 & 0o222 == 0 } ?? false)
+        } catch {
+            if Self.isNotFound(error) { return nil }
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// Citadel has no public `setstat` (FS-19.08 §6e, decided 2026-11-05):
+    /// an SFTP copy keeps the date it was written.
+    func setFileInfo(_ info: RemoteFileInfo, at path: String) async throws -> FileInfoSupport {
+        .unsupported
+    }
+
     func remove(_ path: String) async throws {
         do {
             try await connected().remove(at: path)

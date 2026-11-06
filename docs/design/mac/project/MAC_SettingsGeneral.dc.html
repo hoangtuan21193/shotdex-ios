@@ -14,7 +14,7 @@ button{font-family:inherit;padding:0;margin:0;cursor:default}
 input{font-family:inherit}
 </style>
 </helmet>
-<div style="width: 720px; height: 640px; position: relative; overflow: hidden; border-radius: 16px; background: {{S.win}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
+<div style="width: 720px; height: 920px; position: relative; overflow: hidden; border-radius: 16px; background: {{S.win}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
 <!-- TITLE BAR + PANE TOOLBAR (noncustomizable, always visible) -->
 <div style="position:absolute;left:0;right:0;top:0;height:84px;background:{{S.bar}};border-bottom:1px solid {{t.sep}}">
 <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div></div>
@@ -40,6 +40,7 @@ input{font-family:inherit}
 <sc-if value="{{r.status}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:5px;font-size:11px;line-height:14px;color:{{r.statusColor}};white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums"><span style="flex:none;width:7px;height:7px;border-radius:4px;background:{{r.statusDot}}"></span>{{r.status}}</span></sc-if>
 <sc-if value="{{r.bar}}" hint-placeholder-val="{{false}}"><div style="height:4px;border-radius:2px;background:{{t.track}};margin-top:3px;width:240px"><div style="width:{{r.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
 </div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;opacity:{{r.ctlOp}}">
 <sc-if value="{{r.value}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:13px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{r.value}}</span></sc-if>
 <sc-if value="{{r.checks}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:grid;grid-template-columns:repeat(3, auto);gap:6px 16px"><sc-for list="{{r.checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:6px;font-size:13px;line-height:16px;color:{{t.label}};white-space:nowrap"><input type="checkbox" checked="{{c.on}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{c.bg}};border:{{c.border}};display:flex;align-items:center;justify-content:center;color:{{t.onAccentFill}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{c.label}}</label></sc-for></div></sc-if>
 <sc-if value="{{r.field}}" hint-placeholder-val="{{false}}"><input value="{{r.field}}" aria-label="{{r.label}}" style="flex:none;width:{{r.fieldW}};height:28px;border-radius:8px;border:1px solid {{t.sep}};background:{{S.fieldBg}};padding:0 8px;box-sizing:border-box;font-size:13px;color:{{t.label}};outline:none"></sc-if>
@@ -48,6 +49,7 @@ input{font-family:inherit}
 <sc-if value="{{r.btns}}" hint-placeholder-val="{{false}}"><div style="flex:none;display:flex;gap:8px"><sc-for list="{{r.btns}}" as="b" hint-placeholder-count="1"><button aria-label="{{b.aria}}" disabled="{{b.disabled}}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-size:13px;font-weight:{{b.weight}};white-space:nowrap">{{b.label}}</button></sc-for></div></sc-if>
 <sc-if value="{{r.sw}}" hint-placeholder-val="{{false}}"><label style="flex:none;position:relative;width:32px;height:18px;border-radius:9px;background:{{r.swBg}}"><input type="checkbox" role="switch" checked="{{r.on}}" aria-label="{{r.label}}" style="position:absolute;inset:0;opacity:0;margin:0"><span style="position:absolute;top:2px;left:{{r.knob}};width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></label></sc-if>
 </div>
+</div>
 </sc-for>
 </div>
 <sc-if value="{{s.foot}}" hint-placeholder-val="{{false}}"><div style="font-size:11px;line-height:14px;color:{{t.label2}};padding:0 4px">{{s.foot}}</div></sc-if>
@@ -55,10 +57,9 @@ input{font-family:inherit}
 </sc-for>
 </div>
 </div>
-<div aria-hidden="true" style="position:absolute;right:3px;top:88px;width:7px;height:471px;border-radius:4px;background:{{S.scroller}}"></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":720,"height":640}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"needsApproval":{"editor":"boolean","default":false},"iCloudFull":{"editor":"boolean","default":false},"$preview":{"width":720,"height":920}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -99,6 +100,7 @@ const I = {
   onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
   album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
   smart:'M4 9h16v11H4z M6.5 6h11 M9 3h6 M12 12v5 M9.5 14.5h5',
+  backup:'M12 3a9 9 0 1 1-8.5 6 M3.5 4v5h5 M12 7.5V12l3 2',
   stats:'M3 20h18 M6.5 16.5v-5 M11.5 16.5V6 M16.5 16.5v-8',
   places:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
   trips:'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8.5v.01',
@@ -148,7 +150,7 @@ function sidebar(t, o){
     {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
-    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Backup',I.backup,'2'),row('Statistics',I.stats),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
   ];
 }
 const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
@@ -244,7 +246,7 @@ function ui(dark){
       icon:null, iconBg:TILE.blue, iconFg:'#FFFFFF', iconSize:'28px', iconRadius:'8px', glyph:'16',
       sw:false, on:false, swBg:t.track, knob:'2px', popup:null, popupW:'auto', seg:null, btns:null, checks:null,
       field:null, fieldW:'160px', bar:null, tag:null, tagBg:t.fill, tagFg:t.label2, labelColor:t.label,
-      weight:'400', h:'34px', sepTop:false, swatch:null }, o);
+      weight:'400', h:'34px', sepTop:false, swatch:null, ctlOp:'1' }, o);
   const sections = (list) => list.map(s => Object.assign({ title:null, aside:null, foot:null }, s,
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
@@ -260,24 +262,48 @@ class Component extends DCLogic {
     const dark = !!this.props.dark;
     const k = ui(dark); const t = k.t; const S = k.S;
     const { seg, btn, chk, sw, status, row, sections } = k;
+    const approval = !!this.props.needsApproval;
+    const iCloudFull = !!this.props.iCloudFull;
+    // Not on the Mac yet: label and control dimmed, the reason at full contrast (FS-18.04 §3).
+    const dim = (r) => Object.assign(r, { ctlOp:'0.45', labelColor:t.label3, sub:'Available in a later version',
+      swBg:t.track, knob:'2px', on:false, field:null, h: r.h === '34px' ? '44px' : r.h });
 
     const general = sections([
-      { title:'Library', rows:[
-        row({ label:'Group Photos By', popup:'Day', popupW:'170px' }),
-        row({ label:'Open Photos', seg: seg(['In the Same Window','In a New Window'], 0) })
-      ], foot:'Thumbnail size: View › Zoom In and Zoom Out (⌘+ and ⌘−), or pinch on the trackpad.' },
       { title:'Thumbnails', rows:[
-        row(Object.assign({ label:'File Type Badge', sub:'RAW, HEIC, JPG in the corner of each thumbnail' }, sw(false), { h:'44px' })),
-        row({ label:'Info on Thumbnails', h:'82px', checks:[chk('File Name',true),chk('Capture Time',false),chk('ISO',true),
+        row(Object.assign({ label:'File Type Badge', sub:'RAW, HEIC, JPG in the corner of each thumbnail' }, sw(true), { h:'44px' })),
+        row({ label:'Info on Thumbnails', h:'82px', checks:[chk('File Name',false),chk('Capture Time',false),chk('ISO',true),
               chk('Aperture',true),chk('Shutter Speed',false),chk('Focal Length',true),chk('Megapixels',false),chk('File Size',false)] }),
         row({ label:'Focal Length', seg: seg(['Actual','Full-Frame Equivalent'], 0) })
       ]},
+      // FS-18.04 §3 (2026-11-04): the Mac has no viewer, Statistics screen or reminder yet — dimmed, in place.
       { title:'Viewing and Reminders', rows:[
-        row(Object.assign({ label:'View Full HDR', sub:'Brighter highlights on XDR and HDR displays' }, sw(false), { h:'44px' })),
-        row(Object.assign({ label:'Autoplay Videos' }, sw(true))),
-        row(Object.assign({ label:'Show Insights in Statistics' }, sw(true))),
-        row(Object.assign({ label:'On This Day Reminder', sub:'A notification each day with photos from this date', field:'9:00 AM', fieldW:'84px' }, sw(true), { h:'44px' }))
-      ]}
+        dim(row(Object.assign({ label:'View Full HDR' }, sw(false)))),
+        dim(row(Object.assign({ label:'Autoplay Videos' }, sw(true)))),
+        dim(row(Object.assign({ label:'Show Insights in Statistics' }, sw(true)))),
+        dim(row(Object.assign({ label:'On This Day Reminder', field:'9:00 AM', fieldW:'84px' }, sw(true))))
+      ]},
+      // Intents 2026-11-02-mac-local-only-index + -icloud-shared-index: read only originals on this Mac,
+      // share results over iCloud, and let the Mac index for iPhone and iPad (they read only local originals).
+      { title:'Indexing', rows:[
+        row(Object.assign({ label:'Index Only Photos Downloaded to This Mac', sub:'Photos stored only in iCloud are left for your other devices, or for Index Now' }, sw(false), { h:'44px' })),
+        row({ label:'Not Indexed on This Mac', sub:'1,284 photos without camera info', btns:[btn('Index Now')], h:'44px' }),
+        row(Object.assign({ label:'Share Index Across Devices', sub:'Each photo is read once, by whichever device gets to it first' }, sw(true), { h:'44px' })),
+        row(Object.assign({ label:'Index for iPhone and iPad', sub:'Your iPhone and iPad read only photos stored on them and take the rest from this Mac' }, sw(false), { h:'44px' }))
+      // iCloudFull tweak (2026-11-05): CloudKit refused the push with quotaExceeded; results wait in the outbox,
+      // the footer says so instead of "Last synced" until a push empties the queue.
+      ], foot: iCloudFull
+        ? 'Your iCloud storage is full, so results from this Mac are not reaching your other devices. They go up once there is room; indexing on this Mac is not affected.'
+        : 'Results go to your own iCloud account only. Last synced 2 minutes ago.' },
+      // FS-22.06 §5.4: one helper runs Backup and On Server checks after Quit; awake row replaces Servers' "While Uploading".
+      // needsApproval tweak (AC-46): the user turned ShotDex off in System Settings › Login Items; the switch stays on
+      // (it is what the user wants), the row says why nothing runs after Quit and opens the right place.
+      { title:'Background', rows:[
+        approval
+          ? row(Object.assign({ label:'Keep Working After Quit', btns:[btn('Open Login Items Settings')], h:'44px' },
+                status('warn', 'Needs Approval'), sw(true)))
+          : row(Object.assign({ label:'Keep Working After Quit' }, sw(true))),
+        row({ label:'Keep Mac Awake While Copying', popup:'On Power Adapter', popupW:'170px' })
+      ], foot: approval ? 'Backups stop when you quit ShotDex.' : 'Backups and On Server checks continue in the background.' }
     ]);
 
     return { t, S, panes: panes(t, 'General'), paneTitle: 'General', general };

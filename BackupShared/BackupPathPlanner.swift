@@ -14,6 +14,10 @@ struct BackupPlacementInput: Sendable {
     /// The album (Photos) or subfolder (FS-19) the Album level files it under;
     /// nil = not in one.
     var album: String?
+    /// Same as Source (Common Photos, FS-19.08 §6e): the folders the file
+    /// sits in under the first folder of the set, `/`-separated; "" = at its
+    /// top.
+    var sourceFolder: String?
 }
 
 /// Turns a job's Organize settings into a destination path (FS-22.01 §3–§5).
@@ -33,7 +37,7 @@ struct BackupPathPlanner: Sendable {
         case .yearMonth: [.together, .apartAtTop, .apartInYear, .apartInMonth]
         case .yearDate: [.together, .apartAtTop, .apartInYear, .apartInDay]
         case .dateOnly: [.together, .apartAtTop, .apartInDay]
-        case .album, .noFolders: [.together, .apartAtTop]
+        case .album, .noFolders, .sameAsSource: [.together, .apartAtTop]
         }
     }
 
@@ -53,6 +57,7 @@ struct BackupPathPlanner: Sendable {
         case .dateOnly: [(names.day(date, organize: organize), .apartInDay)]
         case .album: [(input.album.map(BackupDateName.safeFolderName) ?? Self.unfiledFolder, nil)]
         case .noFolders: []
+        case .sameAsSource: (input.sourceFolder ?? "").split(separator: "/").map { (String($0), nil) }
         }
         levels = levels.map { (BackupDateName.safeFolderName($0.name), $0.videosAfter) }
 
