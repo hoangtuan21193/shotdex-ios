@@ -242,14 +242,17 @@ struct SmartAlbumRuleRow: View {
             }
         } label: {
             HStack {
+                // `Server        NAS Home ⌃⌄` like the Folder row under it; the
+                // menu label would tint a `.secondary` style, so the colour is
+                // named outright (board PH_SmartAlbumEditor).
                 if rule.field == .alsoOnServer {
                     Text(String(localized: "Server", comment: "Smart album Also on Server condition: the server row"))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.secondaryLabel))
                     Spacer()
                 }
                 Text(choiceLabel)
-                    .foregroundStyle(rule.text.isEmpty ? .secondary : Color.primary)
-                Spacer()
+                    .foregroundStyle(rule.text.isEmpty ? Color(.secondaryLabel) : Color.primary)
+                if rule.field != .alsoOnServer { Spacer() }
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption)
                     .foregroundStyle(.secondary)

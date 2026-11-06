@@ -53,6 +53,11 @@ struct ShotDexApp: App {
                 .environment(dependencies.unsupportedRAWIndex)
                 .environment(dependencies.photoMarks)
                 .environment(dependencies.fileServerCatalog)
+                // Full Access granted (or taken away): Keep in Photos starts
+                // or says why it waits (FS-06.12 AC-11).
+                .onChange(of: dependencies.photoLibrary.authorizationState) {
+                    dependencies.photosAlbumSync.setNeedsSync()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
