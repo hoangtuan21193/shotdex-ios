@@ -80,20 +80,14 @@ final class CommonPhotosScanModel {
             } else if phase == .done { recut() }
         }
     }
-    var action = CommonPhotosRun.Action.copy {
-        didSet {
-            // A Copy scan took earlier hashes on trust (FS-19.08 §6c); a
-            // Move deletes on them, so it scans again.
-            if action == .move, scannedTrustingCache, phase != .idle {
-                let hadQuick = photos.contains(where: \.isQuick)
-                resetScan()
-                notice = hadQuick ? .quickCleared : .moveChecksAgain
-            }
-        }
-    }
-    /// Quick Check (FS-19.08 §6e), Copy only, off until the user turns it
-    /// on: same path and size, three samples, no SHA-256. Turned off after
-    /// a quick scan, those results go — they were never read in full.
+    /// Copy or Move. The scan is the same for both (FS-19.08 §6c): switching
+    /// keeps its results. A Move asks each copy again for its size and write
+    /// time before removing it, and reads every byte of a Quick row first.
+    var action = CommonPhotosRun.Action.copy
+    /// Quick Check (FS-19.08 §6e), off until the user turns it on: same
+    /// path and size, three samples, no SHA-256 — a Move reads every byte of
+    /// those rows before it removes anything. Turned off after a quick scan,
+    /// those results go — they were never read in full.
     var quickCheck = false {
         didSet {
             if !quickCheck, oldValue, photos.contains(where: \.isQuick) {
@@ -180,8 +174,6 @@ final class CommonPhotosScanModel {
     private(set) var failureError: RemoteFileError?
     /// Saving what the last scan read, so the helper can wait for it.
     private var saving: Task<Void, Never>?
-    /// The scan shown took every known hash on trust (a Copy scan).
-    private var scannedTrustingCache = false
     /// Scan Everything (FS-19.08 §6c): check every photo, not only the new
     /// ones, even when the set gathered before.
     /// The results shown came from Scan Everything (FS-19.08 §6c): every
@@ -195,7 +187,7 @@ final class CommonPhotosScanModel {
     /// — the ones the results leave out.
     private(set) var alreadyGathered = 0
     /// Why the last results went (FS-19.08 §6c): said where they were.
-    enum Notice: Equatable { case moveChecksAgain, otherDestination, quickCleared, quickOff }
+    enum Notice: Equatable { case otherDestination, quickOff }
     private(set) var notice: Notice?
     /// The scan read only the sizes new to its set (its destination was
     /// known when it listed).
@@ -308,12 +300,11 @@ final class CommonPhotosScanModel {
     }
 
     /// A destination is set and Same photos are found: Copy N / Move N.
-    /// Never a Move on a scan that took earlier hashes on trust.
     var canRun: Bool {
         // Rows already in the destination still run on a Copy (recorded as
         // there, a missing sidecar added — §6), though the button leaves them
         // out of its count.
-        phase == .done && !isCutting && problem == nil && !includedPhotos.isEmpty && !(action == .move && scannedTrustingCache)
+        phase == .done && !isCutting && problem == nil && !includedPhotos.isEmpty
     }
 
     /// Photos the user left out, by SHA-256 (§6d): the run never touches them.
@@ -607,7 +598,6 @@ final class CommonPhotosScanModel {
         listedFiles = 0
         checkedFiles = 0
         bytesLeft = 0
-        scannedTrustingCache = false
         scansEverything = false
         lastGathered = nil
         alreadyGathered = 0
@@ -652,9 +642,6 @@ final class CommonPhotosScanModel {
         bytesLeft = 0
         // Ten updates a second at most: a big file's hash reports often.
         let lastUpdate = OSAllocatedUnfairLock(initialState: ContinuousClock.now - .seconds(1))
-        let trustsCache = action == .copy
-        // Set before any read: switching to Move mid-scan drops this scan.
-        scannedTrustingCache = trustsCache
         // What this scan reads, kept for the next one (FS-19.08 §6c) —
         // saved even when the scan stops partway.
         let read = OSAllocatedUnfairLock(initialState: [CommonPhotosFile: String]())
@@ -679,10 +666,10 @@ final class CommonPhotosScanModel {
                 }
             }
             let scanner = CommonPhotosScanner(client: watched)
-            // A Copy rescan takes unchanged day folders from the last listing
-            // (§6e); a Move, which deletes on what it lists, and Scan
-            // Everything list every folder.
-            let listings = action == .copy && !scansEverything
+            // A rescan takes unchanged day folders from the last listing
+            // (§6e); Scan Everything lists every folder. A file gone since is
+            // found by the run, which asks each copy again before it acts.
+            let listings = !scansEverything
                 ? database.map { CommonPhotosFolderListings(database: $0, connectionId: connectionId) } : nil
             let listing = try await scanner.list(folders, listings: listings)
             try Task.checkCancellation()
@@ -731,7 +718,7 @@ final class CommonPhotosScanModel {
             let storedOut = self.setKey.flatMap { key in try? self.leftOutStore?.entries(setKey: key) } ?? []
             let leftOutSizes = Set(storedOut.map(\.size) + self.leftOutPending.values.map(\.size))
             let found = try await CommonPhotosVerifier(client: watched).verify(
-                preview, folders: folders, knownHashes: known, trustsCache: trustsCache, quick: trustsCache && quickCheck,
+                preview, folders: folders, knownHashes: known, trustsCache: true, quick: quickCheck,
                 fullSizes: leftOutSizes,
                 hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
                 found: { [weak self] batch in

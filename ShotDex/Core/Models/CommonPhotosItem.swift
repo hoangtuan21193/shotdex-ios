@@ -89,7 +89,8 @@ struct CommonPhotosItem: Hashable, Sendable {
     var destinationWasThere = false
     /// How the photo was proven Same (FS-19.08 §6e); nil for runs before it.
     enum CheckMethod: String, Codable, Sendable {
-        /// Path, size and three samples (Quick Check, Copy only).
+        /// Path, size and three samples (Quick Check); a Move reads every
+        /// byte before it acts and records `full`.
         case quick
         /// SHA-256 of every byte.
         case full

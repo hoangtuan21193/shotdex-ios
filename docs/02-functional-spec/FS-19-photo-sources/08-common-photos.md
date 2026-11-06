@@ -152,9 +152,17 @@ Copy/Move vẫn là cùng bộ.
   `copy_files` hay `photo_metadata`.
 - Lần quét sau, file có **đường dẫn + cỡ + ngày sửa** trùng thì lấy SHA đã nhớ, không đọc byte nào. Ngày sửa chỉ dùng để
   biết file có đổi hay không, không bao giờ dùng để nói hai file giống nhau (giữ luật §5).
-- Chỉ lượt quét **Copy** tin SHA đã nhớ ở mọi folder: Copy không xoá gì và đọc lại SHA của bản nó ghi. Lượt quét
-  **Move** vẫn băm lại mọi bản ngoài folder đầu như §5, vì Move xoá trên những bản đó. Đổi Copy → Move sau hay trong
-  lúc quét thì kết quả bị bỏ, phải quét lại.
+- **Scan không phụ thuộc Copy hay Move** (người dùng 2026-11-06): scan chỉ băm và liệt kê ảnh chung, luôn tin SHA đã
+  nhớ ở mọi folder. Đổi Copy ↔ Move sau hay trong lúc quét **giữ nguyên kết quả**. Move vẫn an toàn vì lúc chạy hỏi lại
+  cỡ + ngày sửa từng bản trước khi đổi chỗ hay xoá (§6, AC-125), và đọc đủ byte mọi bản của hàng Quick (§6e).
+  **Rủi ro người dùng chấp nhận (2026-11-06):** SHA đã nhớ được tin theo đường dẫn + cỡ + ngày sửa; một file bị sửa mà
+  giữ nguyên cả cỡ lẫn ngày sửa (vd `exiftool -P` sửa tag cùng độ dài, khôi phục bản cũ cùng cỡ) vẫn được coi là Same
+  và Move có thể xoá nó. Người dùng chọn tốc độ hơn băm lại lúc chạy. Cặp Live có video Quick: video được đọc đủ byte
+  **trước** khi ảnh dời, lệch thì cả cặp ở yên.
+  (Trước 2026-11-06: lượt Copy tin SHA nhớ, đổi sang Move thì bỏ kết quả — bỏ vì quét lại 15.000 file mất hàng giờ.)
+- Sau lượt chạy, SHA của mỗi ảnh **đi theo nó sang đích**: bảng SHA đã đọc có thêm hàng cho đường dẫn ở đích (cỡ, ngày
+  sửa ở đích, SHA, khoá ngày chụp của bản đầu). Ngày sửa lấy từ bản đầu khi lượt chạy giữ được ngày, không thì hỏi
+  server. Scan sau của folder đích không đọc lại byte nào của ảnh đó.
 - File không còn trên server ở lần liệt kê sau: bỏ khỏi bảng nhớ.
 
 ### Chạy lại chỉ ảnh mới
@@ -275,7 +283,8 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
   - Move: kiểm cỡ + ngày sửa từng bản (§6). Chỉ băm khi một trong hai lệch.
 - Folder chung đổi giữa Scan và chạy (có file mới trùng tên): lượt chạy chọn tên trống kế tiếp, không ghi đè (§6). Log
   và CSV ghi tên cuối thật.
-- Kế hoạch là của lần Scan này. Đổi folder, đích, hay Copy ↔ Move thì bỏ kết quả, phải Scan lại (như §6c).
+- Kế hoạch là của lần Scan này. Đổi folder hay đích (khi danh sách bị cắt cho bộ khác) thì bỏ kết quả, phải Scan lại
+  (như §6c). Đổi Copy ↔ Move thì **giữ** kết quả (§6c, 2026-11-06).
 
 ### So sánh hai bản
 
@@ -287,7 +296,10 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 - Thanh trên (toolbar): ↑ ↓ (phím ↑↓, ←→ khi ảnh vừa khung), Fit/100%, ô **Include in Copy** (hay **Include in Move**).
   Bỏ ô = Leave Out, như ô chọn của hàng; hàng Copy bỏ qua (đã có ở đích) thì ô mờ. Thanh dưới chỉ là chữ (MAC_STYLE: không
   control nào ở 60pt đáy): dòng SHA và gợi ý "↑↓ next row · Esc close". Tiêu đề "Compare — <tên>", phụ đề "3 of 282".
-- Ảnh đã index: preview của index (400 px), nên 100% là cỡ của preview cho tới khi đọc cả file (phần chưa index).
+- Ảnh đã index: preview của index (400 px) hiện **trước**, rồi luôn tải cả file vào cache tạm (§6d, tối đa 2 GB) và thay
+  bằng bản đầy đủ (người dùng 2026-11-06: 400 px quá mờ để so). Lúc đang tải, trên ảnh có nhãn nhỏ "Loading full size…"
+  kèm thanh tiến độ. Vẽ tối đa 4.096 px cạnh dài; thumbnail nhúng nhỏ hơn mức đó (HEIC/JPEG thường 320 px) thì vẽ từ
+  chính ảnh. Tải hỏng thì giữ preview của index.
 - **Ảnh:** hiện vừa khung. Cùng zoom và cùng vị trí cho cả hai khung (cuộn hay zoom một bên, bên kia theo).
 - **Video:** một nút Play (Space) và một thanh tua cho cả hai; tua và Play đưa cả hai về cùng thời điểm, cùng một giờ
   máy; lúc chạy, bên phải lệch quá 2 khung hình (ít nhất 50 ms) thì được kéo lại; tiếng chỉ bên trái. Hết video thì
@@ -399,9 +411,10 @@ tháng/năm thì không (share Windows NTFS).
   (§6d mục 2). Bản ở folder khác **không** được băm — đó là phần người dùng chấp nhận bỏ.
 - Hàng kế hoạch của ảnh quick có nhãn nhỏ **Quick**; ô Same ghi thêm số ảnh quick ("Same 282 · 214 quick"). Cửa sổ
   log có cột **Check** = `Quick` / `Full` (trống ở hàng Skipped và ở log Undo); CSV cột `Check` = `quick` / `full`.
-- Đổi sang **Move** sau khi quét quick → kết quả bị bỏ, phải Scan lại (băm đủ); giữa sheet ghi "Quick check results
-  cleared. Move reads every byte, so Scan again." và nút thành **Scan**. Move không bao giờ dựa trên mẫu.
-- Ảnh quick không ghi vào bảng **SHA đã đọc** (§6c) cho bản ở folder khác — lần sau Move vẫn phải băm bản đó.
+- Đổi sang **Move** sau khi quét quick → kết quả **giữ nguyên** (2026-11-06). Khi chạy, trước khi đổi chỗ hay xoá, Move
+  đọc đủ byte **mọi bản** của hàng quick; cùng một SHA thì đó là SHA của ảnh (log cột Check = `Full`), lệch thì hàng
+  Failed "changed on server", không bản nào bị đụng. Move không bao giờ xoá dựa trên mẫu.
+- Ảnh quick không ghi vào bảng **SHA đã đọc** (§6c) cho bản ở folder khác.
 - Chi tiết (T7, 2026-11-05): chỉ ghép quick khi mẫu đó có **đúng một file** ở mỗi folder — cùng ảnh hai lần trong một
   folder đi đường băm, ra một ảnh nhiều bản như hôm nay; cỡ nào bộ đã có ảnh trong **Left Out** thì không ghép quick
   (Left Out nhớ theo SHA-256); bỏ chọn một hàng quick thì đọc bản đầu lấy SHA-256 rồi mới lưu vào Left Out; Compare của
@@ -420,16 +433,18 @@ tháng/năm thì không (share Windows NTFS).
   
   thì dùng danh sách đã lưu, không gửi lệnh liệt kê. Folder ngày trong `Năm/Tháng/Ngày` là đúng loại này: Tuan/Hue từ
   ~2.540 lệnh còn ~200 + số ngày đổi mỗi bên, ~9 phút → dưới 1 phút.
-- Không dùng danh sách đã lưu khi: Action là **Move** (Move luôn liệt kê đủ, review T1), server không trả giờ sửa của folder (một số WebDAV), **Scan Everything**, hay lần
+- Không dùng danh sách đã lưu khi: server không trả giờ sửa của folder (một số WebDAV), **Scan Everything**, hay lần
   liệt kê đầy đủ gần nhất của bộ đã quá **24 giờ** (mặc định, đổi được ở `/plan` nếu đo ra lý do). Lý do: NTFS không đổi giờ sửa folder
   khi một file bên trong bị ghi đè tại chỗ cùng tên.
 - Danh sách đã lưu là dữ liệu dẫn xuất; xoá khi xoá connection, hàng không được liệt kê lại trong 7 ngày cũng xoá.
 - Chi tiết (T8, 2026-11-05): mốc 24 giờ tính **cho từng folder** (lần nó được liệt kê), không theo cả bộ; folder vừa
   được ghi chưa tới 5 giây trước khi liệt kê thì không lưu (đồng hồ folder bước 1–2 s, file thêm cùng giây không đổi giờ);
   folder con của folder ngày (`edited/`) là lá, giờ của nó đọc từ danh sách mới của folder ngày, nên được dùng lại khi
-  giờ đó không đổi; Copy và tự gom dùng danh sách đã lưu, **Move** và **Scan Everything** liệt kê đủ; danh sách mới ghi
+  giờ đó không đổi; mọi lượt quét (Copy hay Move) và tự gom dùng danh sách đã lưu, **Scan Everything** liệt kê đủ
+  (trước 2026-11-06 Move liệt kê đủ; giờ scan không phụ thuộc Action); danh sách mới ghi
   một lần (một giao dịch) cuối lượt liệt kê. Đánh đổi đã biết: file bị ghi đè tại chỗ cùng tên trong folder không đổi giờ
-  thì tới 24 giờ sau mới được thấy (Copy có thể coi là Already there theo SHA cũ; Move không ảnh hưởng); dòng "Listing…
+  thì tới 24 giờ sau mới được thấy (Copy có thể coi là Already there theo SHA cũ; Move hỏi lại cỡ + ngày sửa từng bản
+  trước khi đụng, nên ảnh đó Failed "changed on server", không bản nào bị xoá); dòng "Listing…
   N files" chỉ đếm file của folder thật sự được liệt kê.
 
 **Không làm** (đã cân): bỏ nhánh chỉ một bên có (`A/2019` mà B không có) — đo được chỉ ~75 s trên 9 phút, và làm sót

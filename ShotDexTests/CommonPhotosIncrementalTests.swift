@@ -103,24 +103,23 @@ import Testing
         await again.close()
     }
 
-    /// A Move deletes the other copies, so a Move scan hashes them now even
-    /// when an earlier scan did; switching a Copy scan to Move drops it.
-    @Test func moveDoesNotTrustTheCache() async throws {
+    /// The scan is the same for Copy and Move: switching to Move keeps the
+    /// results, and a rescan for a Move reads nothing an earlier scan read.
+    @Test func moveKeepsTheScan() async throws {
         let client = Self.nas()
         let database = try AppDatabase.makeEmpty()
         let first = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
                                           client: client, database: database)
         try await Self.scan(first)
         try await Self.waitForRecords(database, count: 6)
-        #expect(first.canRun == false)  // no destination yet
         first.action = .move
-        #expect(first.phase == .idle)
+        #expect(first.phase == .done)
+        #expect(first.sameCount == 3)
 
         let before = client.sha256Paths.count
         try await Self.scan(first)
         #expect(first.sameCount == 3)
-        let hashedAgain = client.sha256Paths.dropFirst(before)
-        #expect(Set(hashedAgain) == Set((0..<3).map { "photos/B/from-a/copy \($0).HEIC" }))
+        #expect(client.sha256Paths.count == before)
         await first.close()
     }
 
@@ -152,8 +151,9 @@ import Testing
             == CommonPhotosScanRecord(path: "p", size: 2, modifiedAt: 1, sha256: nil, captureKey: "z"))
     }
 
-    /// Switched to Move while a Copy scan runs: that scan cannot run a Move.
-    @Test func moveMidScanCannotRunOnTrust() async throws {
+    /// Switched to Move while a scan runs: the scan goes on, and its results
+    /// can run a Move.
+    @Test func moveMidScanKeepsScanning() async throws {
         let client = Self.nas()
         let database = try AppDatabase.makeEmpty()
         let first = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
@@ -165,12 +165,13 @@ import Testing
         sheet.destination = "photos/Shared"
         client.whileHashing = { _ in try? await Task.sleep(for: .milliseconds(30)) }
         sheet.scan()
-        // Switched once the Copy scan has started trusting the cache.
         for _ in 0..<200 where sheet.phase != .checking { try await Task.sleep(for: .milliseconds(2)) }
         sheet.action = .move
-        for _ in 0..<100 where sheet.isScanning { try await Task.sleep(for: .milliseconds(20)) }
-        #expect(!sheet.canRun)
-        #expect(sheet.makeRun() == nil ? true : false)
+        for _ in 0..<100 where sheet.isScanning || sheet.isCutting { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(sheet.phase == .done)
+        #expect(sheet.sameCount == 3)
+        #expect(sheet.canRun)
+        #expect(sheet.makeRun()?.run.action == .move)
         await first.close()
         await sheet.close()
     }

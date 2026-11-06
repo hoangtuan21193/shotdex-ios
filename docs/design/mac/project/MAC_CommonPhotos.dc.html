@@ -254,7 +254,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","quickThenMove","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","checking","readingDates","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"quick":{"editor":"boolean","default":false},"organize":{"editor":"select","options":["sameAsSource","noFolders","yearMonthDay"],"default":"sameAsSource"},"noDates":{"editor":"boolean","default":false},"organizeChanged":{"editor":"boolean","default":false},"leftOut":{"editor":"boolean","default":false},"sort":{"editor":"select","options":["found","name","largest","smallest"],"default":"found"},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -474,8 +474,8 @@ class Component extends DCLogic {
       { path:'NAS Home › Family › Tuấn', count:'18,240 files', remove:'Remove Tuấn', rowBg:'transparent' },
       { path:'NAS Home › Family › Vợ', count:'15,902 files', remove:'Remove Vợ', rowBg:t.rowAlt }
     ];
-    // quickThenMove: Quick check was on, the user switched to Move — the scan is dropped, Move needs every byte read.
-    const move = this.props.action === 'move' || this.props.state === 'quickThenMove';
+    // Copy and Move share one scan: switching keeps the results (quick rows keep their tag; Move reads them in full when it runs).
+    const move = this.props.action === 'move';
     const action = k.seg(['Copy', 'Move'], move ? 1 : 0);
     const leftOutOpen = !!this.props.leftOut;
     // §6d: only Same rows. [name, sources, first folder's subfolder, name in Shared ('' = already there), size, checked,
@@ -506,6 +506,7 @@ class Component extends DCLogic {
       return p[0] + '/' + MON[+p[1] - 1] + '/' + p[0] + '.' + p[1] + '.' + p[2] + '/';
     };
     const quickOn = !!this.props.quick && !move;
+    const quickRows = !!this.props.quick;
     // §6e: while the plan reads dates, rows show without their → path yet.
     const readingNow = this.props.state === 'readingDates';
     const row = (m, i, seed) => {
@@ -518,7 +519,7 @@ class Component extends DCLogic {
         // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
         note: there ? 'Already in Shared' : !m[5] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
         help: m[1] + (there ? '' : ' → ' + dest),
-        quick: quickOn && m[7] && !there, live: !!m[8],
+        quick: quickRows && m[7] && !there, live: !!m[8],
         there, hasBox: !there, on, off: !there && !m[5], checkVis: on ? 'visible' : 'hidden',
         thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
         boxBg: on ? t.accentFill : t.field, boxBorder: on ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
@@ -532,8 +533,8 @@ class Component extends DCLogic {
 
     // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
     const state = this.props.state || 'first';
-    const dropped = state === 'quickThenMove', reading = state === 'readingDates';
-    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing || dropped;
+    const reading = state === 'readingDates';
+    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing;
     const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
     const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
     // Left Out open: the list scrolled to its end, the last photos then the section.
@@ -563,16 +564,16 @@ class Component extends DCLogic {
       organizeSummary: organize === 'noFolders' ? 'No Folders' : (organize === 'sameAsSource' ? 'Same as Source' : 'Year › Month › Day') + ' · videos together',
       organizeSample: before ? '' : 'e.g. ' + folderOf('2025/10/12') + 'DSC04388.ARW',
       gatheredNote: again && !!this.props.organizeChanged,
-      quickRow: !move, quickN: quickOn && state === 'first' ? '214' : (quickOn && state === 'again' ? '2' : ''), quick: quickOn, quickOff: !quickOn, quickVis: quickOn ? 'visible' : 'hidden',
+      quickRow: !move, quickN: quickRows && state === 'first' ? '214' : (quickRows && state === 'again' ? '2' : ''), quick: quickOn, quickOff: !quickOn, quickVis: quickOn ? 'visible' : 'hidden',
       quickBg: quickOn ? t.accentFill : t.field, quickBorder: quickOn ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
       noDates: !!this.props.noDates,
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
-      waitingLine: dropped ? 'Quick check results cleared. Move reads every byte, so Scan again.' : listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
-      footHint: nothingNew || before || dropped ? '' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
+      footHint: nothingNew || before ? '' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
       headline: checkingNow ? 'Checking · 172 of 314 confirmed so far' : first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before || dropped ? 'Scan' : listing || checkingNow ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
+      runLabel: before ? 'Scan' : listing || checkingNow ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
       runBg: nothingNew || listing || checkingNow ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing || checkingNow ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }

@@ -9,8 +9,7 @@ import os
 ///
 /// Same is what a Move deletes on, so every way a read can come back wrong
 /// drops the file instead: a read shorter than asked, a hash over fewer
-/// bytes than listed, a cached hash with no write time to vouch for it. A
-/// photo whose hashes all came from the cache is hashed once more.
+/// bytes than listed, a cached hash with no write time to vouch for it.
 struct CommonPhotosVerifier {
     let client: RemoteFileClient
 
@@ -39,10 +38,11 @@ struct CommonPhotosVerifier {
     /// earlier for the same path, size and write time (`copy_files`, or an
     /// earlier scan, FS-19.08 §6c); a file listed with no write time has
     /// nothing to vouch for its hash, so its entry is ignored. They stand in
-    /// for the first folder's copies only — unless `trustsCache`, which a
-    /// Copy scan sets: a Copy deletes nothing and reads back what it writes,
-    /// so every copy's known hash stands and a group known throughout is not
-    /// read at all. A Move deletes the other copies, which are hashed now.
+    /// for the first folder's copies only — unless `trustsCache`: then every
+    /// copy's known hash stands and a group known throughout is not read at
+    /// all. The sheet always trusts it, for a Copy and a Move alike (user
+    /// 2026-11-06: one scan for both); a Move asks each copy again for its
+    /// size and write time before it removes it.
     /// `hashed` hears every SHA-256 this scan worked out, group by group,
     /// for the next scan. `found` hears each size group's Same photos as
     /// they are decided; `progress` hears after every group and while a big
@@ -109,8 +109,7 @@ struct CommonPhotosVerifier {
                 for file in candidates.joined() {
                     // A cached hash stands in only for the first folder's
                     // copy — the one a Move renames, never deletes — unless
-                    // the scan trusts the cache. Every other copy is hashed
-                    // now: a Move deletes on it.
+                    // the scan trusts the cache.
                     if file.folder == 0 || trustsCache, file.modified != nil, let known = knownHashes[file] {
                         hashes[file] = known
                         continue
@@ -131,7 +130,7 @@ struct CommonPhotosVerifier {
             var groupPhotos: [CommonPhoto] = quickPhotos
             for (sha256, files) in CommonPhotosMatcher.shared(candidates, keys: hashes).sorted(by: { $0.key < $1.key }) {
                 // Nothing read this time vouches for these bytes: read one
-                // — not for a Copy, which reads every byte it writes back.
+                // — not when the scan trusts the cache.
                 if !trustsCache, !files.joined().contains(where: fresh.contains) {
                     let check = try await skippingUnreadable { try await fullHash(files[0][0], folders: folders, state: state, progress: progress) }
                     guard check == sha256 else { continue }

@@ -97,10 +97,10 @@ import Testing
         #expect(timed.listingCount - earlier == Self.fullListing)
     }
 
-    /// AC-200 (Scan Everything) + AC-221: the sheet lists every folder for a
-    /// Move — which deletes on what it lists — and for Scan Everything; a
-    /// Copy rescan lists root, year and months only.
-    @Test @MainActor func moveAndScanEverythingListEverything() async throws {
+    /// AC-200 (Scan Everything) + AC-221: the sheet lists every folder for
+    /// Scan Everything; a rescan lists root, year and months only, for a
+    /// Move as for a Copy — the run asks each copy again before it acts.
+    @Test @MainActor func scanEverythingListsEverything() async throws {
         let nas = Self.nas()
         let database = try AppDatabase.makeEmpty()
         let sheet = CommonPhotosScanModel(connectionId: "nas", sourceId: "source", folders: ["A", "B"], client: nas, database: database)
@@ -116,7 +116,7 @@ import Testing
         sheet.action = .move
         before = nas.listingCount
         await sheet.scanToEnd()
-        #expect(nas.listingCount - before == Self.fullListing)
+        #expect(nas.listingCount - before == (1 + 1 + 2) * 2)
     }
 
     /// A folder written seconds before it was listed is not kept: a file

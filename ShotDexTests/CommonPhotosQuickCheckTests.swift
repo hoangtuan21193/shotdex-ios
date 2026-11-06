@@ -3,9 +3,9 @@ import Foundation
 import Testing
 @testable import ShotDex
 
-/// FS-19.08 §6e Quick Check: a Copy may take a photo at the same path, of
+/// FS-19.08 §6e Quick Check: a scan may take a photo at the same path, of
 /// the same size, with matching samples, as Same — without reading every
-/// byte at the scan. Move never does.
+/// byte. A Move reads every byte of it before it removes anything.
 @Suite struct CommonPhotosQuickCheckTests {
     /// Bytes bigger than three samples, so the samples are not the file.
     static func photo(_ seed: UInt8, count: Int = 300_000) -> Data {
@@ -138,9 +138,9 @@ import Testing
         #expect(String(decoding: csv, as: UTF8.self).contains(",quick\r\n"))
     }
 
-    /// AC-197: a quick scan, then Move — the results go, a Move rescans in
-    /// full; turning Quick check off drops them too.
-    @Test @MainActor func moveDropsQuickResults() async throws {
+    /// AC-197: a quick scan, then Move — the results stay (the scan is the
+    /// same for both); turning Quick check off drops them.
+    @Test @MainActor func moveKeepsQuickResults() async throws {
         let nas = InMemoryRemoteFileClient()
         nas.put("A/2025/03/15/X.ARW", Self.photo(1))
         nas.put("B/2025/03/15/X.ARW", Self.photo(1))
@@ -150,19 +150,107 @@ import Testing
         #expect(sheet.quickCount == 1)
 
         sheet.action = .move
-        #expect(sheet.notice == .quickCleared)
-        #expect(sheet.sameCount == 0)
-        await sheet.scanToEnd()
-        #expect(sheet.quickCount == 0)
-        #expect(sheet.sameCount == 1)
-
-        sheet.action = .copy
-        sheet.quickCheck = true
-        await sheet.scanToEnd()
+        #expect(sheet.notice == nil)
+        #expect(sheet.phase == .done)
         #expect(sheet.quickCount == 1)
+        sheet.action = .copy
+        #expect(sheet.quickCount == 1)
+
         sheet.quickCheck = false
         #expect(sheet.notice == .quickOff)
         #expect(sheet.sameCount == 0)
+    }
+
+    /// A quick row and its run, every copy at the same path under A and B.
+    private func quickRun(_ nas: InMemoryRemoteFileClient, action: CommonPhotosRun.Action,
+                          photos: [CommonPhoto]? = nil) async throws -> CommonPhotosStore {
+        let listing = try await CommonPhotosScanner(client: nas).list(["A", "B"])
+        let found = try await verify(nas, quick: true)
+        let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+        try store.start(CommonPhotosRun(id: "R1", connectionId: "S1", folders: ["A", "B"], destination: "C", action: action),
+                        items: CommonPhotosRunner.items(for: photos ?? found, runId: "R1", folders: ["A", "B"],
+                                                        files: listing.files, sidecars: listing.sidecars))
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("QuickCheck-\(UUID().uuidString)")
+        try await CommonPhotosRunner(client: nas, store: store, workDirectory: work).run("R1")
+        return store
+    }
+
+    /// A quick row moved: every copy read in full first, then moved; the row
+    /// records the SHA-256 and a full check, and the destination's SHA-256
+    /// is remembered so no scan reads it again.
+    @Test func quickMoveReadsEveryCopy() async throws {
+        let nas = InMemoryRemoteFileClient()
+        nas.put("A/2025/03/15/X.ARW", Self.photo(1))
+        nas.put("B/2025/03/15/X.ARW", Self.photo(1))
+        nas.addDirectory("C")
+
+        let store = try await quickRun(nas, action: .move)
+
+        let item = try #require(try store.items(runId: "R1").first)
+        let sha = FileChecksum.hex(SHA256.hash(data: Self.photo(1)))
+        #expect(item.status == .moved)
+        #expect(item.sha256 == sha)
+        #expect(item.checkMethod == .full)
+        #expect(Set(nas.sha256Paths).isSuperset(of: ["A/2025/03/15/X.ARW", "B/2025/03/15/X.ARW"]))
+        #expect(nas.files["C/X.ARW"] == Self.photo(1))
+        #expect(nas.files["A/2025/03/15/X.ARW"] == nil && nas.files["B/2025/03/15/X.ARW"] == nil)
+        let records = CommonPhotosScanRecords(database: store.database)
+        #expect(try records.records(connectionId: "S1", paths: ["C/X.ARW"])["C/X.ARW"]?.sha256 == sha)
+    }
+
+    /// A quick row whose copies differ past the samples: nothing is moved
+    /// or removed, the row fails as changed.
+    @Test func quickMoveOfDifferentCopiesRemovesNothing() async throws {
+        let nas = InMemoryRemoteFileClient()
+        var other = Self.photo(1)
+        other[123_457] &+= 1
+        nas.put("A/X.ARW", Self.photo(1))
+        nas.put("B/X.ARW", other)
+        nas.addDirectory("C")
+        let listing = try await CommonPhotosScanner(client: nas).list(["A", "B"])
+        let quick = CommonPhoto(sha256: CommonPhoto.quickPrefix + "x", size: Int64(other.count),
+                                files: [[listing.files[0][0]], [listing.files[1][0]]])
+
+        let store = try await quickRun(nas, action: .move, photos: [quick])
+
+        let item = try #require(try store.items(runId: "R1").first)
+        #expect(item.status == .failed)
+        #expect(item.failure?.reason == .changedOnServer)
+        #expect(nas.files["A/X.ARW"] == Self.photo(1))
+        #expect(nas.files["B/X.ARW"] == other)
+        #expect(nas.files["C/X.ARW"] == nil)
+    }
+
+    /// A Live Photo whose motion is a quick row with copies that differ past
+    /// the samples: the motion is read in full before the still moves, so
+    /// neither half moves and nothing is removed (§6f).
+    @Test func quickMotionIsReadBeforeTheStillMoves() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let still = Self.photo(2, count: 200_000)
+        var otherMotion = Self.photo(3)
+        otherMotion[150_001] &+= 1
+        nas.put("A/IMG_1.HEIC", still)
+        nas.put("B/IMG_1.HEIC", still)
+        nas.put("A/IMG_1.MOV", Self.photo(3))
+        nas.put("B/IMG_1.MOV", otherMotion)
+        nas.addDirectory("C")
+        let listing = try await CommonPhotosScanner(client: nas).list(["A", "B"])
+        let file = { (folder: Int, name: String) in try #require(listing.files[folder].first { $0.name == name }) }
+        let photos = [
+            CommonPhoto(sha256: FileChecksum.hex(SHA256.hash(data: still)), size: Int64(still.count),
+                        files: [[try file(0, "IMG_1.HEIC")], [try file(1, "IMG_1.HEIC")]]),
+            CommonPhoto(sha256: CommonPhoto.quickPrefix + "m", size: Int64(otherMotion.count),
+                        files: [[try file(0, "IMG_1.MOV")], [try file(1, "IMG_1.MOV")]]),
+        ]
+
+        let store = try await quickRun(nas, action: .move, photos: photos)
+
+        let items = try store.items(runId: "R1")
+        #expect(items.map(\.status) == [.failed, .failed])
+        #expect(items[0].failure?.reason == .liveMotionChanged)
+        #expect(nas.files["A/IMG_1.HEIC"] == still && nas.files["B/IMG_1.HEIC"] == still)
+        #expect(nas.files["A/IMG_1.MOV"] == Self.photo(3) && nas.files["B/IMG_1.MOV"] == otherMotion)
+        #expect(nas.files.keys.filter { $0.hasPrefix("C/") && !$0.hasSuffix(".csv") }.isEmpty)
     }
 }
 

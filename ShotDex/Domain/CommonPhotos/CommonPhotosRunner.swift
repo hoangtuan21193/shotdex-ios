@@ -334,7 +334,12 @@ struct CommonPhotosRunner: Sendable {
                 if run.action == .move, items[index].status == .pending, index + 1 < items.count,
                    Self.isLivePair(still: items[index], motion: items[index + 1]), items[index + 1].status == .pending {
                     var motionUnchanged = true
-                    for source in items[index + 1].sources where !source.isRemoved {
+                    // A Quick motion is read in full now, before the still
+                    // moves: found different, it fails and the still stays.
+                    if items[index + 1].sha256.hasPrefix(CommonPhoto.quickPrefix) {
+                        motionUnchanged = try await readQuickInFull(&items[index + 1], state: state, progress: progress)
+                    }
+                    for source in items[index + 1].sources where motionUnchanged && !source.isRemoved {
                         if try await !isUnchanged(source, sha256: items[index + 1].sha256) { motionUnchanged = false; break }
                     }
                     if !motionUnchanged {
@@ -402,6 +407,7 @@ struct CommonPhotosRunner: Sendable {
             if let keeps = ServerFileInfoSupport.keepsDates(from: items.compactMap(\.fileInfo)) {
                 try? ServerFileInfoSupport.record(connectionId: run.connectionId, keepsDates: keeps, in: store.database)
             }
+            await rememberLanded(items, connectionId: run.connectionId)
             try store.markState(.finishing, runId: runId)
             let csvPath = try await writeLog(items, run: run, into: destination)
             try await afterRun(run, CommonPhotosLog.historyChanges(items))
@@ -653,10 +659,15 @@ struct CommonPhotosRunner: Sendable {
             try finish(&item, .failed, reason: .noSource)
             return
         }
-        // Move deletes on a SHA-256 of every byte, never on samples (§6e).
-        guard !item.sha256.hasPrefix(CommonPhoto.quickPrefix) else {
-            try finish(&item, .failed, reason: .unreadableRecord)
-            return
+        // Move deletes on a SHA-256 of every byte, never on samples (§6e): a
+        // Quick row has every copy read in full first, and moves only when
+        // all of them are one SHA-256 — that becomes the photo's.
+        if item.sha256.hasPrefix(CommonPhoto.quickPrefix) {
+            guard item.status == .pending else {
+                try finish(&item, .failed, reason: .unreadableRecord)
+                return
+            }
+            guard try await readQuickInFull(&item, state: state, progress: progress) else { return }
         }
         let name = live?.besideStill ?? ServerUploadPath.lastComponent(of: item.placement ?? source.path)
         let report = { @Sendable (step: Progress.Step) in
@@ -800,6 +811,68 @@ struct CommonPhotosRunner: Sendable {
         return try await CommonPhotosPlacement.place(sourcePath: source.path, size: item.size, modifiedAt: source.modifiedAt,
                                                      organize: organize, firstFolder: firstFolder, client: client,
                                                      timeZone: timeZone, locale: locale, now: now())
+    }
+
+    /// A Quick row about to be moved: every copy read in full. All one
+    /// SHA-256 → it becomes the photo's and the row says Full; otherwise the
+    /// row fails and false comes back — nothing of it is touched.
+    private func readQuickInFull(_ item: inout CommonPhotosItem, state: Progress,
+                                 progress: @escaping @Sendable (Progress) -> Void) async throws -> Bool {
+        var state = state
+        state.currentName = item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) }
+        state.currentStep = .checking
+        progress(state)
+        var hashes: Set<String> = []
+        do {
+            for copy in item.sources {
+                try Task.checkCancellation()
+                guard try await client.fileSize(at: copy.path) == item.size else {
+                    try finish(&item, .failed, reason: .changedOnServer)
+                    return false
+                }
+                hashes.insert(try await client.sha256(of: copy.path, progress: { _ in }).lowercased())
+            }
+        } catch let error as RemoteFileError where !error.stopsBatch {
+            try finish(&item, .failed, reason: .serverError, detail: error.localizedDescription)
+            return false
+        }
+        guard hashes.count == 1, let read = hashes.first else {
+            try finish(&item, .failed, reason: .changedOnServer)
+            return false
+        }
+        item.sha256 = read
+        item.checkMethod = .full
+        try store.update(item)
+        return true
+    }
+
+    /// What the run left in the destination, remembered as a scan's reads
+    /// are (FS-19.08 §6c): the SHA-256 — and the capture key a scan read of
+    /// the first copy — go with the photo, so no scan reads it again. The
+    /// write time is the first copy's where the dates were kept, else asked.
+    private func rememberLanded(_ items: [CommonPhotosItem], connectionId: String) async {
+        let landed = items.filter { item in
+            [.copied, .moved, .skipped].contains(item.status) && item.destinationPath != nil
+                && !item.sha256.hasPrefix(CommonPhoto.quickPrefix)
+        }
+        guard !landed.isEmpty else { return }
+        let records = CommonPhotosScanRecords(database: store.database)
+        let read = (try? records.records(connectionId: connectionId, paths: landed.compactMap { $0.sources.first?.path })) ?? [:]
+        var out: [CommonPhotosScanRecord] = []
+        for item in landed {
+            guard let path = item.destinationPath, let first = item.sources.first else { continue }
+            let datesKept = item.fileInfo == .kept || item.fileInfo == .tagsNotKept
+            var modifiedAt = datesKept && !item.destinationWasThere ? first.modifiedAt : nil
+            if modifiedAt == nil, let info = try? await client.fileInfo(at: path) {
+                modifiedAt = Int(info.modified.timeIntervalSince1970)
+            }
+            guard let modifiedAt else { continue }
+            out.append(CommonPhotosScanRecord(path: path, size: item.size, modifiedAt: modifiedAt,
+                                              sha256: item.sha256, captureKey: read[first.path]?.captureKey))
+        }
+        do { try records.save(connectionId: connectionId, out) } catch {
+            Self.log.error("common photos: landed hashes not saved: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func reset(_ item: inout CommonPhotosItem) throws {

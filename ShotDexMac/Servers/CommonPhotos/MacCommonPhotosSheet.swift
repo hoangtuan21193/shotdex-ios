@@ -425,9 +425,9 @@ private struct MacCommonPhotosSheetContent: View {
         .frame(height: 28)
     }
 
-    /// Copy or Move is chosen once the scan has found what to run: a switch
-    /// to Move mid-scan would throw the scan away (§6c). Shown too while
-    /// Move is on and nothing scans, so it can be switched back.
+    /// Copy or Move is chosen once the scan has found what to run; switching
+    /// keeps the results (§6c). Shown too while Move is on and nothing
+    /// scans, so it can be switched back.
     private var showsAction: Bool {
         model.phase == .done || (!model.isScanning && model.action == .move)
     }
@@ -785,12 +785,6 @@ private struct MacCommonPhotosSheetContent: View {
     /// Why results the user saw went (FS-19.08 §6c).
     private func noticeText(_ notice: CommonPhotosScanModel.Notice) -> String {
         switch notice {
-        case .moveChecksAgain:
-            String(localized: "Moving checks each copy before removing it. Scan again to list the photos.",
-                   comment: "Mac common photos sheet: results dropped after switching to Move")
-        case .quickCleared:
-            String(localized: "Quick check results cleared. Move reads every byte, so Scan again.",
-                   comment: "Mac common photos sheet: quick results dropped after switching to Move")
         case .quickOff:
             String(localized: "Quick check is off. Scan again to check every byte.",
                    comment: "Mac common photos sheet: quick results dropped after turning Quick check off")
