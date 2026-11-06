@@ -200,6 +200,16 @@ enum SmartAlbumSQLBuilder {
             default:
                 return nil
             }
+
+        case .server:
+            // Also on Server (FS-19.07 §7): a Photos item whose every original
+            // is on the folder (Yes), or checked and missing one (No). Unchecked
+            // items match neither; a source that no longer exists matches nothing.
+            guard !rule.text.isEmpty else { return nil }
+            let (presence, values) = rule.boolValue
+                ? OnServerPresenceSQL.present(sourceId: rule.text, folder: rule.folder)
+                : OnServerPresenceSQL.missing(sourceId: rule.text, folder: rule.folder)
+            return ("(EXISTS (SELECT 1 FROM sources WHERE id = ? AND kind = 'server') AND \(presence))", [rule.text] + values)
         }
     }
 
@@ -225,8 +235,10 @@ enum SmartAlbumSQLBuilder {
                     [id] + values + [id] + copyValues)
         case .isNot:
             let (missing, values) = OnServerPresenceSQL.missing(sourceId: id, folder: rule.folder)
-            return ("((\(isServer) AND \(missing)) OR (NOT \(isServer) AND NOT \(copies)))",
-                    [id] + values + [id] + copyValues)
+            // A source that is gone matches nothing, not every photo: an album
+            // people delete from must never widen to the whole library (AC-254).
+            return ("((\(isServer) AND \(missing)) OR (NOT \(isServer) AND EXISTS (SELECT 1 FROM sources WHERE id = ?) AND NOT \(copies)))",
+                    [id] + values + [id, id] + copyValues)
         default:
             return nil
         }

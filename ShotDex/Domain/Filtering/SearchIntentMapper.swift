@@ -108,6 +108,10 @@ enum SearchIntentMapper {
             // Search does not read stars in v1 (FS-01.12 §3): filters do.
             return nil
 
+        case .server:
+            // A server and folder are not something a search sentence names.
+            return nil
+
         case .keyword, .caption:
             // The on-device model is not given keyword or caption fields; the
             // parser reads `keyword:` itself (FS-02.07 §7).

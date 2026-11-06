@@ -16,7 +16,10 @@ struct SmartAlbumRuleRow: View {
     /// The Source field's choices, (id, name) — read by the builder, since
     /// sources change and the other choice sets do not.
     var sources: [(value: String, label: String)] = []
-    /// Server sources, which narrow to a folder (FS-19.07 §7).
+    /// Server sources, (id, name) — the Also on Server field's choices
+    /// (FS-19.07 §7). Empty hides the field.
+    var servers: [(value: String, label: String)] = []
+    /// Sources whose folder can be browsed for a narrower condition (FS-19.07 §7).
     var folderSources: Set<String> = []
     /// Opens the folder browser for the rule's source.
     var onChooseFolder: (() -> Void)?
@@ -27,7 +30,7 @@ struct SmartAlbumRuleRow: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 fieldMenu
-                if rule.field.kind != .favorite {
+                if !rule.field.kind.allowedOperators.isEmpty {
                     operatorMenu
                 }
                 Spacer(minLength: 0)
@@ -42,7 +45,7 @@ struct SmartAlbumRuleRow: View {
 
     private var fieldMenu: some View {
         Menu {
-            ForEach(RuleField.selectableCases) { field in
+            ForEach(fieldChoices) { field in
                 Button(field.displayName) { selectField(field) }
             }
         } label: {
@@ -104,6 +107,8 @@ struct SmartAlbumRuleRow: View {
         // of a displayed-but-nil date the user must tap to activate.
         // A rating condition is complete from the start, like a date one.
         if field.kind == .rating { rule.number = 4 }
+        // One server: it is the only answer, so the count shows at once (AC-248).
+        if field == .alsoOnServer, servers.count == 1 { rule.text = servers[0].value }
         if field.kind == .date, rule.op == .on {
             rule.number = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
         }
@@ -123,7 +128,27 @@ struct SmartAlbumRuleRow: View {
         // `has any keyword` / `has no keywords` test nothing typed: no field.
         case .keyword: if rule.op.needsValue { textEditor }
         case .caption: textEditor
+        case .server: serverEditor
         }
+    }
+
+    /// Also on Server: Yes / No, the server, its folder (FS-19.07 §7).
+    @ViewBuilder
+    private var serverEditor: some View {
+        Picker(RuleField.alsoOnServer.displayName, selection: $rule.boolValue) {
+            Text(String(localized: "Yes", comment: "Smart album Also on Server condition: the photo has a copy there")).tag(true)
+            Text(String(localized: "No", comment: "Smart album Also on Server condition: the photo is checked and missing a copy there")).tag(false)
+        }
+        .pickerStyle(.segmented)
+        choiceMenu
+        if !rule.text.isEmpty, folderSources.contains(rule.text), let onChooseFolder {
+            folderButton(onChooseFolder)
+        }
+    }
+
+    /// Every selectable field, less Also on Server when there is no server.
+    private var fieldChoices: [RuleField] {
+        RuleField.selectableCases.filter { $0 != .alsoOnServer || !servers.isEmpty || rule.field == .alsoOnServer }
     }
 
     /// 0–5 as one segmented row: five stars and zero fit a 402pt phone.
@@ -217,6 +242,11 @@ struct SmartAlbumRuleRow: View {
             }
         } label: {
             HStack {
+                if rule.field == .alsoOnServer {
+                    Text(String(localized: "Server", comment: "Smart album Also on Server condition: the server row"))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
                 Text(choiceLabel)
                     .foregroundStyle(rule.text.isEmpty ? .secondary : Color.primary)
                 Spacer()
@@ -397,11 +427,18 @@ struct SmartAlbumRuleRow: View {
     }
 
     private var choiceLabel: String {
-        choices.first { $0.value == rule.text }?.label ?? "Choose…"
+        if let label = choices.first(where: { $0.value == rule.text })?.label { return label }
+        return rule.field == .alsoOnServer
+            ? String(localized: "Choose Server", comment: "Smart album Also on Server condition: no server picked yet")
+            : "Choose…"
     }
 
     private var choices: [(value: String, label: String)] {
-        rule.field == .source ? sources : rule.field.choiceValues
+        switch rule.field {
+        case .source: sources
+        case .alsoOnServer: servers
+        default: rule.field.choiceValues
+        }
     }
 
     /// Autocomplete source values for the current text field.

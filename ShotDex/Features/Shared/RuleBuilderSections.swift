@@ -20,6 +20,7 @@ struct RuleBuilderSections: View {
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
     @State private var keywords: [String] = []
     @State private var sources: [(value: String, label: String)] = []
+    @State private var servers: [(value: String, label: String)] = []
     /// Server sources by id → their connection, for the Folder row.
     @State private var serverConnections: [String: String] = [:]
     /// Hosts the Folder row's browser; without one the row is not offered.
@@ -131,6 +132,7 @@ struct RuleBuilderSections: View {
                     places: places,
                     keywords: keywords,
                     sources: sources,
+                    servers: servers,
                     folderSources: folderPicker == nil ? [] : Set(serverConnections.keys),
                     onChooseFolder: { chooseFolder(for: rule) },
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
@@ -161,7 +163,10 @@ struct RuleBuilderSections: View {
             if let database = dependencies?.database {
                 let store = SourceStore(database: database)
                 let all = (try? store.sources()) ?? []
-                sources = all.map { ($0.id, $0.name) }
+                // A server is not a place a photo lives here; it is a question
+                // asked of a Photos item — Also on Server (FS-19.07 §7).
+                sources = all.filter { $0.kind != "server" }.map { ($0.id, $0.name) }
+                servers = all.filter { $0.kind == "server" }.map { ($0.id, $0.name) }
                 serverConnections = (try? store.serverConnections()) ?? [:]
             }
         }

@@ -28,10 +28,10 @@ Review rows run agents (two rounds), merge findings into the row, fix each in it
 
 | # | Task | Status | Note |
 |---|---|---|---|
-| 1 | Model + SQL + display `.alsoOnServer` (AC-251, 252, 254, 255) | todo | |
-| 2 | Normalizer old `Source is <server>` → Also on Server (AC-253) | todo | |
-| 3 | Editor iOS + Mac (AC-246…250, 258) | todo | |
-| 4 | Progress line from Also on Server (AC-256, 259) | todo | |
+| 1 | Model + SQL + display `.alsoOnServer` (AC-251, 252, 254, 255) | done (this commit) | gộp với 2, 3 (code), 4 vì editor phải đổi mới build qua |
+| 2 | Normalizer old `Source is <server>` → Also on Server (AC-253) | done (this commit) | `AlsoOnServerMigration` trong `SmartAlbumStore.fetchAllOrdered` |
+| 3 | Editor iOS + Mac (AC-246…250, 258) | code done; ảnh còn ở row 11 | |
+| 4 | Progress line from Also on Server (AC-256, 259) | code done; test còn | `refreshOnServer` nhận cả `.alsoOnServer` |
 | 5 | Migration + `SmartAlbumPhotosAlbumStore` | todo | |
 | 6 | `PhotosAlbumDiff` + `PhotosAlbumSync` (FS-06.12 AC-2…8, 10, 12, 13, 15, 17) | todo | |
 | 7 | UI: switch, status line, delete alert, limited (AC-9, 11) | todo | |

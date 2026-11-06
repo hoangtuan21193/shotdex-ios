@@ -11,6 +11,9 @@ extension SmartAlbumRule {
 
     /// Human-readable one-line description used by the read-only tokens.
     var displaySummary: String {
+        if field == .alsoOnServer {
+            return serverSummary(text)
+        }
         if field.kind == .favorite {
             return boolValue ? "Favorite" : "Not favorite"
         }
@@ -23,15 +26,26 @@ extension SmartAlbumRule {
     /// `Source is NAS Home › Shared` (FS-19.07 §7). The rule stores the
     /// source's id, so the caller hands over the names it has.
     func displaySummary(naming sourceNames: [String: String]) -> String {
+        if field == .alsoOnServer, !text.isEmpty { return serverSummary(sourceLabel(sourceNames)) }
         guard field == .source, !text.isEmpty else { return displaySummary }
         return "\(field.displayName) \(op.displayName) \(sourceLabel(sourceNames))"
     }
 
     /// `compactDisplaySummary` with a source shown by its name and folder.
     func compactDisplaySummary(naming sourceNames: [String: String]) -> String {
+        if field == .alsoOnServer, !text.isEmpty { return serverSummary(sourceLabel(sourceNames)) }
         guard field == .source, !text.isEmpty else { return compactDisplaySummary }
         let value = sourceLabel(sourceNames)
         return op == .isNot ? "\(compactFieldName) ≠ \(value)" : "\(compactFieldName) \(value)"
+    }
+
+    /// `Also on NAS Home › Shared` / `Not on NAS Home › Shared` — the chip
+    /// names the server, not the field (FS-19.07 §7, user 2026-11-06).
+    private func serverSummary(_ label: String) -> String {
+        guard !label.isEmpty else { return field.displayName }
+        return boolValue
+            ? String(localized: "Also on \(label)", comment: "Smart album chip: photos that also have a copy on this server folder, e.g. Also on NAS Home › Shared")
+            : String(localized: "Not on \(label)", comment: "Smart album chip: checked photos missing a copy on this server folder, e.g. Not on NAS Home › Shared")
     }
 
     /// `NAS Home › Shared/2025` — the id when the name is not known.
@@ -74,6 +88,8 @@ extension SmartAlbumRule {
             return compactRatingSummary
         case .keyword, .caption:
             return KeywordCopy.chip(for: self)
+        case .server:
+            return serverSummary(text)
         }
     }
 
@@ -175,6 +191,7 @@ extension SmartAlbumRule {
         case .anyText: "text"
         case .source: "source"
         case .original: "original"
+        case .alsoOnServer: "server"
         }
     }
 
@@ -238,7 +255,7 @@ extension SmartAlbumRule {
             return number.map { MarkCopy.starsAccessibility(Int($0.rounded())) } ?? ""
         case .keyword:
             return op.needsValue ? text : ""
-        case .caption:
+        case .caption, .server:
             return text
         }
     }

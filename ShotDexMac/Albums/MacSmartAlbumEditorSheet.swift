@@ -20,6 +20,7 @@ struct MacSmartAlbumEditorSheet: View {
     @State private var bodies: [String] = []
     @State private var lenses: [String] = []
     @State private var sources: [(value: String, label: String)] = []
+    @State private var servers: [(value: String, label: String)] = []
     /// Server sources by id → their connection, for the Folder row.
     @State private var serverConnections: [String: String] = [:]
     @State private var matchCount: Int?
@@ -90,7 +91,7 @@ struct MacSmartAlbumEditorSheet: View {
                     ForEach(visibleRules, id: \.wrappedValue.id) { $rule in
                         SmartAlbumRuleRow(
                             rule: $rule, brands: brands, bodies: bodies, lenses: lenses, places: [], keywords: [],
-                            sources: sources, folderSources: Set(serverConnections.keys),
+                            sources: sources, servers: servers, folderSources: Set(serverConnections.keys),
                             onChooseFolder: { chooseFolder(for: rule) },
                             onDelete: { query.rules.removeAll { $0.id == rule.id } }
                         )
@@ -155,7 +156,10 @@ struct MacSmartAlbumEditorSheet: View {
 
     private func prepare() async {
         let store = SourceStore(database: dependencies.database)
-        sources = ((try? store.sources()) ?? []).map { ($0.id, $0.name) }
+        let everySource = (try? store.sources()) ?? []
+        // Servers are asked through Also on Server, not Source (FS-19.07 §7).
+        sources = everySource.filter { $0.kind != "server" }.map { ($0.id, $0.name) }
+        servers = everySource.filter { $0.kind == "server" }.map { ($0.id, $0.name) }
         serverConnections = (try? store.serverConnections()) ?? [:]
         let catalog = await dependencies.filterSuggestions.load()
         brands = catalog.brands

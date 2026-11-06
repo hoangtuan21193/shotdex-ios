@@ -24,10 +24,10 @@ struct SmartAlbumOperatorTests {
         }
     }
 
-    /// Every field the menu shows has at least one operator, except Favorite,
-    /// whose row is a switch.
+    /// Every field the menu shows has at least one operator, except Favorite
+    /// and Also on Server, whose rows are a Yes/No switch.
     @Test func selectableFieldsHaveOperators() {
-        for field in RuleField.selectableCases(extendedMetadata: true) where field != .favorite {
+        for field in RuleField.selectableCases(extendedMetadata: true) where field != .favorite && field != .alsoOnServer {
             #expect(!field.kind.allowedOperators.isEmpty, "\(field)")
         }
     }
@@ -42,7 +42,7 @@ struct SmartAlbumOperatorTests {
             [.equalTo, .greaterThan, .lessThan, .inRange]
         case .dateTaken:
             [.on, .inMonth, .inLastDays, .before, .after, .inRange]
-        case .favorite:
+        case .favorite, .alsoOnServer:
             []
         case .rating:
             [.atLeast, .equalTo, .atMost]

@@ -27,6 +27,7 @@ enum RuleFieldKind: Equatable, Sendable {
     case rating     // the current star rating, 0–5 (FS-01.12)
     case keyword    // a Photos keyword (iOS 27, FS-02.07 §7)
     case caption    // the Photos caption (iOS 27, FS-02.07 §7)
+    case server     // a server source + folder, Yes/No in `boolValue` (FS-19.07 §7)
 }
 
 /// A photo attribute a smart-album condition can test.
@@ -66,11 +67,17 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case anyText
     /// Where a copy of the photo lives — a source's id (FS-19.04 §5). A
     /// Statistics card that names one keeps it whatever the screen's Source
-    /// popup says (FS-18 04 §2).
+    /// popup says (FS-18 04 §2). The builder offers Photos and folder/drive
+    /// sources only; a server lives in `alsoOnServer` (FS-19.07 §7).
     case source
     /// Whether every original file is on this device (FS-06.10): read from
     /// the offline check's table, so an unchecked photo matches neither value.
     case original
+    /// Whether every original file of the Photos item has a byte-identical
+    /// copy in a server source's folder (FS-19.07 §7): `text` is the source
+    /// id, `folder` narrows it, `boolValue` is Yes / No. An item not checked
+    /// yet matches neither answer.
+    case alsoOnServer
 
     var id: String { rawValue }
 
@@ -96,6 +103,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
         case .source: String(localized: "Source", comment: "Rule field: the photo library, folder, drive or server a copy lives in")
         case .original: String(localized: "Original", comment: "Rule field: whether the photo's original files are on this device or only in iCloud")
+        case .alsoOnServer: String(localized: "Also on Server", comment: "Rule field: whether the photo in the library also has an identical copy on a server folder")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         }
     }
@@ -110,6 +118,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .rating: .rating
         case .keyword: .keyword
         case .caption: .caption
+        case .alsoOnServer: .server
         }
     }
 
@@ -169,7 +178,7 @@ extension RuleFieldKind {
         case .choice: [.isExactly, .isNot]
         case .number: [.equalTo, .greaterThan, .lessThan, .inRange]
         case .date: [.on, .inMonth, .inLastDays, .before, .after, .inRange]
-        case .favorite: []
+        case .favorite, .server: []
         case .rating: [.atLeast, .equalTo, .atMost]
         case .keyword: [.hasKeyword, .lacksKeyword, .hasAnyKeyword, .hasNoKeywords]
         case .caption: [.contains, .doesNotContain]
@@ -366,7 +375,7 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
             return number != nil
         case .keyword:
             return !op.needsValue || !text.trimmingCharacters(in: .whitespaces).isEmpty
-        case .caption:
+        case .caption, .server:
             return !text.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }

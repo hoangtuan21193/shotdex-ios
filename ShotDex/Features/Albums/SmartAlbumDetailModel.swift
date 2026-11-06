@@ -82,11 +82,14 @@ final class SmartAlbumDetailModel {
         }
     }
 
-    /// Reads the check's progress for the album's first server Source
-    /// condition — after each batch the check runs.
+    /// Reads the check's progress for the album's first Also on Server
+    /// condition (or a Source condition on a server, not yet rewritten) —
+    /// after each batch the check runs.
     func refreshOnServer(_ check: OnServerCheck, isLimited: Bool) async {
         let servers = (try? sourceStore.serverConnections()) ?? [:]
-        guard let rule = query.validRules.first(where: { $0.field == .source && servers[$0.text] != nil }) else {
+        guard let rule = query.validRules.first(where: {
+            ($0.field == .alsoOnServer || $0.field == .source) && servers[$0.text] != nil
+        }) else {
             onServerLines = []
             return
         }
