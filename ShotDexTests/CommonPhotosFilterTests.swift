@@ -48,7 +48,8 @@ import Testing
         for _ in 0..<50 where sheet.problemFiles.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }
 
         #expect(sheet.sameCount == 0)
-        let problem = try? #require(sheet.problemFiles.first)
+        #expect(sheet.problemFiles.count == 1)
+        let problem = sheet.problemFiles.first
         #expect(problem?.name == "X.JPG")
         #expect(problem?.place == "B")
         #expect(problem?.unreadable != nil)
