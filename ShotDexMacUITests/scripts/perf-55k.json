@@ -1,0 +1,87 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoDatabase",
+    "demo55k.sqlite",
+    "-ShotDexDemoScale",
+    "200"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  },
+  {
+   "action": "click",
+   "label": "Favorites",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "RAW",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Videos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "scroll",
+   "label": "All Photos",
+   "type": "staticText",
+   "distance": -1
+  },
+  {
+   "action": "screenshot",
+   "name": "big"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

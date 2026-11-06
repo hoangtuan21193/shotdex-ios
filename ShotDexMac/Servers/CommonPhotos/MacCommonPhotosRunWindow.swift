@@ -869,7 +869,8 @@ private struct MacCommonPhotosRunContent: View {
 /// stutter while scrolled. It redraws when the rows are read again or
 /// what it shows changes — never for the progress bar.
 private struct MacCommonPhotosLogTable: View, Equatable {
-    @Bindable var log: MacCommonPhotosLogModel
+    /// Plain, so the nonisolated `==` can compare it; bound in `body`.
+    let log: MacCommonPhotosLogModel
     let run: CommonPhotosRun
     let isReady: Bool
     let isRunning: Bool
@@ -886,6 +887,7 @@ private struct MacCommonPhotosLogTable: View, Equatable {
     }
 
     var body: some View {
+        @Bindable var log = log
         Table(log.shown, selection: $log.selection, sortOrder: $log.sortOrder) {
             TableColumn(String(localized: "Status", comment: "Common photos log column"), value: \.statusText) { row in
                 statusCell(row)

@@ -20,12 +20,17 @@ import XCTest
 /// - `wait` `seconds`; `waitFor` / `assertExists` / `assertMissing` `label`
 ///   (+ `type`, `seconds`) — the assertion that makes a click a test.
 /// - `assertValue` `label` + `text` — the element's value (toggle, field).
+/// - `within` (any step, seconds): fail when the step takes longer — a
+///   `click` followed by `waitFor … within 0.5` is the latency check. Every
+///   step's duration lands in report.json as `ms`.
 /// - `screenshot` `name` — the front window only, never the whole screen.
 /// - `dump` `name` — every element of the app with label, identifier, value,
 ///   frame in window points, enabled and selected.
 final class MacUIDriverTests: XCTestCase {
     private var app: XCUIApplication!
     private var results: [[String: String]] = []
+    /// When the last click was pressed, after its element was found.
+    private var pressAt: Date?
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -36,9 +41,17 @@ final class MacUIDriverTests: XCTestCase {
         let steps = try loadSteps()
         for (index, step) in steps.enumerated() {
             do {
+                let start = Date()
                 let detail = try perform(step)
-                results.append(["index": "\(index)", "action": step.action, "detail": detail])
-                print("step \(index) \(step.action) ok \(detail)")
+                let ms = Int(Date().timeIntervalSince(start) * 1000)
+                var entry = ["index": "\(index)", "action": step.action, "detail": detail, "ms": "\(ms)",
+                             "at": Self.clock.string(from: start)]
+                if let pressAt, pressAt >= start { entry["pressAt"] = Self.clock.string(from: pressAt) }
+                results.append(entry)
+                print("step \(index) \(step.action) ok \(ms)ms \(detail)")
+                if let within = step.within, Double(ms) > within * 1000 {
+                    throw DriverError.assertion("took \(ms) ms, limit \(Int(within * 1000)) ms")
+                }
             } catch {
                 results.append(["index": "\(index)", "action": step.action, "detail": describe(step), "failure": "\(error)"])
                 print("step \(index) \(step.action) FAILED \(describe(step)): \(error)")
@@ -67,6 +80,7 @@ final class MacUIDriverTests: XCTestCase {
         var seconds: Double?
         var name: String?
         var arguments: [String]?
+        var within: Double?
     }
 
     private struct Script: Decodable { let steps: [Step] }
@@ -107,15 +121,27 @@ final class MacUIDriverTests: XCTestCase {
             app.launchArguments = ["-ApplePersistenceIgnoreState", "YES"] + (step.arguments ?? [])
             app.launch()
             _ = app.wait(for: .runningForeground, timeout: 30)
+            // A launch argument with a value (`-ShotDexSection backup`) makes
+            // AppKit skip the first window; File › New Window opens it.
+            if !app.windows.firstMatch.waitForExistence(timeout: 5) {
+                app.typeKey("n", modifierFlags: .command)
+            }
             _ = app.windows.firstMatch.waitForExistence(timeout: 15)
         case "activate":
             app.activate()
-        case "click":
-            if let point = try windowPoint(step) { point.click() } else { try element(step).click() }
-        case "rightClick":
-            if let point = try windowPoint(step) { point.rightClick() } else { try element(step).rightClick() }
-        case "doubleClick":
-            if let point = try windowPoint(step) { point.doubleClick() } else { try element(step).doubleClick() }
+        case "click", "rightClick", "doubleClick":
+            // Find first, then press: the lookup reads the app's accessibility
+            // tree on its main thread, so a hang before `pressAt` is the
+            // driver's and one after it is the app answering the click.
+            let point = try windowPoint(step) ?? pressPoint(for: try element(step))
+            Thread.sleep(forTimeInterval: 0.3)
+            pressAt = Date()
+            switch step.action {
+            case "rightClick": point.rightClick()
+            case "doubleClick": point.doubleClick()
+            default: point.click()
+            }
+            return describe(step) + " pressAt=\(Self.clock.string(from: pressAt!))"
         case "hover":
             if let point = try windowPoint(step) { point.hover() } else { try element(step).hover() }
             Thread.sleep(forTimeInterval: step.seconds ?? 0.5)
@@ -142,6 +168,7 @@ final class MacUIDriverTests: XCTestCase {
             }
         case "key":
             guard let text = step.text else { throw DriverError.missing("text") }
+            pressAt = Date()
             app.typeKey(Self.keyName(text), modifierFlags: Self.modifiers(step.modifiers))
         case "scroll":
             try element(step).scroll(byDeltaX: 0, deltaY: CGFloat(-(step.distance ?? 5) * 10))
@@ -178,18 +205,32 @@ final class MacUIDriverTests: XCTestCase {
 
     private func query(_ step: Step) -> XCUIElementQuery {
         let type = Self.elementType(step.type)
-        let predicate = NSPredicate(format: "label == %@ OR title == %@ OR identifier == %@",
-                                    step.label ?? "", step.label ?? "", step.label ?? "")
+        // A macOS static text carries its words in `value`, not `label`.
+        let text = step.label ?? ""
+        let predicate = NSPredicate(format: "label == %@ OR title == %@ OR identifier == %@ OR value == %@",
+                                    text, text, text, text)
         return app.descendants(matching: type).matching(predicate)
     }
 
     private func element(_ step: Step, timeout: Double = 5) throws -> XCUIElement {
-        guard step.label != nil else { throw DriverError.missing("label") }
-        let match = query(step).element(boundBy: step.index ?? 0)
+        // No label: the nth element of `type` (a search field has none).
+        let match = step.label == nil
+            ? app.descendants(matching: Self.elementType(step.type)).element(boundBy: step.index ?? 0)
+            : query(step).element(boundBy: step.index ?? 0)
         guard match.waitForExistence(timeout: timeout) else {
             throw DriverError.notFound("\(step.type ?? "any") \(step.label ?? "")")
         }
         return match
+    }
+
+    /// The element's centre as a point on its window, read once — pressing
+    /// it needs no second accessibility lookup.
+    private func pressPoint(for element: XCUIElement) -> XCUICoordinate {
+        let frame = element.frame
+        let window = app.windows.firstMatch
+        let origin = window.frame.origin
+        return window.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - origin.x, dy: frame.midY - origin.y))
     }
 
     private func windowPoint(_ step: Step) throws -> XCUICoordinate? {
@@ -220,7 +261,7 @@ final class MacUIDriverTests: XCTestCase {
                 || node.elementType == .button {
                 rows.append([
                     "type": Self.typeName(node.elementType),
-                    "label": node.label.isEmpty ? node.title : node.label,
+                    "label": !node.label.isEmpty ? node.label : !node.title.isEmpty ? node.title : (node.value as? String ?? ""),
                     "identifier": node.identifier,
                     "value": node.value.map { "\($0)" } ?? "",
                     "x": Double(frame.minX - origin.x), "y": Double(frame.minY - origin.y),
@@ -247,6 +288,13 @@ final class MacUIDriverTests: XCTestCase {
     }
 
     // MARK: Names
+
+    /// Wall-clock time of each step, to line a hang in hangs.txt up with it.
+    private static let clock: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
 
     private static let types: [String: XCUIElement.ElementType] = [
         "button": .button, "menuButton": .menuButton, "popUpButton": .popUpButton, "checkBox": .checkBox,

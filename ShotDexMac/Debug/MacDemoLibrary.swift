@@ -264,9 +264,9 @@ enum MacDemoLibrary {
             for n in 0..<day.count {
                 let shot = lenses[(n + dayIndex) % lenses.count]
                 let id = "demo-\(dayIndex)-\(n)"
-                let ext = formats[(n + dayIndex * 3) % formats.count]
+                let ext = n % 17 == 5 ? "MOV" : formats[(n + dayIndex * 3) % formats.count]
                 rows.append(PhotoMetadata(
-                    assetId: id, creationDate: Int(start.timeIntervalSince1970) - n * 90, modificationDate: nil, mediaType: 1,
+                    assetId: id, creationDate: Int(start.timeIntervalSince1970) - n * 90, modificationDate: nil, mediaType: n % 17 == 5 ? 2 : 1,
                     cameraManufacturer: nil, cameraModel: shot.camera, normalizedCameraModel: shot.camera,
                     normalizedCameraManufacturer: nil, lensManufacturer: nil, lensModel: shot.lens, normalizedLensModel: shot.lens,
                     originalFilename: String(format: "DSC%05d.%@", 4100 + n, ext), iso: shot.iso, aperture: shot.aperture,
@@ -278,6 +278,38 @@ enum MacDemoLibrary {
             }
         }
         return rows
+    }
+
+    /// `-ShotDexDemoScale N`: N − 1 more copies of the library, a week apart
+    /// each, for measuring a click at the size of a real library (55k ≈ 200).
+    /// Written on a background task after launch — the window must not wait
+    /// for the seeding — then the grid reloads.
+    static func seedScaleIfAsked(_ dependencies: MacDependencies, then done: @escaping @MainActor () -> Void) {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let scale = arguments.firstIndex(of: "-ShotDexDemoScale").flatMap({ $0 + 1 < arguments.count ? Int(arguments[$0 + 1]) : nil }),
+              scale > 1
+        else { return }
+        let store = dependencies.metadataStore
+        let queries = dependencies.libraryQueries
+        let base = rows()
+        Task.detached(priority: .utility) {
+            // A database file kept from an earlier run (`-ShotDexDemoDatabase`,
+            // the way to run this: a pool reads while it writes) has them.
+            if let count = try? queries.count(matching: FilterCriteria.empty), count >= base.count * scale {
+                await MainActor.run { done() }
+                return
+            }
+            for copy in 1..<scale {
+                let batch = base.map { row in
+                    var row = row
+                    row.assetId += "-x\(copy)"
+                    row.creationDate = row.creationDate.map { $0 - copy * 86_400 * 7 }
+                    return row
+                }
+                try? store.saveBatch(batch, cursorAssetId: nil)
+            }
+            await MainActor.run { done() }
+        }
     }
 
     /// Landscape desktop pictures, decoded once, cycled over the tiles.

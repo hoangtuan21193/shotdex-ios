@@ -25,6 +25,16 @@ mkdir -p "$(dirname "$BUNDLED")"
 cp "$SCRIPT" "$BUNDLED"
 trap 'rm -f "$BUNDLED"' EXIT
 BUNDLE="$OUT/result.xcresult"
+# MAC_UI_SAMPLE=1: sample the app's main thread for the whole run (1 ms), to
+# tell the app's own work from XCTest's accessibility reads (mac-ui-sample.py).
+if [ "${MAC_UI_SAMPLE:-0}" = 1 ]; then
+    ( for i in $(seq 1 180); do
+          PID=$(pgrep -f "$ROOT/build/mac/Build/Products/Debug/ShotDex.app/Contents/MacOS/ShotDex -" | head -1)
+          [ -n "$PID" ] && break; sleep 1
+      done
+      [ -n "$PID" ] && sample "$PID" 600 1 -mayDie -file "$OUT/sample.txt" >/dev/null 2>&1 ) &
+fi
+START="$(date '+%Y-%m-%d %H:%M:%S')"
 xcodebuild test \
     -project "$ROOT/ShotDex.xcodeproj" \
     -scheme ShotDexMacUIDriver \
@@ -38,4 +48,14 @@ if [ -d "$BUNDLE" ]; then
     python3 "$ROOT/Tools/ui-drive-rename.py" "$OUT" || true
     rm -rf "$BUNDLE"
 fi
+# XCTest's own screen recording and hierarchy dumps: big, and the script's
+# shots and dumps already say it.
+rm -rf "$OUT"/*.mp4 "$OUT"/"UI Snapshot"* "$OUT"/"App UI hierarchy"* "$OUT"/"Debug description"* "$OUT"/"Synthesized Event"* 2>/dev/null || true
+# Main-thread hangs the Debug build logged during the run (MacHangWatchdog).
+/usr/bin/log show --start "$START" --style compact \
+    --predicate 'subsystem == "com.hoangtuan.shotdex" AND category == "hang"' 2>/dev/null \
+    | grep "blocked" | sed -E 's/^([0-9:. -]+).*blocked/\1 blocked/' > "$OUT/hangs.txt" || true
+echo; echo "main-thread hangs > 100 ms: $(wc -l < "$OUT/hangs.txt" | tr -d ' ') (hangs.txt)"
+python3 "$ROOT/Tools/mac-ui-hangs.py" "$OUT" 2>/dev/null || true
+if [ -s "$OUT/sample.txt" ]; then python3 "$ROOT/Tools/mac-ui-sample.py" "$OUT/sample.txt" || true; fi
 echo; echo "artifacts in $OUT:"; ls -1 "$OUT" 2>/dev/null

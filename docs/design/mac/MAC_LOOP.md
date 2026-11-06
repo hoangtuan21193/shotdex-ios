@@ -34,7 +34,19 @@ real NAS/Windows share or at PhotoKit writes. Code paths that write PhotoKit get
    **Never** shoot without the demo library (real library has faces).
 7. **Click-test**: `Tools/mac-ui-drive <script.json>` (XCUITest driver, Automation Mode enabled
    2026-11-06) — click every button/menu on the screen, dump after each, assert the result
-   (sheet opened, state changed, row added). Scripts in `ShotDexUITests/mac-scripts/`. Fix failures.
+   (sheet opened, state changed, row added). Scripts in `ShotDexMacUITests/scripts/`. Fix failures.
+7b. **Performance (user 2026-11-06: "UI hay lag khi bấm — logic nặng chạy nền, không bao giờ bắt UI chờ")**:
+   the DEBUG build's `MacHangWatchdog` logs every main-thread stall > 100 ms; `Tools/mac-ui-drive` prints them
+   split by `Tools/mac-ui-hangs.py`: **app hangs** (started in `launch` or a `wait` step) fail the pass;
+   **suspects** (after a click/key `pressAt`) need `MAC_UI_SAMPLE=1 Tools/mac-ui-drive …`, whose
+   `mac-ui-sample.py` summary lists ShotDex's own main-thread frames with XCTest's accessibility reads taken
+   out — any ShotDex frame ≥ 50 ms fails the pass. Dumps/screenshots/element lookups also stall the app
+   (XCTest reads the AX tree on the main thread); those are ignored. Every click is followed by a `wait`
+   ≥ 1 s so its work lands in a measured window. Run once on the 273-row demo and once at 45k:
+   `-ShotDexDemoLibrary -ShotDexDemoDatabase demo55k.sqlite -ShotDexDemoScale 200` (`perf-55k.json`).
+   A launch argument with a value makes AppKit skip the first window — the driver presses ⌘N.
+   Fix = move work off the main actor (GRDB `await reader.read`, `Task.detached`), never a sync DB read or
+   PhotoKit fetch in a click path, rebuild only on a generation change; `perf-profiler` joins review round 2.
 8. **Close**: board drift fixed on the board too if code is right and board is wrong (publish to canvas,
    read url first). Commit only this pass's paths (`git commit -- <paths>`, never `add -A`).
    Row → `done <hash>` + one line (what was checked). **Push to main** (user 2026-11-06; several
@@ -53,7 +65,7 @@ Disk: stop if `volumeAvailableCapacityForImportantUsage` < 25 GB. Quit the app b
 | # | Board(s) | FS doc | Status |
 |---|---|---|---|
 | 0 | Tooling: `Tools/mac-ui-drive` (macOS XCUITest driver, same JSON as ui-drive) | — | done (this commit) — smoke.json: launch demo, menu ShotDex>Settings…, waitFor, window shots + dump pass. Seen: Settings Focal Length segmented is system blue, not amber (fix in a Settings row) |
-| 1 | Main shell: route sidebar places to own query, wire search text, empty state | 01-window-and-navigation | doing |
+| 1 | Main shell: route sidebar places to own query, wire search text, empty state | 01-window-and-navigation | done (this commit) — places as `LibraryModel.place`, counts off-main, search + ⌘F + Go ⌥⌘1–5, grey `rowSel` selection, empty places, pending-place stand-in; grid built off-main on `rowsGeneration`, assets via cache. Reviews: cavecrew + design-reviewer, then ux + perf-profiler — all blockers fixed. Click-test `mac-places.json` (85 steps), `mac-places-dark.json`, `perf-55k.json` pass, 0 app hangs after clicks. Left for later rows: day-header place name ("· Kyoto"), "indexed 2 min ago" foot, counts on Collections/Utilities rows, Back/Forward, launch hang 0.4 s, inspector content |
 | 2 | MAC_EmptyLibrary | 01-window-and-navigation §7 | todo |
 | 3 | MAC_Onboarding | 01 §7, FS-09 | todo |
 | 4 | MAC_AddSource | FS-19 01 | todo |

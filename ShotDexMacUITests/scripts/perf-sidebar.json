@@ -1,0 +1,163 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Favorites",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Videos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "RAW",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Recently Added",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "On This Day",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Albums",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Statistics",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Duplicates",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Backup",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Grid"
+  },
+  {
+   "action": "click",
+   "label": "List"
+  },
+  {
+   "action": "click",
+   "label": "Filter and Sort",
+   "within": 0.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Sort By",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector"
+  },
+  {
+   "action": "screenshot",
+   "name": "end"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

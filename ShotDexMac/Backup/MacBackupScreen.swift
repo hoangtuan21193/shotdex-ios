@@ -209,6 +209,12 @@ extension Notification.Name {
     static let macAddServer = Notification.Name("ShotDexMacAddServer")
     /// Go › Backup ⌥⌘B (FS-22.06 §5.1).
     static let macShowBackup = Notification.Name("ShotDexMacShowBackup")
+    /// Go › All Photos … Recently Added: the object is the `MacSidebarItem`.
+    static let macGoTo = Notification.Name("ShotDexMacGoTo")
+    /// Edit › Search ⌘F; the window turns it into `macFocusSearch` once the
+    /// grid, and so its search field, is on screen.
+    static let macFocusSearchRequest = Notification.Name("ShotDexMacFocusSearchRequest")
+    static let macFocusSearch = Notification.Name("ShotDexMacFocusSearch")
     /// A connection was added or edited — screens that read the list redraw.
     static let macServersChanged = Notification.Name("ShotDexMacServersChanged")
     /// File › New Smart Album… ⌥⌘N (FS-18.01b).

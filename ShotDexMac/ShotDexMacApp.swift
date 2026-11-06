@@ -28,6 +28,7 @@ struct ShotDexMacApp: App {
         // only: the helper never shows Compare.
         CompareFileCache.sweepLeftovers()
         #if DEBUG
+        MacHangWatchdog.start()
         MacSnapshot.scheduleIfAsked()
         // `-ShotDexAppearance dark|light`: the window's look for screenshots,
         // whatever System Settings says.
@@ -117,7 +118,21 @@ struct MacBackupCommands: Commands {
                 NotificationCenter.default.post(name: .macNewBackup, object: nil)
             }
         }
+        // Edit › Search ⌘F (FS-18.01b §2): the toolbar's search field.
+        CommandGroup(after: .pasteboard) {
+            Divider()
+            Button(String(localized: "Search", comment: "Mac menu: Edit › Search")) {
+                NotificationCenter.default.post(name: .macFocusSearchRequest, object: nil)
+            }
+            .keyboardShortcut("f", modifiers: .command)
+        }
         CommandMenu(String(localized: "Go", comment: "Mac menu bar: Go menu")) {
+            // Go › All Photos ⌥⌘1 … Recently Added ⌥⌘5 (FS-18.01b §2).
+            ForEach(Array(MacSidebarItem.library.enumerated()), id: \.offset) { index, item in
+                Button(item.title) { NotificationCenter.default.post(name: .macGoTo, object: item) }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.option, .command])
+            }
+            Divider()
             Button(String(localized: "Backup", comment: "Mac menu: Go › Backup")) {
                 NotificationCenter.default.post(name: .macShowBackup, object: nil)
             }

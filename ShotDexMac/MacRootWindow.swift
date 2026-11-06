@@ -10,6 +10,13 @@ struct MacRootWindow: View {
     @State private var selection: MacSidebarItem? = .allPhotos
     @State private var library: LibraryModel?
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
+    /// The grid's rules came from the search field (they share the slot
+    /// with Advanced Filter): emptying the field takes them away again.
+    @State private var searchOwnsQuery = false
+    /// ⌘F asked for the field while the grid (and so the field) was not on
+    /// screen: the grid takes it when it appears.
+    @State private var wantsSearchFocus = false
     @State private var showsInspector = false
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
@@ -35,6 +42,8 @@ struct MacRootWindow: View {
     /// The filtered grid's last settled count, shown while a reload runs —
     /// so the line and the empty state do not flicker on each one.
     @State private var settledMatchCount: Int?
+    /// The sidebar's counts (FS-18.01 §2), read off the main actor.
+    @State private var placeCounts: [MacSidebarItem: Int] = [:]
 
     var body: some View {
         NavigationSplitView {
@@ -46,6 +55,8 @@ struct MacRootWindow: View {
                 MacServerBrowserScreen(source: source)
             } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
                 MacSmartAlbumScreen(album: album, edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) })
+            } else if let selection, selection.isPendingScreen {
+                MacPendingPlace(item: selection)
             } else {
                 libraryDetail
             }
@@ -53,7 +64,21 @@ struct MacRootWindow: View {
         .tint(MacTheme.accent)
         .onAppear { reloadSources() }
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
-        .onChange(of: selection) { reloadSources() }
+        .onChange(of: selection) {
+            // Only a row that shows the grid moves it: Backup or Statistics
+            // must not reload 55k rows nobody sees.
+            if let selection, isGridPlace(selection) {
+                libraryTotal = nil
+                libraryHasVideos = false
+                // Words typed but never searched do not follow to the next place.
+                if !searchOwnsQuery { searchText = "" }
+                library?.place = place(for: selection)
+            }
+        }
+        // One LibraryModel serves every Library window: the key window's
+        // place is the one it shows.
+        .background(MacKeyWindowObserver { if let selection, isGridPlace(selection) { library?.place = place(for: selection) } })
+        .task(id: countsKey) { await reloadPlaceCounts() }
         // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
         // browser goes to the destination.
         .onChange(of: dependencies.commonPhotos.browserRequest?.path) {
@@ -86,48 +111,68 @@ struct MacRootWindow: View {
             }
             selection = .source(sourceId)
         }
-        .background(MacMainWindowMarker())
-        .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
-        .task { await start() }
-        .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            dependencies.backupControl.appBecameActive()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
-            serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
-        }
-        .sheet(item: $smartAlbumForm) { request in
-            MacSmartAlbumEditorSheet(existing: request.editing, initialQuery: request.query, onSaved: { album in
-                smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
-                selection = .smartAlbum(album.id)
-            })
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
-        .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
-        .sheet(item: $serverForm) { request in
-            MacServerFormSheet(editing: request.editing) { _ in
-                NotificationCenter.default.post(name: .macServersChanged, object: nil)
+        .modifier(MacRootRequests(root: self))
+    }
+
+    /// The menu commands' and the app's requests to this window — split from
+    /// `body` so the type checker can take it.
+    fileprivate func requests(_ content: some View) -> some View {
+        content
+            .background(MacMainWindowMarker())
+            .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
+            .task { await start() }
+            .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
+            // Edit › Search ⌘F: search is the grid's, so from Backup or a server
+            // All Photos opens first and its field takes the focus once it exists.
+            .onReceive(NotificationCenter.default.publisher(for: .macFocusSearchRequest)) { _ in
+                guard selection.map(isGridPlace) != true else {
+                    NotificationCenter.default.post(name: .macFocusSearch, object: nil)
+                    return
+                }
+                wantsSearchFocus = true
+                selection = .allPhotos
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
-            selection = .backup
-            opensNewBackup = true
-        }
-        // Settings › General › Indexing: "Index Now" reads what originals-only
-        // skipped, with iCloud allowed; a changed switch starts a fresh run.
-        .onReceive(NotificationCenter.default.publisher(for: .macIndexMissingNow)) { _ in
-            library?.reindexIncompleteAssets(manual: true)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macIndexSettingsChanged)) { _ in
-            library?.startIndexing()
-        }
+            .onReceive(NotificationCenter.default.publisher(for: .macGoTo)) { note in
+                if let item = note.object as? MacSidebarItem { selection = item }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                dependencies.backupControl.appBecameActive()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
+                serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
+            }
+            .sheet(item: $smartAlbumForm) { request in
+                MacSmartAlbumEditorSheet(existing: request.editing, initialQuery: request.query, onSaved: { album in
+                    smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+                    selection = .smartAlbum(album.id)
+                })
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
+            .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
+            .sheet(item: $serverForm) { request in
+                MacServerFormSheet(editing: request.editing) { _ in
+                    NotificationCenter.default.post(name: .macServersChanged, object: nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
+                selection = .backup
+                opensNewBackup = true
+            }
+            // Settings › General › Indexing: "Index Now" reads what originals-only
+            // skipped, with iCloud allowed; a changed switch starts a fresh run.
+            .onReceive(NotificationCenter.default.publisher(for: .macIndexMissingNow)) { _ in
+                library?.reindexIncompleteAssets(manual: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macIndexSettingsChanged)) { _ in
+                library?.startIndexing()
+            }
     }
 
     /// The server source picked in the sidebar: its browser fills the
     /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
     /// The sidebar, with what its + › Add Folder… could not add.
     private var sidebar: some View {
-        MacSidebar(selection: $selection, library: library, sources: sources,
+        MacSidebar(selection: $selection, library: library, counts: placeCounts, sources: sources,
                    backup: backupBadge, smartAlbums: smartAlbums,
                    newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
                    addFolder: addFolderFromSidebar,
@@ -145,6 +190,71 @@ struct MacRootWindow: View {
     private var serverSource: SourceStore.Source? {
         guard case .source(let id) = selection else { return nil }
         return sources.first { $0.id == id && $0.kind == "server" }
+    }
+
+    /// The row shows the library grid (and so its search field).
+    private func isGridPlace(_ item: MacSidebarItem) -> Bool {
+        switch item {
+        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded: true
+        case .source: serverSource == nil
+        default: false
+        }
+    }
+
+    /// What the grid shows for a sidebar row; nil is the whole library.
+    private func place(for item: MacSidebarItem?) -> LibraryPlace? {
+        switch item {
+        case .favorites: .favorites
+        case .videos: .videos
+        case .raw: .raw
+        case .recentlyAdded: .recentlyAdded
+        case .source(let id): .source(id)
+        default: nil
+        }
+    }
+
+    /// Recounted when the library, the index or the sources change — not on
+    /// every body. The grid's own count stands in for "a file was indexed".
+    private var countsKey: String {
+        "\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)-\(sources.map(\.id))"
+    }
+
+    /// What an empty place says (FS-18.01 §2).
+    private var emptyPlaceTitle: String {
+        switch selection {
+        case .favorites: String(localized: "No Favorites", comment: "Mac library: Favorites is empty")
+        case .videos: String(localized: "No Videos", comment: "Mac library: Videos is empty")
+        case .raw: String(localized: "No RAW Photos", comment: "Mac library: RAW is empty")
+        case .recentlyAdded: String(localized: "Nothing Added Recently", comment: "Mac library: Recently Added is empty")
+        default: String(localized: "No Photos", comment: "Mac library: a source with no photos")
+        }
+    }
+
+    /// The window title: the row's name — a source's own name, not "Source".
+    private var placeTitle: String {
+        if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
+        return selection?.title ?? "ShotDex"
+    }
+
+    /// All Photos, Favorites, Videos, RAW and each source, counted on GRDB's
+    /// pool so a click never waits on them. Waits a beat first: an index run
+    /// changes the key often, and only the last change needs counting.
+    private func reloadPlaceCounts() async {
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        let queries = dependencies.libraryQueries
+        var counts: [MacSidebarItem: Int] = [:]
+        if let all = await library?.wholeLibraryCount() { counts[.allPhotos] = all }
+        var places: [(MacSidebarItem, LibraryPlace)] = [(.favorites, .favorites), (.videos, .videos), (.raw, .raw)]
+        places += sources.filter { $0.kind != "server" }.map { (.source($0.id), .source($0.id)) }
+        for (item, place) in places {
+            guard !Task.isCancelled else { return }
+            if let filters = try? await place.filters(), let count = try? await queries.count(matchingAll: filters) {
+                counts[item] = count
+            }
+        }
+        guard !Task.isCancelled else { return }
+        placeCounts = counts
     }
 
     private func reloadSources() {
@@ -193,7 +303,7 @@ struct MacRootWindow: View {
                 }
                 // While filtered, M follows the library: a change in Photos,
                 // an index run ending — read from the unfiltered grid's source.
-                .task(id: "\(library?.hasActiveQuery == true)-\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)") {
+                .task(id: "\(selection?.id ?? "")-\(library?.hasActiveQuery == true)-\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)") {
                     guard let library, library.hasActiveQuery else { return }
                     if let total = await library.unfilteredCount(), !Task.isCancelled { libraryTotal = total }
                 }
@@ -201,13 +311,43 @@ struct MacRootWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .macShowFilterPopover)) { _ in showsFilterPopover = true }
                 .sheet(isPresented: $showsAdvancedFilter) {
                     MacSmartAlbumEditorSheet(initialQuery: libraryQuery,
-                                             applyFilter: { library?.advancedQuery = $0.isEmpty ? nil : $0 })
+                                             applyFilter: {
+                                                 searchOwnsQuery = false
+                                                 library?.advancedQuery = $0.isEmpty ? nil : $0
+                                             })
                 }
-                .navigationTitle(selection?.title ?? "ShotDex")
+                .navigationTitle(placeTitle)
                 .navigationSubtitle(subtitle)
                 .toolbar { toolbar }
                 .searchable(text: $searchText, placement: .toolbar,
                             prompt: Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
+                .searchFocused($isSearchFocused)
+                .onReceive(NotificationCenter.default.publisher(for: .macFocusSearch)) { _ in isSearchFocused = true }
+                .onAppear {
+                    guard wantsSearchFocus else { return }
+                    wantsSearchFocus = false
+                    isSearchFocused = true
+                }
+                // Return searches (FS-18.02 §4); an emptied field shows the
+                // grid again at once. Parsing runs off the main actor.
+                .onSubmit(of: .search) {
+                    searchOwnsQuery = true
+                    library?.applySearch(searchText, using: dependencies.search)
+                }
+                // A Reset (filter bar, popover, empty state) that empties the
+                // grid's query takes the search words with it.
+                .onChange(of: library?.hasActiveQuery == true) {
+                    if library?.hasActiveQuery == false, searchOwnsQuery {
+                        searchOwnsQuery = false
+                        searchText = ""
+                    }
+                }
+                .onChange(of: searchText) {
+                    guard searchText.trimmingCharacters(in: .whitespaces).isEmpty, let library else { return }
+                    library.applySearch("", using: dependencies.search)
+                    if searchOwnsQuery { library.advancedQuery = nil }
+                    searchOwnsQuery = false
+                }
                 .inspector(isPresented: $showsInspector) {
                     Text("Info", comment: "Mac inspector placeholder")
                         .foregroundStyle(.secondary)
@@ -218,8 +358,11 @@ struct MacRootWindow: View {
     @ViewBuilder
     private var content: some View {
         if let library, !library.items.isEmpty {
+            // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
-                         picture: Self.demoPicture)
+                         picture: Self.demoPicture, generation: library.rowsGeneration,
+                         assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
+                         assetGeneration: library.contentRefreshGeneration)
         } else if let library, let error = library.loadError {
             ContentUnavailableView {
                 Label(error, systemImage: "exclamationmark.triangle")
@@ -256,6 +399,10 @@ struct MacRootWindow: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let library, !library.isLoading, library.items.isEmpty, !library.hasActiveQuery, library.place != nil {
+            // A place with nothing in it says so; the spinner is only for loading.
+            ContentUnavailableView(emptyPlaceTitle, systemImage: selection?.systemImage ?? "photo")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dependencies.photoLibrary.authorizationState == .denied {
             ContentUnavailableView(String(localized: "No Access to Photos", comment: "Mac library: Photos access denied"),
                                    systemImage: "photo.on.rectangle",
@@ -324,8 +471,11 @@ struct MacRootWindow: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button { } label: { Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up") }
+            // The label says what a click does (FS-18.01 §3).
             Button { showsInspector.toggle() } label: {
-                Label(String(localized: "Show Inspector", comment: "Mac toolbar"), systemImage: "sidebar.right")
+                Label(showsInspector ? String(localized: "Hide Inspector", comment: "Mac toolbar")
+                                     : String(localized: "Show Inspector", comment: "Mac toolbar"),
+                      systemImage: "sidebar.right")
             }
         }
     }
@@ -373,6 +523,10 @@ struct MacRootWindow: View {
         if MacDemoLibrary.isOn {
             library?.readsGridFromIndex = true
             library?.loadIfNeeded()
+            // `-ShotDexDemoSources`: the folder sources in the sidebar too.
+            await MacDemoSources.seedIfAsked(dependencies)
+            reloadSources()
+            MacDemoLibrary.seedScaleIfAsked(dependencies) { library?.reload() }
             // `filterPopover` (default), `filterSet` (conditions + popover),
             // `filterBar` (conditions, popover closed) — board `MAC_FilterPopover`;
             // `filterSet` wants `-ShotDexOriginalCheck checked` for its Storage row.
@@ -439,5 +593,40 @@ extension MacRootWindow {
         if MacDemoLibrary.isOn { return MacDemoLibrary.picture(for:) }
         #endif
         return nil
+    }
+}
+
+private struct MacRootRequests: ViewModifier {
+    let root: MacRootWindow
+    func body(content: Content) -> some View { root.requests(content) }
+}
+
+/// Calls back when this view's window becomes the key window.
+private struct MacKeyWindowObserver: NSViewRepresentable {
+    let becameKey: () -> Void
+
+    func makeNSView(context: Context) -> NSView { Probe(becameKey: becameKey) }
+    func updateNSView(_ nsView: NSView, context: Context) { (nsView as? Probe)?.becameKey = becameKey }
+
+    final class Probe: NSView {
+        var becameKey: () -> Void
+        private var token: NSObjectProtocol?
+
+        init(becameKey: @escaping () -> Void) {
+            self.becameKey = becameKey
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            token.map(NotificationCenter.default.removeObserver)
+            token = nil
+            guard let window else { return }
+            token = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.becameKey() }
+            }
+        }
     }
 }

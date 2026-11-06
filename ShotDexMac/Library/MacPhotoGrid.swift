@@ -21,6 +21,17 @@ struct MacPhotoGrid: NSViewRepresentable {
     var onServer: Set<String> = []
     /// The selected asset ids, each time the selection changes.
     var onSelection: ((Set<String>) -> Void)? = nil
+    /// The model's id-list generation (`LibraryModel.contentGeneration`):
+    /// when given, an unchanged number skips the update without comparing
+    /// 55k ids on every SwiftUI pass.
+    var generation: Int? = nil
+    /// A PHAsset by newest-first position, from the model's non-blocking
+    /// cache: a miss returns nil and resolves off the main actor. Without it
+    /// `asset` is called, which fetches synchronously.
+    var assetAt: ((Int) -> PHAsset?)? = nil
+    /// Bumped when the cache resolved a chunk: tiles still without a
+    /// picture ask again.
+    var assetGeneration = 0
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -58,7 +69,10 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.onSelection = onSelection
         let glyphsChanged = coordinator.onServer != onServer
         coordinator.onServer = onServer
-        coordinator.update(items, isNewestFirst: isNewestFirst, showsDays: showsDays, forceReload: glyphsChanged)
+        coordinator.assetAt = assetAt
+        coordinator.update(items, isNewestFirst: isNewestFirst, showsDays: showsDays, generation: generation,
+                           forceReload: glyphsChanged)
+        coordinator.assetsResolved(assetGeneration)
     }
 
     @MainActor
@@ -66,6 +80,12 @@ struct MacPhotoGrid: NSViewRepresentable {
         weak var collection: NSCollectionView?
         var photoLibrary: PhotoLibraryService?
         var asset: (String) -> PHAsset? = { _ in nil }
+        var assetAt: ((Int) -> PHAsset?)?
+        private var lastGeneration: Int?
+        private var lastAssetGeneration = 0
+        /// The newest-first rows and day sections being built off the main
+        /// actor; a newer update cancels it.
+        private var buildTask: Task<Void, Never>?
         var picture: ((String) -> CGImage?)?
         var onServer: Set<String> = []
         var onSelection: ((Set<String>) -> Void)?
@@ -73,6 +93,8 @@ struct MacPhotoGrid: NSViewRepresentable {
         private var fields = ThumbnailInfoFields.load()
         private var rows: [LibraryGridItem] = []
         private var sections: [PhotoGridSection] = []
+        /// Videos per section, for the day header's words.
+        private var sectionVideos: [Int] = []
 
         private var showsDays = true
 
@@ -101,17 +123,51 @@ struct MacPhotoGrid: NSViewRepresentable {
             }
         }
 
-        func update(_ items: [LibraryGridItem], isNewestFirst: Bool, showsDays: Bool, forceReload: Bool) {
-            // The model keeps the newest at the end (the iOS grid anchors at
-            // the bottom); the Mac reads top-down, newest day first.
-            let newestFirst = isNewestFirst ? items : Array(items.reversed())
-            guard forceReload || showsDays != self.showsDays || newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
-            rows = newestFirst
+        func update(_ items: [LibraryGridItem], isNewestFirst: Bool, showsDays: Bool, generation: Int?, forceReload: Bool) {
+            if let generation {
+                guard forceReload || showsDays != self.showsDays || generation != lastGeneration else { return }
+                lastGeneration = generation
+            } else {
+                let newestFirst = isNewestFirst ? items : Array(items.reversed())
+                guard forceReload || showsDays != self.showsDays || newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
+            }
             self.showsDays = showsDays
-            sections = showsDays
-                ? PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
-                : rows.isEmpty ? [] : [PhotoGridSection(kind: .undated, range: 0..<rows.count)]
-            collection?.reloadData()
+            // The model keeps the newest at the end (the iOS grid anchors at
+            // the bottom); the Mac reads top-down, newest day first. The
+            // reverse and the day sections (51 ms at 55k) are built off the
+            // main actor; the click that changed the list never waits on them.
+            buildTask?.cancel()
+            buildTask = Task { [weak self] in
+                let built = await Task.detached(priority: .userInitiated) {
+                    let rows = isNewestFirst ? items : Array(items.reversed())
+                    let sections = showsDays
+                        ? PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
+                        : rows.isEmpty ? [] : [PhotoGridSection(kind: .undated, range: 0..<rows.count)]
+                    let videos = sections.map { section in
+                        rows[section.range].reduce(0) { $0 + (MediaKind(storedValue: $1.mediaType) == .video ? 1 : 0) }
+                    }
+                    return (rows, sections, videos)
+                }.value
+                guard let self, !Task.isCancelled else { return }
+                (self.rows, self.sections, self.sectionVideos) = built
+                self.collection?.reloadData()
+            }
+        }
+
+        /// A chunk of assets resolved: tiles on screen that are still blank
+        /// take their asset now.
+        func assetsResolved(_ generation: Int) {
+            guard generation != lastAssetGeneration, let collection else { return }
+            lastAssetGeneration = generation
+            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width)
+            for case let tile as MacPhotoTile in collection.visibleItems() where !tile.hasPicture {
+                guard let indexPath = collection.indexPath(for: tile) else { continue }
+                let index = sections[indexPath.section].range.lowerBound + indexPath.item
+                guard index < rows.count, let asset = assetAt?(index) else { continue }
+                let row = rows[index]
+                tile.show(row, asset: asset, picture: nil, photoLibrary: photoLibrary, side: side,
+                          fields: fields, isOnServer: onServer.contains(row.assetId))
+            }
         }
 
         func numberOfSections(in collectionView: NSCollectionView) -> Int { sections.count }
@@ -122,8 +178,13 @@ struct MacPhotoGrid: NSViewRepresentable {
 
         func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
             let tile = collectionView.makeItem(withIdentifier: MacPhotoTile.identifier, for: indexPath) as! MacPhotoTile
-            let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
-            tile.show(row, asset: asset(row.assetId), picture: picture?(row.assetId), photoLibrary: photoLibrary,
+            let index = sections[indexPath.section].range.lowerBound + indexPath.item
+            let row = rows[index]
+            let picture = picture?(row.assetId)
+            // The cache never blocks; the synchronous lookup is for grids
+            // without one (a smart album).
+            let asset = picture != nil ? nil : assetAt.map { $0(index) } ?? asset(row.assetId)
+            tile.show(row, asset: asset, picture: picture, photoLibrary: photoLibrary,
                       side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
                       fields: fields, isOnServer: onServer.contains(row.assetId))
             return tile
@@ -150,7 +211,8 @@ struct MacPhotoGrid: NSViewRepresentable {
                             at indexPath: IndexPath) -> NSView {
             let header = collectionView.makeSupplementaryView(ofKind: kind, withIdentifier: MacDayHeader.identifier, for: indexPath) as! MacDayHeader
             let section = sections[indexPath.section]
-            header.show(section, count: section.range.count)
+            let videos = indexPath.section < sectionVideos.count ? sectionVideos[indexPath.section] : 0
+            header.show(section, count: LibraryCountLine.text(shown: section.range.count, videos: videos, total: nil, isFiltered: false))
             return header
         }
 
@@ -303,8 +365,12 @@ final class MacPhotoTile: NSCollectionViewItem {
         }
     }
 
+    /// A picture is set or on its way; false while the asset is unresolved.
+    private(set) var hasPicture = false
+
     func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat,
               fields: ThumbnailInfoFields, isOnServer: Bool = false) {
+        hasPicture = picture != nil || asset != nil
         // A reused tile drops a late result by its asset id, below.
         requestId = nil
         photo.layer?.contents = nil
@@ -383,13 +449,12 @@ final class MacDayHeader: NSView, NSCollectionViewElement {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-    func show(_ section: PhotoGridSection, count photos: Int) {
+    /// `count`: "48 photos", "3 photos · 2 videos" — the toolbar line's words.
+    func show(_ section: PhotoGridSection, count: String) {
         switch section.kind {
         case .date(let date): title.stringValue = date.formatted(.dateTime.weekday(.wide).month(.wide).day())
         case .undated: title.stringValue = String(localized: "No Date", comment: "Mac grid: header of photos with no capture date")
         }
-        count.stringValue = photos == 1
-            ? String(localized: "1 photo", comment: "Mac grid: day header count")
-            : String(localized: "\(photos) photos", comment: "Mac grid: day header count")
+        self.count.stringValue = count
     }
 }

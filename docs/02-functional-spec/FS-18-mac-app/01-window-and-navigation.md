@@ -35,6 +35,16 @@ sổ riêng là tuỳ chọn.
 - Hàng chọn = nền xám, icon accent. Icon hàng luôn amber (D11).
 - Chân sidebar: nghỉ thì "Up to date · indexed 2 min ago"; đang index thì "Indexing ‹nguồn› 41%" + thanh tiến độ.
 - Bốn trạng thái hàng nguồn (gắn ngoài, offline, đang thêm, cần cấp quyền) do FS-19 định nghĩa.
+- **Mỗi hàng là một chỗ, không phải một bộ lọc** (2026-11-06): Favorites = ảnh yêu thích, Videos = video, RAW =
+  file RAW, một nguồn = ảnh có bản ở nguồn đó, Recently Added = album Recently Added của Photos cộng ảnh thư mục /
+  ổ / server được index (đọc lần gần nhất) trong 30 ngày — file sửa rồi đọc lại cũng tính là mới thêm. Filter và search thu hẹp **bên trong** chỗ đó; thanh chip, "N of M"
+  (M = cả chỗ) và Reset Filters không đụng tới chỗ. Đếm ở sidebar đọc trên pool GRDB, không bao giờ trên main.
+  Filter **giữ nguyên khi đổi chỗ** (như thanh lọc Lightroom; thanh chip luôn nói đang lọc gì). Search chung một
+  ô với Advanced Filter: Return thay điều kiện bằng điều search hiểu được, xoá chữ thì bỏ; chữ gõ mà chưa Return
+  không theo sang chỗ khác. Chỗ rỗng nói thẳng ("No Videos", "No RAW Photos", "Nothing Added Recently"),
+  spinner chỉ khi đang tải. Edit › Search ⌘F từ Backup/server mở All Photos rồi đặt con trỏ vào ô search.
+- Hàng chưa có màn riêng (On This Day, Albums, Statistics, Duplicates, Collages, Video Projects, On Server) không
+  được hiện cả thư viện dưới tên của nó; tới lượt màn đó trong `docs/design/mac/MAC_LOOP.md` thì thay.
 
 ## 3. Toolbar
 

@@ -52,6 +52,8 @@ struct MacFilterPopoverLogicTests {
             == "\(1_200.formatted()) photos · 10 videos")
         #expect(LibraryCountLine.text(shown: 1, videos: 0, total: nil, isFiltered: true) == "1 photo")
         #expect(LibraryCountLine.text(shown: 2, videos: 1, total: nil, isFiltered: false) == "1 photo · 1 video")
+        // Only videos — the Videos place, a day of clips: no "0 photos".
+        #expect(LibraryCountLine.text(shown: 14, videos: 14, total: nil, isFiltered: false) == "14 videos")
     }
 
     // MARK: Sort By

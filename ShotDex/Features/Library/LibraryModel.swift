@@ -94,6 +94,10 @@ final class LibraryModel {
     /// re-renders visible cells in place — it must NOT re-anchor, so the user's
     /// scroll position survives an index run finishing or being cancelled.
     private(set) var contentRefreshGeneration = 0
+    /// Bumped every time rows are published, same list or not — the Mac grid
+    /// rebuilds on this and nothing else (an asset chunk resolving bumps
+    /// `contentRefreshGeneration` too, and must not rebuild 55k rows).
+    private(set) var rowsGeneration = 0
     /// Latest in-place deletion, published in the same update as the pruned
     /// list so the grid animates the tiles out instead of reloading.
     private(set) var lastRemoval: PhotoGridRemoval?
@@ -103,6 +107,9 @@ final class LibraryModel {
     var matchCount: Int { items.count }
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    /// The search being resolved: a newer one, or an emptied field, cancels
+    /// it, so a slow answer never lands over a later query.
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
     /// SwiftUI `.task` can run again when a full-screen cover is dismissed.
     /// Initial grid loading is model-scoped and must happen only once;
     /// explicit filter/library changes still call `reload()` directly.
@@ -205,6 +212,16 @@ final class LibraryModel {
         didSet {
             guard advancedQuery != oldValue else { return }
             if advancedQuery != nil, !criteria.isEmpty { criteria = .empty }
+            reload()
+        }
+    }
+    /// A sidebar place (Mac, FS-18.01 §2): what the grid shows before any
+    /// filter — Favorites, RAW, one source. Not a filter: the filter bar,
+    /// the count line's "N of M" and Reset leave it alone, and the user's
+    /// filters narrow inside it.
+    var place: LibraryPlace? {
+        didSet {
+            guard place != oldValue else { return }
             reload()
         }
     }
@@ -343,16 +360,23 @@ final class LibraryModel {
         // back to the DB query.
         // PhotoKit only knows Photos: with a folder, drive or server photo in
         // the library the grid comes from the index (FS-19.05 §3).
-        let usePhotoKit = !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
-            && !((try? libraryQueries.hasPhotosOutsidePhotos()) ?? false)
+        let place = self.place
+        // Whether the index holds file photos is read inside the task, off
+        // the main actor: a click must not wait behind an index write.
+        let mayUsePhotoKit = place == nil && !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
         // showing, publishing the 600-row slice first would replace the content
         // twice — two `reloadData()`s and a content-height collapse/re-expand,
         // which is what made an index run finishing jump the grid and flicker.
-        let useFirstPaintSlice = usePhotoKit && items.isEmpty
+        let gridIsEmpty = items.isEmpty
         loadTask = Task { [weak self] in
             do {
+                let hasFilePhotos = mayUsePhotoKit
+                    ? await Task.detached(priority: .userInitiated) { (try? libraryQueries.hasPhotosOutsidePhotos()) ?? false }.value
+                    : false
+                let usePhotoKit = mayUsePhotoKit && !hasFilePhotos
+                let useFirstPaintSlice = usePhotoKit && gridIsEmpty
                 if usePhotoKit {
                     var slice: [LibraryGridItem] = []
                     if useFirstPaintSlice {
@@ -367,6 +391,19 @@ final class LibraryModel {
                     )
                     guard let self, !Task.isCancelled else { return }
                     self.applyLoadedRows(all)
+                } else if let place {
+                    var filters = try await place.filters()
+                    if let advancedQuery, !advancedQuery.isEmpty {
+                        filters.append(.query(advancedQuery))
+                    } else if !criteria.isEmpty {
+                        filters.append(.criteria(criteria))
+                    }
+                    let rows = try await libraryQueries.gridItems(
+                        matchingAll: filters, restrictedTo: try await place.assetIds(queries: libraryQueries), sort: sort
+                    )
+                    guard let self, !Task.isCancelled else { return }
+                    self.cloudPlaceholderCount = 0
+                    self.applyLoadedRows(rows)
                 } else if let advancedQuery, !advancedQuery.isEmpty {
                     let rows = try await libraryQueries.gridItems(matching: advancedQuery, sort: sort)
                     guard let self, !Task.isCancelled else { return }
@@ -444,6 +481,7 @@ final class LibraryModel {
         // Every row was just re-fetched — cached lazy-badge answers are stale.
         badgeCache.removeAll()
         items = reversed
+        rowsGeneration &+= 1
         // Same ids in the same order = every resolved PHAsset chunk is still
         // valid. Re-seeding would drop them all, so `asset(atFlatIndex:)`
         // would return nil for every visible tile and each one would blank
@@ -502,8 +540,22 @@ final class LibraryModel {
     /// the index plus its cloud-only files.
     func unfilteredCount() async -> Int? {
         let queries = libraryQueries
-        let photoKitPath = !readsGridFromIndex && sort.photoKitSortKey != nil
-            && !((try? queries.hasPhotosOutsidePhotos()) ?? false)
+        if let place {
+            // Inside a place, M is the place: "12 of 340 photos" in Favorites.
+            return try? await queries.count(
+                matchingAll: try await place.filters(), restrictedTo: try await place.assetIds(queries: queries)
+            )
+        }
+        return await wholeLibraryCount()
+    }
+
+    /// Everything the unfiltered All Photos grid would show — the sidebar's
+    /// All Photos count uses this too, so the row and "N of M" agree.
+    func wholeLibraryCount() async -> Int? {
+        let queries = libraryQueries
+        // The index read runs off the main actor: this backs a sidebar count.
+        let hasFilePhotos = await Task.detached(priority: .utility) { (try? queries.hasPhotosOutsidePhotos()) ?? false }.value
+        let photoKitPath = !readsGridFromIndex && sort.photoKitSortKey != nil && !hasFilePhotos
         if photoKitPath {
             let sort = self.sort
             return await Task.detached(priority: .utility) {
@@ -664,6 +716,7 @@ final class LibraryModel {
     /// the "Search for …" row and a tapped suggestion cannot behave differently.
     func applySearch(_ text: String, using service: SearchService) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        searchTask?.cancel()
         guard !trimmed.isEmpty else {
             criteria.searchText = nil
             return
@@ -671,9 +724,9 @@ final class LibraryModel {
         // Remembered before the resolution lands, and remembered as typed: recents
         // are "what I asked for", not "what the parser made of it".
         service.recentSearches.remember(trimmed)
-        Task { [weak self] in
+        searchTask = Task { [weak self] in
             let resolution = await service.resolve(trimmed)
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             // `criteria` and `advancedQuery` clear each other, so exactly one of
             // these is ever set.
             if resolution.hasRules {

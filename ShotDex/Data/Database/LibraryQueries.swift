@@ -148,6 +148,18 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// Photos with a folder, drive or server copy, indexed (last read) since
+    /// a date — that half of the Mac's Recently Added (FS-18.01 §2).
+    func assetIdsOutsidePhotos(indexedSince date: Date) async throws -> [String] {
+        try await database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT assetId FROM photo_metadata
+                WHERE indexedAt >= ?
+                  AND assetId IN (SELECT photoId FROM photo_copies WHERE kind != 'photos' AND missingSince IS NULL)
+                """, arguments: [Int64(date.timeIntervalSince1970)])
+        }
+    }
+
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"

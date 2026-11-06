@@ -1,0 +1,390 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoSources"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "00-all"
+  },
+  {
+   "action": "screenshot",
+   "name": "00-all"
+  },
+  {
+   "action": "click",
+   "label": "Favorites",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "01-Favorites"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-Favorites"
+  },
+  {
+   "action": "click",
+   "label": "Videos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "02-Videos"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-Videos"
+  },
+  {
+   "action": "click",
+   "label": "RAW",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "03-RAW"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-RAW"
+  },
+  {
+   "action": "click",
+   "label": "Recently Added",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "04-RecentlyAdded"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-RecentlyAdded"
+  },
+  {
+   "action": "click",
+   "label": "2026 Japan",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "05-2026Japan"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-2026Japan"
+  },
+  {
+   "action": "click",
+   "label": "Favorites",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Filter and Sort"
+  },
+  {
+   "action": "waitFor",
+   "label": "Sort By",
+   "seconds": 3,
+   "within": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "10-fav-popover"
+  },
+  {
+   "action": "dump",
+   "name": "10-fav-popover"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "click",
+   "label": "On This Day",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "20-OnThisDay"
+  },
+  {
+   "action": "click",
+   "label": "Albums",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "21-Albums"
+  },
+  {
+   "action": "click",
+   "label": "Statistics",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "22-Statistics"
+  },
+  {
+   "action": "click",
+   "label": "Duplicates",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "23-Duplicates"
+  },
+  {
+   "action": "click",
+   "label": "Collages",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "24-Collages"
+  },
+  {
+   "action": "click",
+   "label": "Video Projects",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "25-VideoProjects"
+  },
+  {
+   "action": "click",
+   "label": "On Server",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "26-OnServer"
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "ISO 3200\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "30-search"
+  },
+  {
+   "action": "screenshot",
+   "name": "30-search"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "31-search-cleared"
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector"
+  },
+  {
+   "action": "click",
+   "label": "List"
+  },
+  {
+   "action": "click",
+   "label": "Grid View"
+  },
+  {
+   "action": "key",
+   "text": "2",
+   "modifiers": "option,cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "Favorites \u2013 21 photos",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "Go>RAW"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "40-go-raw"
+  },
+  {
+   "action": "click",
+   "label": "Backup",
+   "type": "staticText",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "typeText",
+   "text": "85mm\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "50-cmdf-from-backup"
+  },
+  {
+   "action": "click",
+   "label": "Filter and Sort"
+  },
+  {
+   "action": "waitFor",
+   "label": "Sort By",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "51-popover-while-searched"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

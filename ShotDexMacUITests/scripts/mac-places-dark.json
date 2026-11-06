@@ -1,0 +1,14 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary","-ShotDexDemoSources","-ShotDexAppearance","dark"]},
+ {"action":"waitFor","label":"All Photos","type":"staticText","seconds":15},
+ {"action":"wait","seconds":4},
+ {"action":"click","label":"Favorites","type":"staticText","index":0},{"action":"wait","seconds":1.5},
+ {"action":"screenshot","name":"dark-favorites"},
+ {"action":"click","label":"Client Shoots 2026","type":"staticText","index":0},{"action":"wait","seconds":1.5},
+ {"action":"assertExists","label":"No Photos","seconds":3},
+ {"action":"screenshot","name":"dark-empty-source"},
+ {"action":"click","label":"Statistics","type":"staticText","index":0},{"action":"wait","seconds":1},
+ {"action":"assertExists","label":"Not built on the Mac yet.","seconds":3},
+ {"action":"screenshot","name":"dark-pending"},
+ {"action":"quit"}
+]}

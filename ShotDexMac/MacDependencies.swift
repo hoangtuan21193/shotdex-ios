@@ -13,6 +13,9 @@ final class MacDependencies: LibraryServices {
     let metadataStore: MetadataStore
     let libraryQueries: LibraryQueries
     let filterSuggestions: FilterSuggestionCache
+    /// Typed queries to grid state (FS-18.02 §4): the parser, then free
+    /// text. AI search is a later version on the Mac (FS-18.04 §3).
+    let search: SearchService
     let indexPipeline: IndexPipeline
     let placeIndexPass: PlaceIndexPass
     let keywordMirror: ExtendedMetadataMirrorPass? = nil
@@ -86,6 +89,7 @@ final class MacDependencies: LibraryServices {
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
         filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
+        search = SearchService(filterSuggestions: filterSuggestions, recentSearches: RecentSearchStore())
         let placeStore = PlaceStore(database: database)
         placeIndexPass = PlaceIndexPass(store: placeStore, geocoder: PlaceGeocodingService(store: placeStore))
         unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))

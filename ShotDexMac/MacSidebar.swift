@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The sidebar (board `Main`): Library, Sources, Collections, Utilities;
@@ -5,6 +6,9 @@ import SwiftUI
 struct MacSidebar: View {
     @Binding var selection: MacSidebarItem?
     let library: LibraryModel?
+    /// Counts on the Library rows and the sources (FS-18.01 §2); Recently
+    /// Added has none.
+    var counts: [MacSidebarItem: Int] = [:]
     let sources: [SourceStore.Source]
     /// The Backup row's count, or a warning dot when a job needs the user
     /// (FS-22.06 §5.1).
@@ -21,13 +25,22 @@ struct MacSidebar: View {
         List(selection: $selection) {
             Section {
                 ForEach(MacSidebarItem.library) { item in
-                    row(item, count: item == .allPhotos ? library?.items.count : nil)
+                    row(item, count: counts[item])
                 }
             }
             Section {
                 ForEach(sources, id: \.id) { source in
-                    Label { Text(source.name) } icon: { MacSidebar.icon(MacSidebar.symbol(forSourceKind: source.kind)) }
+                    Label {
+                        HStack {
+                            Text(source.name)
+                            Spacer(minLength: 4)
+                            if let count = counts[.source(source.id)] {
+                                MacSidebar.countText(count)
+                            }
+                        }
+                    } icon: { MacSidebar.icon(MacSidebar.symbol(forSourceKind: source.kind)) }
                         .tag(MacSidebarItem.source(source.id))
+                        .listRowBackground(ground(.source(source.id)))
                 }
             } header: {
                 HStack {
@@ -51,6 +64,7 @@ struct MacSidebar: View {
                 ForEach(smartAlbums) { album in
                     Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
                         .tag(MacSidebarItem.smartAlbum(album.id))
+                        .listRowBackground(ground(.smartAlbum(album.id)))
                 }
             } header: {
                 HStack {
@@ -73,6 +87,19 @@ struct MacSidebar: View {
             }
         }
         .safeAreaInset(edge: .bottom) { status }
+        .background(MacSidebarHighlightOff())
+    }
+
+    /// The picked row's ground: grey `rowSel` whether or not the sidebar has
+    /// the focus (DESIGN.md §10b, D11) — the system draws it in the macOS
+    /// accent, blue, once the list is clicked.
+    @ViewBuilder
+    private func ground(_ item: MacSidebarItem) -> some View {
+        if selection == item {
+            RoundedRectangle(cornerRadius: 8).fill(MacTheme.rowSelection).padding(.horizontal, 8)
+        } else {
+            Color.clear
+        }
     }
 
     private func row(_ item: MacSidebarItem, count: Int?) -> some View {
@@ -81,13 +108,14 @@ struct MacSidebar: View {
                 Text(item.title)
                 Spacer(minLength: 4)
                 if let count {
-                    Text(count.formatted()).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    MacSidebar.countText(count)
                 }
             }
         } icon: {
             MacSidebar.icon(item.systemImage)
         }
         .tag(item)
+        .listRowBackground(ground(item))
     }
 
     private var backupRow: some View {
@@ -99,13 +127,14 @@ struct MacSidebar: View {
                     Circle().fill(.orange).frame(width: 8, height: 8)
                         .accessibilityLabel(String(localized: "Needs attention", comment: "Mac sidebar: a backup job has a problem"))
                 } else if backup.jobs > 0 {
-                    Text(backup.jobs.formatted()).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    MacSidebar.countText(backup.jobs)
                 }
             }
         } icon: {
             MacSidebar.icon(MacSidebarItem.backup.systemImage)
         }
         .tag(MacSidebarItem.backup)
+        .listRowBackground(ground(.backup))
     }
 
     @ViewBuilder
@@ -138,6 +167,11 @@ struct MacSidebar: View {
             .fontWeight(.regular)
             .foregroundStyle(MacTheme.accent)
             .frame(width: 16, height: 16)
+    }
+
+    /// A row's count: 11, tabular, secondary (DESIGN.md §10b).
+    static func countText(_ count: Int) -> some View {
+        Text(count.formatted()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
     }
 
     static func symbol(forSourceKind kind: String) -> String {
@@ -188,6 +222,16 @@ enum MacSidebarItem: Hashable, Identifiable {
         }
     }
 
+    /// A place whose own screen a later pass of the Mac loop builds
+    /// (docs/design/mac/MAC_LOOP.md): it must not show the whole library
+    /// under its name meanwhile.
+    var isPendingScreen: Bool {
+        switch self {
+        case .onThisDay, .albums, .statistics, .duplicates, .collages, .videoProjects, .onServer: true
+        default: false
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .allPhotos: "photo.on.rectangle"
@@ -206,5 +250,59 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .videoProjects: "film"
         case .onServer: "externaldrive.connected.to.line.below"
         }
+    }
+}
+
+/// Stands in for a place whose screen is not built yet (see
+/// `MacSidebarItem.isPendingScreen`).
+struct MacPendingPlace: View {
+    let item: MacSidebarItem
+
+    var body: some View {
+        ContentUnavailableView(item.title, systemImage: item.systemImage,
+                               description: Text("Not built on the Mac yet.", comment: "Mac: a sidebar place whose screen is still to come"))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle(item.title)
+    }
+}
+
+/// Turns off the sidebar outline view's own selection highlight, so the
+/// rows' `rowSel` ground is the only one drawn.
+private struct MacSidebarHighlightOff: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { Probe() }
+
+    /// Again on every update: the List can rebuild its outline view, and a
+    /// fresh one comes back with the blue highlight.
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { Self.apply(from: nsView) }
+    }
+
+    /// Applies as soon as it is in a window — before that there is no
+    /// outline view next to it.
+    private final class Probe: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard window != nil else { return }
+            DispatchQueue.main.async { MacSidebarHighlightOff.apply(from: self) }
+        }
+    }
+
+    static func apply(from view: NSView) {
+        // The outline view is a sibling of this background: search from the
+        // nearest ancestor that holds one.
+        var ancestor = view.superview
+        while let current = ancestor {
+            if let outline = find(in: current) {
+                outline.selectionHighlightStyle = .none
+                return
+            }
+            ancestor = current.superview
+        }
+    }
+
+    private static func find(in view: NSView) -> NSOutlineView? {
+        if let outline = view as? NSOutlineView { return outline }
+        for child in view.subviews { if let found = find(in: child) { return found } }
+        return nil
     }
 }

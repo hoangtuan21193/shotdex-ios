@@ -23,8 +23,12 @@ enum LibraryCountLine {
                 : String(localized: "\(shown.formatted()) of \(total.formatted()) photos", comment: "Mac toolbar subtitle while a filter is on: shown of all photos")
         }
         let photos = shown - videos
-        var parts = [photos == 1 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
-                                 : String(localized: "\(photos.formatted()) photos", comment: "Mac toolbar subtitle")]
+        var parts: [String] = []
+        // Videos alone (the Videos place) say only videos: no "0 photos".
+        if photos > 0 || videos == 0 {
+            parts.append(photos == 1 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
+                                     : String(localized: "\(photos.formatted()) photos", comment: "Mac toolbar subtitle"))
+        }
         if videos > 0 {
             parts.append(videos == 1 ? String(localized: "1 video", comment: "Mac toolbar subtitle")
                                      : String(localized: "\(videos.formatted()) videos", comment: "Mac toolbar subtitle"))
