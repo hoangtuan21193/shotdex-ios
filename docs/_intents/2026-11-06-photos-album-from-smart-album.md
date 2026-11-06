@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-06 |
 | Trạng thái | accepted (2026-11-06) |
-| Tiến độ | **chưa làm** (2026-11-06) — spec FS-06.12, 17 AC; chờ spike AC-1 trên iPhone thật |
+| Tiến độ | **đang làm** (2026-11-06) — spec FS-06.12, 17 AC; board vẽ (`74008bba`); plan [2026-11-06-also-on-server-keep-in-photos](../_plans/2026-11-06-also-on-server-keep-in-photos.md), task 0/11; AC-1 cần iPhone thật |
 | Nguồn | phản hồi người dùng (2026-11-06): "muốn hiện những ảnh có cả ở iCloud và NAS, sau đó move all ảnh trong album đó vào shared library của iCloud" |
 | Spec sinh ra từ đây | [FS-06.12](../02-functional-spec/FS-06-collections/12-photos-album-sync.md) |
 
