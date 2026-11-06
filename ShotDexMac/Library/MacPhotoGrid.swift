@@ -38,6 +38,11 @@ struct MacPhotoGrid: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
+    /// Whatever it is offered, never the collection's fitting size.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
     func makeNSView(context: Context) -> NSScrollView {
         let layout = NSCollectionViewFlowLayout()
         layout.minimumInteritemSpacing = MacGridMetrics.spacing

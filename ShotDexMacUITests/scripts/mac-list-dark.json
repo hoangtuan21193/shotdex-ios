@@ -1,0 +1,7 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary","-ShotDexAppearance","dark"]},
+ {"action":"waitFor","label":"All Photos","type":"staticText","seconds":15},{"action":"wait","seconds":3},
+ {"action":"key","text":"2","modifiers":"cmd"},{"action":"wait","seconds":2},
+ {"action":"click","x":0.5,"y":0.15},{"action":"wait","seconds":1},
+ {"action":"screenshot","name":"dark-list"},{"action":"quit"}
+]}

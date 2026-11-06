@@ -336,7 +336,10 @@ enum MacDemoLibrary {
                      "Big Sur Shore Rocks", "Catalina Sunset", "Big Sur Aerial", "Catalina Silhouette"]
         return names.compactMap { name in
             let url = folder.appendingPathComponent(name + ".heic")
-            return CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+            // Decoded now, once: a lazy HEIC would decode on the main thread
+            // at every display and show up as the app's own cost.
+            let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+            return CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, options) }
         }
     }()
 

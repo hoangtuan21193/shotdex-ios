@@ -1,0 +1,194 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "List",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Camera",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-list"
+  },
+  {
+   "action": "dump",
+   "name": "01-list"
+  },
+  {
+   "action": "click",
+   "x": 0.745,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "02-sorted-iso"
+  },
+  {
+   "action": "click",
+   "x": 0.745,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "02b-sorted-iso-asc"
+  },
+  {
+   "action": "click",
+   "x": 0.19,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "03-sorted-name"
+  },
+  {
+   "action": "click",
+   "x": 0.19,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "04-sorted-name-desc"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.4,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Lens",
+   "type": "menuItem",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Lens",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "05-lens-hidden"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.4,
+   "y": 0.074
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Lens",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.5,
+   "y": 0.15
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "06-row-selected"
+  },
+  {
+   "action": "key",
+   "text": "1",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Camera",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "2",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Camera",
+   "seconds": 5
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

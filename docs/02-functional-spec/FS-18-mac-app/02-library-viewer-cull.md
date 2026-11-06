@@ -37,6 +37,9 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
 - Hàng **28**, ảnh nhỏ 20, nền xen kẽ; header 28 có vạch chia. Nhấp header sắp xếp, nhấp lại đảo chiều.
 - Cột kéo đổi rộng, kéo đổi chỗ, ẩn/hiện qua menu chuột phải trên header; bảng rộng hơn cửa sổ thì cuộn ngang.
 - Hàng chọn: nền amber khi bảng đang focus, xám khi không. Lưới và bảng giữ chung một lựa chọn.
+- Mac (2026-11-07): Date, Focal, Aperture, Shutter, ISO sắp bằng thứ tự của thư viện (lưới theo cùng); Name, Camera,
+  Lens, Rating, Source, Size sắp riêng trong bảng (ở nền). Bấm cột lần đầu: Date/ISO/Focal/Rating/Size lớn trước, còn lại
+  A→Z. View › as Grid ⌘1 · as List ⌘2; chế độ nhớ qua lần mở. Lựa chọn chung giữa lưới và bảng: hàng sau (LibrarySelected).
 
 ## 4. Search
 

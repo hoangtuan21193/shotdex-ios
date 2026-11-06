@@ -135,6 +135,18 @@ struct MacBackupCommands: Commands {
                 NotificationCenter.default.post(name: .macNewBackup, object: nil)
             }
         }
+        // View › as Grid ⌘1 · as List ⌘2 (FS-18.02 §3).
+        CommandGroup(before: .toolbar) {
+            Button(String(localized: "as Grid", comment: "Mac menu: View › as Grid")) {
+                NotificationCenter.default.post(name: .macViewMode, object: "grid")
+            }
+            .keyboardShortcut("1", modifiers: .command)
+            Button(String(localized: "as List", comment: "Mac menu: View › as List")) {
+                NotificationCenter.default.post(name: .macViewMode, object: "list")
+            }
+            .keyboardShortcut("2", modifiers: .command)
+            Divider()
+        }
         // Edit › Search ⌘F (FS-18.01b §2): the toolbar's search field.
         CommandGroup(after: .pasteboard) {
             Divider()

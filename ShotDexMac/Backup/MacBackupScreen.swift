@@ -211,6 +211,8 @@ extension Notification.Name {
     static let macShowBackup = Notification.Name("ShotDexMacShowBackup")
     /// Go › All Photos … Recently Added: the object is the `MacSidebarItem`.
     static let macGoTo = Notification.Name("ShotDexMacGoTo")
+    /// View › as Grid ⌘1 / as List ⌘2; the object is the mode's raw value.
+    static let macViewMode = Notification.Name("ShotDexMacViewMode")
     /// File › Add Source…: the Add a Source sheet.
     static let macShowAddSource = Notification.Name("ShotDexMacShowAddSource")
     /// File › Add Folder… and Add Photos Library….

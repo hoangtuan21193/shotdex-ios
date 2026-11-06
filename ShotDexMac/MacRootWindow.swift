@@ -36,7 +36,13 @@ struct MacRootWindow: View {
     @State private var smartAlbums: [SmartAlbum] = []
     /// Why the sidebar's Add Folder… could not add (Settings shows its own).
     @State private var addFolderFailure: SourcesModel.Failure?
-    @State private var viewMode = MacViewMode.grid
+    /// Grid or list (FS-18.02 §3), kept between launches.
+    @AppStorage("mac.library.viewMode") private var viewMode = MacViewMode.grid
+    /// The list view's extra columns, by asset id.
+    @State private var tableDetails: [String: LibraryTableQueries.Details] = [:]
+    /// Bumped on each read of `tableDetails`, so the table sees a new read
+    /// even when it holds as many photos as the last one.
+    @State private var tableDetailsGeneration = 0
     /// The sidebar's sources, read when they change — not on every body.
     @State private var sources: [SourceStore.Source] = []
     /// Filter and Sort (FS-18.02 §5): the popover, its Advanced Filter…
@@ -156,6 +162,9 @@ struct MacRootWindow: View {
             // ⇧⌘O and ⌘K wait while Add a Source is open: one sheet at a time.
             .onReceive(NotificationCenter.default.publisher(for: .macAddFolder)) { _ in
                 if !showsAddSource { addFolderFromSidebar() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macViewMode)) { note in
+                if let mode = (note.object as? String).flatMap(MacViewMode.init(rawValue:)) { viewMode = mode }
             }
             .onReceive(NotificationCenter.default.publisher(for: .macShowAddSource)) { _ in
                 addSourceRequest = nil
@@ -632,6 +641,28 @@ struct MacRootWindow: View {
         if isLibraryEmpty {
             MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: { addFolderFromSidebar() },
                             connectToServer: { serverForm = MacServerFormRequest() }, addFolders: { addFolders($0) })
+        } else if let library, !library.items.isEmpty, viewMode == .list {
+            MacPhotoTable(items: library.items, generation: library.rowsGeneration, details: tableDetails,
+                          detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
+                          assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
+                          assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
+                          sort: library.sort, setSort: { library.sort = $0 })
+                // Camera, lens, rating, source: one read of the index, off the
+                // main actor — again when the set of photos changes, not on a sort.
+                // An index run changes the count often: the read waits for a
+                // pause, and a read like the last one is not handed over.
+                .task(id: "\(library.items.count)-\(library.place.map { "\($0)" } ?? "")-\(dependencies.photoLibrary.assetChangeToken)") {
+                    if !tableDetails.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
+                    let queries = LibraryTableQueries(database: dependencies.database)
+                    let old = tableDetails
+                    guard let details = try? await queries.details(), !Task.isCancelled else { return }
+                    let isSame = await Task.detached(priority: .userInitiated) { details == old }.value
+                    guard !isSame, !Task.isCancelled else { return }
+                    tableDetails = details
+                    tableDetailsGeneration += 1
+                    // The old 55k entries are let go off the main actor.
+                    Task.detached(priority: .utility) { _ = old }
+                }
         } else if let library, !library.items.isEmpty {
             // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
@@ -813,6 +844,28 @@ struct MacRootWindow: View {
             await MacDemoSources.seedIfAsked(dependencies)
             reloadSources()
             MacDemoLibrary.seedScaleIfAsked(dependencies) { library?.reload() }
+            // `-ShotDexPerfCycle`: switch list/grid and sort by itself, then
+            // quit — the hang watchdog's numbers without XCTest reading the
+            // accessibility tree on the main thread at the same time.
+            if ProcessInfo.processInfo.arguments.contains("-ShotDexPerfCycle") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(8))
+                    viewMode = ProcessInfo.processInfo.arguments.contains("-ShotDexPerfGrid") ? .grid : .list
+                    try? await Task.sleep(for: .seconds(3))
+                    for step in 0..<6 {
+                        MacAgentProbe.log.notice("perf cycle: sort \(step, privacy: .public)")
+                        library?.sort = step.isMultiple(of: 2) ? .isoDescending : .isoAscending
+                        try? await Task.sleep(for: .seconds(2))
+                    }
+                    for step in 0..<4 {
+                        MacAgentProbe.log.notice("perf cycle: mode \(step, privacy: .public)")
+                        viewMode = step.isMultiple(of: 2) ? .grid : .list
+                        try? await Task.sleep(for: .seconds(2))
+                    }
+                    MacAgentProbe.log.notice("perf cycle: done")
+                    NSApp.terminate(nil)
+                }
+            }
             // `filterPopover` (default), `filterSet` (conditions + popover),
             // `filterBar` (conditions, popover closed) — board `MAC_FilterPopover`;
             // `filterSet` wants `-ShotDexOriginalCheck checked` for its Storage row.
@@ -861,7 +914,7 @@ struct MacRootWindow: View {
     }
 }
 
-enum MacViewMode: Hashable { case grid, list }
+enum MacViewMode: String, Hashable { case grid, list }
 
 /// A Locate… pick that does not look like the source (FS-19.01b §2).
 struct MacUnlikelyLocate {
