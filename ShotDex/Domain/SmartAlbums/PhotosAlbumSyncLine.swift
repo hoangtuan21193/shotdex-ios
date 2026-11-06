@@ -35,6 +35,11 @@ enum PhotosAlbumSyncLine {
             return Line(text: String(localized: "Couldn’t update the album in Photos. Will try again.",
                                      comment: "Smart album: a Keep in Photos write failed; it retries"),
                         showsHint: false)
+        case .synced where assetCount == 0:
+            // Nothing to move yet — no instruction to move it (UX review).
+            return Line(text: String(localized: "In Photos · No photos yet",
+                                     comment: "Smart album kept in Photos: its album holds nothing yet, e.g. while the NAS check runs"),
+                        showsHint: false)
         case .synced:
             let count = String(localized: "In Photos · \(assetCount) photos",
                                comment: "Smart album kept in Photos: how many photos its album holds; e.g. In Photos · 8,412 photos")

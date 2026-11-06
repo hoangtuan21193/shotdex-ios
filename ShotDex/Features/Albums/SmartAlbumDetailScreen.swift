@@ -114,7 +114,10 @@ struct SmartAlbumDetailScreen: View {
         .task(id: dependencies.photosAlbumSync.generation) {
             let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
             let id = album.id
-            photosLink = await Task.detached { try? links.link(id) }.value
+            let link = await Task.detached { try? links.link(id) }.value
+            // A newer generation's task replaced this one: keep its answer.
+            guard !Task.isCancelled else { return }
+            photosLink = link
         }
         // Each batch of the on-server check can move photos in or out of a
         // `Source is <server>` album, and moves its progress line (FS-19.07 §7).

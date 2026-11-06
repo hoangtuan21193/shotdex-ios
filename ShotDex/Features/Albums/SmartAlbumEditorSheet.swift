@@ -107,14 +107,15 @@ struct SmartAlbumEditorSheet: View {
     private var keepInPhotosSection: some View {
         let isFullAccess = dependencies.photoLibrary.authorizationState == .authorized
         return Section {
+            // On without Full Access can still be turned off (UX review).
             Toggle("Keep in Photos", isOn: $keepsInPhotos)
-                .disabled(!isFullAccess)
+                .disabled(!isFullAccess && !keepsInPhotos)
         } footer: {
             if isFullAccess {
                 Text("ShotDex keeps an album in Photos with exactly these photos.")
             } else {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Needs Full Photos Access.")
+                    Text(keepsInPhotos ? "Needs Full Photos Access. The album in Photos isn’t updating." : "Needs Full Photos Access.")
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
@@ -199,6 +200,8 @@ struct SmartAlbumEditorSheet: View {
         // Only after the album row exists: a link to no album is never cleaned up.
         if keepsInPhotos != keptInPhotos {
             try? SmartAlbumPhotosAlbumStore(database: dependencies.database).setEnabled(keepsInPhotos, smartAlbumId: album.id)
+            // The album's line shows the change now, not after the next pass.
+            dependencies.photosAlbumSync.linksChanged()
         }
         // A rename or new conditions change the album in Photos too.
         dependencies.photosAlbumSync.setNeedsSync()

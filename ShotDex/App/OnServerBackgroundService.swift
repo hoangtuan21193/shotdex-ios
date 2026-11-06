@@ -58,8 +58,12 @@ final class OnServerBackgroundService {
                 finish(false)
             }
         }
+        // `register(… using: .main)`: the expiration handler and this task run
+        // on the main queue after `run` returns, so `work` is set by then.
         work = Task { @MainActor in
             await pass.value
+            // Ended by iOS: the expiration handler already reported and finished.
+            guard !Task.isCancelled else { return }
             if !finished { await afterPass?() }
             report(started: started, expired: false)
             if check.hasWorkLeft { appDidEnterBackground() }

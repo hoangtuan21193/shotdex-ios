@@ -45,6 +45,7 @@ Dòng trạng thái nằm dưới thanh điều kiện của smart album, sau d�
 | tắt | không có dòng |
 | đang tạo / đang đồng bộ | `Updating album in Photos…` |
 | đã đồng bộ | `In Photos · 1,284 photos · Updated 2 min ago` (album trong Photos cùng tên smart album nên không nhắc lại tên — tên dài làm dòng bị cắt trên iPhone 402pt) và dưới đó `To share these, open the album in Photos and choose Move to Shared Library.` |
+| đã đồng bộ, 0 ảnh | `In Photos · No photos yet`, không có câu hướng dẫn (ux-review 2026-11-07) |
 | chờ (smart album còn đang kiểm On Server) | như *đã đồng bộ*. Album chỉ có ảnh đã kiểm xong, số đếm tăng dần |
 | album bị xoá trong Photos | `The album was deleted in Photos. Keep in Photos is off.` Công tắc về tắt |
 | quyền `.limited` / bị từ chối | công tắc tắt và không bật được. Chân công tắc ghi `Needs Full Photos Access.` + nút mở Settings |

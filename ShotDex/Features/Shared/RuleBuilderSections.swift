@@ -26,6 +26,11 @@ struct RuleBuilderSections: View {
     /// Hosts the Folder row's browser; without one the row is not offered.
     @Environment(SourceFolderPicker.self) private var folderPicker: SourceFolderPicker?
 
+    /// Rows on screen without enough to compile — dropped on Save.
+    private var incompleteCount: Int {
+        visibleRuleBindings.filter { !$0.wrappedValue.isValid }.count
+    }
+
     /// An Original condition while the check has photos left.
     private var uncheckedOriginals: Bool {
         guard query.usesOriginal, let check = dependencies?.originalPresenceCheck else { return false }
@@ -155,7 +160,10 @@ struct RuleBuilderSections: View {
                 // Unchecked photos match neither value (FS-06.10 §3): the
                 // count grows as the check goes on. Two keys, so the count
                 // keeps its plural forms.
-                Text("Matches \(matchCount) photo.")
+                // A half-filled row is dropped on Save; say so rather than
+                // lose the NAS condition without a word (UX review).
+                (incompleteCount > 0 ? Text("\(incompleteCount) incomplete condition won’t be saved.") + Text(" ") : Text(""))
+                + Text("Matches \(matchCount) photo.")
                     + (uncheckedOriginals ? Text(" ") + Text("Photos not checked yet aren’t counted.") : Text(""))
             }
         }

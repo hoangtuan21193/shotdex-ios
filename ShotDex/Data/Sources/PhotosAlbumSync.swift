@@ -45,6 +45,8 @@ final class PhotosAlbumSync {
     private var isPending = false
     private var lastStart: ContinuousClock.Instant?
     private var retry: Task<Void, Never>?
+    /// Set by `syncNow`: the next pass does not wait out the gap.
+    private var skipsGap = false
 
     init(database: AppDatabase, writer: PhotosAlbumWriting, canWrite: @escaping @MainActor () -> Bool,
          minimumGap: Duration = .seconds(10), now: @escaping @Sendable () -> Date = { Date() }) {
@@ -68,12 +70,13 @@ final class PhotosAlbumSync {
     /// One pass now, without waiting out the gap — for the background slot,
     /// where seconds count, and for tests. Cancelling the caller cancels it.
     func syncNow() async {
+        skipsGap = true
         if let running {
             isPending = true
             await withTaskCancellationHandler { await running.value } onCancel: { running.cancel() }
             return
         }
-        let task = Task { await self.runCoalesced(waitsForGap: false) }
+        let task = Task { await self.runCoalesced(waitsForGap: true) }
         running = task
         await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
     }
@@ -81,18 +84,24 @@ final class PhotosAlbumSync {
     private func runCoalesced(waitsForGap: Bool) async {
         var waits = waitsForGap
         repeat {
-            isPending = false
-            if waits, let lastStart {
+            if waits, !skipsGap, let lastStart {
                 let wait = minimumGap - (ContinuousClock.now - lastStart)
                 if wait > .zero { try? await Task.sleep(for: wait) }
             }
             waits = true
+            skipsGap = false
             guard !Task.isCancelled else { break }
+            // Cleared only now: a request that came in during the wait is
+            // answered by this pass, not by one more after it.
+            isPending = false
             lastStart = .now
             await pass()
         } while isPending && !Task.isCancelled
         running = nil
     }
+
+    /// A link was turned on or off outside a pass: screens re-read it.
+    func linksChanged() { generation &+= 1 }
 
     /// Every enabled link, one after another.
     func pass() async {
@@ -105,7 +114,7 @@ final class PhotosAlbumSync {
             Self.logger.error("links: \(error.localizedDescription, privacy: .public)")
             return
         }
-        guard !enabled.isEmpty else { return }
+        guard !enabled.isEmpty else { generation &+= 1; return }
         // Without Full Access the album cannot be "exactly these photos":
         // say so on every kept album rather than sit on an old answer.
         guard canWrite() else {
@@ -229,7 +238,9 @@ final class PhotosAlbumSync {
             progress[album.id] = nil
             link.state = .failed
             await save(link)
-            retryLater()
+            // An album Photos will not let ShotDex edit stays that way: no
+            // retry loop every minute; the next real change tries again.
+            if !(error is PhotosAlbumSyncError) { retryLater() }
         }
     }
 
@@ -293,12 +304,13 @@ struct LivePhotosAlbumWriter: PhotosAlbumWriting {
     }
 
     func createAlbum(named name: String) async throws -> String {
-        var placeholder: PHObjectPlaceholder?
+        let created = OSAllocatedUnfairLock<String?>(initialState: nil)
         try await PHPhotoLibrary.shared().performChanges {
-            placeholder = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: name)
-                .placeholderForCreatedAssetCollection
+            let id = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: name)
+                .placeholderForCreatedAssetCollection.localIdentifier
+            created.withLock { $0 = id }
         }
-        guard let id = placeholder?.localIdentifier else { throw PhotoImportError.creationFailed }
+        guard let id = created.withLock({ $0 }) else { throw PhotoImportError.creationFailed }
         return id
     }
 
@@ -307,8 +319,12 @@ struct LivePhotosAlbumWriter: PhotosAlbumWriting {
             throw PhotosAlbumSyncError.albumNotEditable
         }
         try await PHPhotoLibrary.shared().performChanges {
+            // Fetched inside the block rather than captured across actors.
+            guard let collection = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject
+            else { return }
             PHAssetCollectionChangeRequest(for: collection)?.title = name
         }
+        _ = collection
     }
 
     func add(_ assetIds: [String], to id: String) async throws {
@@ -326,11 +342,17 @@ struct LivePhotosAlbumWriter: PhotosAlbumWriting {
         guard let collection = collection(id), collection.canPerform(operation) else {
             throw PhotosAlbumSyncError.albumNotEditable
         }
-        let assets = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: Self.everything)
-        guard assets.count > 0 else { return }
+        guard PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: Self.everything).count > 0 else { return }
+        let refused = OSAllocatedUnfairLock(initialState: false)
         try await PHPhotoLibrary.shared().performChanges {
-            guard let request = PHAssetCollectionChangeRequest(for: collection) else { return }
+            // Collection and assets fetched inside the block, not captured
+            // across the actor hop (swift-concurrency review).
+            let assets = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: Self.everything)
+            guard let collection = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject,
+                  let request = PHAssetCollectionChangeRequest(for: collection)
+            else { refused.withLock { $0 = true }; return }
             apply(request, assets)
         }
+        if refused.withLock({ $0 }) { throw PhotosAlbumSyncError.albumNotEditable }
     }
 }

@@ -233,7 +233,7 @@ struct AlbumsScreen: View {
             Button("Cancel", role: .cancel) { deletingKeptSmartAlbum = nil }
             Button("Delete", role: .destructive) { model.deleteSmartAlbum(id: album.id) }
         } message: { album in
-            Text("The album “\(album.name)” stays in Photos.")
+            Text("This deletes the smart album. The album “\(album.name)” stays in Photos.")
         }
         .sheet(item: $editingSmartAlbum) { album in
             SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
@@ -539,7 +539,8 @@ struct AlbumsScreen: View {
                                 let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
                                 Task {
                                     let link = await Task.detached { try? links.link(album.id) }.value
-                                    if link?.isEnabled == true, link?.collectionLocalId != nil {
+                                    // Any album ShotDex made in Photos, kept or not: say it stays.
+                                    if link?.collectionLocalId != nil {
                                         deletingKeptSmartAlbum = album
                                     } else {
                                         model.deleteSmartAlbum(id: album.id)
