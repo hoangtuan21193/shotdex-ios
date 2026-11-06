@@ -4,6 +4,13 @@ Builds every Mac screen the canvas draws and the app lacks, one screen per pass
 (started 2026-11-06, user request: no intent, no plan — spec + code per screen).
 Canvas: <https://claude.ai/artifact/HEj8sG21jAEWd7Mgvuyxgj>, boards in `docs/design/mac/project/`.
 
+**Hard rule (user, 2026-11-06): never edit or delete real photos — not in the iCloud Photos library,
+not on the Windows server.** Every click-test runs on `-ShotDexDemoLibrary` (in-memory) and, for
+server flows, the local test SMB in the scratchpad (memory `mac-app-testing`). A destructive button
+(Delete, Move to Trash, Revert, Save over original, Upload/Move to server, Free Up Space) is clicked
+only when the app is on demo data; otherwise assert it exists and stop. Never point a test at the
+real NAS/Windows share or at PhotoKit writes. Code paths that write PhotoKit get proven on demo data only.
+
 ## How a pass runs (read this first every pass — it is the memory)
 
 1. Take the first row below whose status is `todo` (skip `blocked`). Set it `doing`.
