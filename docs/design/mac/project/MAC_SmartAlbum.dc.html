@@ -15,11 +15,11 @@ input{font-family:inherit}
 </style>
 </helmet>
 <div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
-<!-- CONTENT: smart album "On NAS — Shared" (FS-19.07 §7/§11). Bar under the toolbar: read-only Source chip, item count,
-     and the On Server progress line (§7) for the album's first server Source condition; grid scrolls under the toolbar. -->
+<!-- CONTENT: smart album "On NAS — Shared" (FS-19.07 §7/§11). Bar under the toolbar: read-only Also on Server chip (2026-11-06; was Source), item count,
+     and the On Server progress line (§7) for the album's first Also on Server condition; grid scrolls under the toolbar. -->
 <div style="position:absolute;left:244px;right:0px;top:0;bottom:0;overflow:hidden">
 <div style="position:absolute;left:16px;right:16px;top:60px;height:44px;display:flex;align-items:center;gap:12px">
-<span aria-label="Condition: Source is NAS Home › Shared" style="flex:none;height:24px;border-radius:12px;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:{{t.label}};white-space:nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="{{serverIcon}}"></path></svg>{{chip}}</span>
+<span aria-label="Condition: Also on NAS Home › Shared" style="flex:none;height:24px;border-radius:12px;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:{{t.label}};white-space:nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="{{serverIcon}}"></path></svg>{{chip}}</span>
 <sc-if value="{{origOn}}" hint-placeholder-val="{{true}}"><span aria-label="Condition: Original is iCloud Only" style="flex:none;height:24px;border-radius:12px;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:{{t.label}};white-space:nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="{{cloudIcon}}"></path></svg>{{origChip}}</span></sc-if>
 <span style="flex:none;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{count}}</span>
 <div style="flex:1"></div>
@@ -232,7 +232,7 @@ class Component extends DCLogic {
     const e=edges(dark);
     // 12,408 of 54,920 checked = 22.6% of the ring's 56.5 circumference (r=9).
     return { t, groups, tiles: empty ? [] : tiles(40,3,{onServer:true, noVideo:true}), serverIcon: I.server, empty,
-      chip:'Source is NAS Home › Shared', count: empty ? '0 photos' : '40 photos', dash:'12.8 100',
+      chip:'Also on NAS Home › Shared', count: empty ? '0 photos' : '40 photos', dash:'12.8 100',
       progress:'Checking · 12,408 of 54,920 · 38 GB to download', progress2:'3 Edited — edit not on NAS Home',
       mismatch: !!this.props.mismatch, origOn: orig!=='off', origChecking: orig==='checking', origChecked: orig==='checked',
       origChip:'Original is iCloud Only', origDash:'12.7 100', cloudIcon:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z', edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };

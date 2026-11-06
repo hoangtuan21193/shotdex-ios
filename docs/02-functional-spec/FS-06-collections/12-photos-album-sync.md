@@ -44,7 +44,7 @@ Dòng trạng thái nằm dưới thanh điều kiện của smart album, sau d�
 |---|---|
 | tắt | không có dòng |
 | đang tạo / đang đồng bộ | `Updating album in Photos…` |
-| đã đồng bộ | `In Photos as "Shared NAS" · 1,284 photos · Updated 2 min ago` và dưới đó `To share these, open the album in Photos and choose Move to Shared Library.` |
+| đã đồng bộ | `In Photos · 1,284 photos · Updated 2 min ago` (album trong Photos cùng tên smart album nên không nhắc lại tên — tên dài làm dòng bị cắt trên iPhone 402pt) và dưới đó `To share these, open the album in Photos and choose Move to Shared Library.` |
 | chờ (smart album còn đang kiểm On Server) | như *đã đồng bộ*. Album chỉ có ảnh đã kiểm xong, số đếm tăng dần |
 | album bị xoá trong Photos | `The album was deleted in Photos. Keep in Photos is off.` Công tắc về tắt |
 | quyền `.limited` / bị từ chối | công tắc tắt và không bật được. Chân công tắc ghi `Needs Full Photos Access.` + nút mở Settings |
@@ -88,7 +88,7 @@ Dòng trạng thái nằm dưới thanh điều kiện của smart album, sau d�
 ## 6. Ràng buộc
 
 - **Tier B**, hàng chuẩn của Form (toggle + chân chữ). Không token, màu hay bo góc mới ([DESIGN.md](../../../DESIGN.md)).
-  Công tắc nằm trong **editor**, section cuối dưới Conditions (người dùng chốt 2026-11-06). Duo trong 951×669: section
+  Công tắc nằm trong **editor**, section cuối dưới Conditions (người dùng chốt 2026-11-06). Layout hai cột (Duo trong) đặt nó cuối cột trái, dưới Match. Duo trong 951×669: section
   này được phép nằm dưới mép (cuộn mới thấy); FS-06.08 AC-4 (3 điều kiện + Add Condition thấy trọn) vẫn phải đạt.
 - Board phải vẽ trước khi code: `PH_/IP_/DI_/DC_SmartAlbumEditor` (công tắc) và `PH_/IP_/DI_/DC_SmartAlbum` (dòng
   trạng thái + câu hướng dẫn). Cả bản sáng và tối.
@@ -104,7 +104,7 @@ Thư viện thử trên simulator iPhone 17 iOS 26.5 (và 18.6 cho AC-UI). Khôn
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | spike, iPhone thật, Shared Library 2 người, album "Sync Test" 20 ảnh do ShotDex đồng bộ | trong Photos: Select All → Move to Shared Library; mở ShotDex, chờ một lượt đồng bộ | ghi: `localIdentifier` của 20 ảnh có đổi không; album còn 20 ảnh không; lượt đồng bộ có thêm/bỏ ảnh nào không. Đạt khi 0 ảnh bị thêm/bỏ | ⚠️ chưa có — spike, ghi số vào intent. **Không đạt thì dừng spec** và quay lại intent |
-| AC-2 | smart album "Shared NAS" khớp 120 ảnh, quyền Full | bật Keep in Photos, Save | Photos có một album mới "Shared NAS" chứa đúng 120 ảnh đó; dòng trạng thái `In Photos as "Shared NAS" · 120 photos · Updated …` | ⚠️ chưa có — đề xuất `PhotosAlbumSyncTests.createsAndFills` (PhotoKit giả) + `ShotDexUITests/scripts/fs0612-keep-in-photos.json` |
+| AC-2 | smart album "Shared NAS" khớp 120 ảnh, quyền Full | bật Keep in Photos, Save | Photos có một album mới "Shared NAS" chứa đúng 120 ảnh đó; dòng trạng thái `In Photos · 120 photos · Updated …` | ⚠️ chưa có — đề xuất `PhotosAlbumSyncTests.createsAndFills` (PhotoKit giả) + `ShotDexUITests/scripts/fs0612-keep-in-photos.json` |
 | AC-3 | đã có album "Shared NAS" do người dùng tạo, 5 ảnh | bật Keep in Photos cho smart album cùng tên | album mới được tạo; album của người dùng vẫn 5 ảnh, không bị đụng | ⚠️ chưa có — `PhotosAlbumSyncTests.neverAdoptsUserAlbum` |
 | AC-4 | album đồng bộ 120 ảnh; một đợt On Server kiểm xong thêm 30 ảnh khớp và 4 ảnh thôi khớp | xong đợt kiểm | trong ≤ 10 s album Photos có 146 ảnh: 30 ảnh mới có, 4 ảnh kia không còn; 4 ảnh vẫn còn trong thư viện | ⚠️ chưa có — `PhotosAlbumSyncTests.followsMatchChanges` |
 | AC-5 | album đồng bộ 120 ảnh; người dùng trong Photos thêm tay 3 ảnh khác và bỏ 2 ảnh của album | mở ShotDex | sau một lượt album lại đúng 120 ảnh của smart album | ⚠️ chưa có — `PhotosAlbumSyncTests.overwritesManualEdits` |
