@@ -1,0 +1,161 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoSources",
+    "-ShotDexSection",
+    "sourceIndexing"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Adding \u201cClient Shoots 2026\u201d",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive is offline",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive, offline"
+  },
+  {
+   "action": "assertExists",
+   "label": "Indexing 1,240 of 3,812, 33%"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-indexing"
+  },
+  {
+   "action": "dump",
+   "name": "01-indexing"
+  },
+  {
+   "action": "click",
+   "label": "Pause",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Adding \u201cClient Shoots 2026\u201d is paused"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-paused"
+  },
+  {
+   "action": "click",
+   "label": "Hide Banner",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Adding \u201cClient Shoots 2026\u201d is paused",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "sidebar.readFoot"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Adding \u201cClient Shoots 2026\u201d is paused",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Remove Source\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove \u201cT7 RAW Archive\u201d?",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-remove-confirm"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove \u201cT7 RAW Archive\u201d?",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive is offline"
+  },
+  {
+   "action": "click",
+   "label": "Locate T7 RAW Archive",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-locate-panel"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive is offline"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

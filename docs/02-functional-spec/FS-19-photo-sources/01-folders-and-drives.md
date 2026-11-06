@@ -73,7 +73,10 @@ theo ngày chụp ngay khi đọc, và theo dõi thư mục để file mới t�
   Sidebar foot giữ dòng tóm tắt khi banner bị ẩn.
 - **Ước lượng thời gian**: tính từ tốc độ của **200 file gần nhất**; trước khi đủ 200 file ghi "Estimating time…". Làm tròn
   phút ("about 2 min left"), quá 60 phút ghi "about 1 h 20 min left". Không bao giờ hiện số giây.
-- Pause giữ mọi file đã đọc; chạy tiếp từ điểm dừng, kể cả sau khi tắt app. Stop / Remove Source… dừng ngay khung
+- Pause giữ mọi file đã đọc; chạy tiếp từ điểm dừng, kể cả sau khi tắt app. Mac (2026-11-07): Pause đổi banner ngay
+  (file đang đọc dở xong rồi mới dừng thật); trạng thái dừng lưu lại qua lần mở app và Read All bỏ qua nguồn đó tới khi
+  Resume. × chỉ ẩn banner; chân sidebar giữ dòng ("Indexing …" / "Paused · …"), bấm vào thì banner hiện lại. Ổ rút giữa
+  chừng: banner thành "T7 RAW Archive was disconnected · 1,240 of 3,812 photos read · connect it to read the rest". Stop / Remove Source… dừng ngay khung
   hình bấm, phần đuôi dọn ở nền ([BD-03.04](../../01-basic-design/BD-03-metadata-indexing-flow/04-progress-and-background.md)).
 - Nhiệt, Low Power Mode, cổng nhường cho viewer: như BD-03.03. Mac thêm **Pause Indexing on Battery Power** (bật) và
   **Prevent Sleep While Indexing**; iPad, iPhone, Duo dùng **Keep Screen Awake While Indexing** (tắt) như FS-08.02.

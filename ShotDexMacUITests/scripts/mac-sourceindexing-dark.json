@@ -1,0 +1,48 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoSources",
+    "-ShotDexSection",
+    "sourceIndexing",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Adding \u201cClient Shoots 2026\u201d",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive is offline",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "T7 RAW Archive, offline"
+  },
+  {
+   "action": "assertExists",
+   "label": "Indexing 1,240 of 3,812, 33%"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-indexing"
+  },
+  {
+   "action": "screenshot",
+   "name": "dark-indexing"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

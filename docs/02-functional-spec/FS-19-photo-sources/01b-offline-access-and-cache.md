@@ -34,6 +34,11 @@ file chỉ có trên cloud không bị tải ngầm; preview có chỗ và có t
   **giá trị hiện hành** ([02 §7](02-identity-and-sidecars.md)); so kích thước + ngày sửa, chỉ đọc lại phần lệch.
 - **Ổ rút giữa lượt đọc đầu**: không hộp lỗi. Banner đổi thành "T7 RAW Archive was disconnected · 1,240 of 3,812 read".
   1.240 ảnh đã đọc ở lại (offline); nguồn khác đọc tiếp; cắm lại thì chạy tiếp từ file 1.241, không đọc lại.
+- Mac (2026-11-07): một nguồn offline → banner đầy đủ trên lưới; nhiều nguồn → một dòng "2 sources offline: A, B",
+  bấm tên mở nguồn đó kèm banner của nó. Ô ảnh không còn bản nào mở được mang glyph ổ góc phải; dòng phụ "· N offline"
+  đếm đúng những ảnh đó. Remove Source… nói rõ: ảnh có bản ở nguồn khác ở lại, rating/edit giữ 30 ngày, không xoá gì trên ổ/server.
+- **Locate…** (Mac): bảng chọn mở ở chỗ cũ; không làm khi đang có lượt đọc khác; thư mục chọn chứa < 20% trong 50 file
+  nguồn đã biết → hỏi "This Folder Doesn’t Look Like “…”" (Use This Folder / Cancel) trước khi đổi.
 - **Locate…**: mở bảng chọn để chỉ chỗ mới của thư mục (ổ đổi tên, thư mục bị chuyển). Chọn xong → đọc lại kiểu so lệch;
   ảnh có hash trùng giữ nguyên danh tính và dữ liệu ([02 §1](02-identity-and-sidecars.md)).
 - **Remove Source…**: hỏi "Remove “T7 RAW Archive”? Its 26,107 photos leave ShotDex. Nothing on the drive is deleted." ·

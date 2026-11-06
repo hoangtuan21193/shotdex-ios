@@ -40,8 +40,11 @@ struct FolderSourceIndexer: Sendable {
     /// Every file is recorded in its own transaction, so a pause, a quit or a
     /// crash keeps what was read, and the next read skips it by path, size
     /// and date — Resume, even after a relaunch, reads only what is left.
+    /// `progress` gets (units looked at, units listed) — at the start, then
+    /// after each file, so the banner moves as the read does (FS-19.01 §4).
     func index(sourceId: String, root: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool,
-               now: Date = Date(), shouldContinue: () -> Bool = { true }) throws -> Summary {
+               now: Date = Date(), shouldContinue: () -> Bool = { true },
+               progress: (_ done: Int, _ total: Int) -> Void = { _, _ in }) throws -> Summary {
         let listing = FolderEnumeration.entries(in: root, includeSubfolders: includesSubfolders)
         let files = listing.filter { !$0.isSidecar }
         let sidecars = Dictionary(listing.filter(\.isSidecar).map { (Self.pathKey($0.relativePath), $0) },
@@ -64,9 +67,15 @@ struct FolderSourceIndexer: Sendable {
         var vanished = try database.reader.read { db in
             try FileCopyWriter.vanished(db, sourceId: sourceId, kind: "file", listed: listed)
         }
-        for unit in units {
+        progress(0, units.count)
+        for (position, unit) in units.enumerated() {
+            // `defer` so every `continue` below counts the file too — but not
+            // a file left unread by a pause or a lost drive.
+            var isCounted = true
+            defer { if isCounted { progress(position + 1, units.count) } }
             try Task.checkCancellation()
             guard shouldContinue() else {
+                isCounted = false
                 summary.paused = true
                 return summary
             }
@@ -102,6 +111,7 @@ struct FolderSourceIndexer: Sendable {
                 hash = try ContentHasher.hash(FileBytes(url: url), full: false)
             } catch {
                 guard Self.isReachable(root) else {
+                    isCounted = false
                     try SourceStore(database: database).setOnline(false, sourceId: sourceId)
                     summary.disconnected = true
                     return summary

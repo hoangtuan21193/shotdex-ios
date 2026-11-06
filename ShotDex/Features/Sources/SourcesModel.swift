@@ -16,6 +16,26 @@ final class SourcesModel {
     private(set) var rows: [Row] = []
     /// A source being added or read: its row shows progress, Add waits.
     private(set) var readingSourceId: String?
+    /// The read in progress, or one paused (FS-19.01 §4): the grid's banner,
+    /// the row's ring and the sidebar foot. Nil when nothing is being read.
+    private(set) var readProgress: SourceReadProgress? {
+        didSet {
+            let running = readProgress.map { !$0.isPaused && !$0.isDisconnected } ?? false
+            if running != isReadRunning { isReadRunning = running }
+            if (readProgress != nil) != hasReadProgress { hasReadProgress = readProgress != nil }
+            let reading = readProgress.flatMap { $0.isPaused || $0.isDisconnected ? nil : $0.sourceId }
+            if reading != readSourceId { readSourceId = reading }
+        }
+    }
+    /// A read is shown at all (running, paused or cut off) — changes only
+    /// when one starts or is let go.
+    private(set) var hasReadProgress = false
+    /// The source being read now (not paused): its sidebar row shows the ring.
+    private(set) var readSourceId: String?
+    /// A read is going (not paused): changes only at its start, pause and end,
+    /// for views that must not redraw on every progress tick.
+    private(set) var isReadRunning = false
+    @ObservationIgnored private let readControl = SourceReadControl()
     /// Bumped after every read, so the grid and the tabs reload what changed.
     private(set) var readCount = 0
     /// Add, Remove… or Grant Access… did not go through; Settings says why.
@@ -44,9 +64,25 @@ final class SourcesModel {
     }
 
     func load() {
+        apply(Self.snapshot(database))
+    }
+
+    /// `load()` with the reads off the main actor — the read path runs it at a
+    /// read's start and end, the moments a click is waiting (55k photos:
+    /// counts and statuses scan every copy).
+    func reload() async {
+        let database = database
+        apply(await Task.detached(priority: .userInitiated) { Self.snapshot(database) }.value)
+    }
+
+    private struct Snapshot: Sendable {
+        var sources: [SourceStore.Source]
+        var counts: [String: Int]
+        var statuses: [String: (status: String?, lastRead: Int?, protocol: String?)]
+    }
+
+    nonisolated private static func snapshot(_ database: AppDatabase) -> Snapshot {
         let store = SourceStore(database: database)
-        let sources = (try? store.sources()) ?? []
-        let counts = (try? store.photoCounts()) ?? [:]
         let statuses = (try? database.reader.read { db in
             Dictionary(uniqueKeysWithValues: try Row_.fetchAll(db, sql: """
                 SELECT s.id, s.status, (SELECT MAX(lastSeenAt) FROM photo_copies c WHERE c.sourceId = s.id) AS lastRead,
@@ -55,6 +91,11 @@ final class SourcesModel {
                 """).map { ($0["id"] as String, (status: $0["status"] as String?, lastRead: $0["lastRead"] as Int?,
                                                  protocol: $0["protocol"] as String?)) })
         }) ?? [:]
+        return Snapshot(sources: (try? store.sources()) ?? [], counts: (try? store.photoCounts()) ?? [:], statuses: statuses)
+    }
+
+    private func apply(_ snapshot: Snapshot) {
+        let sources = snapshot.sources, counts = snapshot.counts, statuses = snapshot.statuses
         let access = photoLibrary.authorizationState.title
         rows = sources.map { source in
             let info = statuses[source.id]
@@ -112,7 +153,64 @@ final class SourcesModel {
            (try? SourceStore(database: database).sources())?.first(where: { $0.id == id })?.kind == "drive" {
             try? SourceStore(database: database).setWhenUnplugged(.hidePhotos, sourceId: id)
         }
-        await read(sourceId: id)
+        await read(sourceId: id, isAdding: true)
+    }
+
+    /// Pause on the read's banner: the file in hand finishes, what was read
+    /// stays, and Resume reads only the rest (FS-19.01 §4).
+    func pauseRead() {
+        readControl.pause()
+        // Paused at once on screen: the file in hand (a large RAW, a NAS)
+        // may take seconds more, and Pause must not look broken meanwhile.
+        if var progress = readProgress {
+            progress.isPaused = true
+            readProgress = progress
+            Self.storePaused(progress)
+        }
+    }
+
+    /// A paused read outlives the app (FS-19.01 §4): kept here, restored at
+    /// launch, skipped by Read All until Resume.
+    private static let pausedKey = "sources.pausedRead"
+
+    private static func storePaused(_ progress: SourceReadProgress?) {
+        if let progress, let data = try? JSONEncoder().encode(progress) {
+            UserDefaults.standard.set(data, forKey: pausedKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: pausedKey)
+        }
+    }
+
+    /// The read paused before the last quit, shown paused again.
+    func restorePausedRead() {
+        guard readProgress == nil, let data = UserDefaults.standard.data(forKey: Self.pausedKey),
+              var paused = try? JSONDecoder().decode(SourceReadProgress.self, from: data)
+        else { return }
+        paused.isPaused = true
+        readProgress = paused
+    }
+
+    #if DEBUG
+    /// The Mac demo's read in progress (board `MAC_SourceIndexing`): the
+    /// banner and the foot without a real folder being read.
+    func debugShowRead(_ progress: SourceReadProgress) {
+        readProgress = progress
+    }
+    #endif
+
+    /// Resume on a paused banner.
+    func resumeRead() async {
+        guard let paused = readProgress, paused.isPaused else { return }
+        await read(sourceId: paused.sourceId, isAdding: paused.isAdding)
+    }
+
+    /// The close on the banner: a paused read is let go; one still running
+    /// keeps its line in the sidebar foot.
+    func dismissPausedRead() {
+        if readProgress?.isPaused == true || readProgress?.isDisconnected == true {
+            readProgress = nil
+            Self.storePaused(nil)
+        }
     }
 
     /// Mac Settings › Sources › When a Drive Is Disconnected (FS-19.01 §1):
@@ -133,16 +231,58 @@ final class SourcesModel {
         load()
     }
 
-    func read(sourceId: String) async {
+    func read(sourceId: String, isAdding: Bool = false) async {
         // One read at a time: the runner refuses a second, and its nil must
         // not end the first one's progress on the row.
         guard readingSourceId == nil else { return }
         readingSourceId = sourceId
-        load()
-        _ = try? await runner.read(sourceId: sourceId)
+        let name = rows.first(where: { $0.id == sourceId })?.name
+            ?? (try? SourceStore(database: database).sources())?.first(where: { $0.id == sourceId })?.name ?? ""
+        // Resume carries on from the paused numbers, not from "0 of 0".
+        if let paused = readProgress, paused.sourceId == sourceId, paused.isPaused || paused.isDisconnected {
+            var resumed = paused
+            resumed.isPaused = false
+            resumed.isDisconnected = false
+            readProgress = resumed
+            Self.storePaused(nil)
+        } else {
+            readProgress = SourceReadProgress(sourceId: sourceId, sourceName: name, isAdding: isAdding)
+        }
+        readControl.reset()
+        await reload()
+        let control = readControl
+        let summary = try? await runner.read(sourceId: sourceId, shouldContinue: { !control.isPaused }) { [weak self] done, total in
+            guard control.shouldReport(done: done, total: total) else { return }
+            Task { @MainActor in self?.readMoved(done: done, total: total, sourceId: sourceId) }
+        }
         readingSourceId = nil
+        // Paused: the banner stays with Resume. Drive gone mid-read: it
+        // says so, with what was read. Otherwise the read is over.
+        if summary?.paused == true, var paused = readProgress {
+            paused.isPaused = true
+            readProgress = paused
+            Self.storePaused(paused)
+        } else if summary?.disconnected == true, var cut = readProgress {
+            cut.isDisconnected = true
+            readProgress = cut
+            Self.storePaused(cut)
+        } else {
+            readProgress = nil
+        }
         readCount += 1
-        load()
+        await reload()
+    }
+
+    private func readMoved(done: Int, total: Int, sourceId: String) {
+        // Reports hop over unordered: a late, smaller one is dropped, or the
+        // estimate would start over ("Estimating time…" flickering back).
+        guard var progress = readProgress, progress.sourceId == sourceId, !progress.isPaused,
+              done > progress.done || total != progress.total
+        else { return }
+        progress.done = done
+        progress.total = total
+        progress.estimate.record(processed: done)
+        readProgress = progress
     }
 
     /// A connection's Add as Source switch, after its form saved (FS-19.03
@@ -262,7 +402,9 @@ final class SourcesModel {
         #endif
         // Only a read that changed something reloads the grid: a reload under
         // an open viewer would take it away.
-        if await runner.readAll() { readCount += 1 }
+        // A read paused by the user stays paused until Resume (FS-19.01 §4).
+        let paused = readProgress.flatMap { $0.isPaused || $0.isDisconnected ? $0.sourceId : nil }
+        if await runner.readAll(skipping: paused.map { [$0] } ?? []) { readCount += 1 }
         // Servers are listed by the on-server check, within each
         // connection's Backup rules (FS-19.07 §6): `serverListingChanged`.
         load()

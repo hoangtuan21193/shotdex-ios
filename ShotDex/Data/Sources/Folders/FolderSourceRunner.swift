@@ -32,8 +32,12 @@ actor FolderSourceRunner {
     }
 
     /// Reads one source: what is new or changed, by path, size and date.
+    /// `progress` and `shouldContinue` come from the caller's thread-safe
+    /// state: the read runs on this actor, the banner on the main one.
     @discardableResult
-    func read(sourceId: String) throws -> FolderSourceIndexer.Summary? {
+    func read(sourceId: String,
+              shouldContinue: @escaping @Sendable () -> Bool = { true },
+              progress: @escaping @Sendable (_ done: Int, _ total: Int) -> Void = { _, _ in }) throws -> FolderSourceIndexer.Summary? {
         guard reading == nil else { return nil }
         reading = sourceId
         defer { reading = nil }
@@ -47,7 +51,8 @@ actor FolderSourceRunner {
             customMappings: (try? metadataStore.customMappings()) ?? []
         ))
         let summary = try FolderSourceIndexer(database: database, composer: composer, thumbnails: thumbnails)
-            .index(sourceId: sourceId, root: root, includesSubfolders: source.includesSubfolders, pairsRawAndJpeg: source.pairsRawAndJpeg)
+            .index(sourceId: sourceId, root: root, includesSubfolders: source.includesSubfolders, pairsRawAndJpeg: source.pairsRawAndJpeg,
+                   shouldContinue: shouldContinue, progress: progress)
         _ = try IdentityMergePass(database: database) { [root] id, path in id == sourceId ? root.appendingPathComponent(path) : nil }.run()
         return summary
     }
@@ -122,8 +127,10 @@ actor FolderSourceRunner {
     /// launch and on each return to the foreground (FS-19.01 §5). True when
     /// any of them changed what the library shows.
     @discardableResult
-    func readAll() -> Bool {
-        let ids = (try? SourceStore(database: database).sources().filter { $0.kind == "folder" || $0.kind == "drive" }.map(\.id)) ?? []
+    /// `skipping`: a read the user paused, left for Resume.
+    func readAll(skipping: Set<String> = []) -> Bool {
+        let ids = (try? SourceStore(database: database).sources()
+            .filter { ($0.kind == "folder" || $0.kind == "drive") && !skipping.contains($0.id) }.map(\.id)) ?? []
         var changed = false
         for id in ids {
             if let summary = try? read(sourceId: id), summary.changesLibrary { changed = true }

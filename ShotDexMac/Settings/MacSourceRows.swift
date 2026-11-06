@@ -106,8 +106,10 @@ struct MacPhotoSourcesSection: View {
     }
 
     /// Add Folder's open panel, here and on the sidebar's + (board `Main`).
-    static func chooseFolder(_ picked: @escaping (URL) -> Void) {
+    /// `startingAt`: where the panel opens (Locate…: the folder's last place).
+    static func chooseFolder(startingAt: URL? = nil, _ picked: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()
+        panel.directoryURL = startingAt
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false

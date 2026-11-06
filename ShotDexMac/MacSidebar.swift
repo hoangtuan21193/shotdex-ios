@@ -22,6 +22,12 @@ struct MacSidebar: View {
     var addFolders: ([URL]) -> Void = { _ in }
     /// When the index last finished a pass, for the foot's "indexed 2 min ago".
     var lastIndexedAt: Date? = nil
+    /// Sources' states and the read in progress (FS-19.01 §4, 01b §1): read
+    /// inside the small views below, so a read's progress does not redraw
+    /// the whole sidebar ten times a second.
+    var sourcesModel: SourcesModel? = nil
+    /// A click on the read's foot line: its banner comes back.
+    var showReadBanner: () -> Void = {}
     /// A long task's foot (a common-photos run), shown instead of the index line.
     var busyFooter: AnyView? = nil
 
@@ -41,13 +47,7 @@ struct MacSidebar: View {
                 }
                 ForEach(sources, id: \.id) { source in
                     Label {
-                        HStack {
-                            Text(source.name)
-                            Spacer(minLength: 4)
-                            if let count = counts[.source(source.id)] {
-                                MacSidebar.countText(count)
-                            }
-                        }
+                        MacSourceRowTitle(source: source, count: counts[.source(source.id)], model: sourcesModel)
                     } icon: { MacSidebar.icon(MacSidebar.symbol(forSourceKind: source.kind)) }
                         .tag(MacSidebarItem.source(source.id))
                         .listRowBackground(ground(.source(source.id)))
@@ -154,6 +154,8 @@ struct MacSidebar: View {
     private var status: some View {
         if let busyFooter {
             busyFooter
+        } else if let sourcesModel, sourcesModel.hasReadProgress {
+            MacReadFoot(model: sourcesModel, showBanner: showReadBanner)
         } else if let library {
             // "Up to date · indexed 2 min ago" (FS-18.01 §2), the age kept
             // current once a minute.
@@ -337,5 +339,75 @@ private struct MacSidebarHighlightOff: NSViewRepresentable {
         if let outline = view as? NSOutlineView { return outline }
         for child in view.subviews { if let found = find(in: child) { return found } }
         return nil
+    }
+}
+
+/// A source row's name and what is beside it: the read's ring, "Offline",
+/// or the count (FS-19.01 §4, 01b §1).
+private struct MacSourceRowTitle: View {
+    let source: SourceStore.Source
+    let count: Int?
+    let model: SourcesModel?
+
+    var body: some View {
+        let isOffline = model?.rows.first(where: { $0.id == source.id })?.text.status == .offline
+        // Only the row being read follows the progress ticks.
+        let isReading = model?.readSourceId == source.id || model?.readingSourceId == source.id
+        let progress = isReading ? model?.readProgress : nil
+        HStack {
+            Text(source.name).foregroundStyle(isOffline ? .secondary : .primary)
+            Spacer(minLength: 4)
+            if isReading {
+                MacProgressRing(fraction: progress?.fraction ?? 0)
+                    .accessibilityElement()
+                    .accessibilityLabel(String(localized: "Adding, \(progress?.percent ?? 0) percent",
+                                               comment: "Mac sidebar: the source is being read, VoiceOver"))
+            } else if isOffline {
+                Text("Offline", comment: "Mac sidebar: the drive or server is not connected")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .frame(height: 16)
+                    .background(Capsule().fill(MacTheme.fill))
+            } else if let count {
+                MacSidebar.countText(count)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isOffline ? String(localized: "\(source.name), offline", comment: "Mac sidebar: an offline source, VoiceOver") : source.name)
+    }
+}
+
+/// "Indexing 1,240 of 3,812 · 33%" over a bar (board `MAC_SourceIndexing`),
+/// "Paused · …" once paused; a click brings the banner back.
+private struct MacReadFoot: View {
+    let model: SourcesModel
+    let showBanner: () -> Void
+
+    var body: some View {
+        if let progress = model.readProgress {
+            Button(action: showBanner) {
+                VStack(spacing: 6) {
+                    HStack {
+                        Text(progress.footLine).foregroundStyle(.primary)
+                        Spacer()
+                        Text(progress.fraction, format: .percent.precision(.fractionLength(0))).foregroundStyle(.secondary)
+                    }
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                    MacProgressBar(fraction: progress.fraction)
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 44)
+                .background(RoundedRectangle(cornerRadius: 10).fill(MacTheme.fill))
+                .contentShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+            .padding(8)
+            .help(String(localized: "Show Progress", comment: "Mac sidebar foot: bring the source read banner back"))
+            .accessibilityIdentifier("sidebar.readFoot")
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+        }
     }
 }

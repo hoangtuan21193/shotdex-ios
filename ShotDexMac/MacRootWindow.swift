@@ -57,6 +57,14 @@ struct MacRootWindow: View {
     /// When the index last finished, for the sidebar foot; read off the main actor.
     @State private var lastIndexedAt: Date?
     @State private var indexRunsEnded = 0
+    /// The source whose read banner the user closed: the foot keeps the line.
+    @State private var hiddenReadBannerId: String?
+    /// Remove Source… asked on an offline banner, waiting for its confirmation.
+    @State private var removingSource: SourcesModel.Row?
+    /// Locate… picked a folder that holds few of the source's files: asked first.
+    @State private var unlikelyLocate: MacUnlikelyLocate?
+    /// Photos only on offline sources: their tiles carry the offline glyph.
+    @State private var offlinePhotoIds: Set<String> = []
 
     var body: some View {
         NavigationSplitView {
@@ -238,6 +246,8 @@ struct MacRootWindow: View {
                    },
                    addFolders: { addFolders($0) },
                    lastIndexedAt: lastIndexedAt,
+                   sourcesModel: dependencies.sourcesModel,
+                   showReadBanner: { hiddenReadBannerId = nil },
                    busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
             // Read at open, at a run's start and end — `.indexRunEnded` also
             // covers the runs that found nothing to do and never flip isIndexing.
@@ -250,6 +260,10 @@ struct MacRootWindow: View {
                 lastIndexedAt = read
             }
             .onReceive(NotificationCenter.default.publisher(for: .indexRunEnded)) { _ in indexRunsEnded &+= 1 }
+            // A new read shows its banner again, whatever was closed before.
+            .onChange(of: dependencies.sourcesModel.readingSourceId) { _, reading in
+                if reading != nil { hiddenReadBannerId = nil }
+            }
             .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
     }
 
@@ -443,13 +457,91 @@ struct MacRootWindow: View {
         return (coordinator.jobs.count, coordinator.states.values.contains { stuck.contains($0.status) })
     }
 
+    /// Drives and servers not connected (FS-19.01b §2), each with its banner.
+    private var offlineSources: [SourcesModel.Row] {
+        dependencies.sourcesModel.rows.filter { $0.text.status == .offline }
+    }
+
+    @ViewBuilder
+    private var sourceBanners: some View {
+        MacSourceReadBannerHost(model: dependencies.sourcesModel, hiddenSourceId: $hiddenReadBannerId)
+        // One offline source, or the one picked in the sidebar: its banner.
+        // Several elsewhere: one line, so shelved drives don't eat the grid.
+        let shown = offlineSources.count == 1 ? offlineSources : offlineSources.filter { selection == .source($0.id) }
+        ForEach(shown) { row in
+            let isServer = if case .server = row.text.kind { true } else { false }
+            MacSourceOfflineBanner(name: row.name, photoCount: row.text.count, isServer: isServer,
+                                   locate: { locate(row) }, remove: { removingSource = row })
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+        }
+        if offlineSources.count > 1, shown.isEmpty {
+            MacOfflineSummary(names: offlineSources.map(\.name)) { name in
+                if let row = offlineSources.first(where: { $0.name == name }) { selection = .source(row.id) }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
+    }
+
+    /// Remove Source…'s message: what leaves, what stays, by drive or server.
+    private var removeSourceMessage: String {
+        guard let row = removingSource else { return "" }
+        let isServer = if case .server = row.text.kind { true } else { false }
+        return isServer
+            ? String(localized: "Its \(row.text.count) photos leave ShotDex unless another source has a copy. Ratings and edits are kept for 30 days in case you add it back. Nothing on the server is deleted.",
+                     comment: "Mac: Remove Source confirmation, a server (plural)")
+            : String(localized: "Its \(row.text.count) photos leave ShotDex unless another source has a copy. Ratings and edits are kept for 30 days in case you add it back. Nothing on the drive is deleted.",
+                     comment: "Mac: Remove Source confirmation, a drive or folder (plural)")
+    }
+
+    /// Locate…: the folder's new place; read back to the same photos (FS-19.01b §2).
+    /// Not while another read runs, and a folder holding almost none of the
+    /// source's files is asked about first — read against the wrong folder,
+    /// every photo would be marked missing.
+    private func locate(_ row: SourcesModel.Row) {
+        let model = dependencies.sourcesModel
+        guard model.readingSourceId == nil else {
+            addFolderFailure = SourcesModel.Failure(
+                title: String(localized: "Can’t Locate Now", comment: "Mac: Locate while a source is read"),
+                message: String(localized: "Wait for the current read to finish, then locate “\(row.name)” again.",
+                                comment: "Mac: Locate while a source is read"))
+            return
+        }
+        MacPhotoSourcesSection.chooseFolder(startingAt: model.lastKnownPath(sourceId: row.id)?.deletingLastPathComponent()) { folder in
+            let queries = CopyReachabilityQueries(database: dependencies.database)
+            Task {
+                let paths = (try? await queries.knownPaths(sourceId: row.id)) ?? []
+                let found = await Task.detached(priority: .userInitiated) {
+                    let scoped = folder.startAccessingSecurityScopedResource()
+                    defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+                    return paths.filter { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }.count
+                }.value
+                if paths.isEmpty || found * 5 >= paths.count {
+                    await model.grantAccess(sourceId: row.id, folder: folder)
+                } else {
+                    unlikelyLocate = MacUnlikelyLocate(row: row, folder: folder, found: found, checked: paths.count)
+                }
+            }
+        }
+    }
+
     private var libraryDetail: some View {
             VStack(spacing: 0) {
+                sourceBanners
                 if let library, showsFilterBar, library.hasActiveQuery {
                     MacFilterBar(library: library)
                 }
                 content
             }
+                // Which photos are offline, read again when a source comes or goes.
+                .task(id: "\(offlineSources.map(\.id))-\(dependencies.sourcesModel.readCount)") {
+                    guard !offlineSources.isEmpty else { offlinePhotoIds = []; return }
+                    let queries = CopyReachabilityQueries(database: dependencies.database)
+                    let ids = (try? await queries.offlinePhotoIds()) ?? []
+                    guard !Task.isCancelled, ids != offlinePhotoIds else { return }
+                    offlinePhotoIds = ids
+                }
                 .onChange(of: library.map { "\($0.items.count)-\($0.isLoading)-\($0.hasActiveQuery)" }, initial: true) {
                     guard let library, !library.isLoading else { return }
                     if library.hasActiveQuery {
@@ -475,7 +567,27 @@ struct MacRootWindow: View {
                                                  library?.advancedQuery = $0.isEmpty ? nil : $0
                                              })
                 }
-                .navigationTitle(placeTitle)
+                .alert(removingSource.map { String(localized: "Remove “\($0.name)”?", comment: "Mac: Remove Source confirmation title") } ?? "",
+                       isPresented: Binding(get: { removingSource != nil }, set: { if !$0 { removingSource = nil } })) {
+                    Button(String(localized: "Remove", comment: "Mac: confirm Remove Source"), role: .destructive) {
+                        guard let row = removingSource else { return }
+                        Task { await dependencies.sourcesModel.remove(sourceId: row.id) }
+                    }
+                    Button(String(localized: "Cancel", comment: "Mac: keep the source"), role: .cancel) {}
+                } message: {
+                    Text(removeSourceMessage)
+                }
+                .alert(String(localized: "This Folder Doesn’t Look Like “\(unlikelyLocate?.row.name ?? "")”", comment: "Mac: Locate picked another folder"),
+                       isPresented: Binding(get: { unlikelyLocate != nil }, set: { if !$0 { unlikelyLocate = nil } })) {
+                    Button(String(localized: "Use This Folder", comment: "Mac: Locate anyway"), role: .destructive) {
+                        guard let pick = unlikelyLocate else { return }
+                        Task { await dependencies.sourcesModel.grantAccess(sourceId: pick.row.id, folder: pick.folder) }
+                    }
+                    Button(String(localized: "Cancel", comment: "Mac: keep the source where it was"), role: .cancel) {}
+                } message: {
+                    Text("Only \(unlikelyLocate?.found ?? 0) of \(unlikelyLocate?.checked ?? 0) files checked are in “\(unlikelyLocate?.folder.lastPathComponent ?? "")”. Using it marks the photos it lacks as missing.",
+                         comment: "Mac: Locate picked a folder with few of the source's files")
+                }                .navigationTitle(placeTitle)
                 .navigationSubtitle(subtitle)
                 .toolbar { toolbar }
                 .searchable(text: $searchText, placement: .toolbar,
@@ -523,7 +635,7 @@ struct MacRootWindow: View {
         } else if let library, !library.items.isEmpty {
             // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
-                         picture: Self.demoPicture, generation: library.rowsGeneration,
+                         picture: Self.demoPicture, offline: offlinePhotoIds, generation: library.rowsGeneration,
                          assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                          assetGeneration: library.contentRefreshGeneration)
         } else if let library, let error = library.loadError {
@@ -582,8 +694,13 @@ struct MacRootWindow: View {
         if isLibraryEmpty { return String(localized: "No photos yet", comment: "Mac toolbar subtitle: no source added yet") }
         guard let library else { return "" }
         let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
-        return LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
-                                     isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
+        let line = LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
+                                         isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
+        // "55,267 photos · 1,204 videos · 26,107 offline" (FS-19.01b §2), in the whole library.
+        // Photos with no copy that opens now — not every photo a drive holds.
+        let offline = offlinePhotoIds.count
+        guard offline > 0, library.place == nil, !library.hasActiveQuery else { return line }
+        return line + " · " + String(localized: "\(offline) offline", comment: "Mac toolbar subtitle: photos on sources not connected")
     }
 
     /// What narrows the grid as rules: the Advanced Filter, or the quick
@@ -656,6 +773,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
+        // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.
         if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
         if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
         if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
@@ -718,6 +836,8 @@ struct MacRootWindow: View {
             return
         }
         #endif
+        // A read paused before the last quit comes back paused (FS-19.01 §4).
+        dependencies.sourcesModel.restorePausedRead()
         // The Photos permission is asked by Add Photos Library…, never here
         // (FS-18.01 §7): until then the window is the first-run screen.
         // The helper runs the jobs and the On Server check, or the app while
@@ -742,6 +862,14 @@ struct MacRootWindow: View {
 }
 
 enum MacViewMode: Hashable { case grid, list }
+
+/// A Locate… pick that does not look like the source (FS-19.01b §2).
+struct MacUnlikelyLocate {
+    let row: SourcesModel.Row
+    let folder: URL
+    let found: Int
+    let checked: Int
+}
 
 /// What Add a Source asked for (board `MAC_AddSource`).
 enum MacAddSourceRequest {

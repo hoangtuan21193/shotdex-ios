@@ -19,6 +19,9 @@ struct MacPhotoGrid: NSViewRepresentable {
     var showsDays = true
     /// Photos with a copy on a server (FS-19.07 §8): the drive glyph.
     var onServer: Set<String> = []
+    /// Photos whose every copy is on a drive or server not connected
+    /// (FS-19.01b §2): the offline glyph, top right.
+    var offline: Set<String> = []
     /// The selected asset ids, each time the selection changes.
     var onSelection: ((Set<String>) -> Void)? = nil
     /// The model's id-list generation (`LibraryModel.contentGeneration`):
@@ -67,8 +70,9 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.asset = asset
         coordinator.picture = picture
         coordinator.onSelection = onSelection
-        let glyphsChanged = coordinator.onServer != onServer
+        let glyphsChanged = coordinator.onServer != onServer || coordinator.offline != offline
         coordinator.onServer = onServer
+        coordinator.offline = offline
         coordinator.assetAt = assetAt
         coordinator.update(items, isNewestFirst: isNewestFirst, showsDays: showsDays, generation: generation,
                            forceReload: glyphsChanged)
@@ -88,6 +92,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         private var buildTask: Task<Void, Never>?
         var picture: ((String) -> CGImage?)?
         var onServer: Set<String> = []
+        var offline: Set<String> = []
         var onSelection: ((Set<String>) -> Void)?
         /// Settings › General › Thumbnails (AC-67, AC-68); a change redraws the tiles on screen.
         private var fields = ThumbnailInfoFields.load()
@@ -119,7 +124,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             for case let tile as MacPhotoTile in collection.visibleItems() {
                 guard let indexPath = collection.indexPath(for: tile) else { continue }
                 let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
-                tile.showInfo(row, side: side, fields: fields, isOnServer: onServer.contains(row.assetId))
+                tile.showInfo(row, side: side, fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
             }
         }
 
@@ -166,7 +171,7 @@ struct MacPhotoGrid: NSViewRepresentable {
                 guard index < rows.count, let asset = assetAt?(index) else { continue }
                 let row = rows[index]
                 tile.show(row, asset: asset, picture: nil, photoLibrary: photoLibrary, side: side,
-                          fields: fields, isOnServer: onServer.contains(row.assetId))
+                          fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
             }
         }
 
@@ -186,7 +191,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             let asset = picture != nil ? nil : assetAt.map { $0(index) } ?? asset(row.assetId)
             tile.show(row, asset: asset, picture: picture, photoLibrary: photoLibrary,
                       side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
-                      fields: fields, isOnServer: onServer.contains(row.assetId))
+                      fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
             return tile
         }
 
@@ -275,6 +280,9 @@ final class MacPhotoTile: NSCollectionViewItem {
     /// "On server" (FS-19.07 §8): bottom-left, as on iOS.
     private let serverGlyph = NSImageView(image: NSImage(systemSymbolName: "externaldrive.fill.badge.checkmark",
                                                            accessibilityDescription: nil) ?? NSImage())
+    /// Every copy is on a drive or server not connected (FS-19.01b §2): top right.
+    private let offlineGlyph = NSImageView(image: NSImage(systemSymbolName: "externaldrive",
+                                                            accessibilityDescription: nil) ?? NSImage())
     private let shade = CAGradientLayer()
     private var requestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
@@ -327,7 +335,12 @@ final class MacPhotoTile: NSCollectionViewItem {
         caption.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         serverGlyph.contentTintColor = .white
         serverGlyph.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
-        for subview in [photo, badge, caption, exif, serverGlyph] {
+        offlineGlyph.contentTintColor = .white
+        offlineGlyph.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
+        offlineGlyph.wantsLayer = true
+        offlineGlyph.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
+        offlineGlyph.layer?.cornerRadius = 9
+        for subview in [photo, badge, caption, exif, serverGlyph, offlineGlyph] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -346,6 +359,10 @@ final class MacPhotoTile: NSCollectionViewItem {
             caption.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 8),
             serverGlyph.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
             serverGlyph.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
+            offlineGlyph.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -6),
+            offlineGlyph.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
+            offlineGlyph.widthAnchor.constraint(equalToConstant: 18),
+            offlineGlyph.heightAnchor.constraint(equalToConstant: 18),
         ])
     }
 
@@ -369,16 +386,18 @@ final class MacPhotoTile: NSCollectionViewItem {
     private(set) var hasPicture = false
 
     func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat,
-              fields: ThumbnailInfoFields, isOnServer: Bool = false) {
+              fields: ThumbnailInfoFields, isOnServer: Bool = false, isOffline: Bool = false) {
         hasPicture = picture != nil || asset != nil
         // A reused tile drops a late result by its asset id, below.
         requestId = nil
         photo.layer?.contents = nil
         assetId = row.assetId
         self.photoLibrary = photoLibrary
-        showInfo(row, side: side, fields: fields, isOnServer: isOnServer)
+        showInfo(row, side: side, fields: fields, isOnServer: isOnServer, isOffline: isOffline)
         let name = row.originalFilename ?? String(localized: "Photo", comment: "Mac grid: a photo with no file name")
-        view.setAccessibilityLabel(isOnServer
+        view.setAccessibilityLabel(isOffline
+            ? String(localized: "\(name), Offline", comment: "Mac grid: VoiceOver label of a photo only on a source not connected")
+            : isOnServer
             ? String(localized: "\(name), On server", comment: "Mac grid: VoiceOver label of a photo that is on a server")
             : name)
         if let picture {
@@ -397,7 +416,8 @@ final class MacPhotoTile: NSCollectionViewItem {
 
     /// Badge, caption, exposure line and server glyph — everything over the
     /// picture; Settings changing them redraws only this.
-    func showInfo(_ row: LibraryGridItem, side: CGFloat, fields: ThumbnailInfoFields, isOnServer: Bool) {
+    func showInfo(_ row: LibraryGridItem, side: CGFloat, fields: ThumbnailInfoFields, isOnServer: Bool, isOffline: Bool = false) {
+        offlineGlyph.isHidden = !isOffline
         let format = MacPhotoTile.format(of: row.originalFilename)
         badge.stringValue = format.map { " \($0) " } ?? ""
         badge.isHidden = format == nil || !fields.showsFileTypeBadge
