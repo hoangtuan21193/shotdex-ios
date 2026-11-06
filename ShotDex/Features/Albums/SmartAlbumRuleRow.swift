@@ -247,11 +247,11 @@ struct SmartAlbumRuleRow: View {
                 // named outright (board PH_SmartAlbumEditor).
                 if rule.field == .alsoOnServer {
                     Text(String(localized: "Server", comment: "Smart album Also on Server condition: the server row"))
-                        .foregroundStyle(Color(.secondaryLabel))
+                        .foregroundStyle(Self.secondaryText)
                     Spacer()
                 }
                 Text(choiceLabel)
-                    .foregroundStyle(rule.text.isEmpty ? Color(.secondaryLabel) : Color.primary)
+                    .foregroundStyle(rule.text.isEmpty ? Self.secondaryText : Color.primary)
                 if rule.field != .alsoOnServer { Spacer() }
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption)
@@ -427,6 +427,15 @@ struct SmartAlbumRuleRow: View {
             },
             set: { rule[keyPath: key] = $0.timeIntervalSince1970 }
         )
+    }
+
+    /// Grey that a Menu label does not tint (UIKit and AppKit name it apart).
+    private static var secondaryText: Color {
+        #if canImport(UIKit)
+        Color(uiColor: .secondaryLabel)
+        #else
+        Color(nsColor: .secondaryLabelColor)
+        #endif
     }
 
     private var choiceLabel: String {
