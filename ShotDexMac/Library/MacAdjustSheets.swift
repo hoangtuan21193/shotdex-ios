@@ -38,6 +38,80 @@ struct MacAdjustWriter {
         }
     }
 
+    /// Several photos in one Photos change (Get Info on a selection): each
+    /// to its own date, or all to one place. Photos it cannot change are
+    /// counted, not dropped silently.
+    func setDates(_ dates: [String: Date]) async -> (Outcome, skipped: Int) {
+        let metadataStore = dependencies.metadataStore
+        return await writeMany(ids: Array(dates.keys), change: { id, request in request.creationDate = dates[id] },
+                               landed: { id, asset in
+                                   guard let want = dates[id], let have = asset.creationDate else { return false }
+                                   return abs(have.timeIntervalSince(want)) < 1
+                               }) { landed in
+            for id in landed { if let date = dates[id] { try? metadataStore.updateCreationDate(assetIds: [id], date: date) } }
+        }
+    }
+
+    func setLocation(_ coordinate: CLLocationCoordinate2D?, ids: [String]) async -> (Outcome, skipped: Int) {
+        let metadataStore = dependencies.metadataStore
+        let latitude = coordinate?.latitude, longitude = coordinate?.longitude
+        let location = latitude.flatMap { lat in longitude.map { CLLocation(latitude: lat, longitude: $0) } }
+        return await writeMany(ids: ids, change: { _, request in request.location = location },
+                               landed: { _, asset in
+                                   switch (asset.location?.coordinate, coordinate) {
+                                   case (nil, nil): true
+                                   case let (a?, b?): abs(a.latitude - b.latitude) < 1e-6 && abs(a.longitude - b.longitude) < 1e-6
+                                   default: false
+                                   }
+                               }) { landed in
+            try? metadataStore.updateLocation(assetIds: landed, latitude: latitude, longitude: longitude)
+        }
+    }
+
+    private func writeMany(ids: [String], change: @escaping @Sendable (String, PHAssetChangeRequest) -> Void,
+                           landed: @escaping @Sendable (String, PHAsset) -> Bool,
+                           mirror: @escaping @Sendable ([String]) -> Void) async -> (Outcome, skipped: Int) {
+        #if DEBUG
+        if MacDemoLibrary.isOn {
+            await Task.detached(priority: .userInitiated) { mirror(ids) }.value
+            return (.done, 0)
+        }
+        #endif
+        let database = dependencies.database
+        // Photo id → its asset, through the Photos copy's own PhotoKit id.
+        let assets = await Task.detached(priority: .userInitiated) { () -> [String: PHAsset] in
+            var kitIds: [String: String] = [:]
+            try? database.reader.read { db in
+                for id in ids {
+                    kitIds[id] = try String.fetchOne(db, sql: """
+                        SELECT photoKitId FROM photo_copies WHERE photoId = ? AND kind = 'photos' AND photoKitId IS NOT NULL
+                        """, arguments: [id]) ?? id
+                }
+            }
+            let byKit = Dictionary(PhotoLibraryService.fetchAssets(ids: Array(kitIds.values)).map { ($0.localIdentifier, $0) }) { a, _ in a }
+            return kitIds.compactMapValues { byKit[$0] }
+        }.value
+        let editable = assets.filter { $0.value.canPerform(.properties) }
+        guard !editable.isEmpty else {
+            return (.failed(String(localized: "Photos doesn’t allow changing these photos.", comment: "Mac adjust: none editable")), ids.count)
+        }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                for (id, asset) in editable { change(id, PHAssetChangeRequest(for: asset)) }
+            }
+        } catch {
+            return (.failed(error.localizedDescription), ids.count)
+        }
+        let kitById = editable.mapValues(\.localIdentifier)
+        let done = await Task.detached(priority: .userInitiated) { () -> [String] in
+            let fresh = Dictionary(PhotoLibraryService.fetchAssets(ids: Array(kitById.values)).map { ($0.localIdentifier, $0) }) { a, _ in a }
+            return kitById.compactMap { id, kit in fresh[kit].map { landed(id, $0) } == true ? id : nil }
+        }.value
+        await Task.detached(priority: .userInitiated) { mirror(done) }.value
+        dependencies.photoLibrary.publishAppCreatedAsset()
+        return (.done, ids.count - done.count)
+    }
+
     /// Photos first, on the photo's own asset (a merged photo's id is not its
     /// PhotoKit id), and only where Photos allows a property edit; the change
     /// is read back before the index follows. The index is a mirror: a
@@ -93,12 +167,15 @@ struct MacAdjustWriter {
 struct MacAdjustDateSheet: View {
     /// Nil: the photo has no date yet; the sheet starts from now.
     let original: Date?
+    /// More than one: the earliest moves to the date picked, the rest by the same amount.
+    var count = 1
     let apply: (Date) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var date: Date
 
-    init(original: Date?, apply: @escaping (Date) -> Void) {
+    init(original: Date?, count: Int = 1, apply: @escaping (Date) -> Void) {
         self.original = original
+        self.count = count
         self.apply = apply
         _date = State(initialValue: original ?? Date())
     }
@@ -129,6 +206,11 @@ struct MacAdjustDateSheet: View {
                     }
                 }
             }
+            if count > 1 {
+                Text("All \(count) photos move by the same amount: the earliest goes to this date, the rest keep their spacing.",
+                     comment: "Mac adjust date: several photos (plural)")
+                    .font(.system(size: 11))
+            }
             Text("The date in the original file stays as it is, as in Photos.", comment: "Mac adjust date: what it does not change")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             HStack {
@@ -151,6 +233,8 @@ struct MacAdjustDateSheet: View {
 /// Location › Adjust…: a map to click, a place to search, or no place.
 struct MacAdjustLocationSheet: View {
     let original: CLLocationCoordinate2D?
+    /// More than one: every photo goes to the same place.
+    var count = 1
     let apply: (CLLocationCoordinate2D?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var pin: CLLocationCoordinate2D?
@@ -162,8 +246,9 @@ struct MacAdjustLocationSheet: View {
     @State private var isPicking = false
     @State private var searchNote: String?
 
-    init(original: CLLocationCoordinate2D?, apply: @escaping (CLLocationCoordinate2D?) -> Void) {
+    init(original: CLLocationCoordinate2D?, count: Int = 1, apply: @escaping (CLLocationCoordinate2D?) -> Void) {
         self.original = original
+        self.count = count
         self.apply = apply
         _pin = State(initialValue: original)
         let center = original ?? CLLocationCoordinate2D(latitude: 20, longitude: 0)
@@ -175,6 +260,10 @@ struct MacAdjustLocationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Adjust Location", comment: "Mac adjust location: title").font(.headline)
+            if count > 1 {
+                Text("All \(count) photos go to this place.", comment: "Mac adjust location: several photos (plural)")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
             TextField(String(localized: "Search for a place", comment: "Mac adjust location: search field"), text: $query)
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: query) { _, text in

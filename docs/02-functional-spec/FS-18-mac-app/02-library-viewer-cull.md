@@ -109,6 +109,9 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
   khác giá trị ghi **"Mixed"** (chữ phụ); gõ hay chọn giá trị mới thì ghi cho cả N ảnh, ô không chạm giữ nguyên từng ảnh.
 - Keywords nhiều ảnh: hiện mọi chip có trong lựa chọn; thêm chip → thêm cho cả N, × trên chip → gỡ khỏi cả N.
 - EXIF nhiều ảnh: dòng cùng giá trị ghi giá trị, khác nhau ghi "Mixed"; Show All Raw Metadata mờ.
+- Ô chữ nhiều ảnh ghi khi gõ xong (Return hoặc rời ô), không giữa chừng; ô "Mixed" xoá trắng bằng nút × "Clear on all N"
+  (ô trống của nó nghĩa là giữ nguyên từng ảnh). Title chỉ vào ảnh thư mục. Adjust… tắt (kèm lời) khi lựa chọn có ảnh thư mục.
+  Quá 500 ảnh: "Get Info edits up to 500 photos at a time."
 - Panel mở bằng ⌘I (Image › Get Info) hoặc Get Info trên menu chuột phải (chỉ mở, không đóng); không lấy bàn phím tới khi
   bấm vào một ô (như Info của Photos). Ảnh chỉ có trong Photos: Title tắt (Photos giữ tiêu đề), ghi "Saved as you type to Photos."
 - Creator, Copyright: trường của ShotDex cho mọi ảnh (`photo_user_marks`, v62); ảnh file ghi tiếp ra sidecar (`dc:creator`,

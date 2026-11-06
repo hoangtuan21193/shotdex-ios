@@ -35,6 +35,13 @@ struct PhotoInfoQueriesTests {
         #expect(!info.isInPhotos)
         #expect(info.serverCopies == [.init(serverName: "NAS Home", path: "Shared/2025/DSC04512.ARW")])
 
+        // A selection reads in one go; an id not in the index still has an entry.
+        let several = try await PhotoInfoQueries(database: database).infos(photoIds: ["A", "missing"])
+        #expect(several["A"]?.title == "Last light over Wakakusa")
+        #expect(several["missing"] != nil)
+        #expect(several["missing"]?.metadata == nil)
+        #expect(several["missing"]?.isInPhotos == false)
+
         // Saves in the same second: the last one wins (typing).
         let now = Date()
         try store.setCaption("Deer", photoIds: ["A"], at: now)

@@ -34,7 +34,26 @@ struct PhotoInfoQueries: Sendable {
     }
 
     func info(photoId: String) async throws -> Info {
-        try await database.reader.read { db in
+        try await database.reader.read { db in try Self.info(db, photoId: photoId) }
+    }
+
+    /// Several photos' info in one read (Get Info on a selection, §8).
+    func infos(photoIds: [String]) async throws -> [String: Info] {
+        var infos: [String: Info] = [:]
+        // 50 photos a read: a selection left behind stops between reads.
+        for start in stride(from: 0, to: photoIds.count, by: 50) {
+            try Task.checkCancellation()
+            let chunk = Array(photoIds[start..<min(photoIds.count, start + 50)])
+            let part = try await database.reader.read { db in
+                try chunk.reduce(into: [String: Info]()) { $0[$1] = try Self.info(db, photoId: $1) }
+            }
+            infos.merge(part) { $1 }
+        }
+        return infos
+    }
+
+    static func info(_ db: Database, photoId: String) throws -> Info {
+        do {
             var info = Info()
             info.metadata = try PhotoMetadata.fetchOne(db, key: photoId)
             let copies = try Row.fetchAll(db, sql: """
@@ -57,7 +76,9 @@ struct PhotoInfoQueries: Sendable {
             }
             // No copy row at all (missing ones count — a drive unplugged is
             // still a file photo): a Photos asset the copy table has not caught up with.
-            if copies.isEmpty, try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE photoId = ?", arguments: [photoId]) == 0 {
+            // Not in the index at all (gone): nowhere.
+            if copies.isEmpty, info.metadata != nil,
+               try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE photoId = ?", arguments: [photoId]) == 0 {
                 info.isInPhotos = true
             }
             let marks = try Row.fetchOne(db, sql: "SELECT title, caption, creator, copyright FROM photo_user_marks WHERE photoId = ?",

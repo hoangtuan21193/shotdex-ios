@@ -114,9 +114,7 @@ struct MacInfoView: View {
                 ContentUnavailableView(String(localized: "No Selection", comment: "Mac Get Info: nothing selected"), systemImage: "info.circle",
                                        description: Text("Select a photo to see its info.", comment: "Mac Get Info: hint"))
             } else {
-                ContentUnavailableView(String(localized: "\(selection.ids.count) Photos", comment: "Mac Get Info: several selected (plural)"),
-                                       systemImage: "photo.stack",
-                                       description: Text("Select one photo to edit its info.", comment: "Mac Get Info: several selected, hint"))
+                MacInfoMultiView(selection: selection, menu: menu, picture: picture)
             }
         }
         .frame(minWidth: 420, maxWidth: 420, minHeight: 360)

@@ -54,44 +54,46 @@ struct MacKeywordEditor {
 
     /// Get Info's caption: a file photo's own row (and sidecar), Photos'
     /// caption for a photo in Photos. Empty clears it.
-    func setCaption(_ text: String, for id: String) async -> Outcome {
+    func setCaption(_ text: String, for id: String) async -> Outcome { await setCaption(text, for: [id]) }
+
+    /// Several photos at once (Get Info on a selection): each one's own copy
+    /// kinds decide where it goes.
+    func setCaption(_ text: String, for ids: [String]) async -> Outcome {
         let caption: CaptionKeywordChange.Caption = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .clear : .set(text)
-        return await write(ids: [id], files: { store, files in try store.setCaption(text, photoIds: files) }) { current in
+        return await write(ids: ids, files: { store, files in try store.setCaption(text, photoIds: files) }) { current in
             current.caption == (caption == .clear ? nil : text) ? nil : CaptionKeywordChange(caption: caption)
         }
     }
 
     /// Creator and Copyright: ShotDex's own fields for every photo, sent on
     /// to the sidecar of a file photo (Photos has no such field).
-    func setCreator(_ text: String, for id: String) async -> Outcome {
-        await setUserText(id) { try $0.setCreator(text, photoIds: [id]) }
+    func setCreator(_ text: String, for id: String) async -> Outcome { await setCreator(text, for: [id]) }
+
+    func setCreator(_ text: String, for ids: [String]) async -> Outcome {
+        await setUserText(ids) { try $0.setCreator(text, photoIds: ids) }
     }
 
-    func setCopyright(_ text: String, for id: String) async -> Outcome {
-        await setUserText(id) { try $0.setCopyright(text, photoIds: [id]) }
-    }
+    func setCopyright(_ text: String, for id: String) async -> Outcome { await setCopyright(text, for: [id]) }
 
-    private func setUserText(_ id: String, _ write: @escaping @Sendable (PhotoUserMarksStore) throws -> Void) async -> Outcome {
-        let store = PhotoUserMarksStore(database: database)
-        do {
-            try await Task.detached(priority: .userInitiated) { try write(store) }.value
-            await sidecarQueue.schedule([id])
-            return .done
-        } catch {
-            Self.log.error("user field write failed: \(error.localizedDescription, privacy: .public)")
-            return .failed
-        }
+    func setCopyright(_ text: String, for ids: [String]) async -> Outcome {
+        await setUserText(ids) { try $0.setCopyright(text, photoIds: ids) }
     }
 
     /// A file photo's title (Photos keeps none ShotDex writes).
-    func setTitle(_ text: String, for id: String) async -> Outcome {
+    func setTitle(_ text: String, for id: String) async -> Outcome { await setTitle(text, for: [id]) }
+
+    func setTitle(_ text: String, for ids: [String]) async -> Outcome {
+        await setUserText(ids) { try $0.setTitle(text, photoIds: ids) }
+    }
+
+    private func setUserText(_ ids: [String], _ write: @escaping @Sendable (PhotoUserMarksStore) throws -> Void) async -> Outcome {
         let store = PhotoUserMarksStore(database: database)
         do {
-            try await Task.detached(priority: .userInitiated) { try store.setTitle(text, photoIds: [id]) }.value
-            await sidecarQueue.schedule([id])
+            try await Task.detached(priority: .userInitiated) { try write(store) }.value
+            await sidecarQueue.schedule(ids)
             return .done
         } catch {
-            Self.log.error("title write failed: \(error.localizedDescription, privacy: .public)")
+            Self.log.error("user field write failed: \(error.localizedDescription, privacy: .public)")
             return .failed
         }
     }

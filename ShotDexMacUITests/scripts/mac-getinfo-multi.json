@@ -1,0 +1,197 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Caption",
+   "type": "textField",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-multi",
+   "window": "Info"
+  },
+  {
+   "action": "dump",
+   "name": "01-multi"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "typeText",
+   "label": "Caption",
+   "type": "textField",
+   "text": "Deer park, Nara"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "label": "Add Keyword",
+   "type": "textField",
+   "text": "Nara\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove keyword Nara",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "3 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scroll",
+   "label": "Flag",
+   "distance": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Adjust Location",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "click",
+   "label": "Map — click to place the photo, or search for a place"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Adjust",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-multi-edited",
+   "window": "Info"
+  },
+  {
+   "action": "click",
+   "x": 0.33,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Caption",
+   "type": "textField",
+   "text": "Deer park, Nara"
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove keyword Nara",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-one-of-them",
+   "window": "Info"
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

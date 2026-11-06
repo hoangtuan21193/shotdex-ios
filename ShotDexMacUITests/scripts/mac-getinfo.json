@@ -337,8 +337,8 @@
   },
   {
    "action": "assertExists",
-   "label": "2 Photos",
-   "seconds": 3
+   "label": "Changes apply to all 2 photos. Untouched fields keep their own values.",
+   "seconds": 5
   },
   {
    "action": "screenshot",
