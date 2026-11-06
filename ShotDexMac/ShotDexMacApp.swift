@@ -112,6 +112,9 @@ struct MacBackupCommands: Commands {
         CommandGroup(after: .newItem) {
             // File › sources (FS-18.01b §2): the keyboard's way to the sidebar's +.
             Divider()
+            Button(String(localized: "Add Source…", comment: "Mac menu: File › Add Source… (the Add a Source sheet)")) {
+                NotificationCenter.default.post(name: .macShowAddSource, object: nil)
+            }
             Button(String(localized: "Add Folder…", comment: "Mac menu: File › Add Folder…")) {
                 NotificationCenter.default.post(name: .macAddFolder, object: nil)
             }

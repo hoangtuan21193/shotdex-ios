@@ -21,6 +21,12 @@ theo ngày chụp ngay khi đọc, và theo dõi thư mục để file mới t�
 - Duo màn trong (board `DI_AddSource`): sheet chỉ cao 661pt, nên **Folder or Drive** và **Server** đứng cạnh nhau, và chú thích
   chân sheet đứng bên trái **Choose Folder…** trên một hàng — để thẻ "Have a memory card?" (có **Choose Card…**) không bị
   chân sheet che.
+- Mac (2026-11-07): dấu **+** cạnh Sources mở sheet này (không còn menu). Ba hàng chọn một; mặc định **Folder or Drive**.
+  Nút chính đổi theo hàng: **Choose Folder…** (open panel, kèm hai ô dưới) · **Connect to Server…** (form kết nối) ·
+  **Add Photos Library…** (hỏi quyền Photos). Photos đã là nguồn → hàng ghi "✓ Added · N items" và không chọn được.
+  Open panel mở **trên** sheet; Cancel panel → về sheet, hai ô giữ nguyên; chọn xong sheet mới đóng. Server và Photos đóng
+  sheet trước rồi mở form / hỏi quyền. Cancel và Esc đóng, không thêm gì. ↑↓ đổi loại. Thả thư mục lên sheet = thêm với hai
+  ô đang chọn. File › Add Source… mở sheet; File › Add Folder… ⇧⌘O bỏ qua sheet (hai ô mặc định).
 - Folder or Drive có hai ô đánh dấu, **mặc định bật**: **Include Subfolders** · **Pair RAW + JPEG as One Photo**.
 - **Choose Folder…** mở bảng chọn của hệ thống (Mac: open panel; iPad, iPhone, Duo: Files, ổ USB-C ở Locations). Chọn được cả
   gốc một ổ. Thả thư mục thì bỏ qua sheet và dùng hai giá trị mặc định.

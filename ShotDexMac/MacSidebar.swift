@@ -15,12 +15,9 @@ struct MacSidebar: View {
     var backup: (jobs: Int, needsAttention: Bool) = (0, false)
     var smartAlbums: [SmartAlbum] = []
     var newSmartAlbum: () -> Void = {}
-    /// The Sources header's + (board `Main`): a folder or drive, or a server.
-    var addFolder: () -> Void = {}
-    /// Add Photos Library… in the + menu while Photos is not a source — the
-    /// way in once a folder has replaced the first-run screen.
-    var addPhotosLibrary: (() -> Void)? = nil
-    var connectToServer: () -> Void = {}
+    /// The Sources header's + (board `Main`): the Add a Source sheet
+    /// (`MAC_AddSource`) — Photos, a folder or drive, or a server.
+    var addSource: () -> Void = {}
     /// Folders, drives or cards dropped on the sidebar (FS-18.01 §7).
     var addFolders: ([URL]) -> Void = { _ in }
     /// A long task's foot (a common-photos run), shown instead of the index line.
@@ -57,23 +54,15 @@ struct MacSidebar: View {
                 HStack {
                     Text("Sources", comment: "Mac sidebar group")
                     Spacer()
-                    Menu {
-                        if let addPhotosLibrary {
-                            Button(String(localized: "Add Photos Library…", comment: "Mac sidebar: add the Photos library as a source"),
-                                   action: addPhotosLibrary)
-                        }
-                        Button(String(localized: "Add Folder…", comment: "Mac sidebar: add a folder or drive source"), action: addFolder)
-                        Button(String(localized: "Connect to Server…", comment: "Mac sidebar: add a server connection"), action: connectToServer)
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
-                    .help(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
-                    .accessibilityLabel(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
-                    .accessibilityIdentifier("sidebar.addSource")
+                    // Add a Source (board `MAC_AddSource`): a sheet, not a menu.
+                    Button(action: addSource) { Image(systemName: "plus") }
+                        .buttonStyle(.borderless)
+                        .help(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                        .accessibilityLabel(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                        .accessibilityIdentifier("sidebar.addSource")
                 }
+                // macOS reads a List header as one element: the + is its action.
+                .accessibilityAction(named: String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"), addSource)
             }
             Section {
                 ForEach(MacSidebarItem.collections) { row($0, count: nil) }
@@ -91,6 +80,7 @@ struct MacSidebar: View {
                         .help(String(localized: "New Smart Album… (⌥⌘N)", comment: "Mac sidebar: add a smart album"))
                         .accessibilityLabel(String(localized: "New Smart Album", comment: "Mac sidebar: add a smart album"))
                 }
+                .accessibilityAction(named: String(localized: "New Smart Album", comment: "Mac sidebar: add a smart album"), newSmartAlbum)
             }
             Section(String(localized: "Utilities", comment: "Mac sidebar group")) {
                 ForEach(MacSidebarItem.utilities) { item in

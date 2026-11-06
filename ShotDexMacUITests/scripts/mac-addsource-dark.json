@@ -1,0 +1,5 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary","-ShotDexSection","addSource","-ShotDexAppearance","dark"]},
+ {"action":"waitFor","label":"Add a Source","seconds":15},{"action":"wait","seconds":2},
+ {"action":"screenshot","name":"dark-sheet"},{"action":"quit"}
+]}

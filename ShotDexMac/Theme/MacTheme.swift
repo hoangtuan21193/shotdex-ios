@@ -24,6 +24,16 @@ enum MacTheme {
     static let accentFill = dynamic(light: NSColor(red: 0xA3 / 255, green: 0x5E / 255, blue: 0x0A / 255, alpha: 1),
                                     dark: NSColor(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255, alpha: 1))
     static let onAccentFill = dynamic(light: .white, dark: .black)
+    /// `sheet`: every sheet's ground, opaque (DESIGN.md §10b, one token).
+    static let sheet = dynamic(light: NSColor(red: 0xF6 / 255, green: 0xF6 / 255, blue: 0xF8 / 255, alpha: 1),
+                               dark: NSColor(red: 0x2A / 255, green: 0x2A / 255, blue: 0x2D / 255, alpha: 1))
+    /// `content`: the content area's ground, and a card's on a sheet.
+    static let content = dynamic(light: .white, dark: NSColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1))
+    /// `sep`: hairlines and card borders.
+    static let separator = dynamic(light: NSColor(white: 0, alpha: 0.10), dark: NSColor(white: 1, alpha: 0.10))
+    /// `greenText`: a done state's words ("Added · 23,904 items", board `MAC_AddSource`).
+    static let greenText = dynamic(light: NSColor(red: 0x1F / 255, green: 0x7A / 255, blue: 0x35 / 255, alpha: 1),
+                                   dark: NSColor(red: 0x30 / 255, green: 0xD1 / 255, blue: 0x58 / 255, alpha: 1))
 
     /// `fill`: a flat control's ground (DESIGN.md §10b).
     static let fill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.07))

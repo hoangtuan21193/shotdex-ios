@@ -1,0 +1,293 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "addSource"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Add a Source",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Choose Folder\u2026",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "01-sheet"
+  },
+  {
+   "action": "click",
+   "label": "addSource.server"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Connect to Server\u2026",
+   "type": "button",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-server-picked"
+  },
+  {
+   "action": "click",
+   "label": "addSource.photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Connect to Server\u2026",
+   "type": "button",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "addSource.folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Choose Folder\u2026",
+   "type": "button",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Include subfolders",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Include subfolders",
+   "type": "checkBox",
+   "text": "0"
+  },
+  {
+   "action": "click",
+   "label": "Include subfolders",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Include subfolders",
+   "type": "checkBox",
+   "text": "1"
+  },
+  {
+   "action": "click",
+   "label": "Pair RAW + JPEG as one photo",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Pair RAW + JPEG as one photo",
+   "type": "checkBox",
+   "text": "0"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.1493,
+   "y": 0.26
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.1493,
+   "y": 0.26
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "addSource.server"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Connect to Server\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "type": "sheet",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-server-form"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.1493,
+   "y": 0.26
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Choose Folder\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "04-open-panel"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Include subfolders",
+   "type": "checkBox",
+   "text": "1"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "File>Add Source\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Add a Source",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

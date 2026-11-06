@@ -96,7 +96,7 @@ struct MacEmptyLibrary: View {
             Button(action: action) {
                 Text(button).frame(maxWidth: .infinity)
             }
-            .buttonStyle(MacEmptyLibraryButtonStyle(isDefault: isDefault))
+            .buttonStyle(MacPushButtonStyle(isDefault: isDefault))
             .keyboardShortcut(isDefault ? .defaultAction : nil)
         }
         // 16 inside a 1pt border, as the board's border-box draws it.
@@ -144,41 +144,5 @@ private struct MacEmptyLibraryTile: View {
             .frame(width: side, height: side)
             .overlay(Image(systemName: systemImage).font(.system(size: glyph)).foregroundStyle(MacTheme.accent))
             .accessibilityHidden(true)
-    }
-}
-
-/// Push button 28, radius 8 (DESIGN.md §10b): `accentFill` for the default,
-/// `fill` for the others — whatever the system accent.
-private struct MacEmptyLibraryButtonStyle: ButtonStyle {
-    let isDefault: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        StyledLabel(configuration: configuration, isDefault: isDefault)
-    }
-
-    /// A view, so it can read focus and enabled state: keyboard navigation
-    /// gets a ring, a disabled button looks it.
-    private struct StyledLabel: View {
-        let configuration: Configuration
-        let isDefault: Bool
-        @Environment(\.isEnabled) private var isEnabled
-        @Environment(\.isFocused) private var isFocused
-
-        var body: some View {
-            label
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(MacTheme.accent, lineWidth: isFocused ? 2 : 0))
-                .opacity(isEnabled ? 1 : 0.4)
-        }
-
-        private var label: some View {
-        configuration.label
-            .font(.system(size: 13, weight: isDefault ? .semibold : .regular))
-            .foregroundStyle(isDefault ? MacTheme.onAccentFill : Color.primary)
-            .frame(height: 28)
-            .padding(.horizontal, 12)
-            .background(RoundedRectangle(cornerRadius: 8).fill(isDefault ? MacTheme.accentFill : MacTheme.fill))
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
-        }
     }
 }

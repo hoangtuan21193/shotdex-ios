@@ -21,6 +21,10 @@ struct MacRootWindow: View {
     @State private var demoPhotosAdded = false
     /// Add Photos Library… is waiting on macOS's prompt: a second click waits too.
     @State private var isAddingPhotos = false
+    /// Add a Source (board `MAC_AddSource`) and what it asked for, run once
+    /// it has closed — the open panel and the server form are window sheets.
+    @State private var showsAddSource = false
+    @State private var addSourceRequest: MacAddSourceRequest?
     /// Add Photos Library… came back without access.
     @State private var showsPhotosDenied = false
     @State private var showsInspector = false
@@ -123,18 +127,8 @@ struct MacRootWindow: View {
     /// The menu commands' and the app's requests to this window — split from
     /// `body` so the type checker can take it.
     fileprivate func requests(_ content: some View) -> some View {
-        content
+        alerts(content)
             .background(MacMainWindowMarker())
-            .alert(String(localized: "ShotDex Can’t Read Your Photos Library", comment: "Mac alert: Photos access refused"),
-                   isPresented: $showsPhotosDenied) {
-                Button(String(localized: "Open System Settings", comment: "Mac alert: go to Privacy › Photos")) {
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!)
-                }
-                Button(String(localized: "Not Now", comment: "Mac alert: dismiss"), role: .cancel) {}
-            } message: {
-                Text("Allow ShotDex in System Settings › Privacy & Security › Photos. Folders, drives and servers work without it.",
-                     comment: "Mac alert: how to grant Photos access")
-            }
             .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
             .task { await start() }
             .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
@@ -148,7 +142,14 @@ struct MacRootWindow: View {
                 wantsSearchFocus = true
                 selection = .allPhotos
             }
-            .onReceive(NotificationCenter.default.publisher(for: .macAddFolder)) { _ in addFolderFromSidebar() }
+            // ⇧⌘O and ⌘K wait while Add a Source is open: one sheet at a time.
+            .onReceive(NotificationCenter.default.publisher(for: .macAddFolder)) { _ in
+                if !showsAddSource { addFolderFromSidebar() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macShowAddSource)) { _ in
+                addSourceRequest = nil
+                showsAddSource = true
+            }
             .onReceive(NotificationCenter.default.publisher(for: .macAddPhotosLibrary)) { _ in addPhotosLibrary() }
             .onReceive(NotificationCenter.default.publisher(for: .macGoTo)) { note in
                 if let item = note.object as? MacSidebarItem { selection = item }
@@ -161,6 +162,7 @@ struct MacRootWindow: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
+                guard !showsAddSource else { return }
                 serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
             }
             .sheet(item: $smartAlbumForm) { request in
@@ -171,6 +173,12 @@ struct MacRootWindow: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
             .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
+            .sheet(isPresented: $showsAddSource, onDismiss: runAddSourceRequest) {
+                MacAddSourceSheet(photosAdded: photosAdded,
+                                  addPhotosLibrary: { addSourceRequest = .photos },
+                                  addFolder: { addSourceRequest = .folder($0, includesSubfolders: $1, pairsRawAndJpeg: $2) },
+                                  connectToServer: { addSourceRequest = .server })
+            }
             .sheet(item: $serverForm) { request in
                 MacServerFormSheet(editing: request.editing) { _ in
                     NotificationCenter.default.post(name: .macServersChanged, object: nil)
@@ -190,6 +198,27 @@ struct MacRootWindow: View {
             }
     }
 
+    /// Why an add did not happen, at the window's root: the sidebar may be hidden.
+    private func alerts(_ content: some View) -> some View {
+        content
+            .alert(addFolderFailure?.title ?? "",
+                   isPresented: Binding(get: { addFolderFailure != nil }, set: { if !$0 { addFolderFailure = nil } })) {
+                Button(String(localized: "OK", comment: "Mac alert: dismiss")) {}
+            } message: {
+                Text(addFolderFailure?.message ?? "")
+            }
+            .alert(String(localized: "ShotDex Can’t Read Your Photos Library", comment: "Mac alert: Photos access refused"),
+                   isPresented: $showsPhotosDenied) {
+                Button(String(localized: "Open System Settings", comment: "Mac alert: go to Privacy › Photos")) {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!)
+                }
+                Button(String(localized: "Not Now", comment: "Mac alert: dismiss"), role: .cancel) {}
+            } message: {
+                Text("Allow ShotDex in System Settings › Privacy & Security › Photos. Folders, drives and servers work without it.",
+                     comment: "Mac alert: how to grant Photos access")
+            }
+    }
+
     /// The server source picked in the sidebar: its browser fills the
     /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
     /// The sidebar, with what its + › Add Folder… could not add.
@@ -199,18 +228,14 @@ struct MacRootWindow: View {
                    sources: photosAdded ? sources : sources.filter { $0.kind != "photos" },
                    backup: backupBadge, smartAlbums: smartAlbums,
                    newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
-                   addFolder: addFolderFromSidebar,
-                   addPhotosLibrary: photosAdded ? nil : addPhotosLibrary,
-                   connectToServer: { serverForm = MacServerFormRequest() },
-                   addFolders: addFolders,
+                   addSource: {
+                       // A request left by a close that never reached onDismiss is not run later.
+                       addSourceRequest = nil
+                       showsAddSource = true
+                   },
+                   addFolders: { addFolders($0) },
                    busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
             .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
-            .alert(addFolderFailure?.title ?? "",
-                   isPresented: Binding(get: { addFolderFailure != nil }, set: { if !$0 { addFolderFailure = nil } })) {
-                Button(String(localized: "OK", comment: "Mac alert: dismiss")) {}
-            } message: {
-                Text(addFolderFailure?.message ?? "")
-            }
     }
 
     private var serverSource: SourceStore.Source? {
@@ -278,7 +303,7 @@ struct MacRootWindow: View {
     /// Folders, drives or cards — dropped on the window or the sidebar, or
     /// picked with Add Folder or Drive…. Every one is tried; what could not
     /// be added is said once, after.
-    private func addFolders(_ urls: [URL]) {
+    private func addFolders(_ urls: [URL], includesSubfolders: Bool = true, pairsRawAndJpeg: Bool = true) {
         let folders = urls.filter(MacEmptyLibrary.isFolder)
         if folders.isEmpty {
             addFolderFailure = SourcesModel.Failure(
@@ -291,7 +316,7 @@ struct MacRootWindow: View {
         Task {
             var failures: [SourcesModel.Failure] = []
             for folder in folders {
-                await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true)
+                await model.addFolder(folder, includesSubfolders: includesSubfolders, pairsRawAndJpeg: pairsRawAndJpeg)
                 if let failure = model.failure {
                     model.failure = nil
                     failures.append(failure)
@@ -377,10 +402,22 @@ struct MacRootWindow: View {
         sources = (try? dependencies.sources.sources()) ?? []
     }
 
-    /// The sidebar's + › Add Folder…: what Settings › Sources adds, the
-    /// failure said here rather than in a Settings window that may be shut.
+    /// The first run's Add Folder or Drive… and File › Add Folder…: what
+    /// Settings › Sources adds, with its defaults; the failure said here rather
+    /// than in a Settings window that may be shut.
     private func addFolderFromSidebar() {
         MacPhotoSourcesSection.chooseFolder { addFolders([$0]) }
+    }
+
+    private func runAddSourceRequest() {
+        guard let request = addSourceRequest else { return }
+        addSourceRequest = nil
+        switch request {
+        case .photos: addPhotosLibrary()
+        case .folder(let folder, let subfolders, let pairs):
+            addFolders([folder], includesSubfolders: subfolders, pairsRawAndJpeg: pairs)
+        case .server: serverForm = MacServerFormRequest()
+        }
     }
 
     /// Jobs, or a warning when one is stuck on something only the user can
@@ -466,8 +503,8 @@ struct MacRootWindow: View {
     @ViewBuilder
     private var content: some View {
         if isLibraryEmpty {
-            MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: addFolderFromSidebar,
-                            connectToServer: { serverForm = MacServerFormRequest() }, addFolders: addFolders)
+            MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: { addFolderFromSidebar() },
+                            connectToServer: { serverForm = MacServerFormRequest() }, addFolders: { addFolders($0) })
         } else if let library, !library.items.isEmpty {
             // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
@@ -603,6 +640,7 @@ struct MacRootWindow: View {
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
+        if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
         if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
         if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
@@ -689,6 +727,13 @@ struct MacRootWindow: View {
 }
 
 enum MacViewMode: Hashable { case grid, list }
+
+/// What Add a Source asked for (board `MAC_AddSource`).
+enum MacAddSourceRequest {
+    case photos
+    case folder(URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool)
+    case server
+}
 
 /// New Smart Album… or editing one.
 struct MacSmartAlbumFormRequest: Identifiable {
