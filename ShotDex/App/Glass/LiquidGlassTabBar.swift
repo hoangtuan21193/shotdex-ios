@@ -25,7 +25,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .library: "photo.on.rectangle"
         case .albums: "square.stack"
-        case .utilities: "wrench.and.screwdriver"
+        case .utilities: "square.grid.2x2"
         case .search: "magnifyingglass"
         }
     }
@@ -34,7 +34,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .library: "photo.on.rectangle.fill" // no fill variant renders same
         case .albums: "square.stack.fill"
-        case .utilities: "wrench.and.screwdriver.fill"
+        case .utilities: "square.grid.2x2.fill"
         case .search: "magnifyingglass"
         }
     }
