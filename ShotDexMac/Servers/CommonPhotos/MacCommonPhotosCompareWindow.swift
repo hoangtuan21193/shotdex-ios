@@ -67,6 +67,8 @@ final class MacCommonPhotosCompareModel {
     private(set) var failures: [String: String] = [:]
     /// Sides read whole that this Mac cannot draw (a RAW it does not know).
     private(set) var noPreview: Set<String> = []
+    /// Sides drawn from the whole file, not the index's 400-pixel preview.
+    private(set) var fullSize: Set<String> = []
     /// Video sides, played from the server where they lie, by copy path.
     @ObservationIgnored private var videoStreams: [String: RemoteVideoStream] = [:]
     /// Both sides' videos read: played as one (AC-185).
@@ -153,8 +155,8 @@ final class MacCommonPhotosCompareModel {
     }
 
     /// Loads the two sides of the row shown and lets go of every other: the
-    /// index's preview when it has one, else the whole file, downloaded
-    /// behind every other call on the connection (AC-182…184). A cancelled
+    /// index's preview first when it has one, then the whole file, downloaded
+    /// behind every other call on the connection, in its place (AC-182…184). A cancelled
     /// load (the row changed) writes nothing and leaves no part file.
     func loadSides() async {
         // Before the guard: a list emptied by a rescan stops the sound too.
@@ -171,21 +173,25 @@ final class MacCommonPhotosCompareModel {
         // A failure belongs to its row: another row's never shows or blocks.
         failures = failures.filter { paths.contains($0.key) }
         noPreview = noPreview.intersection(paths)
+        fullSize = fullSize.intersection(paths)
         cache.pin(paths: sides.map { ($0.path, sha256) })
-        for side in sides where previews[side.path] == nil && videoStreams[side.path] == nil
-            && !noPreview.contains(side.path) && failures[side.path] == nil {
-            // A video is played from the server, never from the index's still
-            // and never downloaded: any size plays (§6d).
-            if Self.isVideo(side.path) {
-                await stream(side)
-                continue
-            }
+        let pictures = sides.filter { side in
+            !fullSize.contains(side.path) && videoStreams[side.path] == nil
+                && !noPreview.contains(side.path) && failures[side.path] == nil
+        }
+        // A video is played from the server, never from the index's still
+        // and never downloaded: any size plays (§6d).
+        for side in pictures where Self.isVideo(side.path) { await stream(side) }
+        // Both sides' index previews first, so neither waits on the other's
+        // download; then each whole file replaces its preview.
+        for side in pictures where !Self.isVideo(side.path) && previews[side.path] == nil {
             if let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
                                                                maxPixelSize: Self.previewPixels), indexed.image != nil {
                 guard !Task.isCancelled else { return }
                 previews[side.path] = indexed
-                continue
             }
+        }
+        for side in pictures where !Self.isVideo(side.path) {
             guard !Task.isCancelled else { return }
             await download(side, sha256: sha256)
         }
@@ -297,8 +303,11 @@ final class MacCommonPhotosCompareModel {
         let drawn = await Task.detached { Self.draw(file) }.value
         guard !Task.isCancelled else { return }
         if let drawn {
-            previews[side.path] = drawn
-        } else {
+            // The index read the capture date when the file did not say.
+            previews[side.path] = MacCommonPhotosPreview.Indexed(image: drawn.image,
+                                                                 captured: drawn.captured ?? previews[side.path]?.captured)
+            fullSize.insert(side.path)
+        } else if previews[side.path] == nil {
             noPreview.insert(side.path)
         }
     }
@@ -306,13 +315,23 @@ final class MacCommonPhotosCompareModel {
     /// The picture and capture date of a whole file; nil when ImageIO
     /// cannot draw it.
     nonisolated private static func draw(_ file: URL) -> MacCommonPhotosPreview.Indexed? {
-        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                kCGImageSourceThumbnailMaxPixelSize: downloadedPixels,
-                // A RAW's own preview when it has one: no 60-megapixel decode.
-                kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
-                kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary) else { return nil }
+        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil) else { return nil }
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0
+        let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? 0
+        let wanted = min(downloadedPixels, max(width, height))
+        func thumbnail(always: Bool) -> CGImage? {
+            CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceThumbnailMaxPixelSize: downloadedPixels,
+                always ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+                kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
+        }
+        // A RAW's own preview when it is big enough: no 60-megapixel decode.
+        // A HEIC's or JPEG's embedded thumbnail is often 320 pixels: then the
+        // image itself is drawn.
+        var image = thumbnail(always: false)
+        if let small = image, max(small.width, small.height) < wanted { image = thumbnail(always: true) ?? small }
+        guard let image else { return nil }
         let exif = properties?[kCGImagePropertyExifDictionary] as? [CFString: Any]
         // With its offset when the camera wrote one, as the index reads it.
         let captured = exif.flatMap { EmbeddedPreview.captureDate(fromEXIF: $0) }
@@ -446,10 +465,18 @@ private struct MacCommonPhotosCompareContent: View {
                     MacCommonPhotosPlayerView(player: isRight ? pair.follower : pair.leader).padding(16)
                 } else if let image = model.previews[side.path]?.image {
                     let picture = Image(decorative: image, scale: 1)
-                    if model.zoom == .fit {
-                        picture.resizable().scaledToFit().padding(16)
-                    } else {
-                        ScrollView([.horizontal, .vertical]) { picture }
+                    Group {
+                        if model.zoom == .fit {
+                            picture.resizable().scaledToFit().padding(16)
+                        } else {
+                            ScrollView([.horizontal, .vertical]) { picture }
+                        }
+                    }
+                    // The index's preview stands in while the whole file comes.
+                    .overlay(alignment: .bottom) {
+                        if let read = model.downloading[side.path], !model.fullSize.contains(side.path) {
+                            fullSizeBadge(side, read: read)
+                        }
                     }
                 } else if let failure = model.failures[side.path] {
                     VStack(spacing: 10) {
@@ -509,6 +536,19 @@ private struct MacCommonPhotosCompareContent: View {
 
     /// The whole file coming from the server — or waiting while the scan
     /// still reads (its calls go first, AC-184).
+    /// Over the index's preview: the whole file is on its way.
+    private func fullSizeBadge(_ side: CommonPhotosCompare.Copy, read: Int64) -> some View {
+        HStack(spacing: 8) {
+            ProgressView(value: Double(read), total: Double(max(side.size, 1))).frame(width: 80)
+            Text("Loading full size…", comment: "Common photos compare: the index preview shows while the whole file downloads")
+        }
+        .font(.caption)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule())
+        .padding(.bottom, 24)
+    }
+
     @ViewBuilder
     private func downloadingView(_ side: CommonPhotosCompare.Copy, read: Int64) -> some View {
         if read == 0, model.scan.isScanning {

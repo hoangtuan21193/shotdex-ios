@@ -38,7 +38,8 @@ button{font-family:inherit}
 <div style="flex:1;min-height:0;display:flex;gap:1px;background:{{D.hair}}">
 <sc-for list="{{sides}}" as="p" hint-placeholder-count="2"><section aria-label="{{p.aria}}" style="flex:1;min-width:0;display:flex;flex-direction:column;background:{{D.bg}}">
 <div style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:16px">
-<sc-if value="{{p.shows}}" hint-placeholder-val="{{true}}"><div role="img" aria-label="{{p.name}}" style="width:{{p.imgW}};height:{{p.imgH}};border-radius:2px;background:{{p.tile}}"></div></sc-if>
+<sc-if value="{{p.shows}}" hint-placeholder-val="{{true}}"><div role="img" aria-label="{{p.name}}" style="width:{{p.imgW}};height:{{p.imgH}};border-radius:2px;background:{{p.tile}};filter:{{p.blur}}"></div></sc-if>
+<sc-if value="{{p.fullLoading}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:{{D.panel}};font-size:12px;white-space:nowrap"><div aria-hidden="true" style="width:80px;height:4px;border-radius:2px;background:{{D.track}};overflow:hidden"><div style="width:{{p.pct}};height:4px;background:{{D.accent}}"></div></div>Loading full size…</div></sc-if>
 <sc-if value="{{p.loading}}" hint-placeholder-val="{{false}}"><div role="status" style="width:260px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
 <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{D.track}}" stroke-width="2.6"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{D.accent}}" stroke-width="2.6" stroke-linecap="round"></path></svg>
 <div style="font-size:13px">{{p.loadLine}}</div>
@@ -88,7 +89,7 @@ button{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"select","options":["photo","video","loading","waiting","noPreview","error","threeFolders"],"default":"photo"},"quick":{"editor":"boolean","default":false},"$preview":{"width":1180,"height":760}}'>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"select","options":["photo","fullLoading","video","loading","waiting","noPreview","error","threeFolders"],"default":"photo"},"quick":{"editor":"boolean","default":false},"$preview":{"width":1180,"height":760}}'>
 // Tier D tokens (ShotDex/Features/Editing/EditorTheme.swift): the window is always dark.
 const D = { bg:'#000000', panel:'#0E0E0E', control:'#1C1C1C', track:'#2A2A2A', hair:'rgba(255,255,255,0.09)',
   text:'rgba(255,255,255,0.92)', text2:'rgba(255,255,255,0.55)', accent:'#EB9526', green:'#30D158' };
@@ -102,6 +103,8 @@ class Component extends DCLogic {
     const video = state === 'video', loading = state === 'loading', error = state === 'error';
     const waiting = state === 'waiting', noPreview = state === 'noPreview', three = state === 'threeFolders';
     const raw = loading || error || waiting || noPreview;
+    // fullLoading: the index's 400 px preview shows while the whole file downloads to replace it (§6d, 2026-11-06).
+    const fullLoading = state === 'fullLoading';
     const name = video ? 'IMG_4107.MOV' : raw ? 'DSC04388.ARW' : 'IMG_4021.HEIC';
     const row = video ? 5 : raw ? 3 : 1;
     // A video plays from the server where it lies: any size, nothing downloaded (§6d).
@@ -115,7 +118,7 @@ class Component extends DCLogic {
       // Same bytes, so the same picture on both sides.
       tile: tile(row), shows: !(loading || waiting || noPreview || (error && i === 1)), video,
       waiting, noPreview: noPreview && i === 1, picker: three && i === 1, plain: !(three && i === 1),
-      imgW: '540px', imgH: '360px',
+      imgW: '540px', imgH: '360px', fullLoading, blur: fullLoading ? 'blur(1.5px)' : 'none',
       // Loading: both copies download (not indexed); Error: the right one lost the connection.
       loading, pct: i === 0 ? '44%' : '18%',
       loadLine: 'Downloading from NAS Home…', loadBytes: (i === 0 ? '21.4' : '8.8') + ' of 48.6 MB',
