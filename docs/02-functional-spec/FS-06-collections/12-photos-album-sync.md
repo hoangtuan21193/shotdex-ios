@@ -60,7 +60,8 @@ Dòng trạng thái nằm dưới thanh điều kiện của smart album, sau d�
   So với nội dung hiện tại của album trong Photos: thêm phần thiếu, bỏ phần thừa.
 - **Khi nào:** sau mỗi lần tập khớp có thể đổi — lưu sheet, xong một đợt kiểm On Server, PhotoKit báo đổi thư viện
   (thêm, xoá, sửa metadata), index ghi xong một lô. Gom lại: tối đa một lượt mỗi 10 giây cho mỗi album. Ở nền: chạy ở
-  cuối lượt nền của `OnServerBackground`, rồi trong BG task của app nếu có album bật mà không có điều kiện On Server.
+  cuối lượt nền của `OnServerBackground` (`afterPass`). Album không có điều kiện On Server thì chưa có slot nền riêng —
+  nó đồng bộ khi app về trước mặt (2026-11-07, theo code).
 - **Lô:** thêm/bỏ tối đa 500 ảnh mỗi `performChanges`, ngoài main thread. Huỷ được giữa lượt (app ra nền hết giờ):
   lượt sau tính lại từ đầu, vì so với nội dung thật của album nên không mất gì.
 - **Đổi tên smart album:** đổi tên album trong Photos theo. Người dùng tự đổi tên trong Photos thì lần sau bị ghi đè
@@ -111,12 +112,12 @@ Thư viện thử trên simulator iPhone 17 iOS 26.5 (và 18.6 cho AC-UI). Khôn
 | AC-6 | smart album khớp 100 ảnh, 10 trong đó chưa kiểm On Server xong | đồng bộ | album Photos có 90 ảnh; 10 ảnh chưa kiểm không có | theo SQL Also on Server: chưa kiểm không vào Yes (`AlsoOnServerRuleTests.yesNoUncheckedAndServerOnly`); sync lấy đúng tập đó (`SmartAlbumPhotosAlbumStore.photoKitIds`) |
 | AC-7 | smart album gồm 50 mục Photos + 8 ảnh chỉ có trên nguồn thư mục | đồng bộ | album Photos có 50 ảnh; không lỗi vì 8 mục không có PHAsset | `PhotosAlbumSyncTests.ignoresNonPhotosItems` |
 | AC-8 | album đồng bộ 120 ảnh | tắt Keep in Photos | album Photos còn 120 ảnh; lượt đồng bộ sau không đụng tới nó (thêm 5 ảnh khớp: album vẫn 120) | `PhotosAlbumSyncTests.offLeavesAlbum` |
-| AC-9 | album đồng bộ 120 ảnh | xoá smart album | hộp xoá có câu `The album "Shared NAS" stays in Photos.`; sau xoá album Photos còn 120 ảnh; bảng `smart_album_photos_album` không còn dòng | ⚠️ chưa có — `SmartAlbumStoreTests.deleteKeepsPhotosAlbum` + ảnh hộp xoá |
+| AC-9 | album đồng bộ 120 ảnh | xoá smart album | hộp xoá có câu `The album "Shared NAS" stays in Photos.`; sau xoá album Photos còn 120 ảnh; bảng `smart_album_photos_album` không còn dòng | hộp `AlbumsScreen.deletingKeptSmartAlbum` (ảnh: AC-16); store: `PhotosAlbumSyncTests.deleteKeepsPhotosAlbum` |
 | AC-10 | album đồng bộ | xoá album trong Photos, mở ShotDex | công tắc tắt; dòng `The album was deleted in Photos. Keep in Photos is off.`; không album mới nào được tạo | `PhotosAlbumSyncTests.deletedInPhotosTurnsOff` (dòng chữ: ảnh ở AC-16) |
-| AC-11 | quyền `.limited` | mở editor | công tắc Keep in Photos tắt, không bật được; chân ghi `Needs Full Photos Access.` + nút mở Settings | ⚠️ chưa có — `fs0612-keep-in-photos.json` (sim quyền limited) |
+| AC-11 | quyền `.limited` | mở editor | công tắc Keep in Photos tắt, không bật được; chân ghi `Needs Full Photos Access.` + nút mở Settings | `SmartAlbumEditorSheet.keepInPhotosSection` (ảnh ở AC-16) |
 | AC-12 | smart album khớp 55.000 ảnh | bật Keep in Photos | không `performChanges` nào quá 500 ảnh; main thread không chặn > 100 ms; dòng tiến độ đếm lên; giết app giữa lượt → mở lại, album về đủ 55.000, không ảnh trùng | `PhotosAlbumSyncTests.batchesAndResumes` (lô 500; main thread: chụp ở task 11) |
 | AC-13 | PhotoKit ném lỗi ở lô thứ 2 | đồng bộ | dòng `Couldn't update the album in Photos. Will try again.`; lượt sau thử lại và album đủ | `PhotosAlbumSyncTests.retriesAfterError` |
-| AC-14 | album đồng bộ, app ra nền, On Server kiểm xong ở nền thêm 12 ảnh khớp | mở Photos (không mở ShotDex) | album có thêm 12 ảnh | ⚠️ chưa có — `PhotosAlbumSyncTests.runsAfterBackgroundCheck` (gọi hook cuối lượt nền); máy thật: S3 |
+| AC-14 | album đồng bộ, app ra nền, On Server kiểm xong ở nền thêm 12 ảnh khớp | mở Photos (không mở ShotDex) | album có thêm 12 ảnh | `OnServerBackgroundService.afterPass` → `PhotosAlbumSync.syncNow`; máy thật: S3 |
 | AC-15 | đổi tên smart album "Shared NAS" → "Family NAS" | Save | album Photos đổi tên "Family NAS" | `PhotosAlbumSyncTests.followsRename` |
 | AC-17 | album đồng bộ "Shared NAS" 120 ảnh, đã tắt; người dùng thêm tay 2 ảnh vào album trong Photos | bật lại Keep in Photos | không album mới nào được tạo; "Shared NAS" về đúng 120 ảnh của smart album. Album cũ đã bị xoá trong Photos → một album mới được tạo | `PhotosAlbumSyncTests.reenableReusesAlbum` |
 | AC-16 | iPhone 402×874, Duo trong 951×669, Duo ngoài 466×678, iPad 1376×1032; iOS 26.5 và 18.6 | mở editor có 3 điều kiện + Keep in Photos; mở smart album đã đồng bộ | công tắc, chân chữ, dòng trạng thái thấy trọn, không cắt chữ; lệch ≤ 2pt so với board vẽ mới; Duo trong vẫn đạt FS-06.08 AC-4 (công tắc được phép nằm dưới mép) | ⚠️ chưa có — design-parity trên `PH_/IP_/DI_/DC_SmartAlbumEditor`, `PH_/IP_/DI_/DC_SmartAlbum` |

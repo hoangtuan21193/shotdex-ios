@@ -48,6 +48,9 @@ struct AlbumsScreen: View {
     @State private var isCreatingSmartAlbum = false
     @State private var isCustomizePresented = false
     @State private var editingSmartAlbum: SmartAlbum?
+    /// A smart album kept in Photos, waiting for the delete to be confirmed
+    /// (FS-06.12 AC-9). Others delete at once, as before.
+    @State private var deletingKeptSmartAlbum: SmartAlbum?
     @State private var namingRequest: NamingRequest?
     @State private var enteredName = ""
     @State private var deletionRequest: DeletionRequest?
@@ -218,6 +221,19 @@ struct AlbumsScreen: View {
             Button("Delete", role: .destructive) { confirmDelete(request) }
         } message: { request in
             Text(request.message)
+        }
+        .alert(
+            deletingKeptSmartAlbum.map { "Delete “\($0.name)”?" } ?? "",
+            isPresented: Binding(
+                get: { deletingKeptSmartAlbum != nil },
+                set: { if !$0 { deletingKeptSmartAlbum = nil } }
+            ),
+            presenting: deletingKeptSmartAlbum
+        ) { album in
+            Button("Cancel", role: .cancel) { deletingKeptSmartAlbum = nil }
+            Button("Delete", role: .destructive) { model.deleteSmartAlbum(id: album.id) }
+        } message: { album in
+            Text("The album “\(album.name)” stays in Photos.")
         }
         .sheet(item: $editingSmartAlbum) { album in
             SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
@@ -519,7 +535,12 @@ struct AlbumsScreen: View {
                                 Label("Edit", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                model.deleteSmartAlbum(id: item.album.id)
+                                let link = try? SmartAlbumPhotosAlbumStore(database: dependencies.database).link(item.album.id)
+                                if link?.isEnabled == true, link?.collectionLocalId != nil {
+                                    deletingKeptSmartAlbum = item.album
+                                } else {
+                                    model.deleteSmartAlbum(id: item.album.id)
+                                }
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }

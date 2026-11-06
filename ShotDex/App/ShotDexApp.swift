@@ -82,6 +82,8 @@ struct ShotDexApp: App {
                         // New and changed Photos items: are their originals
                         // here (FS-06.10 §4)?
                         dependencies.originalPresenceCheck.appBecameActive()
+                        // Keep in Photos: changes made while away (FS-06.12 §4).
+                        dependencies.photosAlbumSync.setNeedsSync()
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

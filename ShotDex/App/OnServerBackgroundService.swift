@@ -16,6 +16,10 @@ final class OnServerBackgroundService {
     /// Whether any Backup job of a server source's connection waits for power.
     private let needsPower: @MainActor () -> Bool
 
+    /// Runs at the end of each background pass, inside the same slot — Keep
+    /// in Photos catches up with what the pass found (FS-06.12 §4).
+    var afterPass: (@MainActor () async -> Void)?
+
     init(check: OnServerCheck, needsPower: @escaping @MainActor () -> Bool) {
         self.check = check
         self.needsPower = needsPower
@@ -54,6 +58,7 @@ final class OnServerBackgroundService {
         }
         Task { @MainActor in
             await pass.value
+            if !finished { await afterPass?() }
             report(started: started, expired: false)
             if check.hasWorkLeft { appDidEnterBackground() }
             finish(true)

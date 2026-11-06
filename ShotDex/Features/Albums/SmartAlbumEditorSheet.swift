@@ -24,6 +24,9 @@ struct SmartAlbumEditorSheet: View {
     @State private var matchCount: Int?
     /// Lowercased names of the *other* smart albums, for the uniqueness check.
     @State private var takenNames: Set<String> = []
+    /// Keep in Photos (FS-06.12): the switch as loaded, and as set now.
+    @State private var keepsInPhotos = false
+    @State private var keptInPhotos = false
 
     init(
         existing: SmartAlbum?,
@@ -77,6 +80,8 @@ struct SmartAlbumEditorSheet: View {
                 rules(.scope)
             } trailing: {
                 rules(.conditions)
+            } closing: {
+                keepInPhotosSection
             }
             .navigationTitle(existing == nil ? "New Smart Album" : "Edit Smart Album")
             .navigationBarTitleDisplayMode(.inline)
@@ -94,6 +99,29 @@ struct SmartAlbumEditorSheet: View {
         .sourceFolderPicker(folderPicker, query: $query)
         .task { await prepare() }
         .task(id: query) { await recomputeCount(for: query) }
+    }
+
+    /// Keep in Photos — last in one column, under Match in two (FS-06.12 §6).
+    /// Needs Full Access: an album of photos ShotDex cannot all see would
+    /// not be "exactly these photos".
+    private var keepInPhotosSection: some View {
+        let isFullAccess = dependencies.photoLibrary.authorizationState == .authorized
+        return Section {
+            Toggle("Keep in Photos", isOn: $keepsInPhotos)
+                .disabled(!isFullAccess)
+        } footer: {
+            if isFullAccess {
+                Text("ShotDex keeps an album in Photos with exactly these photos.")
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Needs Full Photos Access.")
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    .font(.footnote)
+                }
+            }
+        }
     }
 
     private func rules(_ parts: RuleBuilderSections.Parts) -> some View {
@@ -116,8 +144,15 @@ struct SmartAlbumEditorSheet: View {
         let all = await Task.detached(priority: .utility) {
             (try? smartAlbumStore.fetchAllOrdered()) ?? []
         }.value
+        let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+        let albumId = existing?.id
+        let kept = await Task.detached(priority: .utility) {
+            albumId.flatMap { try? links.link($0) }?.isEnabled ?? false
+        }.value
         let catalog = await suggestionLoad
         guard !Task.isCancelled else { return }
+        keptInPhotos = kept
+        keepsInPhotos = kept
         availableBrands = catalog.brands
         availableBodies = catalog.bodies
         availableLenses = catalog.lenses
@@ -156,6 +191,11 @@ struct SmartAlbumEditorSheet: View {
             createdAt: existing?.createdAt ?? Int(Date().timeIntervalSince1970)
         )
         try? dependencies.smartAlbumStore.upsert(album)
+        if keepsInPhotos != keptInPhotos {
+            try? SmartAlbumPhotosAlbumStore(database: dependencies.database).setEnabled(keepsInPhotos, smartAlbumId: album.id)
+        }
+        // A rename or new conditions change the album in Photos too.
+        dependencies.photosAlbumSync.setNeedsSync()
         onSaved()
         dismiss()
     }

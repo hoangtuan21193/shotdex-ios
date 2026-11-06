@@ -34,8 +34,8 @@ Review rows run agents (two rounds), merge findings into the row, fix each in it
 | 4 | Progress line from Also on Server (AC-256, 259) | code done; test còn | `refreshOnServer` nhận cả `.alsoOnServer` |
 | 5 | Migration + `SmartAlbumPhotosAlbumStore` | done (this commit) | `v61-smartAlbumPhotosAlbum` |
 | 6 | `PhotosAlbumDiff` + `PhotosAlbumSync` (FS-06.12 AC-2…8, 10, 12, 13, 15, 17) | done (this commit) | 13 test; PhotoKit qua `PhotosAlbumWriting` |
-| 7 | UI: switch, status line, delete alert, limited (AC-9, 11) | todo | |
-| 8 | Triggers: save, On Server batch, library change, background (AC-4, 14) | todo | |
+| 7 | UI: switch, status line, delete alert, limited (AC-9, 11) | code done (this commit); ảnh ở row 11 | công tắc ở `closing` của `AdaptiveFormColumns`: cuối cột đơn, dưới Match khi hai cột |
+| 8 | Triggers: save, On Server batch, library change, background (AC-4, 14) | done (this commit) | nền chỉ chạy khi có lượt On Server; album không có điều kiện On Server thì chỉ đồng bộ khi app mở — ghi vào FS-06.12 |
 | 9 | Review round 1: cavecrew-reviewer + photokit-guard + data-migration | todo | |
 | 10 | Review round 2: swift-concurrency + ux-reviewer + design-parity | todo | |
 | 11 | Screens on every device, light/dark, vs boards (AC-16, 257) + `/verify` both specs | todo | |

@@ -20,6 +20,8 @@ struct SmartAlbumDetailScreen: View {
     @State private var lastOriginalReload = Date.distantPast
 
     @State private var model: SmartAlbumDetailModel?
+    /// Keep in Photos link, re-read after each sync pass (FS-06.12 §3).
+    @State private var photosLink: SmartAlbumPhotosAlbum?
     @State private var viewerTarget: PhotoViewerTarget?
     /// Date of the photos under the top of the grid, shown under the title.
     @State private var visibleDate: String?
@@ -108,6 +110,11 @@ struct SmartAlbumDetailScreen: View {
             Task {
                 await model.load()
             }
+        }
+        .task(id: dependencies.photosAlbumSync.generation) {
+            let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+            let id = album.id
+            photosLink = await Task.detached { try? links.link(id) }.value
         }
         // Each batch of the on-server check can move photos in or out of a
         // `Source is <server>` album, and moves its progress line (FS-19.07 §7).
@@ -255,6 +262,15 @@ struct SmartAlbumDetailScreen: View {
     }
 
     /// The original check's progress, for an album on the Original rule.
+    /// `In Photos · 8,412 photos · Updated 2 min ago`, or what it is doing.
+    private var photosAlbumLine: PhotosAlbumSyncLine.Line? {
+        guard let photosLink else { return nil }
+        return PhotosAlbumSyncLine.line(
+            state: photosLink.state, isEnabled: photosLink.isEnabled, assetCount: photosLink.assetCount,
+            lastSyncedAt: photosLink.lastSyncedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            progress: dependencies.photosAlbumSync.progress[album.id])
+    }
+
     private var originalLine: String? {
         guard album.query.usesOriginal || filter.criteria.originalOnDeviceOnly else { return nil }
         let check = dependencies.originalPresenceCheck
@@ -281,6 +297,7 @@ struct SmartAlbumDetailScreen: View {
                     sourceNames: model?.sourceNames ?? [:],
                     statusLines: model?.onServerLines ?? [],
                     originalLine: originalLine,
+                    photosAlbumLine: photosAlbumLine,
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )

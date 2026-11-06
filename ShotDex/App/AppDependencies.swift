@@ -223,6 +223,8 @@ final class AppDependencies {
     let photoDeletionGate: PhotoDeletionGate
     /// The check's own background slot (FS-19.07 §6, phase 2).
     let onServerBackground: OnServerBackgroundService
+    /// Smart albums kept as a real album in Photos (FS-06.12).
+    let photosAlbumSync: PhotosAlbumSync
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
     /// Memory cards shown once, and which are plugged in (FS-20 §4).
@@ -607,11 +609,22 @@ final class AppDependencies {
         ))
         let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: indexInteractionGate))
         self.originalPresenceCheck = originalPresenceCheck
-        photoLibrary.onAssetsChanged = { ids in Task { await originalPresenceCheck.assetsChanged(ids) } }
+        // Keep in Photos follows every change of the set it mirrors (FS-06.12 §4):
+        // a library change, a batch of the On Server check, a save.
+        let photosAlbumSync = PhotosAlbumSync(database: database, writer: LivePhotosAlbumWriter(),
+                                              canWrite: { [photoLibrary] in photoLibrary.authorizationState == .authorized })
+        self.photosAlbumSync = photosAlbumSync
+        photoLibrary.onAssetsChanged = { ids in
+            Task { await originalPresenceCheck.assetsChanged(ids) }
+            photosAlbumSync.setNeedsSync()
+        }
         // The grid's "on server" glyph follows each batch of the check.
         let presence = OnServerProgressQueries(database: database)
         let uploadIndex = serverUploadIndex
-        onServerCheck.onBatch = { uploadIndex.reloadPresence { try presence.presentAnywhere() } }
+        onServerCheck.onBatch = {
+            uploadIndex.reloadPresence { try presence.presentAnywhere() }
+            photosAlbumSync.setNeedsSync()
+        }
         uploadIndex.reloadPresence { try presence.presentAnywhere() }
         #if DEBUG
         OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
@@ -631,6 +644,7 @@ final class AppDependencies {
             let connections = Set(((try? SourceStore(database: database).serverConnections()) ?? [:]).values)
             return ((try? backups.jobs()) ?? []).contains { connections.contains($0.connectionId) && $0.settings.onlyWhileCharging }
         })
+        onServerBackground.afterPass = { await photosAlbumSync.syncNow() }
         photoEditing.deletionGate = photoDeletionGate
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {

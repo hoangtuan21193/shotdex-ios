@@ -29,6 +29,8 @@ struct SmartAlbumConditionsBar: View {
     /// The original-on-device check's line (FS-06.10 §3), under the first
     /// on-server line, with the device's glyph so the two read apart.
     var originalLine: String?
+    /// Keep in Photos (FS-06.12 §3), with the Move to Shared Library hint.
+    var photosAlbumLine: PhotosAlbumSyncLine.Line?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var countsLineLimit: Int? { dynamicTypeSize.isAccessibilitySize ? nil : 1 }
@@ -92,7 +94,7 @@ struct SmartAlbumConditionsBar: View {
                     }
                 }
             }
-            if !statusLines.isEmpty || originalLine != nil {
+            if !statusLines.isEmpty || originalLine != nil || photosAlbumLine != nil {
                 VStack(alignment: .leading, spacing: 2) {
                     if let first = statusLines.first {
                         // The first line is counts and keeps to one — at
@@ -116,6 +118,16 @@ struct SmartAlbumConditionsBar: View {
                     }
                     ForEach(Array(statusLines.dropFirst().enumerated()), id: \.offset) { _, line in
                         Text(line)
+                    }
+                    if let photosAlbumLine {
+                        Label(photosAlbumLine.text, systemImage: "rectangle.stack")
+                            .labelStyle(StatusLineLabelStyle())
+                            .lineLimit(countsLineLimit)
+                            .truncationMode(.tail)
+                            .accessibilityAddTraits(.updatesFrequently)
+                        if photosAlbumLine.showsHint {
+                            Text(PhotosAlbumSyncLine.hint)
+                        }
                     }
                 }
                 .font(.caption)
