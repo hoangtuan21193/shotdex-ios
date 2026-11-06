@@ -1,0 +1,18 @@
+{
+  "steps": [
+    {"action": "launch"},
+    {"action": "wait", "seconds": 8},
+    {"action": "tap", "label": "Collections"},
+    {"action": "wait", "seconds": 3},
+    {"action": "longPress", "label": "On NAS · Shared", "type": "button"},
+    {"action": "wait", "seconds": 2},
+    {"action": "tap", "label": "Edit"},
+    {"action": "wait", "seconds": 4},
+    {"action": "swipe", "x": 0.75, "y": 0.68, "direction": "up", "distance": 0.4},
+    {"action": "wait", "seconds": 2},
+    {"action": "swipe", "x": 0.75, "y": 0.68, "direction": "up", "distance": 0.4},
+    {"action": "wait", "seconds": 2},
+    {"action": "screenshot", "name": "SmartAlbumEditor-bottom"},
+    {"action": "wait", "seconds": 20}
+  ]
+}

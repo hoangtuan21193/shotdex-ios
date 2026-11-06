@@ -1,0 +1,49 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Collections"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "longPress",
+   "label": "On NAS \u00b7 Shared",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "swipe",
+   "label": "Conditions",
+   "direction": "up"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  }
+ ]
+}

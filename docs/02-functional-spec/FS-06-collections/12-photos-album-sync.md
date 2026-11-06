@@ -121,9 +121,9 @@ Thư viện thử trên simulator iPhone 17 iOS 26.5 (và 18.6 cho AC-UI). Khôn
 | AC-14 | album đồng bộ, app ra nền, On Server kiểm xong ở nền thêm 12 ảnh khớp | mở Photos (không mở ShotDex) | album có thêm 12 ảnh | `OnServerBackgroundService.afterPass` → `PhotosAlbumSync.syncNow`; máy thật: S3 |
 | AC-15 | đổi tên smart album "Shared NAS" → "Family NAS" | Save | album Photos đổi tên "Family NAS" | `PhotosAlbumSyncTests.followsRename` |
 | AC-17 | album đồng bộ "Shared NAS" 120 ảnh, đã tắt; người dùng thêm tay 2 ảnh vào album trong Photos | bật lại Keep in Photos | không album mới nào được tạo; "Shared NAS" về đúng 120 ảnh của smart album. Album cũ đã bị xoá trong Photos → một album mới được tạo | `PhotosAlbumSyncTests.reenableReusesAlbum` |
-| AC-16 | iPhone 402×874, Duo trong 951×669, Duo ngoài 466×678, iPad 1376×1032; iOS 26.5 và 18.6 | mở editor có 3 điều kiện + Keep in Photos; mở smart album đã đồng bộ | công tắc, chân chữ, dòng trạng thái thấy trọn, không cắt chữ; lệch ≤ 2pt so với board vẽ mới; Duo trong vẫn đạt FS-06.08 AC-4 (công tắc được phép nằm dưới mép) | iPhone 26.5 light/dark khớp board — ảnh `build/screens/aos/` (iPhone 17 26.5, 2026-11-07); iPad, Duo, iOS 18.6 chưa chụp |
+| AC-16 | iPhone 402×874, Duo trong 951×669, Duo ngoài 466×678, iPad 1376×1032; iOS 26.5 và 18.6 | mở editor có 3 điều kiện + Keep in Photos; mở smart album đã đồng bộ | công tắc, chân chữ, dòng trạng thái thấy trọn, không cắt chữ; lệch ≤ 2pt so với board vẽ mới; Duo trong vẫn đạt FS-06.08 AC-4 (công tắc được phép nằm dưới mép) | iPhone 26.5, iPad 26.5 dọc, Duo trong 27.1, sáng/tối: công tắc, chân chữ, dòng `In Photos · N photos · Updated …` thấy trọn, không cắt chữ; Duo trong: công tắc thấy sau một lần cuộn — ảnh `build/screens/aos/` (2026-11-07). Album Photos thật được tạo trên cả ba máy. Chưa: Duo ngoài (không gập được), iOS 18.6 |
 
-**Chưa chứng minh được:** AC-1 (cần iPhone thật có Shared Library), AC-11 (ảnh limited), AC-14 (lượt nền trên máy thật), AC-16 phần iPad/Duo/18.6.
+**Chưa chứng minh được:** AC-1 (cần iPhone thật có Shared Library), AC-11 (ảnh limited), AC-14 (lượt nền trên máy thật), AC-16 phần Duo ngoài và 18.6.
 
 ## 8. Rủi ro đã biết
 
