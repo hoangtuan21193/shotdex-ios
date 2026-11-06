@@ -24,6 +24,8 @@ struct MacPhotoGrid: NSViewRepresentable {
     var offline: Set<String> = []
     /// The selected asset ids, each time the selection changes.
     var onSelection: ((Set<String>) -> Void)? = nil
+    /// The right-click menu for these photos (board `MAC_ContextMenu`).
+    var contextMenu: (([String]) -> NSMenu?)? = nil
     /// The model's id-list generation (`LibraryModel.contentGeneration`):
     /// when given, an unchanged number skips the update without comparing
     /// 55k ids on every SwiftUI pass.
@@ -61,6 +63,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         collection.dataSource = context.coordinator
         collection.delegate = context.coordinator
         context.coordinator.collection = collection
+        collection.contextMenu = { [weak coordinator = context.coordinator] event in coordinator?.menu(for: event) }
         let scroll = NSScrollView()
         scroll.documentView = collection
         scroll.hasVerticalScroller = true
@@ -75,6 +78,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.asset = asset
         coordinator.picture = picture
         coordinator.onSelection = onSelection
+        coordinator.contextMenu = contextMenu
         let glyphsChanged = coordinator.onServer != onServer || coordinator.offline != offline
         coordinator.onServer = onServer
         coordinator.offline = offline
@@ -209,12 +213,30 @@ struct MacPhotoGrid: NSViewRepresentable {
         }
 
         private func reportSelection(_ collectionView: NSCollectionView) {
-            let ids = collectionView.selectionIndexPaths.compactMap { path -> String? in
+            onSelection?(Set(selectedIds(collectionView)))
+        }
+
+        private func selectedIds(_ collectionView: NSCollectionView) -> [String] {
+            collectionView.selectionIndexPaths.sorted().compactMap { path -> String? in
                 guard path.section < sections.count else { return nil }
                 let index = sections[path.section].range.lowerBound + path.item
                 return index < rows.count ? rows[index].assetId : nil
             }
-            onSelection?(Set(ids))
+        }
+
+        var contextMenu: (([String]) -> NSMenu?)?
+
+        /// A right-click on a selected tile acts on the selection; on any
+        /// other tile it selects that one alone first, as Finder and Photos.
+        func menu(for event: NSEvent) -> NSMenu? {
+            guard let collection, let contextMenu else { return nil }
+            let point = collection.convert(event.locationInWindow, from: nil)
+            guard let path = collection.indexPathForItem(at: point) else { return nil }
+            if !collection.selectionIndexPaths.contains(path) {
+                collection.selectionIndexPaths = [path]
+                reportSelection(collection)
+            }
+            return contextMenu(selectedIds(collection))
         }
 
         func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
@@ -249,6 +271,12 @@ struct MacPhotoGrid: NSViewRepresentable {
 /// for item sizes once; without this a scroller appearing after the first
 /// layout leaves seven tiles too wide for the row, and it wraps at six.
 final class MacGridCollectionView: NSCollectionView {
+    var contextMenu: ((NSEvent) -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu?(event) ?? super.menu(for: event)
+    }
+
     override func setFrameSize(_ newSize: NSSize) {
         let widthChanged = newSize.width != frame.width
         super.setFrameSize(newSize)

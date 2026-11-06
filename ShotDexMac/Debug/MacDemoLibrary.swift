@@ -349,6 +349,20 @@ enum MacDemoLibrary {
         let day = Int(assetId.split(separator: "-").dropFirst().first.flatMap { Int($0) } ?? 0)
         return pictures[(index + day * 5) % pictures.count]
     }
+
+    /// The demo pictures as JPEG files (Quick Look, Share), one per id.
+    static func pictureFiles(for ids: [String]) -> [URL] {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexDemo", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return ids.compactMap { id in
+            let url = folder.appendingPathComponent("\(id).jpg")
+            if FileManager.default.fileExists(atPath: url.path) { return url }
+            guard let image = picture(for: id),
+                  let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil) else { return nil }
+            CGImageDestinationAddImage(destination, image, nil)
+            return CGImageDestinationFinalize(destination) ? url : nil
+        }
+    }
 }
 #endif
 

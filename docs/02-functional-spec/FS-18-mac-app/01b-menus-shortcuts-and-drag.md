@@ -74,6 +74,12 @@ phần theo ngữ cảnh.
 - Ảnh trong Photos: Show in Finder đổi thành Reveal in Photos; dòng xoá theo FS-19.
 - Ảnh trên ổ offline: ẩn Edit, Export, Show in Finder; giữ Rating, Flag, Favorite, Add to Album (FS-19).
 - Trên hàng sidebar, card Collages/Video Projects, header bảng: menu riêng theo board của màn đó.
+- Chuột phải trên ảnh chưa chọn: chọn riêng ảnh đó rồi mở menu (như Finder, Photos); trên vùng đã chọn: menu cho cả vùng.
+- Tình trạng 2026-11-07 (Mac loop hàng 7): Open N Photos, Edit, Get Info, Export N Photos… chưa có trên menu — đến cùng
+  Viewer, Editor, inspector, sheet Export. Reveal in Photos chưa có (macOS không cho mở Photos tới một ảnh): ảnh chỉ có
+  trong Photos không có dòng Show in Finder. Favorite (thành **Unfavorite** khi mọi ảnh đã là favorite) và Add to Album chỉ cho ảnh trong Photos — album là
+  album của Photos, favorite của ảnh file chưa có chỗ lưu; điều này thay cho câu "ảnh trên ổ offline giữ … Add to Album" ở trên
+  tới khi có album riêng của ShotDex. Ảnh offline hết: ẩn cả Quick Look. Album xếp theo tên; hộp New Album là alert hệ thống.
 
 ## 5. Kéo thả
 

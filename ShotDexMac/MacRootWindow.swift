@@ -71,6 +71,8 @@ struct MacRootWindow: View {
     @State private var unlikelyLocate: MacUnlikelyLocate?
     /// Photos only on offline sources: their tiles carry the offline glyph.
     @State private var offlinePhotoIds: Set<String> = []
+    /// The right-click menu on photos (board `MAC_ContextMenu`), grid and list.
+    @State private var photoMenu: MacPhotoMenu?
 
     var body: some View {
         NavigationSplitView {
@@ -145,6 +147,7 @@ struct MacRootWindow: View {
     /// `body` so the type checker can take it.
     fileprivate func requests(_ content: some View) -> some View {
         alerts(content)
+            .modifier(MacPhotoMenuHostIfReady(menu: photoMenu, library: library))
             .background(MacMainWindowMarker())
             .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
             .task { await start() }
@@ -636,6 +639,16 @@ struct MacRootWindow: View {
                 }
     }
 
+    /// The photo menu, told which photos are offline as it opens.
+    private var photoMenuBuilder: (([String]) -> NSMenu?)? {
+        guard let photoMenu else { return nil }
+        let offline = offlinePhotoIds
+        return { ids in
+            photoMenu.offline = offline
+            return photoMenu.menu(for: ids)
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         if isLibraryEmpty {
@@ -646,12 +659,13 @@ struct MacRootWindow: View {
                           detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
                           assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                           assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
-                          sort: library.sort, setSort: { library.sort = $0 })
+                          sort: library.sort, setSort: { library.sort = $0 },
+                          contextMenu: photoMenuBuilder)
                 // Camera, lens, rating, source: one read of the index, off the
                 // main actor — again when the set of photos changes, not on a sort.
                 // An index run changes the count often: the read waits for a
                 // pause, and a read like the last one is not handed over.
-                .task(id: "\(library.items.count)-\(library.place.map { "\($0)" } ?? "")-\(dependencies.photoLibrary.assetChangeToken)") {
+                .task(id: "\(library.items.count)-\(library.place.map { "\($0)" } ?? "")-\(dependencies.photoLibrary.assetChangeToken)-\(photoMenu?.marksGeneration ?? 0)") {
                     if !tableDetails.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
                     let queries = LibraryTableQueries(database: dependencies.database)
                     let old = tableDetails
@@ -666,7 +680,7 @@ struct MacRootWindow: View {
         } else if let library, !library.items.isEmpty {
             // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
-                         picture: Self.demoPicture, offline: offlinePhotoIds, generation: library.rowsGeneration,
+                         picture: Self.demoPicture, offline: offlinePhotoIds, contextMenu: photoMenuBuilder, generation: library.rowsGeneration,
                          assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                          assetGeneration: library.contentRefreshGeneration)
         } else if let library, let error = library.loadError {
@@ -800,6 +814,8 @@ struct MacRootWindow: View {
         // run shows that run and Settings reads the same progress.
         if library == nil { library = dependencies.library ?? LibraryModel(dependencies: dependencies) }
         dependencies.library = library
+        if photoMenu == nil { photoMenu = MacPhotoMenu(dependencies: dependencies) }
+        Task { await dependencies.photoMarks.loadIfNeeded() }
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }

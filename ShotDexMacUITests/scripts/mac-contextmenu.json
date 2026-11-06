@@ -1,0 +1,503 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "01-menu"
+  },
+  {
+   "action": "dump",
+   "name": "01-menu"
+  },
+  {
+   "action": "assertExists",
+   "label": "Quick Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Add to Album",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Share",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Move to Trash",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Show in Finder",
+   "type": "menuItem"
+  },
+  {
+   "action": "hover",
+   "label": "Rating",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "photoMenu.rating.3",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Rating",
+   "type": "menuItem"
+  },
+  {
+   "action": "dump",
+   "name": "02-rating"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "click",
+   "label": "Pick",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "dump",
+   "name": "03-flag"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Clear Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "click",
+   "label": "Clear Flag",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "photoMenu.favorite",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "dump",
+   "name": "04a-favorite-flipped"
+  },
+  {
+   "action": "click",
+   "label": "photoMenu.favorite",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Add to Album",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn",
+   "type": "menuItem"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-albums"
+  },
+  {
+   "action": "click",
+   "label": "New Album with Selection",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-new-album"
+  },
+  {
+   "action": "typeText",
+   "text": "Loop Test"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Add to Album",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertExists",
+   "label": "Loop Test",
+   "type": "menuItem"
+  },
+  {
+   "action": "click",
+   "label": "Loop Test",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "hover",
+   "label": "Share",
+   "type": "menuItem"
+  },
+  {
+   "action": "screenshot",
+   "name": "06-share"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Quick Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "07-quicklook"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.33,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.5,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "dump",
+   "name": "08-all"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "2",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Rating",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "3 of 5 stars",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "08b-list-rated"
+  },
+  {
+   "action": "click",
+   "label": "Date",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.4,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "09-list-menu"
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating",
+   "type": "menuItem"
+  },
+  {
+   "action": "click",
+   "label": "Move to Trash",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "10-trash"
+  },
+  {
+   "action": "dump",
+   "name": "10-trash"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "1",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

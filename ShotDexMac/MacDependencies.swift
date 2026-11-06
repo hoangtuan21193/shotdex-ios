@@ -22,6 +22,9 @@ final class MacDependencies: LibraryServices {
     let unsupportedRAWIndex: UnsupportedRAWIndex
     let indexRunAssertion: any IndexRunAssertion = MacIndexActivity()
     let photoLibrary: PhotoLibraryService
+    /// Stars and flags (FS-01.12): file photos' go to their sidecars, Photos'
+    /// into Photos itself (macOS 27 keeps stars there).
+    let photoMarks: PhotoMarks
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
@@ -126,6 +129,27 @@ final class MacDependencies: LibraryServices {
             PreviewCacheStore.standard.trim(to: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()))
         }
         self.sourcesModel = sourcesModel
+        let sidecarQueue = SidecarWriteQueue(writer: SidecarWriter(database: database) { sourceId, path in
+            folderRoots.fileURL(sourceId: sourceId, relativePath: path)
+        })
+        var ratingWriter: (any PhotoPropertyWriting)?
+        if #available(macOS 27, *) { ratingWriter = PhotoKitPropertyWriter() }
+        #if DEBUG
+        // The demo's photos have no assets: their stars wait in the pending
+        // table, where the list reads them.
+        if MacDemoLibrary.isOn { ratingWriter = nil }
+        #endif
+        photoMarks = PhotoMarks(
+            store: PhotoMarksStore(database: database),
+            metadataStore: metadataStore,
+            ratingWriter: ratingWriter,
+            readPhotosRatings: { @Sendable ids in
+                PhotoLibraryService.fetchAssets(ids: ids).reduce(into: [:]) { result, asset in
+                    if let rating = asset.photosStarRating { result[asset.localIdentifier] = rating }
+                }
+            },
+            sidecarQueue: sidecarQueue
+        )
         onServerCheck = OnServerCheck(environment: .live(
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             // FS-19.07 §12.1: the Mac hashes everything for the other devices

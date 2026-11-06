@@ -185,6 +185,16 @@ struct MetadataStore: Sendable {
     }
 
     /// Updates the favorite flag mirrored from PhotoKit.
+    /// The same for many photos, one transaction (a select-all of 55k).
+    func updateFavorites(assetIds: [String], isFavorite: Bool) throws {
+        guard !assetIds.isEmpty else { return }
+        try database.writer.write { db in
+            for id in assetIds {
+                try db.execute(sql: "UPDATE photo_metadata SET isFavorite = ? WHERE assetId = ?", arguments: [isFavorite, id])
+            }
+        }
+    }
+
     func updateFavorite(assetId: String, isFavorite: Bool) throws {
         try database.writer.write { db in
             try db.execute(

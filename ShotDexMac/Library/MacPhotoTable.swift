@@ -24,7 +24,9 @@ struct MacPhotoTable: NSViewRepresentable {
     /// Aperture, Shutter, ISO): the grid keeps the same order.
     let sort: SortOption
     let setSort: (SortOption) -> Void
-    var onSelection: ((Set<String>) -> Void)? = nil
+    var onSelection: ((Set<String>) -> Void)?
+    /// The right-click menu for these photos (board `MAC_ContextMenu`).
+    var contextMenu: (([String]) -> NSMenu?)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -35,7 +37,8 @@ struct MacPhotoTable: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let table = NSTableView()
+        let table = MacLibraryTableView()
+        table.contextMenu = { [weak coordinator = context.coordinator] row in coordinator?.menu(forRow: row) }
         table.style = .fullWidth
         table.rowHeight = 28
         table.intercellSpacing = NSSize(width: 6, height: 0)
@@ -86,6 +89,7 @@ struct MacPhotoTable: NSViewRepresentable {
         coordinator.picture = picture
         coordinator.setSort = setSort
         coordinator.onSelection = onSelection
+        coordinator.contextMenu = contextMenu
         coordinator.update(items, generation: generation, details: details, detailsGeneration: detailsGeneration, sort: sort)
         coordinator.assetsResolved(assetGeneration)
     }
@@ -272,6 +276,19 @@ struct MacPhotoTable: NSViewRepresentable {
                       let asset = asset(forRow: row) else { continue }
                 cell.showThumbnail(for: rows[row], picture: nil, asset: asset, photoLibrary: photoLibrary)
             }
+        }
+
+        var contextMenu: (([String]) -> NSMenu?)?
+
+        /// A right-click on a selected row acts on the selection; on any
+        /// other row it selects that one alone first, as Finder.
+        func menu(forRow row: Int) -> NSMenu? {
+            guard let table, let contextMenu, row >= 0, row < rows.count else { return nil }
+            if !table.selectedRowIndexes.contains(row) {
+                table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            }
+            let ids = table.selectedRowIndexes.compactMap { $0 < rows.count ? rows[$0].assetId : nil }
+            return contextMenu(ids)
         }
 
         private func selectedIds() -> Set<String> {
@@ -678,5 +695,15 @@ final class MacTableCell: NSTableCellView {
             guard let self, self.assetId == id, let image else { return }
             self.thumb.layer?.contents = image.cgImage
         }
+    }
+}
+
+/// The list's table: a right-click asks the coordinator for the photo menu.
+final class MacLibraryTableView: NSTableView {
+    var contextMenu: ((Int) -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let row = self.row(at: convert(event.locationInWindow, from: nil))
+        return contextMenu?(row) ?? super.menu(for: event)
     }
 }
