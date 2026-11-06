@@ -37,7 +37,13 @@ real NAS/Windows share or at PhotoKit writes. Code paths that write PhotoKit get
    (sheet opened, state changed, row added). Scripts in `ShotDexUITests/mac-scripts/`. Fix failures.
 8. **Close**: board drift fixed on the board too if code is right and board is wrong (publish to canvas,
    read url first). Commit only this pass's paths (`git commit -- <paths>`, never `add -A`).
-   Row → `done <hash>` + one line (what was checked). Then ScheduleWakeup, same /loop prompt. Never clear session.
+   Row → `done <hash>` + one line (what was checked). **Push to main** (user 2026-11-06; several
+   sessions code in this checkout at once): `/usr/bin/git fetch origin`; if origin is ahead,
+   `/usr/bin/git pull --no-rebase origin main` (a merge leaves other sessions' uncommitted files alone —
+   never `stash`, `rebase --autostash`, `reset` or `checkout -- <file>`); then `/usr/bin/git push origin main`.
+   A conflict in a file another session owns: stop and ask. Before staging, `git status` — files you
+   did not touch this pass belong to someone else; never stage them.
+   Then ScheduleWakeup, same /loop prompt. Never clear session.
 
 Disk: stop if `volumeAvailableCapacityForImportantUsage` < 25 GB. Quit the app by pid, not `pkill`
 (kills the helper). `blocked` rows need the user — write why.
@@ -47,7 +53,7 @@ Disk: stop if `volumeAvailableCapacityForImportantUsage` < 25 GB. Quit the app b
 | # | Board(s) | FS doc | Status |
 |---|---|---|---|
 | 0 | Tooling: `Tools/mac-ui-drive` (macOS XCUITest driver, same JSON as ui-drive) | — | done (this commit) — smoke.json: launch demo, menu ShotDex>Settings…, waitFor, window shots + dump pass. Seen: Settings Focal Length segmented is system blue, not amber (fix in a Settings row) |
-| 1 | Main shell: route sidebar places to own query, wire search text, empty state | 01-window-and-navigation | todo |
+| 1 | Main shell: route sidebar places to own query, wire search text, empty state | 01-window-and-navigation | doing |
 | 2 | MAC_EmptyLibrary | 01-window-and-navigation §7 | todo |
 | 3 | MAC_Onboarding | 01 §7, FS-09 | todo |
 | 4 | MAC_AddSource | FS-19 01 | todo |
