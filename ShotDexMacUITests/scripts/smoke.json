@@ -1,0 +1,11 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary"]},
+ {"action":"wait","seconds":3},
+ {"action":"screenshot","name":"main"},
+ {"action":"dump","name":"main"},
+ {"action":"menu","text":"ShotDex>Settings…"},
+ {"action":"waitFor","label":"General","seconds":5},
+ {"action":"screenshot","name":"settings"},
+ {"action":"key","text":"w","modifiers":"cmd"},
+ {"action":"quit"}
+]}

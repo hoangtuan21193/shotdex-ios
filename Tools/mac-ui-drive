@@ -1,0 +1,41 @@
+#!/bin/bash
+# Drive the Mac app from a JSON script: click, assert, screenshot, dump.
+#
+#   Tools/mac-ui-drive <script.json> [out-dir]
+#
+# The macOS twin of Tools/ui-drive; steps are listed at the top of
+# ShotDexMacUITests/MacUIDriverTests.swift, examples in
+# ShotDexMacUITests/scripts/. Needs Automation Mode set up once
+# (`sudo automationmodetool enable-automationmode-without-authentication`,
+# done 2026-11-06). Always launch with -ShotDexDemoLibrary or a fixed section:
+# a plain launch shows the user's real library.
+#
+# Output in out-dir (default build/mac-ui/<script name>): <name>.png (front
+# window only), <name>.json (element dump, frames in window points),
+# report.json (each step, and the one that failed).
+set -euo pipefail
+if [ $# -lt 1 ]; then sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 64; fi
+SCRIPT="$1"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+NAME="$(basename "${SCRIPT%.json}")"
+OUT="${2:-$ROOT/build/mac-ui/$NAME}"
+rm -rf "$OUT"; mkdir -p "$OUT"
+BUNDLED="$ROOT/ShotDexMacUITests/Resources/driver-script.json"
+mkdir -p "$(dirname "$BUNDLED")"
+cp "$SCRIPT" "$BUNDLED"
+trap 'rm -f "$BUNDLED"' EXIT
+BUNDLE="$OUT/result.xcresult"
+xcodebuild test \
+    -project "$ROOT/ShotDex.xcodeproj" \
+    -scheme ShotDexMacUIDriver \
+    -destination 'platform=macOS,arch=arm64' \
+    -derivedDataPath "$ROOT/build/mac" \
+    -resultBundlePath "$BUNDLE" \
+    -only-testing:ShotDexMacUITests/MacUIDriverTests/testRunScript \
+    2>&1 | grep -E "error:|TEST (SUCCEEDED|FAILED)|step [0-9]+ " || true
+if [ -d "$BUNDLE" ]; then
+    xcrun xcresulttool export attachments --path "$BUNDLE" --output-path "$OUT" >/dev/null 2>&1 || true
+    python3 "$ROOT/Tools/ui-drive-rename.py" "$OUT" || true
+    rm -rf "$BUNDLE"
+fi
+echo; echo "artifacts in $OUT:"; ls -1 "$OUT" 2>/dev/null

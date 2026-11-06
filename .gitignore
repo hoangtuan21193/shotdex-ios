@@ -22,3 +22,4 @@ __pycache__/
 
 # Written by Tools/ui-drive before each run; never committed.
 ShotDexUITests/Resources/driver-script.json
+ShotDexMacUITests/Resources/driver-script.json
