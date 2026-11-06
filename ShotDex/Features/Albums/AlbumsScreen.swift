@@ -535,11 +535,15 @@ struct AlbumsScreen: View {
                                 Label("Edit", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                let link = try? SmartAlbumPhotosAlbumStore(database: dependencies.database).link(item.album.id)
-                                if link?.isEnabled == true, link?.collectionLocalId != nil {
-                                    deletingKeptSmartAlbum = item.album
-                                } else {
-                                    model.deleteSmartAlbum(id: item.album.id)
+                                let album = item.album
+                                let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+                                Task {
+                                    let link = await Task.detached { try? links.link(album.id) }.value
+                                    if link?.isEnabled == true, link?.collectionLocalId != nil {
+                                        deletingKeptSmartAlbum = album
+                                    } else {
+                                        model.deleteSmartAlbum(id: album.id)
+                                    }
                                 }
                             } label: {
                                 Label("Delete", systemImage: "trash")

@@ -25,6 +25,9 @@ actor FakePhotosAlbums: PhotosAlbumWriting {
     var albumCount: Int { albums.count }
     func failOnce() { failNextWrite = true }
 
+    var missing: Set<String> = []
+    func forget(_ ids: [String]) { missing.formUnion(ids) }
+    func existing(_ ids: [String]) async -> Set<String> { Set(ids).subtracting(missing) }
     func albumExists(_ id: String) async -> Bool { albums[id] != nil }
     func title(of id: String) async -> String? { albums[id]?.title }
     func assetIds(in id: String) async -> [String] { albums[id]?.ids ?? [] }
@@ -48,7 +51,7 @@ actor FakePhotosAlbums: PhotosAlbumWriting {
         albums[id]?.ids.removeAll { gone.contains($0) }
     }
     private func write(_ count: Int) throws {
-        if failNextWrite { failNextWrite = false; throw CancellationError() }
+        if failNextWrite { failNextWrite = false; throw PhotosAlbumSyncError.albumNotEditable }
         writes.append(count)
     }
 }
@@ -250,6 +253,54 @@ struct PhotosAlbumSyncTests {
         await sync.syncNow()
         #expect(try link().collectionLocalId != id && link().isEnabled)
         #expect(try await kept().ids.count == 120)
+    }
+
+    /// Review fix: ids Photos no longer has are left out, so the pass settles
+    /// on synced with the real count instead of re-adding them forever.
+    @Test func unresolvableIdsSettle() async throws {
+        try library(20, favorites: 20)
+        await photos.forget(["P3", "P7"])
+        try album()
+        await sync.syncNow()
+        #expect(try link().state == .synced && link().assetCount == 18)
+        let writes = await photos.writes.count
+        await sync.syncNow()
+        #expect(await photos.writes.count == writes)
+    }
+
+    /// Review fix: without Full Access nothing is written and the link says why.
+    @Test func limitedAccessSaysSo() async throws {
+        try library(5, favorites: 5)
+        try album()
+        let limited = PhotosAlbumSync(database: database, writer: photos, canWrite: { false }, minimumGap: .zero)
+        await limited.syncNow()
+        #expect(try link().state == .needsFullAccess)
+        #expect(await photos.albumCount == 0)
+    }
+
+    /// Review fix (🔴): a pass never writes the switch back on, nor a link
+    /// back for a smart album deleted meanwhile.
+    @Test func passNeverRevivesALink() async throws {
+        try library(5, favorites: 5)
+        try album()
+        var stale = try link()
+        try links.setEnabled(false, smartAlbumId: "S")
+        stale.state = .synced
+        #expect(try links.recordSync(stale) == false)
+        #expect(try link().isEnabled == false)
+        try SmartAlbumStore(database: database).delete(id: "S")
+        #expect(try links.recordSync(stale) == false)
+        #expect(try links.link("S") == nil)
+    }
+
+    /// Review fix: no condition (or one that compiles to nothing) keeps no
+    /// photos rather than the whole library.
+    @Test func emptyQueryKeepsNothing() throws {
+        try library(10, favorites: 10)
+        #expect(try links.photoKitIds(matching: .empty).isEmpty)
+        let blank = SmartAlbumQuery(rules: [SmartAlbumRule(field: .caption, op: .contains, text: "  ")])
+        #expect(try links.photoKitIds(matching: blank).isEmpty)
+        #expect(try links.photoKitIds(matching: Self.favorites).count == 10)
     }
 
     /// The diff keeps the smart album's order and splits into runs.

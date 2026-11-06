@@ -151,8 +151,9 @@ struct SmartAlbumEditorSheet: View {
         }.value
         let catalog = await suggestionLoad
         guard !Task.isCancelled else { return }
+        // The switch as the person left it if they touched it while this loaded.
+        if keepsInPhotos == keptInPhotos { keepsInPhotos = kept }
         keptInPhotos = kept
-        keepsInPhotos = kept
         availableBrands = catalog.brands
         availableBodies = catalog.bodies
         availableLenses = catalog.lenses
@@ -190,7 +191,12 @@ struct SmartAlbumEditorSheet: View {
             query: cleaned,
             createdAt: existing?.createdAt ?? Int(Date().timeIntervalSince1970)
         )
-        try? dependencies.smartAlbumStore.upsert(album)
+        do {
+            try dependencies.smartAlbumStore.upsert(album)
+        } catch {
+            return
+        }
+        // Only after the album row exists: a link to no album is never cleaned up.
         if keepsInPhotos != keptInPhotos {
             try? SmartAlbumPhotosAlbumStore(database: dependencies.database).setEnabled(keepsInPhotos, smartAlbumId: album.id)
         }

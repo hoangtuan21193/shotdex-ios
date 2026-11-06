@@ -11,6 +11,8 @@ enum PhotosAlbumSyncState: String, Codable, Sendable {
     case deletedInPhotos
     /// A PhotoKit write failed; the next pass tries again.
     case failed
+    /// Photos access is not Full: nothing is written until it is.
+    case needsFullAccess
 }
 
 /// One smart album's Keep in Photos link (FS-06.12 §5).
@@ -42,6 +44,29 @@ struct SmartAlbumPhotosAlbumStore: Sendable {
         try database.writer.write { db in try link.upsert(db) }
     }
 
+    /// What a sync pass writes back: only its own columns, and only while the
+    /// link is still on — a switch turned off or an album deleted mid-pass
+    /// stays that way (review 2026-11-07). False when the link is off or gone.
+    @discardableResult
+    func recordSync(_ link: SmartAlbumPhotosAlbum) throws -> Bool {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                UPDATE smart_album_photos_album
+                SET collectionLocalId = ?, state = ?, lastSyncedAt = ?, assetCount = ?, isEnabled = ?
+                WHERE smartAlbumId = ? AND isEnabled = 1
+                """, arguments: [link.collectionLocalId, link.state.rawValue, link.lastSyncedAt, link.assetCount,
+                                 link.isEnabled, link.smartAlbumId])
+            return db.changesCount > 0
+        }
+    }
+
+    func isEnabled(_ smartAlbumId: String) throws -> Bool {
+        try database.reader.read { db in
+            try Bool.fetchOne(db, sql: "SELECT isEnabled FROM smart_album_photos_album WHERE smartAlbumId = ?",
+                              arguments: [smartAlbumId]) ?? false
+        }
+    }
+
     /// Turns Keep in Photos on or off. Off keeps the album's id so turning it
     /// back on reuses the album (FS-06.12 §4).
     func setEnabled(_ enabled: Bool, smartAlbumId: String) throws {
@@ -64,6 +89,11 @@ struct SmartAlbumPhotosAlbumStore: Sendable {
     /// the album in Photos must hold. Items that live only in a folder or on
     /// a server have no PHAsset and are left out (FS-06.12 §4).
     func photoKitIds(matching query: SmartAlbumQuery) throws -> [String] {
+        // Never the whole library: no condition, or one that compiles to
+        // nothing (a term that folds to empty), would widen the album to
+        // every photo (review 2026-11-07).
+        let rules = query.validRules
+        guard !rules.isEmpty, rules.allSatisfy({ SmartAlbumSQLBuilder.clause(for: $0) != nil }) else { return [] }
         let (whereSQL, arguments) = SmartAlbumSQLBuilder.whereClause(for: query)
         return try database.reader.read { db in
             try String.fetchAll(db, sql: """

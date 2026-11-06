@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import Photos
 
 /// The PhotoKit side of Keep in Photos, behind a protocol so the sync can be
@@ -8,6 +9,9 @@ protocol PhotosAlbumWriting: Sendable {
     func albumExists(_ id: String) async -> Bool
     func title(of id: String) async -> String?
     func assetIds(in id: String) async -> [String]
+    /// The ids among `ids` Photos still has — gone, trashed or otherwise
+    /// unreadable ones are left out so a pass can settle (FS-06.12 §4).
+    func existing(_ ids: [String]) async -> Set<String>
     func createAlbum(named name: String) async throws -> String
     func rename(_ id: String, to name: String) async throws
     func add(_ assetIds: [String], to id: String) async throws
@@ -21,6 +25,8 @@ protocol PhotosAlbumWriting: Sendable {
 /// this album.
 @MainActor @Observable
 final class PhotosAlbumSync {
+    nonisolated static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "PhotosAlbumSync")
+
     /// Items written so far in the running pass, per smart album — the
     /// `Updating album in Photos… 3,200 of 8,412` line.
     private(set) var progress: [String: (done: Int, total: Int)] = [:]
@@ -38,6 +44,7 @@ final class PhotosAlbumSync {
     private var running: Task<Void, Never>?
     private var isPending = false
     private var lastStart: ContinuousClock.Instant?
+    private var retry: Task<Void, Never>?
 
     init(database: AppDatabase, writer: PhotosAlbumWriting, canWrite: @escaping @MainActor () -> Bool,
          minimumGap: Duration = .seconds(10), now: @escaping @Sendable () -> Date = { Date() }) {
@@ -54,25 +61,33 @@ final class PhotosAlbumSync {
     func setNeedsSync() {
         guard running == nil else { isPending = true; return }
         running = Task { [weak self] in
-            await self?.runCoalesced()
+            await self?.runCoalesced(waitsForGap: true)
         }
     }
 
-    /// One pass now, for the background task and tests.
+    /// One pass now, without waiting out the gap — for the background slot,
+    /// where seconds count, and for tests. Cancelling the caller cancels it.
     func syncNow() async {
-        if let running { isPending = true; await running.value; return }
-        let task = Task { await self.runCoalesced() }
+        if let running {
+            isPending = true
+            await withTaskCancellationHandler { await running.value } onCancel: { running.cancel() }
+            return
+        }
+        let task = Task { await self.runCoalesced(waitsForGap: false) }
         running = task
-        await task.value
+        await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
     }
 
-    private func runCoalesced() async {
+    private func runCoalesced(waitsForGap: Bool) async {
+        var waits = waitsForGap
         repeat {
             isPending = false
-            if let lastStart {
+            if waits, let lastStart {
                 let wait = minimumGap - (ContinuousClock.now - lastStart)
                 if wait > .zero { try? await Task.sleep(for: wait) }
             }
+            waits = true
+            guard !Task.isCancelled else { break }
             lastStart = .now
             await pass()
         } while isPending && !Task.isCancelled
@@ -81,32 +96,65 @@ final class PhotosAlbumSync {
 
     /// Every enabled link, one after another.
     func pass() async {
-        guard canWrite() else { return }
         let links = self.links
         let albums = self.albums
-        let enabled = ((try? await Task.detached { try links.links() }.value) ?? []).filter(\.isEnabled)
+        let enabled: [SmartAlbumPhotosAlbum]
+        do {
+            enabled = try await Task.detached { try links.links() }.value.filter(\.isEnabled)
+        } catch {
+            Self.logger.error("links: \(error.localizedDescription, privacy: .public)")
+            return
+        }
         guard !enabled.isEmpty else { return }
-        let all = (try? await Task.detached { try albums.fetchAllOrdered() }.value) ?? []
+        // Without Full Access the album cannot be "exactly these photos":
+        // say so on every kept album rather than sit on an old answer.
+        guard canWrite() else {
+            for var link in enabled where link.state != .needsFullAccess {
+                link.state = .needsFullAccess
+                await save(link)
+            }
+            generation &+= 1
+            return
+        }
+        let all: [SmartAlbum]
+        do {
+            all = try await Task.detached { try albums.fetchAllOrdered() }.value
+        } catch {
+            Self.logger.error("smart albums: \(error.localizedDescription, privacy: .public)")
+            return
+        }
         for link in enabled {
+            guard !Task.isCancelled else { break }
             guard let album = all.first(where: { $0.id == link.smartAlbumId }) else { continue }
             await sync(album, link: link)
-            if Task.isCancelled { break }
         }
         generation &+= 1
+    }
+
+    /// Writes the pass's own columns back; false when the link went off or
+    /// away meanwhile — the pass then stops touching the album.
+    @discardableResult
+    private func save(_ link: SmartAlbumPhotosAlbum) async -> Bool {
+        let links = self.links
+        do {
+            return try await Task.detached { try links.recordSync(link) }.value
+        } catch {
+            Self.logger.error("save link \(link.smartAlbumId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 
     private func sync(_ album: SmartAlbum, link: SmartAlbumPhotosAlbum) async {
         var link = link
         let links = self.links
-        let save: (SmartAlbumPhotosAlbum) async -> Void = { value in
-            _ = try? await Task.detached { try links.save(value) }.value
-        }
         do {
             // The album: reuse ShotDex's own, make one when there is none or
             // the switch was just turned on and it is gone; deleted in Photos
             // while kept → stop keeping it (§4).
             var albumId = link.collectionLocalId
             if let id = albumId, !(await writer.albumExists(id)) {
+                // `lastSyncedAt` is set the moment ShotDex makes the album and
+                // cleared when the switch is turned on again.
                 if link.lastSyncedAt != nil {
                     link.isEnabled = false
                     link.state = .deletedInPhotos
@@ -124,27 +172,45 @@ final class PhotosAlbumSync {
             } else {
                 id = try await writer.createAlbum(named: album.name)
                 link.collectionLocalId = id
-                await save(link)
+                link.lastSyncedAt = Int(now().timeIntervalSince1970)
+                // Lose this id and the next pass makes a second album.
+                guard await save(link) else { throw PhotosAlbumSyncError.lostAlbumId }
             }
 
             let query = album.query
-            let target = try await Task.detached { try links.photoKitIds(matching: query) }.value
+            let wanted = try await Task.detached { try links.photoKitIds(matching: query) }.value
+            // Only what Photos can still hand over: an id it cannot resolve
+            // would be "added" on every pass and the album never settle.
+            let resolvable = await writer.existing(wanted)
+            let target = wanted.filter(resolvable.contains)
+            if target.count < wanted.count {
+                Self.logger.notice("\(album.id, privacy: .public): \(wanted.count - target.count) ids Photos no longer has")
+            }
             let current = await writer.assetIds(in: id)
             let diff = PhotosAlbumDiff(target: target, current: current)
             if !diff.isEmpty {
                 link.state = .updating
-                await save(link)
+                guard await save(link) else { throw CancellationError() }
                 generation &+= 1
                 let total = diff.add.count + diff.remove.count
                 var done = 0
                 progress[album.id] = (0, total)
-                for batch in PhotosAlbumDiff.batches(diff.remove) {
-                    try await writer.remove(batch, from: id)
-                    done += batch.count
-                    progress[album.id] = (done, total)
-                }
-                for batch in PhotosAlbumDiff.batches(diff.add) {
-                    try await writer.add(batch, to: id)
+                let runs = PhotosAlbumDiff.batches(diff.remove).map { (adds: false, ids: $0) }
+                    + PhotosAlbumDiff.batches(diff.add).map { (adds: true, ids: $0) }
+                for (adds, batch) in runs {
+                    // A background slot can end mid-pass; the next pass picks
+                    // up from what the album really holds.
+                    try Task.checkCancellation()
+                    // Turned off or deleted meanwhile: stop touching the album.
+                    let smartAlbumId = album.id
+                    guard (try? await Task.detached { try links.isEnabled(smartAlbumId) }.value) == true else {
+                        throw CancellationError()
+                    }
+                    if adds {
+                        try await writer.add(batch, to: id)
+                    } else {
+                        try await writer.remove(batch, from: id)
+                    }
                     done += batch.count
                     progress[album.id] = (done, total)
                 }
@@ -154,18 +220,51 @@ final class PhotosAlbumSync {
             link.assetCount = target.count
             link.lastSyncedAt = Int(now().timeIntervalSince1970)
             await save(link)
+        } catch is CancellationError {
+            progress[album.id] = nil
         } catch {
             // Try again next pass; nothing half-done is lost, because the next
             // pass compares with what the album really holds (§4).
+            Self.logger.error("sync \(album.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             progress[album.id] = nil
             link.state = .failed
             await save(link)
+            retryLater()
+        }
+    }
+
+    /// "Will try again" (FS-06.12 §3): one more pass a minute after a
+    /// failure, whatever else happens meanwhile.
+    private func retryLater() {
+        guard retry == nil else { return }
+        retry = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(60))
+            guard !Task.isCancelled else { return }
+            self?.retry = nil
+            self?.setNeedsSync()
         }
     }
 }
 
+enum PhotosAlbumSyncError: Error {
+    /// Photos refused to change the album (not ShotDex's to edit any more).
+    case albumNotEditable
+    /// The album was made but its id could not be saved.
+    case lostAlbumId
+}
+
 /// `PhotosAlbumWriting` on the real photo library.
 struct LivePhotosAlbumWriter: PhotosAlbumWriting {
+    /// Hidden photos and every frame of a burst count: a smart album can hold
+    /// them, and an album member PhotoKit leaves out of a fetch would be
+    /// "missing" on every pass.
+    private static var everything: PHFetchOptions {
+        let options = PHFetchOptions()
+        options.includeHiddenAssets = true
+        options.includeAllBurstAssets = true
+        return options
+    }
+
     private func collection(_ id: String) -> PHAssetCollection? {
         PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject
     }
@@ -177,8 +276,20 @@ struct LivePhotosAlbumWriter: PhotosAlbumWriting {
     func assetIds(in id: String) async -> [String] {
         guard let collection = collection(id) else { return [] }
         var ids: [String] = []
-        PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, _ in ids.append(asset.localIdentifier) }
+        PHAsset.fetchAssets(in: collection, options: Self.everything).enumerateObjects { asset, _, _ in
+            ids.append(asset.localIdentifier)
+        }
         return ids
+    }
+
+    func existing(_ ids: [String]) async -> Set<String> {
+        var found = Set<String>()
+        for batch in PhotosAlbumDiff.batches(ids, size: 2_000) {
+            PHAsset.fetchAssets(withLocalIdentifiers: batch, options: Self.everything).enumerateObjects { asset, _, _ in
+                found.insert(asset.localIdentifier)
+            }
+        }
+        return found
     }
 
     func createAlbum(named name: String) async throws -> String {
@@ -192,24 +303,30 @@ struct LivePhotosAlbumWriter: PhotosAlbumWriting {
     }
 
     func rename(_ id: String, to name: String) async throws {
-        guard let collection = collection(id) else { return }
+        guard let collection = collection(id), collection.canPerform(.rename) else {
+            throw PhotosAlbumSyncError.albumNotEditable
+        }
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetCollectionChangeRequest(for: collection)?.title = name
         }
     }
 
     func add(_ assetIds: [String], to id: String) async throws {
-        try await change(id, assetIds) { $0.addAssets($1) }
+        try await change(id, assetIds, needs: .addContent) { $0.addAssets($1) }
     }
 
     func remove(_ assetIds: [String], from id: String) async throws {
-        try await change(id, assetIds) { $0.removeAssets($1) }
+        try await change(id, assetIds, needs: .removeContent) { $0.removeAssets($1) }
     }
 
-    private func change(_ id: String, _ assetIds: [String],
+    /// Throws when Photos will not take the change, so a pass never reports
+    /// synced over an album it did not write (photokit-guard review).
+    private func change(_ id: String, _ assetIds: [String], needs operation: PHCollectionEditOperation,
                         _ apply: @escaping @Sendable (PHAssetCollectionChangeRequest, PHFetchResult<PHAsset>) -> Void) async throws {
-        guard let collection = collection(id) else { throw PhotoImportError.creationFailed }
-        let assets = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: nil)
+        guard let collection = collection(id), collection.canPerform(operation) else {
+            throw PhotosAlbumSyncError.albumNotEditable
+        }
+        let assets = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: Self.everything)
         guard assets.count > 0 else { return }
         try await PHPhotoLibrary.shared().performChanges {
             guard let request = PHAssetCollectionChangeRequest(for: collection) else { return }

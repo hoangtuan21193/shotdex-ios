@@ -428,9 +428,11 @@ struct SmartAlbumRuleRow: View {
 
     private var choiceLabel: String {
         if let label = choices.first(where: { $0.value == rule.text })?.label { return label }
-        return rule.field == .alsoOnServer
+        guard rule.field == .alsoOnServer else { return "Choose…" }
+        // A server since removed: the condition matches nothing (AC-254).
+        return rule.text.isEmpty
             ? String(localized: "Choose Server", comment: "Smart album Also on Server condition: no server picked yet")
-            : "Choose…"
+            : String(localized: "Server Removed", comment: "Smart album Also on Server condition: its server is no longer a source")
     }
 
     private var choices: [(value: String, label: String)] {

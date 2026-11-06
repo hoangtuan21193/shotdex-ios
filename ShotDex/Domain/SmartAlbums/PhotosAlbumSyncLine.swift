@@ -27,6 +27,10 @@ enum PhotosAlbumSyncLine {
                         showsHint: false)
         }
         switch state {
+        case .needsFullAccess:
+            return Line(text: String(localized: "Needs Full Photos Access to keep the album in Photos.",
+                                     comment: "Smart album: Keep in Photos is on but ShotDex has only limited Photos access"),
+                        showsHint: false)
         case .failed:
             return Line(text: String(localized: "Couldn’t update the album in Photos. Will try again.",
                                      comment: "Smart album: a Keep in Photos write failed; it retries"),

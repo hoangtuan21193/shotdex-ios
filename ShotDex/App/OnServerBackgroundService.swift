@@ -49,14 +49,16 @@ final class OnServerBackgroundService {
             finished = true
             task.setTaskCompleted(success: success)
         }
+        var work: Task<Void, Never>?
         task.expirationHandler = {
             Task { @MainActor in
                 pass.cancel()
+                work?.cancel()
                 self.report(started: started, expired: true)
                 finish(false)
             }
         }
-        Task { @MainActor in
+        work = Task { @MainActor in
             await pass.value
             if !finished { await afterPass?() }
             report(started: started, expired: false)

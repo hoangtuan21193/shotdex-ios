@@ -89,7 +89,10 @@ extension SmartAlbumRule {
         case .keyword, .caption:
             return KeywordCopy.chip(for: self)
         case .server:
-            return serverSummary(text)
+            // Without the names an id would show; say the field instead.
+            return boolValue
+                ? String(localized: "Also on Server", comment: "Filter chip: an Also on Server condition whose server name is not at hand")
+                : String(localized: "Not on Server", comment: "Filter chip: an Also on Server No condition whose server name is not at hand")
         }
     }
 
