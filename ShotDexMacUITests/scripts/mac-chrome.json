@@ -1,0 +1,8 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary"]},
+ {"action":"waitFor","label":"All Photos","type":"staticText","seconds":15},
+ {"action":"wait","seconds":4},
+ {"action":"assertExists","label":"Up to date · indexed 2 min. ago","seconds":3},
+ {"action":"screenshot","name":"01-main"},{"action":"dump","name":"01-main"},
+ {"action":"quit"}
+]}

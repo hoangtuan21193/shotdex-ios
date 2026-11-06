@@ -94,7 +94,8 @@ struct MacEmptyLibrary: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(minHeight: 48, alignment: .topLeading)
             Button(action: action) {
-                Text(button).frame(maxWidth: .infinity)
+                // A longer translation wraps rather than clips (the button grows).
+                Text(button).lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
             .buttonStyle(MacPushButtonStyle(isDefault: isDefault))
             .keyboardShortcut(isDefault ? .defaultAction : nil)

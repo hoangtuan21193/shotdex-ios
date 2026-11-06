@@ -50,6 +50,11 @@ enum MacDemoLibrary {
         // albums; Add Photos Library… calls seedRows.
         guard section != "emptyLibrary" else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
+        // The sidebar foot as on board `Main`: "Up to date · indexed 2 min ago".
+        if var state = try? dependencies.metadataStore.indexState() {
+            state.lastIndexedAt = Int(Date().timeIntervalSince1970) - 120
+            try? dependencies.metadataStore.saveIndexState(state)
+        }
         seedBackups(dependencies)
         // A smart album as on board `MAC_SmartAlbum`'s sidebar.
         try? dependencies.smartAlbums.upsert(SmartAlbum(

@@ -21,6 +21,9 @@ sổ riêng là tuỳ chọn.
 
 - Token Mac (bo 18/10/14, nút 28, nền menu/sheet/scrim/hàng xen, accent đậm) nằm ở **mục Mac của
   [DESIGN.md](../../../DESIGN.md)**, viết trước `/plan`. MAC_STYLE là luật vẽ board, không phải nguồn token.
+- **Chrome là bản hệ thống** (đo 2026-11-07 trên macOS 27.2, SDK 27): sidebar liền mép (không phải panel kính nổi inset 8
+  như board), cỡ hàng và chữ sidebar theo Settings › Appearance › Sidebar icon size, header nhóm, ô search và các capsule
+  toolbar do hệ thống vẽ. Board vẽ sidebar nổi — không dựng giả. Lệch x −8 / −16 của nội dung so với board đến từ đây.
 - **macOS 15–25**: sidebar và toolbar là bản hệ thống của macOS đó, không vẽ giả kính; cùng vùng, cùng lệnh,
   cùng phím như macOS 26 ([05](05-platform-and-distribution.md) §1).
 
@@ -33,7 +36,7 @@ sổ riêng là tuỳ chọn.
 - Đếm có ở Library, Sources, Collections, Duplicates (số nhóm), Collages, Video Projects, On Server;
   Statistics, On This Day, Recently Added không có số.
 - Hàng chọn = nền xám, icon accent. Icon hàng luôn amber (D11).
-- Chân sidebar: nghỉ thì "Up to date · indexed 2 min ago"; đang index thì "Indexing ‹nguồn› 41%" + thanh tiến độ.
+- Chân sidebar: nghỉ thì "Up to date · indexed 2 min ago" (tuổi theo định dạng tương đối của hệ thống — en_US ghi "2 min. ago", dưới 1 phút "just now"; tự cập nhật mỗi phút; chưa index lần nào thì chỉ "Up to date"); đang index thì "Indexing ‹nguồn› 41%" + thanh tiến độ.
 - Bốn trạng thái hàng nguồn (gắn ngoài, offline, đang thêm, cần cấp quyền) do FS-19 định nghĩa.
 - **Mỗi hàng là một chỗ, không phải một bộ lọc** (2026-11-06): Favorites = ảnh yêu thích, Videos = video, RAW =
   file RAW, một nguồn = ảnh có bản ở nguồn đó, Recently Added = album Recently Added của Photos cộng ảnh thư mục /

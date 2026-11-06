@@ -31,7 +31,7 @@ struct MacPushButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: isDefault ? defaultWeight : .regular))
             .foregroundStyle(isDefault ? MacTheme.onAccentFill : Color.primary)
-            .frame(height: 28)
+            .frame(minHeight: 28)
             .padding(.horizontal, 12)
             .background(RoundedRectangle(cornerRadius: 8).fill(isDefault ? MacTheme.accentFill : MacTheme.fill))
             .opacity(configuration.isPressed ? 0.75 : 1)

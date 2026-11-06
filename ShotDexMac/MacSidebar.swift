@@ -20,6 +20,8 @@ struct MacSidebar: View {
     var addSource: () -> Void = {}
     /// Folders, drives or cards dropped on the sidebar (FS-18.01 §7).
     var addFolders: ([URL]) -> Void = { _ in }
+    /// When the index last finished a pass, for the foot's "indexed 2 min ago".
+    var lastIndexedAt: Date? = nil
     /// A long task's foot (a common-photos run), shown instead of the index line.
     var busyFooter: AnyView? = nil
 
@@ -153,12 +155,16 @@ struct MacSidebar: View {
         if let busyFooter {
             busyFooter
         } else if let library {
-            HStack(spacing: 6) {
-                Image(systemName: library.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark")
-                Text(library.isIndexing
-                     ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running")
-                     : String(localized: "Up to date", comment: "Mac sidebar foot: the index is finished"))
-                Spacer()
+            // "Up to date · indexed 2 min ago" (FS-18.01 §2), the age kept
+            // current once a minute.
+            TimelineView(.everyMinute) { context in
+                HStack(spacing: 6) {
+                    Image(systemName: library.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark")
+                    Text(library.isIndexing
+                         ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running")
+                         : MacSidebar.upToDate(lastIndexedAt: lastIndexedAt, now: context.date))
+                    Spacer()
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -178,6 +184,22 @@ struct MacSidebar: View {
             .fontWeight(.regular)
             .foregroundStyle(MacTheme.accent)
             .frame(width: 16, height: 16)
+    }
+
+    /// "Up to date · indexed 2 min ago"; "Up to date" before any pass.
+    static func upToDate(lastIndexedAt: Date?, now: Date) -> String {
+        guard let lastIndexedAt else { return String(localized: "Up to date", comment: "Mac sidebar foot: the index is finished") }
+        // `lastIndexedAt` is the last write to the index (any batch, any run).
+        // A date ahead of the clock (the clock set back) says no age at all.
+        let age = now.timeIntervalSince(lastIndexedAt)
+        guard age >= 0 else { return String(localized: "Up to date", comment: "Mac sidebar foot: the index is finished") }
+        // Under a minute reads "just now": a whole sentence, never a fragment spliced in.
+        guard age >= 60 else {
+            return String(localized: "Up to date · indexed just now", comment: "Mac sidebar foot: indexed less than a minute ago")
+        }
+        let phrase = lastIndexedAt.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
+        return String(localized: "Up to date · indexed \(phrase)",
+                      comment: "Mac sidebar foot: the index finished; the argument is a whole relative phrase such as '2 min. ago'")
     }
 
     /// A row's count: 11, tabular, secondary (DESIGN.md §10b).

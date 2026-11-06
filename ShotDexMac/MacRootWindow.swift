@@ -54,6 +54,9 @@ struct MacRootWindow: View {
     @State private var settledMatchCount: Int?
     /// The sidebar's counts (FS-18.01 §2), read off the main actor.
     @State private var placeCounts: [MacSidebarItem: Int] = [:]
+    /// When the index last finished, for the sidebar foot; read off the main actor.
+    @State private var lastIndexedAt: Date?
+    @State private var indexRunsEnded = 0
 
     var body: some View {
         NavigationSplitView {
@@ -234,7 +237,19 @@ struct MacRootWindow: View {
                        showsAddSource = true
                    },
                    addFolders: { addFolders($0) },
+                   lastIndexedAt: lastIndexedAt,
                    busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
+            // Read at open, at a run's start and end — `.indexRunEnded` also
+            // covers the runs that found nothing to do and never flip isIndexing.
+            .task(id: "\(library?.isIndexing == true)-\(indexRunsEnded)") {
+                let store = dependencies.metadataStore
+                let read = await Task.detached(priority: .utility) {
+                    (try? store.indexState())?.lastIndexedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                }.value
+                guard !Task.isCancelled else { return }
+                lastIndexedAt = read
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .indexRunEnded)) { _ in indexRunsEnded &+= 1 }
             .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
     }
 

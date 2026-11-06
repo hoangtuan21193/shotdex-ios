@@ -155,13 +155,14 @@ struct MacAddSourceSheet: View {
                         Spacer(minLength: 0)
                         if isDone {
                             Label {
-                                Text(photosCount.map { String(localized: "Added · \($0.formatted()) items", comment: "Mac Add Source: Photos already a source, with its count") }
+                                Text(photosCount.map { count in String(localized: "Added · \(count) items", comment: "Mac Add Source: Photos already a source, with its count (plural)") }
                                      ?? String(localized: "Added", comment: "Mac Add Source: Photos already a source"))
                             } icon: {
                                 Image(systemName: "checkmark")
                             }
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(MacTheme.greenText)
+                            .fixedSize()
                         }
                     }
                     // Line pitch 17 and 15 as the board: spacing between lines, half-leading around.
