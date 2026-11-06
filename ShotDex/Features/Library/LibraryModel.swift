@@ -225,9 +225,19 @@ final class LibraryModel {
             reload()
         }
     }
-    /// Any filter, search, or advanced query is narrowing the grid.
+    /// The Mac search's scope bar (FS-18.02 §4): which sources a photo must
+    /// have a copy in — Photos Library, the folders, the servers — as a
+    /// `Source` condition (FS-19), the same one smart albums use. Nil: all.
+    /// Narrows inside a place and alongside a search or filter.
+    var sourceScope: SmartAlbumQuery? {
+        didSet {
+            guard sourceScope != oldValue else { return }
+            reload()
+        }
+    }
+    /// Any filter, search, advanced query or source scope is narrowing the grid.
     var hasActiveQuery: Bool {
-        !criteria.isEmpty || (advancedQuery?.isEmpty == false)
+        !criteria.isEmpty || (advancedQuery?.isEmpty == false) || sourceScope != nil
     }
     /// Grid order. Persisted, because it is a preference and not scene state:
     /// a photographer who culls by rating expects the grid to still be in that
@@ -351,6 +361,7 @@ final class LibraryModel {
         isLoading = true
         let criteria = self.criteria
         let advancedQuery = self.advancedQuery
+        let sourceScope = self.sourceScope
         let sort = self.sort
         let libraryQueries = self.libraryQueries
         // Fast path (no metadata filter/search + an order PhotoKit itself can
@@ -363,7 +374,8 @@ final class LibraryModel {
         let place = self.place
         // Whether the index holds file photos is read inside the task, off
         // the main actor: a click must not wait behind an index write.
-        let mayUsePhotoKit = place == nil && !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
+        let mayUsePhotoKit = place == nil && !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sourceScope == nil
+            && sort.photoKitSortKey != nil
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
         // showing, publishing the 600-row slice first would replace the content
@@ -393,6 +405,7 @@ final class LibraryModel {
                     self.applyLoadedRows(all)
                 } else if let place {
                     var filters = try await place.filters()
+                    if let sourceScope { filters.append(.query(sourceScope)) }
                     if let advancedQuery, !advancedQuery.isEmpty {
                         filters.append(.query(advancedQuery))
                     } else if !criteria.isEmpty {
@@ -401,6 +414,17 @@ final class LibraryModel {
                     let rows = try await libraryQueries.gridItems(
                         matchingAll: filters, restrictedTo: try await place.assetIds(queries: libraryQueries), sort: sort
                     )
+                    guard let self, !Task.isCancelled else { return }
+                    self.cloudPlaceholderCount = 0
+                    self.applyLoadedRows(rows)
+                } else if let sourceScope {
+                    var filters: [LibraryQueries.IndexFilter] = [.query(sourceScope)]
+                    if let advancedQuery, !advancedQuery.isEmpty {
+                        filters.append(.query(advancedQuery))
+                    } else if !criteria.isEmpty {
+                        filters.append(.criteria(criteria))
+                    }
+                    let rows = try await libraryQueries.gridItems(matchingAll: filters, sort: sort)
                     guard let self, !Task.isCancelled else { return }
                     self.cloudPlaceholderCount = 0
                     self.applyLoadedRows(rows)

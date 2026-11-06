@@ -93,6 +93,7 @@ struct MacFilterPopover: View {
     private func resetFilters() {
         library.criteria = .empty
         library.advancedQuery = nil
+        library.sourceScope = nil
     }
 
     /// Between sections: the board's 45pt section pitch against 34pt rows

@@ -1,0 +1,157 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "ILCE"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-suggestions"
+  },
+  {
+   "action": "dump",
+   "name": "01-suggestions"
+  },
+  {
+   "action": "assertMissing",
+   "label": "All Sources",
+   "type": "button",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "ILCE-7M4"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "All Sources",
+   "type": "button",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "02-results"
+  },
+  {
+   "action": "click",
+   "label": "Folders",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "No folders or drives are added as sources.",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-folders-empty"
+  },
+  {
+   "action": "click",
+   "label": "Search All Sources",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "No Photos Match",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Photos Library",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "No Photos Match",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Save as Smart Album…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-save"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "All Sources",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

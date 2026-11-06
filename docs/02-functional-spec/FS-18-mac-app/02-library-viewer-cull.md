@@ -58,6 +58,11 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   đang lọc) · Saved Searches (smart album) · Recent · Advanced Search… + một dòng "Try …".
 - Thanh phạm vi dưới toolbar: **All Sources · Photos Library · Folders · Servers** + số kết quả · Save as Smart Album….
 - Phạm vi là điều kiện nguồn (FS-19) — cùng điều kiện mà smart album và biểu đồ dùng.
+- Tình trạng 2026-11-07 (Mac loop hàng 11): gợi ý dùng danh sách gợi ý của ô search hệ thống (không capsule token trong ô;
+  cách parser đọc hiện dưới dòng "Search “…”"); không có số kết quả trên từng gợi ý; "Lenses in These Results" là ống khớp
+  từ đang gõ trong cả thư viện. Save as Smart Album… giữ phạm vi khi phạm vi là một nguồn (Photos Library); Folders/Servers
+  nhiều nguồn không lồng được vào album "all of" (Save tắt kèm lời). Chọn một gợi ý là tìm luôn; xoá ô tìm bỏ luôn phạm vi.
+  Lưới có phạm vi bỏ ảnh chỉ có trên iCloud (như mọi bộ lọc).
 
 ## 5. Filter and Sort
 

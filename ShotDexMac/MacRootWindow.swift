@@ -10,6 +10,13 @@ struct MacRootWindow: View {
     @State private var selection: MacSidebarItem? = .allPhotos
     @State private var library: LibraryModel?
     @State private var searchText = ""
+    /// The search suggestions' vocabulary and how the parser reads the field.
+    @State private var searchReading: [String] = []
+    /// The scope bar's choice; the library holds its condition, rebuilt when
+    /// the sources change.
+    @State private var searchScope = MacSearchScope.all
+    @State private var searchCameras: [String] = []
+    @State private var searchLenses: [String] = []
     @FocusState private var isSearchFocused: Bool
     /// The grid's rules came from the search field (they share the slot
     /// with Advanced Filter): emptying the field takes them away again.
@@ -103,6 +110,8 @@ struct MacRootWindow: View {
                 libraryHasVideos = false
                 // Words typed but never searched do not follow to the next place.
                 if !searchOwnsQuery { searchText = "" }
+                // A scope is part of a search: it does not follow to the next place on its own.
+                if !searchOwnsQuery { library?.sourceScope = nil }
                 library?.place = place(for: selection)
             }
         }
@@ -543,7 +552,13 @@ struct MacRootWindow: View {
     private var libraryDetail: some View {
             VStack(spacing: 0) {
                 sourceBanners
-                if let library, showsFilterBar, library.hasActiveQuery {
+                // Once a search is run, or a scope set — not while words are only typed.
+                if let library, searchOwnsQuery || library.sourceScope != nil {
+                    MacSearchScopeBar(scope: Binding(get: { searchScope }, set: { setScope($0) }), count: subtitle,
+                                      canSave: canSaveSearch,
+                                      saveAsSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest(query: savedSearchQuery) })
+                }
+                if let library, showsFilterBar, !library.criteria.isEmpty || library.advancedQuery?.isEmpty == false {
                     MacFilterBar(library: library)
                 }
                 content
@@ -608,6 +623,23 @@ struct MacRootWindow: View {
                             prompt: isLibraryEmpty ? Text("Search", comment: "Mac search field placeholder before any photo")
                                                    : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
                 .searchFocused($isSearchFocused)
+                .searchSuggestions { searchSuggestions }
+                // The suggestions, a beat after typing stops: the parser's
+                // reading, and the cameras and lenses matching the word being
+                // typed (matched off the main actor; the vocabulary is cached).
+                .task(id: searchText) {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    guard !Task.isCancelled else { return }
+                    let text = searchText
+                    let reading = await dependencies.search.preview(text)
+                    let catalog = await dependencies.filterSuggestions.load()
+                    let tails = MacSearchSuggestions.tail(text.trimmingCharacters(in: .newlines))
+                    let (cameras, lenses) = await Task.detached(priority: .userInitiated) {
+                        (MacSearchSuggestions.matches(tails, in: catalog.bodies), MacSearchSuggestions.matches(tails, in: catalog.lenses))
+                    }.value
+                    guard !Task.isCancelled, text == searchText else { return }
+                    (searchReading, searchCameras, searchLenses) = (reading, cameras, lenses)
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .macFocusSearch)) { _ in isSearchFocused = true }
                 .onAppear {
                     guard wantsSearchFocus else { return }
@@ -631,9 +663,17 @@ struct MacRootWindow: View {
                 .onChange(of: searchText) {
                     guard searchText.trimmingCharacters(in: .whitespaces).isEmpty, let library else { return }
                     library.applySearch("", using: dependencies.search)
-                    if searchOwnsQuery { library.advancedQuery = nil }
+                    // Clearing a search clears its scope too: back to the whole grid.
+                    if searchOwnsQuery {
+                        library.advancedQuery = nil
+                        setScope(.all)
+                    }
                     searchOwnsQuery = false
                 }
+                // A source added or gone: the scope's condition names the sources anew.
+                .onChange(of: sources) { if searchScope != .all { library?.sourceScope = searchScope.query(sources: sources) } }
+                // Every Reset that drops the condition drops the choice with it.
+                .onChange(of: library?.sourceScope == nil) { _, isNil in if isNil { searchScope = .all } }
                 .inspector(isPresented: $showsInspector) {
                     Group {
                         if let photoSelection, let photoMenu {
@@ -740,6 +780,7 @@ struct MacRootWindow: View {
                 Button(MacFilterCopy.resetFilters) {
                     library.criteria = .empty
                     library.advancedQuery = nil
+                    library.sourceScope = nil
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -748,11 +789,19 @@ struct MacRootWindow: View {
                 Label(String(localized: "No Photos Match", comment: "Mac library: the filter leaves nothing"),
                       systemImage: "line.3.horizontal.decrease")
             } description: {
-                Text("No photo matches the current filters.", comment: "Mac library: empty filtered grid")
+                if library.sourceScope != nil {
+                    Text(MacInfoScopeText.empty(searchScope, sources: sources))
+                } else {
+                    Text("No photo matches the current filters.", comment: "Mac library: empty filtered grid")
+                }
             } actions: {
+                if library.sourceScope != nil {
+                    Button(String(localized: "Search All Sources", comment: "Mac library: drop only the source scope")) { setScope(.all) }
+                }
                 Button(MacFilterCopy.resetFilters) {
                     library.criteria = .empty
                     library.advancedQuery = nil
+                    library.sourceScope = nil
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -795,6 +844,48 @@ struct MacRootWindow: View {
     /// What narrows the grid as rules: the Advanced Filter, or the quick
     /// filters converted — the starting point of Advanced Filter… and of
     /// Save as Smart Album….
+    /// The suggestions under the search field (board `MAC_Search`).
+    private var searchSuggestions: some View {
+        MacSearchSuggestions(text: searchText, cameras: searchCameras, lenses: searchLenses, smartAlbums: smartAlbums,
+                             recents: dependencies.search.recentSearches.queries, reading: searchReading,
+                             openSmartAlbum: { album in
+                                 searchText = ""
+                                 setScope(.all)
+                                 selection = .smartAlbum(album.id)
+                             },
+                             search: { runSearch($0) },
+                             advancedSearch: { showsAdvancedFilter = true })
+    }
+
+    private func setScope(_ scope: MacSearchScope) {
+        searchScope = scope
+        library?.sourceScope = scope.query(sources: sources)
+    }
+
+    /// A suggestion picked: the field shows it and the grid is searched.
+    private func runSearch(_ text: String) {
+        searchText = text
+        searchOwnsQuery = true
+        library?.applySearch(text, using: dependencies.search)
+    }
+
+    /// The scope fits in a saved album: one source, and an "all of" search.
+    private var canSaveSearch: Bool {
+        guard let scope = library?.sourceScope else { return true }
+        return scope.rules.count == 1 && (libraryQuery?.matchMode ?? .all) == .all
+    }
+
+    /// Save as Smart Album… from the scope bar: the search, and the scope
+    /// when it is one source (an "any of several" scope does not nest in an
+    /// "all of" album).
+    private var savedSearchQuery: SmartAlbumQuery? {
+        var query = libraryQuery ?? SmartAlbumQuery(matchMode: .all, rules: [])
+        if let scope = library?.sourceScope, scope.rules.count == 1, query.matchMode == .all {
+            query.rules += scope.rules
+        }
+        return query.rules.isEmpty ? nil : query
+    }
+
     private var libraryQuery: SmartAlbumQuery? {
         guard let library else { return nil }
         if let advanced = library.advancedQuery, !advanced.isEmpty { return advanced }
