@@ -215,6 +215,87 @@
   },
   {
    "action": "click",
+   "label": "Adjust Date",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Adjust Date and Time",
+   "seconds": 3
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Adjust",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-adjust-date",
+   "window": "Info"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Adjust Location",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Adjust Location",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Map — click to place the photo, or search for a place"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-adjust-location",
+   "window": "Info"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Adjust",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Adjust",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "None",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
    "x": 0.33,
    "y": 0.2,
    "window": "All Photos"

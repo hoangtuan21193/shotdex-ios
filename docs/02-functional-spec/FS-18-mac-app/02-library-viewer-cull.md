@@ -115,4 +115,5 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
   `dc:rights`) và đọc về theo thời điểm như Title/Caption — chỉ từ sidecar: creator/copyright máy ảnh ghi trong file ảnh không vào. Ảnh Photos giữ trong ShotDex (Photos không có trường này).
 - Show All Raw Metadata: bảng Field/Value mọi trường ImageIO đọc được (chỉ đọc đầu file, không giải mã ảnh); ảnh Photos chỉ khi
   bản gốc có trên máy. Metering, White Balance đọc từ file khi mở panel, không vào index.
-- Tình trạng 2026-11-07 (Mac loop hàng 9b): Date/Location **Adjust…** chưa có (hàng 9c).
+- Date/Location **Adjust…** (hàng 9c): chỉ với ảnh có trong Photos — ghi qua Photos như Adjust Date and Time của Photos (EXIF
+  trong file gốc không đổi), index theo. Ảnh chỉ trong thư mục/ổ không có Adjust…: ngày và nơi là của file.

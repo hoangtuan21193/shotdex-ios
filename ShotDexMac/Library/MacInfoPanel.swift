@@ -1,3 +1,4 @@
+import CoreLocation
 import AppKit
 import Photos
 import SwiftUI
@@ -75,6 +76,10 @@ struct MacInfoView: View {
     @State private var rawEntries: [MacRawMetadata.Entry]?
     @State private var showsRaw = false
     @State private var rawUnavailable: String?
+    @State private var adjustsDate = false
+    @State private var adjustsLocation = false
+    /// An Adjust… write is running: its button waits.
+    @State private var adjusting = false
     @State private var pendingSave: Task<Void, Never>?
     /// Writes waiting for typing to pause, one per field; all run at once
     /// when the photo changes, the panel closes or the app quits.
@@ -290,23 +295,57 @@ struct MacInfoView: View {
                 .frame(width: 168)
                 Spacer(minLength: 0)
             }
-            if let date = info.metadata?.creationDate {
-                MacInfoRow {
+            if info.metadata?.creationDate != nil || info.isInPhotos {
+                let taken = info.metadata?.creationDate.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                MacInfoRow(alignment: .center) {
                     label(String(localized: "Date", comment: "Mac Get Info: field"))
-                    Text(Date(timeIntervalSince1970: TimeInterval(date)).formatted(date: .abbreviated, time: .standard))
+                    Text(info.metadata?.creationDate == nil ? String(localized: "None", comment: "Mac Get Info: no date")
+                                                              : (taken ?? Date()).formatted(date: .abbreviated, time: .standard))
                         .font(.system(size: 13)).monospacedDigit().textSelection(.enabled)
+                        .help(info.isInPhotos ? "" : String(localized: "The date comes from the file; only photos in Photos can be adjusted.",
+                                                            comment: "Mac Get Info: no Adjust… for a folder photo"))
+                    Spacer(minLength: 8)
+                    if info.isInPhotos {
+                        Button(String(localized: "Adjust…", comment: "Mac Get Info: change the capture date")) { adjustsDate = true }
+                            .disabled(adjusting)
+                            .accessibilityLabel(String(localized: "Adjust Date", comment: "Mac Get Info: Adjust… on Date, VoiceOver"))
+                    }
+                }
+                .sheet(isPresented: $adjustsDate) {
+                    MacAdjustDateSheet(original: taken) { newDate in
+                        adjusting = true
+                        Task { await adjusted(id, MacAdjustWriter(dependencies: dependencies).setDate(newDate, id: id), reloadsLibrary: true) }
+                    }
                 }
             }
-            if let place = MacInfoText.place(info) {
-                MacInfoRow {
+            if let place = MacInfoText.place(info) ?? (info.isInPhotos ? MacInfoText.Place(name: nil, coordinates: nil) : nil) {
+                MacInfoRow(alignment: .center) {
                     label(String(localized: "Location", comment: "Mac Get Info: field"))
                     VStack(alignment: .leading, spacing: 1) {
                         if let name = place.name { Text(name).font(.system(size: 13)) }
                         if let coordinates = place.coordinates {
                             Text(coordinates).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
                         }
+                        if place.name == nil, place.coordinates == nil {
+                            Text("None", comment: "Mac Get Info: no location").font(.system(size: 13)).foregroundStyle(.secondary)
+                        }
                     }
                     .textSelection(.enabled)
+                    .help(info.isInPhotos ? "" : String(localized: "The place comes from the file; only photos in Photos can be adjusted.",
+                                                        comment: "Mac Get Info: no Adjust… for a folder photo"))
+                    Spacer(minLength: 8)
+                    if adjusting { ProgressView().controlSize(.small) }
+                    if info.isInPhotos {
+                        Button(String(localized: "Adjust…", comment: "Mac Get Info: change the location")) { adjustsLocation = true }
+                            .disabled(adjusting)
+                            .accessibilityLabel(String(localized: "Adjust Location", comment: "Mac Get Info: Adjust… on Location, VoiceOver"))
+                    }
+                }
+                .sheet(isPresented: $adjustsLocation) {
+                    MacAdjustLocationSheet(original: MacInfoText.coordinate(info)) { coordinate in
+                        adjusting = true
+                        Task { await adjusted(id, MacAdjustWriter(dependencies: dependencies).setLocation(coordinate, id: id), reloadsLibrary: true) }
+                    }
                 }
             }
             MacInfoRow {
@@ -542,6 +581,19 @@ struct MacInfoView: View {
         }
     }
 
+    /// After an Adjust…: the panel reads again, and a new date re-sorts the
+    /// library.
+    private func adjusted(_ id: String, _ outcome: MacAdjustWriter.Outcome, reloadsLibrary: Bool) {
+        adjusting = false
+        switch outcome {
+        case .done:
+            menu.marksChanged([id])
+            if reloadsLibrary { dependencies.library?.reload() }
+        case .failed(let reason):
+            menu.failure = reason
+        }
+    }
+
     private func edit(_ write: @escaping @MainActor (MacKeywordEditor) async -> MacKeywordEditor.Outcome) {
         guard let photoId else { return }
         let editor = editor
@@ -643,6 +695,11 @@ enum MacInfoText {
     }
 
     struct Place { let name: String?; let coordinates: String? }
+
+    static func coordinate(_ info: PhotoInfoQueries.Info) -> CLLocationCoordinate2D? {
+        guard let latitude = info.metadata?.latitude, let longitude = info.metadata?.longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
 
     static func place(_ info: PhotoInfoQueries.Info) -> Place? {
         let name = info.place?.address ?? [info.place?.name, info.place?.locality, info.place?.country]
