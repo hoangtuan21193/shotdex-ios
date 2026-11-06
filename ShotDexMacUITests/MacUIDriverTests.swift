@@ -177,7 +177,7 @@ final class MacUIDriverTests: XCTestCase {
         case "waitFor", "assertExists":
             _ = try element(step, timeout: step.seconds ?? 5)
         case "assertMissing":
-            let query = self.query(step)
+            let query = step.label == nil ? app.descendants(matching: Self.elementType(step.type)) : self.query(step)
             let deadline = Date().addingTimeInterval(step.seconds ?? 2)
             while query.firstMatch.exists, Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
             if query.firstMatch.exists { throw DriverError.assertion("\(step.label ?? "?") still on screen") }

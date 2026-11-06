@@ -1,0 +1,7 @@
+{"steps":[
+ {"action":"launch","arguments":["-ShotDexDemoLibrary","-ShotDexSection","emptyLibrary","-ShotDexAppearance","dark"]},
+ {"action":"waitFor","label":"Welcome to ShotDex","seconds":15},
+ {"action":"wait","seconds":2},
+ {"action":"screenshot","name":"dark-empty"},
+ {"action":"quit"}
+]}

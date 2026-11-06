@@ -46,6 +46,9 @@ enum MacDemoLibrary {
                                            originalCheck: originalCheckState.map { _ in originalCheckEnvironment(database) })
         // A database file kept from an earlier launch is seeded once.
         guard isNewFile else { return dependencies }
+        // `emptyLibrary`: the first run has nothing — no rows, backups or
+        // albums; Add Photos Library… calls seedRows.
+        guard section != "emptyLibrary" else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
         seedBackups(dependencies)
         // A smart album as on board `MAC_SmartAlbum`'s sidebar.
@@ -278,6 +281,14 @@ enum MacDemoLibrary {
             }
         }
         return rows
+    }
+
+    /// The demo's rows, written off the main actor (Add Photos Library… on
+    /// the `emptyLibrary` demo).
+    static func seedRows(_ dependencies: MacDependencies) async {
+        let store = dependencies.metadataStore
+        let rows = rows()
+        await Task.detached(priority: .userInitiated) { try? store.saveBatch(rows, cursorAssetId: nil) }.value
     }
 
     /// `-ShotDexDemoScale N`: N − 1 more copies of the library, a week apart

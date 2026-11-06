@@ -211,6 +211,9 @@ extension Notification.Name {
     static let macShowBackup = Notification.Name("ShotDexMacShowBackup")
     /// Go › All Photos … Recently Added: the object is the `MacSidebarItem`.
     static let macGoTo = Notification.Name("ShotDexMacGoTo")
+    /// File › Add Folder… and Add Photos Library….
+    static let macAddFolder = Notification.Name("ShotDexMacAddFolder")
+    static let macAddPhotosLibrary = Notification.Name("ShotDexMacAddPhotosLibrary")
     /// Edit › Search ⌘F; the window turns it into `macFocusSearch` once the
     /// grid, and so its search field, is on screen.
     static let macFocusSearchRequest = Notification.Name("ShotDexMacFocusSearchRequest")

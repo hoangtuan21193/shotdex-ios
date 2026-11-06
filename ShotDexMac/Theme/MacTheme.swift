@@ -19,6 +19,12 @@ enum MacTheme {
     static let accentSoft = dynamic(light: NSColor(red: 198 / 255, green: 115 / 255, blue: 14 / 255, alpha: 0.14),
                                     dark: NSColor(red: 235 / 255, green: 149 / 255, blue: 38 / 255, alpha: 0.18))
 
+    /// `accentFill` / `onAccentFill`: the default push button's ground and
+    /// its text (DESIGN.md §10b) — darker than `accent` in light.
+    static let accentFill = dynamic(light: NSColor(red: 0xA3 / 255, green: 0x5E / 255, blue: 0x0A / 255, alpha: 1),
+                                    dark: NSColor(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255, alpha: 1))
+    static let onAccentFill = dynamic(light: .white, dark: .black)
+
     /// `fill`: a flat control's ground (DESIGN.md §10b).
     static let fill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.07))
     /// `greenSoft`: the tile behind a done job's check (board `MAC_Activity`).

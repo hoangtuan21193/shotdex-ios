@@ -17,6 +17,12 @@ struct MacRootWindow: View {
     /// ⌘F asked for the field while the grid (and so the field) was not on
     /// screen: the grid takes it when it appears.
     @State private var wantsSearchFocus = false
+    /// The `emptyLibrary` demo's stand-in for the Photos permission.
+    @State private var demoPhotosAdded = false
+    /// Add Photos Library… is waiting on macOS's prompt: a second click waits too.
+    @State private var isAddingPhotos = false
+    /// Add Photos Library… came back without access.
+    @State private var showsPhotosDenied = false
     @State private var showsInspector = false
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
@@ -119,6 +125,16 @@ struct MacRootWindow: View {
     fileprivate func requests(_ content: some View) -> some View {
         content
             .background(MacMainWindowMarker())
+            .alert(String(localized: "ShotDex Can’t Read Your Photos Library", comment: "Mac alert: Photos access refused"),
+                   isPresented: $showsPhotosDenied) {
+                Button(String(localized: "Open System Settings", comment: "Mac alert: go to Privacy › Photos")) {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!)
+                }
+                Button(String(localized: "Not Now", comment: "Mac alert: dismiss"), role: .cancel) {}
+            } message: {
+                Text("Allow ShotDex in System Settings › Privacy & Security › Photos. Folders, drives and servers work without it.",
+                     comment: "Mac alert: how to grant Photos access")
+            }
             .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
             .task { await start() }
             .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
@@ -132,11 +148,17 @@ struct MacRootWindow: View {
                 wantsSearchFocus = true
                 selection = .allPhotos
             }
+            .onReceive(NotificationCenter.default.publisher(for: .macAddFolder)) { _ in addFolderFromSidebar() }
+            .onReceive(NotificationCenter.default.publisher(for: .macAddPhotosLibrary)) { _ in addPhotosLibrary() }
             .onReceive(NotificationCenter.default.publisher(for: .macGoTo)) { note in
                 if let item = note.object as? MacSidebarItem { selection = item }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 dependencies.backupControl.appBecameActive()
+                // Back from System Settings › Photos with access allowed.
+                if dependencies.photoLibrary.refreshAuthorization(), dependencies.photoLibrary.authorizationState.canReadLibrary {
+                    photosBecameReadable()
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
                 serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
@@ -172,11 +194,15 @@ struct MacRootWindow: View {
     /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
     /// The sidebar, with what its + › Add Folder… could not add.
     private var sidebar: some View {
-        MacSidebar(selection: $selection, library: library, counts: placeCounts, sources: sources,
+        // The first run counts nothing (board `MAC_EmptyLibrary`): no row of zeros.
+        MacSidebar(selection: $selection, library: library, counts: isLibraryEmpty ? [:] : placeCounts,
+                   sources: photosAdded ? sources : sources.filter { $0.kind != "photos" },
                    backup: backupBadge, smartAlbums: smartAlbums,
                    newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
                    addFolder: addFolderFromSidebar,
+                   addPhotosLibrary: photosAdded ? nil : addPhotosLibrary,
                    connectToServer: { serverForm = MacServerFormRequest() },
+                   addFolders: addFolders,
                    busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
             .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
             .alert(addFolderFailure?.title ?? "",
@@ -190,6 +216,96 @@ struct MacRootWindow: View {
     private var serverSource: SourceStore.Source? {
         guard case .source(let id) = selection else { return nil }
         return sources.first { $0.id == id && $0.kind == "server" }
+    }
+
+    /// Photos was added as a source: its permission was asked (FS-18.01 §7
+    /// asks only on Add Photos Library…, never at launch). Read straight from
+    /// the observable permission, so the first frame is already right.
+    private var photosAdded: Bool {
+        #if DEBUG
+        if MacDemoLibrary.section == "emptyLibrary" { return demoPhotosAdded }
+        if MacDemoLibrary.isOn { return true }
+        #endif
+        // Refused counts as not added: the welcome screen stays, and its
+        // Add Photos Library… says where to allow it.
+        return dependencies.photoLibrary.authorizationState.canReadLibrary
+    }
+
+    /// No source yet (board `MAC_EmptyLibrary`): Photos not added and no
+    /// folder, drive or server.
+    private var isLibraryEmpty: Bool {
+        !photosAdded && !sources.contains { $0.kind != "photos" }
+    }
+
+    /// Add Photos Library…: macOS asks now, not at launch. Access granted, the
+    /// grid loads and the index starts; refused, the alert says where to fix it.
+    private func addPhotosLibrary() {
+        #if DEBUG
+        if MacDemoLibrary.section == "emptyLibrary" {
+            // The demo's Photos is its seeded rows; the real permission is not asked.
+            Task {
+                await MacDemoLibrary.seedRows(dependencies)
+                demoPhotosAdded = true
+                library?.reload()
+            }
+            return
+        }
+        #endif
+        guard !isAddingPhotos else { return }
+        isAddingPhotos = true
+        Task {
+            defer { isAddingPhotos = false }
+            // Allowed in System Settings since the last look: no prompt, no alert.
+            dependencies.photoLibrary.refreshAuthorization()
+            if dependencies.photoLibrary.authorizationState == .notDetermined {
+                await dependencies.photoLibrary.requestAuthorization()
+            }
+            guard dependencies.photoLibrary.authorizationState.canReadLibrary else {
+                showsPhotosDenied = true
+                return
+            }
+            photosBecameReadable()
+        }
+    }
+
+    /// Photos is readable now: the grid loads and the index starts.
+    private func photosBecameReadable() {
+        library?.loadIfNeeded()
+        library?.reload()
+        library?.startIndexing()
+    }
+
+    /// Folders, drives or cards — dropped on the window or the sidebar, or
+    /// picked with Add Folder or Drive…. Every one is tried; what could not
+    /// be added is said once, after.
+    private func addFolders(_ urls: [URL]) {
+        let folders = urls.filter(MacEmptyLibrary.isFolder)
+        if folders.isEmpty {
+            addFolderFailure = SourcesModel.Failure(
+                title: String(localized: "Drop a Folder", comment: "Mac alert: something other than a folder was dropped"),
+                message: String(localized: "ShotDex adds folders, drives and memory cards. To read your Photos library, use Add Photos Library….",
+                                comment: "Mac alert: a file or a Photos library package was dropped"))
+            return
+        }
+        let model = dependencies.sourcesModel
+        Task {
+            var failures: [SourcesModel.Failure] = []
+            for folder in folders {
+                await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true)
+                if let failure = model.failure {
+                    model.failure = nil
+                    failures.append(failure)
+                }
+            }
+            reloadSources()
+            library?.loadIfNeeded()
+            library?.reload()
+            if let first = failures.first {
+                addFolderFailure = failures.count == 1 ? first : SourcesModel.Failure(
+                    title: first.title,
+                    message: failures.map(\.message).joined(separator: "\n\n"))
+            }
+        }
     }
 
     /// The row shows the library grid (and so its search field).
@@ -264,16 +380,7 @@ struct MacRootWindow: View {
     /// The sidebar's + › Add Folder…: what Settings › Sources adds, the
     /// failure said here rather than in a Settings window that may be shut.
     private func addFolderFromSidebar() {
-        MacPhotoSourcesSection.chooseFolder { folder in
-            let model = dependencies.sourcesModel
-            Task {
-                await model.addFolder(folder, includesSubfolders: true, pairsRawAndJpeg: true)
-                if let failure = model.failure {
-                    model.failure = nil
-                    addFolderFailure = failure
-                }
-            }
-        }
+        MacPhotoSourcesSection.chooseFolder { addFolders([$0]) }
     }
 
     /// Jobs, or a warning when one is stuck on something only the user can
@@ -320,7 +427,8 @@ struct MacRootWindow: View {
                 .navigationSubtitle(subtitle)
                 .toolbar { toolbar }
                 .searchable(text: $searchText, placement: .toolbar,
-                            prompt: Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
+                            prompt: isLibraryEmpty ? Text("Search", comment: "Mac search field placeholder before any photo")
+                                                   : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
                 .searchFocused($isSearchFocused)
                 .onReceive(NotificationCenter.default.publisher(for: .macFocusSearch)) { _ in isSearchFocused = true }
                 .onAppear {
@@ -357,7 +465,10 @@ struct MacRootWindow: View {
 
     @ViewBuilder
     private var content: some View {
-        if let library, !library.items.isEmpty {
+        if isLibraryEmpty {
+            MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: addFolderFromSidebar,
+                            connectToServer: { serverForm = MacServerFormRequest() }, addFolders: addFolders)
+        } else if let library, !library.items.isEmpty {
             // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
             MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
                          picture: Self.demoPicture, generation: library.rowsGeneration,
@@ -416,6 +527,7 @@ struct MacRootWindow: View {
     /// "54,027 photos · 1,204 videos", or "212 of 55,231 photos" while a
     /// filter is on (FS-18.02 §5).
     private var subtitle: String {
+        if isLibraryEmpty { return String(localized: "No photos yet", comment: "Mac toolbar subtitle: no source added yet") }
         guard let library else { return "" }
         let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
         return LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
@@ -447,6 +559,7 @@ struct MacRootWindow: View {
                 Text("View", comment: "Mac toolbar view mode picker")
             }
             .pickerStyle(.segmented)
+            .disabled(isLibraryEmpty)
             Button { showsFilterPopover.toggle() } label: {
                 // Filled while something narrows the grid, as in Photos.
                 // One symbol, its variant switched: a new image would rebuild
@@ -455,6 +568,7 @@ struct MacRootWindow: View {
                     .symbolVariant(library?.hasActiveQuery == true ? .fill : .none)
             }
             .help(String(localized: "Filter and Sort", comment: "Mac toolbar"))
+            .disabled(isLibraryEmpty)
             .popover(isPresented: $showsFilterPopover, arrowEdge: .bottom) {
                 if let library {
                     MacFilterPopover(library: library, countLine: subtitle,
@@ -471,6 +585,7 @@ struct MacRootWindow: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button { } label: { Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up") }
+                .disabled(isLibraryEmpty)
             // The label says what a click does (FS-18.01 §3).
             Button { showsInspector.toggle() } label: {
                 Label(showsInspector ? String(localized: "Hide Inspector", comment: "Mac toolbar")
@@ -550,9 +665,8 @@ struct MacRootWindow: View {
             return
         }
         #endif
-        if dependencies.photoLibrary.authorizationState == .notDetermined {
-            await dependencies.photoLibrary.requestAuthorization()
-        }
+        // The Photos permission is asked by Add Photos Library…, never here
+        // (FS-18.01 §7): until then the window is the first-run screen.
         // The helper runs the jobs and the On Server check, or the app while
         // it is open (FS-22.06 §2, FS-19.07 §11); appStarted starts this
         // side's pass when the app is the runner.
@@ -564,7 +678,11 @@ struct MacRootWindow: View {
             selection = item
         }
         #endif
-        guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
+        guard let library else { return }
+        // A folder, drive or server is enough for a grid; the Photos index
+        // needs the permission.
+        if !isLibraryEmpty { library.loadIfNeeded() }
+        guard dependencies.photoLibrary.authorizationState.canReadLibrary else { return }
         library.loadIfNeeded()
         library.startIndexing()
     }

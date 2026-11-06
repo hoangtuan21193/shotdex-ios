@@ -1,0 +1,172 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "emptyLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Welcome to ShotDex",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "No sources yet"
+  },
+  {
+   "action": "assertExists",
+   "label": "All Photos \u2013 No photos yet"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Filter and Sort"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-empty"
+  },
+  {
+   "action": "dump",
+   "name": "01-empty"
+  },
+  {
+   "action": "click",
+   "label": "Connect to Server\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "type": "sheet",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-server-sheet"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "type": "sheet",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Add Folder or Drive\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-open-panel"
+  },
+  {
+   "action": "dump",
+   "name": "03-open-panel"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Welcome to ShotDex"
+  },
+  {
+   "action": "click",
+   "label": "Add Photos Library\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Welcome to ShotDex",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "Photos Library",
+   "type": "staticText"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Filter and Sort"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-after-photos"
+  },
+  {
+   "action": "dump",
+   "name": "04-after-photos"
+  },
+  {
+   "action": "menu",
+   "text": "File>Add Folder\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-file-add-folder"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "File>Connect to Server\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "type": "sheet",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

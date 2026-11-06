@@ -110,6 +110,20 @@ enum MacWindowMetrics {
 struct MacBackupCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .newItem) {
+            // File › sources (FS-18.01b §2): the keyboard's way to the sidebar's +.
+            Divider()
+            Button(String(localized: "Add Folder…", comment: "Mac menu: File › Add Folder…")) {
+                NotificationCenter.default.post(name: .macAddFolder, object: nil)
+            }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+            Button(String(localized: "Add Photos Library…", comment: "Mac menu: File › Add Photos Library…")) {
+                NotificationCenter.default.post(name: .macAddPhotosLibrary, object: nil)
+            }
+            Button(String(localized: "Connect to Server…", comment: "Mac menu: File › Connect to Server…")) {
+                NotificationCenter.default.post(name: .macAddServer, object: nil)
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            Divider()
             Button(String(localized: "New Smart Album…", comment: "Mac menu: File › New Smart Album…")) {
                 NotificationCenter.default.post(name: .macNewSmartAlbum, object: nil)
             }

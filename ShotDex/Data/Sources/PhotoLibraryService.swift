@@ -199,6 +199,20 @@ final class PhotoLibraryService: NSObject {
 
     // MARK: Authorization
 
+    /// Reads the permission again — the user may have changed it in System
+    /// Settings while the app stayed open. Returns true when it changed.
+    @discardableResult
+    func refreshAuthorization() -> Bool {
+        let state = PhotoAuthorizationState(PHPhotoLibrary.authorizationStatus(for: .readWrite))
+        guard state != authorizationState else { return false }
+        authorizationState = state
+        if state.canReadLibrary, !isObservingChanges {
+            startObservingChanges()
+            refreshAllPhotos()
+        }
+        return true
+    }
+
     /// Requests read-write access (write needed for favorite toggling).
     func requestAuthorization() async {
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)

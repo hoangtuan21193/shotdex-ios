@@ -17,7 +17,12 @@ struct MacSidebar: View {
     var newSmartAlbum: () -> Void = {}
     /// The Sources header's + (board `Main`): a folder or drive, or a server.
     var addFolder: () -> Void = {}
+    /// Add Photos Library… in the + menu while Photos is not a source — the
+    /// way in once a folder has replaced the first-run screen.
+    var addPhotosLibrary: (() -> Void)? = nil
     var connectToServer: () -> Void = {}
+    /// Folders, drives or cards dropped on the sidebar (FS-18.01 §7).
+    var addFolders: ([URL]) -> Void = { _ in }
     /// A long task's foot (a common-photos run), shown instead of the index line.
     var busyFooter: AnyView? = nil
 
@@ -29,6 +34,12 @@ struct MacSidebar: View {
                 }
             }
             Section {
+                if sources.isEmpty {
+                    Text("No sources yet", comment: "Mac sidebar: the Sources group before anything is added")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .selectionDisabled()
+                }
                 ForEach(sources, id: \.id) { source in
                     Label {
                         HStack {
@@ -47,6 +58,10 @@ struct MacSidebar: View {
                     Text("Sources", comment: "Mac sidebar group")
                     Spacer()
                     Menu {
+                        if let addPhotosLibrary {
+                            Button(String(localized: "Add Photos Library…", comment: "Mac sidebar: add the Photos library as a source"),
+                                   action: addPhotosLibrary)
+                        }
                         Button(String(localized: "Add Folder…", comment: "Mac sidebar: add a folder or drive source"), action: addFolder)
                         Button(String(localized: "Connect to Server…", comment: "Mac sidebar: add a server connection"), action: connectToServer)
                     } label: {
@@ -57,6 +72,7 @@ struct MacSidebar: View {
                     .fixedSize()
                     .help(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
                     .accessibilityLabel(String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"))
+                    .accessibilityIdentifier("sidebar.addSource")
                 }
             }
             Section {
@@ -87,6 +103,11 @@ struct MacSidebar: View {
             }
         }
         .safeAreaInset(edge: .bottom) { status }
+        // Anything dropped goes through: a file is refused with a reason.
+        .dropDestination(for: URL.self) { urls, _ in
+            addFolders(urls)
+            return !urls.filter(MacEmptyLibrary.isFolder).isEmpty
+        }
         .background(MacSidebarHighlightOff())
     }
 
