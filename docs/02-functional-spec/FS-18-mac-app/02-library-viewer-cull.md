@@ -37,7 +37,8 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
 - Ô lưới vẽ dấu ở góc dưới trái: cờ (⚑ Pick, ✕ Reject) · ♥ · ★n — cùng nguồn với cột Rating của bảng.
 - Lựa chọn giữ qua sắp xếp, đổi Grid/List, nạp lại; ảnh đã xoá rời lựa chọn.
 - Tình trạng 2026-11-07 (Mac loop hàng 8): Edit, Compare, Sync Edits…, Export… chưa có (đến cùng màn của chúng);
-  thêm/gỡ keyword cho cả lựa chọn là hàng 8b. Inspector mở bằng nút trên toolbar; ⌘I là Get Info (§8, hàng 9–10).
+  thêm/gỡ keyword cho cả lựa chọn có từ hàng 8b (ô "Add keyword to all N", × trên chip đặc, bấm chip viền đứt = thêm cho cả N;
+  ảnh trong Photos qua Photos trên macOS 27, ảnh file vào sidecar). Mac đọc keyword của Photos vào index (mirror) như iOS 27. Inspector mở bằng nút trên toolbar; ⌘I là Get Info (§8, hàng 9–10).
 
 ## 3. Bảng (⌘2)
 

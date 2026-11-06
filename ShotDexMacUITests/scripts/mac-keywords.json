@@ -1,0 +1,180 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "label": "Add keyword to this photo",
+   "text": "temple\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "temple, on 1 of 6",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-partial"
+  },
+  {
+   "action": "typeText",
+   "label": "Add keyword to 6 photos",
+   "text": "Kyoto, autumn\n"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Shared by all 6",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-shared"
+  },
+  {
+   "action": "dump",
+   "name": "02-shared"
+  },
+  {
+   "action": "click",
+   "label": "temple, on 1 of 6",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove keyword temple",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Remove keyword autumn",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove keyword autumn",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-after-remove"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

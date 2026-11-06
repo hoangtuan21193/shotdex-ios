@@ -18,7 +18,13 @@ final class MacDependencies: LibraryServices {
     let search: SearchService
     let indexPipeline: IndexPipeline
     let placeIndexPass: PlaceIndexPass
-    let keywordMirror: ExtendedMetadataMirrorPass? = nil
+    /// Photos' captions and keywords mirrored into the index (FS-02.07 §8),
+    /// macOS 27; nil in the demo, which reads no Photos library.
+    let keywordMirror: ExtendedMetadataMirrorPass?
+    /// Keyword writes to Photos (FS-02.07 §4); nil where the mirror is.
+    let captionKeywords: CaptionKeywordService?
+    /// File photos' stars and keywords on their way to the sidecars.
+    let sidecarQueue: SidecarWriteQueue
     let unsupportedRAWIndex: UnsupportedRAWIndex
     let indexRunAssertion: any IndexRunAssertion = MacIndexActivity()
     let photoLibrary: PhotoLibraryService
@@ -132,6 +138,7 @@ final class MacDependencies: LibraryServices {
         let sidecarQueue = SidecarWriteQueue(writer: SidecarWriter(database: database) { sourceId, path in
             folderRoots.fileURL(sourceId: sourceId, relativePath: path)
         })
+        self.sidecarQueue = sidecarQueue
         var ratingWriter: (any PhotoPropertyWriting)?
         if #available(macOS 27, *) { ratingWriter = PhotoKitPropertyWriter() }
         #if DEBUG
@@ -150,6 +157,29 @@ final class MacDependencies: LibraryServices {
             },
             sidecarQueue: sidecarQueue
         )
+        var keywordReader: (any ExtendedMetadataReading)?
+        if #available(macOS 27, *) { keywordReader = PhotoKitExtendedMetadataReader() }
+        #if DEBUG
+        if MacDemoLibrary.isOn { keywordReader = nil }
+        #endif
+        // One process mirrors Photos' keywords: the window, not the helper,
+        // which shares the database and would interleave the same rows.
+        if !watchesOriginals { keywordReader = nil }
+        if let keywordReader, let ratingWriter {
+            let keywordStore = PhotoKeywordStore(database: database)
+            let mirror = ExtendedMetadataMirrorPass(store: keywordStore, reader: keywordReader, shouldPause: { false })
+            indexPipeline.runObservers.add { changes in await mirror.handle(changes) }
+            keywordMirror = mirror
+            let filterSuggestions = filterSuggestions
+            captionKeywords = CaptionKeywordService(
+                writer: ratingWriter, reader: keywordReader, mirror: mirror, store: keywordStore, metadataStore: metadataStore,
+                keywordCatalog: { recount in
+                    recount ? await filterSuggestions.refreshKeywords() : await filterSuggestions.load().keywords
+                })
+        } else {
+            keywordMirror = nil
+            captionKeywords = nil
+        }
         onServerCheck = OnServerCheck(environment: .live(
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             // FS-19.07 §12.1: the Mac hashes everything for the other devices

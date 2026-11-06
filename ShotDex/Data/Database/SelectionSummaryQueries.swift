@@ -73,7 +73,8 @@ struct SelectionSummaryQueries: Sendable {
         var formats: [String: Int] = [:], cameras: [String: Int] = [:], lenses: [String: Int] = [:]
         // By source id: two drives may share a name.
         var sources: [String: (name: String, kind: String, count: Int)] = [:]
-        var keywords: [String: (name: String, count: Int)] = [:]
+        /// By `caseKey`: photos carrying it, and how many use each spelling.
+        var keywords: [String: (count: Int, spellings: [String: Int])] = [:]
 
         static func widen<T: Comparable>(_ range: inout ClosedRange<T>?, _ value: T?) {
             guard let value else { return }
@@ -104,7 +105,7 @@ struct SelectionSummaryQueries: Sendable {
             cameras.merge(other.cameras, uniquingKeysWith: +)
             lenses.merge(other.lenses, uniquingKeysWith: +)
             sources.merge(other.sources) { ($0.name, $0.kind, $0.count + $1.count) }
-            keywords.merge(other.keywords) { ($0.name, $0.count + $1.count) }
+            keywords.merge(other.keywords) { ($0.count + $1.count, $0.spellings.merging($1.spellings, uniquingKeysWith: +)) }
         }
 
         static func read(_ db: Database, _ chunk: [String]) throws -> Tally {
@@ -161,13 +162,21 @@ struct SelectionSummaryQueries: Sendable {
                     tally.sources[sourceId, default: (row[14] as String? ?? "", row[15] as String? ?? "", 0)].count += 1
                 }
             }
+            // One chip per case (as `KeywordInput.caseKey` matches a remove),
+            // named by the spelling most of these photos use.
             let words = try Row.fetchCursor(db, sql: """
-                SELECT keyword, foldKey, COUNT(DISTINCT assetId) FROM (\(PhotoKeywordStore.everyKeywordSQL))
-                WHERE assetId IN (\(marks)) GROUP BY foldKey
+                SELECT caseKey, keyword, COUNT(DISTINCT assetId) FROM (\(PhotoKeywordStore.everyKeywordSQL))
+                WHERE assetId IN (\(marks)) GROUP BY caseKey, keyword
                 """, arguments: StatementArguments(chunk))
             while let row = try words.next() {
-                let key: String = row[1]
-                tally.keywords[key, default: (row[0], 0)].count += row[2] as Int
+                tally.keywords[row[0], default: (0, [:])].spellings[row[1], default: 0] += row[2] as Int
+            }
+            let photos = try Row.fetchCursor(db, sql: """
+                SELECT caseKey, COUNT(DISTINCT assetId) FROM (\(PhotoKeywordStore.everyKeywordSQL))
+                WHERE assetId IN (\(marks)) GROUP BY caseKey
+                """, arguments: StatementArguments(chunk))
+            while let row = try photos.next() {
+                tally.keywords[row[0], default: (0, [:])].count += row[1] as Int
             }
             return tally
         }
@@ -181,7 +190,10 @@ struct SelectionSummaryQueries: Sendable {
             summary.formats = sorted(formats)
             summary.cameras = sorted(cameras)
             summary.lenses = sorted(lenses)
-            summary.keywords = keywords.values.map { Count(name: $0.name, count: $0.count) }
+            summary.keywords = keywords.values.map { entry in
+                let name = entry.spellings.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }?.key ?? ""
+                return Count(name: name, count: entry.count)
+            }
                 .sorted { $0.count != $1.count ? $0.count > $1.count : $0.name.localizedStandardCompare($1.name) == .orderedAscending }
             summary.sources = sources.values.map { SourceCount(name: $0.name, kind: $0.kind, count: $0.count) }
                 .sorted { $0.count != $1.count ? $0.count > $1.count : $0.name < $1.name }

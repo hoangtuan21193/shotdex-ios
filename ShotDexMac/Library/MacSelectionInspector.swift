@@ -71,6 +71,9 @@ struct MacSelectionInspector: View {
     var picture: ((String) -> CGImage?)?
 
     @Environment(MacDependencies.self) private var dependencies
+    @State private var keywordText = ""
+    @State private var isEditingKeywords = false
+    @State private var showsAllKeywords = false
 
     var body: some View {
         if selection.ids.isEmpty {
@@ -253,16 +256,103 @@ struct MacSelectionInspector: View {
 
     private func keywordsSection(_ summary: SelectionSummaryQueries.Summary) -> some View {
         let shared = summary.keywords.filter { $0.count == summary.count }
-        return Group {
+        let shown = showsAllKeywords ? summary.keywords : Array(summary.keywords.prefix(24))
+        let ids = selection.ids
+        // Photos keywords need Photos' own write (macOS 27); without it the
+        // field says so before anything is typed.
+        let cannotWritePhotos = !canWritePhotosKeywords && summary.sources.contains { $0.kind == "photos" }
+        return section(String(localized: "Keywords", comment: "Mac inspector: section"),
+                       trailing: isEditingKeywords
+                           ? String(localized: "Updating \(summary.count) photos…", comment: "Mac inspector: a keyword write in progress (plural)")
+                           : shared.isEmpty ? nil : String(localized: "Shared by all \(summary.count)", comment: "Mac inspector: keywords every selected photo has")) {
             if !summary.keywords.isEmpty {
-                section(String(localized: "Keywords", comment: "Mac inspector: section"),
-                        trailing: shared.isEmpty ? nil : String(localized: "Shared by all \(summary.count)", comment: "Mac inspector: keywords every selected photo has")) {
-                    MacFlowLayout(spacing: 6) {
-                        ForEach(summary.keywords.prefix(24), id: \.name) { keyword in
-                            MacKeywordChip(name: keyword.name, count: keyword.count, total: summary.count)
+                MacFlowLayout(spacing: 6) {
+                    ForEach(shown, id: \.name) { keyword in
+                        MacKeywordChip(name: keyword.name, count: keyword.count, total: summary.count,
+                                       addToAll: { editKeywords(.add) { await $0.add(keyword.name, to: ids) } },
+                                       removeFromAll: { editKeywords(.remove) { await $0.remove(keyword.name, from: ids) } })
+                    }
+                    if summary.keywords.count > 24 {
+                        Button(showsAllKeywords ? String(localized: "Show Fewer", comment: "Mac inspector: collapse the keyword chips")
+                                                : String(localized: "+\(summary.keywords.count - 24) More", comment: "Mac inspector: keyword chips not shown")) {
+                            showsAllKeywords.toggle()
                         }
+                        .buttonStyle(.link)
+                        .font(.system(size: 12))
                     }
                 }
+                .disabled(isEditingKeywords)
+            }
+            TextField(summary.count == 1
+                      ? String(localized: "Add keyword", comment: "Mac inspector: keyword field, one photo")
+                      : String(localized: "Add keyword to all \(summary.count)", comment: "Mac inspector: keyword field (plural)"), text: $keywordText)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel(summary.count == 1
+                                    ? String(localized: "Add keyword to this photo", comment: "Mac inspector: keyword field, VoiceOver, one photo")
+                                    : String(localized: "Add keyword to \(summary.count) photos", comment: "Mac inspector: keyword field, VoiceOver (plural)"))
+                .onSubmit { addTypedKeywords() }
+                .disabled(cannotWritePhotos)
+                .help(cannotWritePhotos
+                      ? String(localized: "Keywords of photos in Photos can be changed from ShotDex on macOS 27 or later.", comment: "Mac inspector: keyword field off")
+                      : "")
+        }
+        .onChange(of: selection.idSet) { keywordText = "" }
+    }
+
+    private var canWritePhotosKeywords: Bool {
+        #if DEBUG
+        if MacDemoLibrary.isOn { return true }
+        #endif
+        return dependencies.captionKeywords != nil
+    }
+
+    /// "Kyoto, autumn": each keyword added to all, spelled as the library
+    /// already spells it. An empty field (or only commas) does nothing.
+    private func addTypedKeywords() {
+        let text = keywordText
+        guard !KeywordInput.split(text).isEmpty else { return }
+        guard !isEditingKeywords else { NSSound.beep(); return }
+        keywordText = ""
+        let ids = selection.ids, suggestions = dependencies.filterSuggestions
+        editKeywords(.add, restoring: text) { editor in
+            // The library's own spelling of a word it already has (FS-02.07 §4).
+            let catalog = await suggestions.load().keywords
+            let typed = KeywordInput.keywords(from: text, existing: KeywordInput.spellings(catalog))
+            var outcome = MacKeywordEditor.Outcome.done
+            for keyword in typed {
+                outcome = outcome.combined(with: await editor.add(keyword, to: ids))
+            }
+            return outcome
+        }
+    }
+
+    enum KeywordEdit { case add, remove }
+
+    /// One keyword edit at a time; the selection is read again after it, and
+    /// what could not be written is said, not dropped. A typed text that did
+    /// not go in comes back to the field.
+    private func editKeywords(_ kind: KeywordEdit, restoring text: String? = nil,
+                              _ work: @escaping @MainActor (MacKeywordEditor) async -> MacKeywordEditor.Outcome) {
+        guard !isEditingKeywords else { NSSound.beep(); return }
+        isEditingKeywords = true
+        let editor = MacKeywordEditor(database: dependencies.database, captionKeywords: dependencies.captionKeywords,
+                                      sidecarQueue: dependencies.sidecarQueue, filterSuggestions: dependencies.filterSuggestions)
+        let ids = selection.ids
+        Task {
+            let outcome = await work(editor)
+            isEditingKeywords = false
+            menu.marksChanged(ids)
+            switch outcome {
+            case .done: break
+            case .skipped(let count):
+                menu.failure = kind == .add
+                    ? String(localized: "\(count) of these photos are in Photos and didn’t take the keyword — Photos may not allow changes to them, or no longer has them.",
+                             comment: "Mac inspector: keyword not added to some Photos photos (plural)")
+                    : String(localized: "\(count) of these photos are in Photos and kept the keyword — Photos may not allow changes to them, or no longer has them.",
+                             comment: "Mac inspector: keyword not removed from some Photos photos (plural)")
+            case .failed:
+                if let text, keywordText.isEmpty { keywordText = text }
+                menu.failure = String(localized: "Some photos couldn’t be updated.", comment: "Mac inspector: a keyword write failed")
             }
         }
     }
@@ -456,21 +546,45 @@ struct MacKeywordChip: View {
     let name: String
     let count: Int
     let total: Int
+    /// A partial chip: give it to every photo.
+    var addToAll: () -> Void = {}
+    var removeFromAll: () -> Void = {}
 
     var body: some View {
         let isShared = count == total
         HStack(spacing: 4) {
-            Text(name)
-            if !isShared {
-                Text("\(count) of \(total)", comment: "Mac inspector: a keyword some of the selection has").foregroundStyle(.secondary)
+            if isShared {
+                Text(name)
+                Button(action: removeFromAll) {
+                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+                        .frame(width: 14, height: 14)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .padding(-4)
+                .buttonStyle(.plain)
+                .help(String(localized: "Remove “\(name)” from all \(total)", comment: "Mac inspector: remove a keyword from the selection (plural)"))
+                .accessibilityLabel(String(localized: "Remove keyword \(name)", comment: "Mac inspector: chip remove, VoiceOver"))
+            } else {
+                Button(action: addToAll) {
+                    HStack(spacing: 4) {
+                        Text(name)
+                        Text("\(count) of \(total)", comment: "Mac inspector: a keyword some of the selection has").foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(String(localized: "Add “\(name)” to all \(total)", comment: "Mac inspector: give a partial keyword to the whole selection (plural)"))
+                .accessibilityLabel(String(localized: "\(name), on \(count) of \(total)", comment: "Mac inspector: partial keyword chip, VoiceOver"))
+                .accessibilityHint(String(localized: "Adds it to all \(total)", comment: "Mac inspector: partial keyword chip, VoiceOver hint (plural)"))
             }
         }
         .font(.system(size: 12))
-        .padding(.horizontal, 8)
+        .padding(.leading, 8)
+        .padding(.trailing, isShared ? 4 : 8)
         .frame(height: 22)
         .background(Capsule().fill(isShared ? MacTheme.fill : Color.clear))
         .overlay(Capsule().strokeBorder(MacTheme.separator, style: StrokeStyle(lineWidth: 1, dash: isShared ? [] : [3, 2])))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 

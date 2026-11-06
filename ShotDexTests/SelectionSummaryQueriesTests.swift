@@ -81,4 +81,24 @@ struct SelectionSummaryQueriesTests {
         #expect(summary.ratings == nil)
         #expect(summary.sources.isEmpty)
     }
+
+    /// A chip per case, named as most of the photos spell it; words that only
+    /// fold alike (accents) stay apart — a remove matches by case.
+    @Test func keywordChipsGoByCaseAndTheCommonSpelling() async throws {
+        let database = try AppDatabase.makeEmpty()
+        try MetadataStore(database: database).saveBatch(["a", "b", "c"].map {
+            row($0, date: 1_000, file: "\($0).JPG", camera: nil, iso: 100, aperture: 2, size: 1)
+        }, cursorAssetId: nil)
+        try await database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO photo_keyword (assetId, keyword, caseKey, foldKey) VALUES
+                ('a', 'kyoto', 'kyoto', 'kyoto'), ('b', 'kyoto', 'kyoto', 'kyoto'), ('c', 'Kyoto', 'kyoto', 'kyoto'),
+                ('a', 'Đà Lạt', 'đà lạt', 'da lat'), ('b', 'Da Lat', 'da lat', 'da lat')
+                """)
+        }
+        let summary = try await SelectionSummaryQueries(database: database).summary(ids: ["a", "b", "c"])
+        #expect(summary.keywords.first == .init(name: "kyoto", count: 3))
+        #expect(summary.keywords.contains(.init(name: "Đà Lạt", count: 1)))
+        #expect(summary.keywords.contains(.init(name: "Da Lat", count: 1)))
+    }
 }

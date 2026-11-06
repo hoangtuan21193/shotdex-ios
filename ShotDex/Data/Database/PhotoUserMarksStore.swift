@@ -113,6 +113,41 @@ struct PhotoUserMarksStore: Sendable {
         try addKeywords(db, values.keywords, photoId: photoId, at: at)
     }
 
+    /// Adds one keyword to every photo, in one transaction (the Mac
+    /// inspector's "Add keyword to all"); a photo that has it in another case
+    /// keeps its own spelling.
+    func addKeyword(_ keyword: String, photoIds: [String], at date: Date = Date()) throws {
+        guard !photoIds.isEmpty else { return }
+        let stamp = Int(date.timeIntervalSince1970)
+        let key = KeywordInput.caseKey(keyword), fold = KeywordInput.foldKey(keyword)
+        try database.writer.write { db in
+            // One look-up per 900 photos, not one per photo.
+            for start in stride(from: 0, to: photoIds.count, by: 900) {
+                let chunk = Array(photoIds[start..<min(photoIds.count, start + 900)])
+                let have = Set(try String.fetchAll(db, sql: """
+                    SELECT photoId FROM photo_user_keyword WHERE caseKey = ? AND photoId IN (\(databaseQuestionMarks(count: chunk.count)))
+                    """, arguments: StatementArguments([key] + chunk)))
+                for id in chunk where !have.contains(id) {
+                    try db.execute(sql: "INSERT INTO photo_user_keyword (photoId, keyword, caseKey, foldKey, addedAt) VALUES (?, ?, ?, ?, ?)",
+                                   arguments: [id, keyword, key, fold, stamp])
+                }
+            }
+        }
+    }
+
+    /// Takes a keyword off every photo, in any case (`caseKey`).
+    func removeKeyword(_ keyword: String, photoIds: [String]) throws {
+        guard !photoIds.isEmpty else { return }
+        let key = KeywordInput.caseKey(keyword)
+        try database.writer.write { db in
+            for start in stride(from: 0, to: photoIds.count, by: 900) {
+                let chunk = Array(photoIds[start..<min(photoIds.count, start + 900)])
+                try db.execute(sql: "DELETE FROM photo_user_keyword WHERE caseKey = ? AND photoId IN (\(databaseQuestionMarks(count: chunk.count)))",
+                               arguments: StatementArguments([key] + chunk))
+            }
+        }
+    }
+
     /// Adds keywords to a photo, skipping any it already has in another case.
     static func addKeywords(_ db: Database, _ keywords: [String], photoId: String, at: Int) throws {
         guard !keywords.isEmpty else { return }

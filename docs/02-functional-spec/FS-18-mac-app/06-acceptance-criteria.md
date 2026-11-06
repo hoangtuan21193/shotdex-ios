@@ -119,6 +119,7 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-107 | 02 §2, FS-01.12 | 6 ảnh chọn | bấm sao thứ 4; Pick; Favorite; bỏ Favorite; Clear Flag; bấm lại sao thứ 4 | "4 stars" và ô lưới hiện ⚑ ♥ ★4; Favorite tick rồi bỏ; cuối cùng "Unrated", không cờ | `mac-selected.json` (`02-rated`, `03-picked`, `04-marked`) |
 | AC-108 | 02 §2 | 6 ảnh chọn | Add to Album ▾ | danh sách album + New Album with Selection (như menu chuột phải) | `mac-selected.json` |
 | AC-109 | 02 §2 | 6 ảnh chọn | ⌘2 rồi ⌘1 | lựa chọn và inspector giữ nguyên qua đổi Grid/List; ảnh bị xoá rời lựa chọn | `mac-selected.json` (`05-list`) |
+| AC-110 | 02 §2, FS-02.07 §4, FS-19.02 §5 | inspector, 1 rồi 6 ảnh chọn | gõ "temple" ↵ cho 1 ảnh; chọn 6, gõ "Kyoto, autumn" ↵; bấm chip "temple 1 of 6"; bấm × trên "autumn" | chip đặc có × cho keyword cả 6 có, "Shared by all 6"; chip viền đứt "temple 1 of 6" bấm → cả 6; × gỡ khỏi cả 6. Ảnh trong Photos ghi qua Photos (macOS 27; mirror theo), ảnh file vào `photo_user_keyword` + sidecar; ảnh Photos không ghi được thì báo số ảnh, không im lặng; ô trống/chỉ dấu phẩy không làm gì; quá 24 chip có "+N More". **Chưa có Undo** (iOS sheet có) — khoảng trống đã biết | `mac-keywords.json` (`01-partial`, `02-shared`, `03-after-remove`), `PhotoUserMarksKeywordTests` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,
