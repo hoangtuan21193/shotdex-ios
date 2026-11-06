@@ -1,6 +1,6 @@
 # FS-19.07b — Ảnh Photos đã có trên server: spike và tiêu chí nghiệm thu
 
-`FS-19.07b` · quy tắc: [07](07-on-server-check.md) · cập nhật 2026-11-03 (§4 băm dùng chung, AC-144…158; spike S5–S8)
+`FS-19.07b` · quy tắc: [07](07-on-server-check.md) · cập nhật 2026-11-06 (§5 Also on Server, AC-246…259; §4 băm dùng chung, AC-144…158; spike S5–S8)
 
 ## 1. Spike trên máy thật (đo trước, chốt AC sau)
 
@@ -118,3 +118,29 @@ SMB ảo (`OnServerSMBTests.ledgerSavesDownloads`: sổ NAS + đọc lại file 
 `Tools/gate` không xanh vì lỗi ngoài §12: treo ở `writesTheFormatAskedFor(type: heic)` trên Duo 27.1 như lần trước,
 `ServerEditHandoffTests.rafNeverLeaves` đỏ, các test đỏ có sẵn (SettingsSearch, PerceptualHashStore, GridICloudFree), và
 test đo thời gian đỏ khi máy đang tải nặng (`undoRunWords` chạy riêng thì xanh).
+
+## 5. Also on Server (2026-11-06)
+
+Quy tắc: [07 §7](07-on-server-check.md#7-smart-album--điều-kiện-also-on-server-đổi-2026-11-06). Intent:
+[also-on-nas-condition](../../_intents/2026-11-06-also-on-nas-condition.md). Hành vi khớp, tiến độ, cổng xoá giữ nguyên
+AC-74…106 — các AC đó đọc **Source is** thành **Also on Server: Yes**, **is not** thành **No**. Server thử: WebDAV cục bộ
+`NAS Home`, folder `Shared/` (công thức trong memory `backup-fs22`). Thư viện thử không có ảnh mặt người.
+
+| # | Đợt | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|---|
+| AC-246 | 1 | có nguồn server `NAS Home` và thư mục `T7 RAW Archive`; iPhone 402×874, iOS 26.5 và 18.6 | mở *New Smart Album* → Add Condition → menu trường | có mục **Also on Server**; mở menu giá trị của **Source**: có Photos Library và `T7 RAW Archive`, **không** có `NAS Home` | ⚠️ chưa có — đề xuất `SmartAlbumFieldTests.alsoOnServerListed` (danh sách trường/giá trị theo nguồn) + `ShotDexUITests/scripts/fs1907-also-on-server.json` |
+| AC-247 | 1 | không có nguồn server nào | mở menu trường | không có **Also on Server** | ⚠️ chưa có — `SmartAlbumFieldTests.alsoOnServerHiddenWithoutServer` |
+| AC-248 | 1 | một nguồn server `NAS Home` | chọn trường **Also on Server** | dòng điều kiện có dải **Yes / No** (Yes chọn sẵn), Server = `NAS Home` chọn sẵn, dòng **Folder** = `All Folders`; dòng đếm tính ngay, không cần chạm thêm | ⚠️ chưa có — `fs1907-also-on-server.json` (dump: ba control, minY lệch ≤ 2pt so với board) |
+| AC-249 | 1 | hai nguồn server `NAS Home`, `Office NAS`, chưa chọn server | xem dòng đếm | điều kiện bị bỏ qua khi biên dịch (đếm như không có nó); dòng Server ghi *Choose Server* | ⚠️ chưa có — `SmartAlbumSQLBuilderTests.alsoOnServerIncompleteSkipped` |
+| AC-250 | 1 | điều kiện Also on Server: `NAS Home`, Folder `Shared` | đổi Server sang `Office NAS` | Folder về `All Folders` | ⚠️ chưa có — `fs1907-also-on-server.json` |
+| AC-251 | 1 | 100 mục Photos: 60 có đủ file trên `Shared/`, 30 kiểm xong thiếu file, 10 chưa kiểm; 5 file chỉ có trên NAS | album **Yes** `NAS Home › Shared`, rồi album **No** | Yes đúng 60 mục; No đúng 30 mục; 10 chưa kiểm không ở album nào; 5 file NAS không ở album nào | ⚠️ chưa có — chuyển `OnServerRuleTests` sang rule mới (cùng dữ liệu AC-79/80) |
+| AC-252 | 1 | album Yes `NAS Home › Shared`, album No `NAS Home`, cả nguồn | mở từng album, xem thanh điều kiện | chip lần lượt `Also on NAS Home › Shared` và `Not on NAS Home`; VoiceOver đọc đúng chữ đó | ⚠️ chưa có — `SmartAlbumChipTextTests.alsoOnServer` + ảnh iPhone 26.5 |
+| AC-253 | 1 | album lưu JSON cũ: `Source is <id NAS Home>` + Folder `Shared`, op *is not* | mở lại app, mở album | điều kiện thành **Also on Server: No** `NAS Home › Shared`, cùng tập mục như trước | ⚠️ chưa có — `SmartAlbumRuleDecodingTests.sourceServerBecomesAlsoOnServer` |
+| AC-254 | 1 | album JSON cũ chỉ có `Source is <id server đã gỡ>` | mở album | album mở, không crash; điều kiện rơi ra; album hiện *No Photos Match* + nút Edit Smart Album, **không** khớp cả thư viện | ⚠️ chưa có — `SmartAlbumRuleDecodingTests.unknownServerDropsSafely` |
+| AC-255 | 1 | Advanced Search của Library, điều kiện Also on Server: Yes `NAS Home` | áp | chip trong thanh tìm `Also on NAS Home`; lưới chỉ có mục Photos khớp | ⚠️ chưa có |
+| AC-256 | 1 | album Also on Server: Yes `NAS Home › Shared`, 100 mục, 30 kiểm xong | mở album | dòng tiến độ `Checking · 30 of 100` dưới chip (tính theo điều kiện Also on Server đầu tiên) | ⚠️ chưa có — `OnServerProgressTests` theo rule mới |
+| AC-257 | 1 | Duo trong 951×669 và ngoài 466×678, iPad 1376×1032, sheet có 3 điều kiện gồm Also on Server + Folder | mở sheet | mọi control của dòng Also on Server thấy trọn, không cắt chữ; `Tools/design-board compare` lệch ≤ 2pt với `DI_/DC_/IP_SmartAlbumEditor` vẽ lại | ⚠️ chưa có — design-parity |
+| AC-258 | Mac | Mac 1440×900, nguồn server `NAS Home` | `MAC_SmartAlbumEditor` → thêm Also on Server, Folder Choose… → `Shared` | dòng có Yes/No, popup Server, popup Folder + Choose…; album mở trong cửa sổ chính với chip `Also on NAS Home › Shared` + dòng tiến độ | ⚠️ chưa có — `Tools/design-board compare` trên `MAC_SmartAlbumEditor` vẽ lại + mac-shot |
+| AC-259 | 1 | album Also on Server: Yes, 3 mục; NAS mất 1 file trước khi xoá | Select All → Delete | cổng xoá như AC-94…: 1 mục bị bỏ khỏi lượt xoá, người dùng được báo | ⚠️ chưa có — chạy lại test cổng xoá với rule mới |
+
+**Chưa chứng minh được:** AC-246…259 — chưa có code.

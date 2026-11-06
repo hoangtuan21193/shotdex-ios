@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-06 |
 | Trạng thái | accepted (2026-11-06) |
-| Tiến độ | **chưa làm** (2026-11-06) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-06) — spec FS-06.12, 17 AC; chờ spike AC-1 trên iPhone thật |
 | Nguồn | phản hồi người dùng (2026-11-06): "muốn hiện những ảnh có cả ở iCloud và NAS, sau đó move all ảnh trong album đó vào shared library của iCloud" |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-06.12](../02-functional-spec/FS-06-collections/12-photos-album-sync.md) |
 
 Intent anh em: [2026-11-06-also-on-nas-condition](2026-11-06-also-on-nas-condition.md) (điều kiện "Also on Server" tạo ra album này),
 [2026-11-04-smart-album-shared-library](2026-11-04-smart-album-shared-library.md) (biết ảnh nào đã ở Shared Library),

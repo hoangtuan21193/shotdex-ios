@@ -1,7 +1,7 @@
 # FS-06.08 — Smart Album
 
 `FS-06.08` · `Core/Models/SmartAlbumQuery.swift` · `Data/Database/SmartAlbumStore.swift`
-· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-02
+· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-11-06 (Also on Server tách khỏi Source)
 
 **Một câu:** một bộ lọc có tên, lưu lại được — **không phải** smart album của hệ thống, vì hệ thống không
 cho app tạo smart album có điều kiện riêng.
@@ -26,9 +26,10 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | Loại | Trường | Phép so sánh | Ghi chú |
 |---|---|---|---|
 | **chữ** | hãng máy, thân máy, ống kính, tên file, địa điểm | chứa · không chứa · đúng bằng · khác · **is missing** (trừ tên file) | so trên **cả bản đã chuẩn hoá lẫn bản gốc**; phép phủ định vẫn khớp cả dòng rỗng → gõ "R6" bắt được "Canon EOS R6" |
-| **chọn** | khổ cảm biến · loại media · định dạng file · **cờ** · **Source** | là · không là (khổ cảm biến có giá trị *Unknown*) | Source: các nguồn đang có (Photos Library, thư mục, ổ, server — FS-19), khớp ảnh có **bản sao còn đó, không ẩn** ở nguồn ấy; nguồn thư mục/server có thêm dòng **Folder**, mục Photos chưa kiểm xong không vào *là* lẫn *không là* ([FS-19.07 §8](../FS-19-photo-sources/07-on-server-check.md)); thẻ Statistics có điều kiện Source giữ nó, bỏ qua popup Source của màn (FS-18 04 §2); cờ gồm Pick · Reject · Unflagged, đọc từ bảng cờ riêng; định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi — **cùng bảng đuôi** của nhãn định dạng trên tile ([FS-03.04b §2](../FS-03-photo-editor/04b-unsupported-raw.md)) |
+| **chọn** | khổ cảm biến · loại media · định dạng file · **cờ** · **Source** | là · không là (khổ cảm biến có giá trị *Unknown*) | Source: Photos Library và nguồn thư mục/ổ đĩa (FS-19) — **không còn server** từ 2026-11-06, xem *Also on Server* —, khớp ảnh có **bản sao còn đó, không ẩn** ở nguồn ấy; thẻ Statistics có điều kiện Source giữ nó, bỏ qua popup Source của màn (FS-18 04 §2); cờ gồm Pick · Reject · Unflagged, đọc từ bảng cờ riêng; định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi — **cùng bảng đuôi** của nhãn định dạng trên tile ([FS-03.04b §2](../FS-03-photo-editor/04b-unsupported-raw.md)) |
 | **số** | ISO · khẩu · tốc độ · tiêu cự | bằng · lớn hơn · nhỏ hơn · trong khoảng · **is missing** | tốc độ nhận cả `1/500` lẫn số thập phân; tiêu cự có công tắc **thật / tương đương Full Frame** |
 | **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng · **is missing** | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
+| **Also on Server** (2026-11-06) | Also on Server | dải Yes / No + menu Server + dòng **Folder** | mục Photos có bản giống hệt từng byte trên folder đó của nguồn server; mục chưa kiểm xong không vào Yes lẫn No; chip `Also on NAS Home › Shared` / `Not on NAS Home › Shared` — [FS-19.07 §7](../FS-19-photo-sources/07-on-server-check.md); có thể giữ một album Photos đồng bộ — [FS-06.12](12-photos-album-sync.md) |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
 | **vị trí** | vị trí | — | dải chọn **Has Location / No Location**, theo toạ độ, không theo tên địa điểm (S5) |
 | **sao** | sao | là · ít nhất · nhiều nhất | ô chọn 0–5, 0 = *Unrated*; "ít nhất" chỉ nhận 1–5 (ít nhất 0 là cả thư viện). Sao hiện hành theo [FS-01.12 §4](../FS-01-library/12-rating-and-flags.md) |

@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-06 |
 | Trạng thái | accepted (2026-11-06) |
-| Tiến độ | **chưa làm** (2026-11-06) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-06) — spec FS-19.07 §7, 14 AC (07b AC-246…259) |
 | Nguồn | phản hồi người dùng (2026-11-06): "khó hiểu quá… để là source thì dễ bị hiểu là hiển thị ảnh ở NAS, không phải ở iCloud" |
-| Spec sinh ra từ đây | (điền khi sang Design) — sẽ sửa [FS-19.07 §7](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) |
+| Spec sinh ra từ đây | [FS-19.07 §7](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b §5](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) · [FS-06.08 §2](../02-functional-spec/FS-06-collections/08-smart-albums.md) |
 
 Intent anh em: [2026-11-06-photos-album-from-smart-album](2026-11-06-photos-album-from-smart-album.md) (đưa album này
 sang Photos để Move to Shared Library). Gốc: [2026-10-24-smart-album-on-nas](2026-10-24-smart-album-on-nas.md).

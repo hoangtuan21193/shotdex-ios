@@ -2,7 +2,7 @@
 
 `FS-19.07` · tier B (smart album, lưới, Photo Info) · mã có sẵn: `Data/Sources/PhotosContentHashPass.swift`,
 `Data/Sources/FileServer/ServerSourceIndexer.swift`, `Data/Database/SmartAlbumSQLBuilder.swift`,
-`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-11-03 (§12 băm dùng chung)
+`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-11-06 (§7 Also on Server; §12 băm dùng chung)
 
 **Một câu:** ShotDex biết chắc từng ảnh/video trong Photos có bản **giống hệt từng byte** trên một folder của nguồn
 server hay chưa — kể cả file do công cụ khác chép, hay bị script dời, đổi tên — và kiểm lại NAS trước khi xoá.
@@ -21,7 +21,7 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 
 | Đợt | Có |
 |---|---|
-| 1 — xoá được an toàn | hash theo từng file gốc · lấy lại SHA của Backup · lọc theo cỡ · kiểm khi app ở trước mặt · Folder trong Source · chưa kiểm · dòng tiến độ · cổng xoá ở smart album, Free Up Space, Library |
+| 1 — xoá được an toàn | hash theo từng file gốc · lấy lại SHA của Backup · lọc theo cỡ · kiểm khi app ở trước mặt · Folder trong điều kiện (Source tới 2026-11-06, nay Also on Server) · chưa kiểm · dòng tiến độ · cổng xoá ở smart album, Free Up Space, Library |
 | 2 — sau khi đo S3 | chạy nền · ghép Live Photo trên nguồn thư mục/server (ảnh + MOV cùng tên gốc trong một folder là một Live Photo) · dấu lưới theo hiện trạng · Photo Info On Server · cổng xoá ở mọi lối còn lại · gộp Photos ↔ server để hiển thị |
 
 **Cố ý không có:**
@@ -86,23 +86,44 @@ cổng → từng vòng băm server rồi Photos tới khi một vòng không l�
 sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn server. App xuống nền → dừng giữa hai đợt, lý do
 `Open ShotDex to continue`.
 
-## 7. Smart album
+## 7. Smart album — điều kiện **Also on Server** (đổi 2026-11-06)
 
-- Điều kiện **Source** với nguồn server có dòng **Folder** — trống = cả nguồn (`All Folders`); chọn bằng màn duyệt
-  folder FS-15.02 §2a, mở ở folder đang chọn; folder ngoài gốc của nguồn (Folder của connection) bị bỏ qua. Đổi nguồn
-  thì xoá Folder. Nguồn thư mục/ổ đĩa chưa có dòng này (SQL đã hỗ trợ; cần màn duyệt folder cục bộ). Chip chỉ đọc ghi
-  **tên** nguồn: `Source is NAS Home › Shared` (cả ở thanh tìm nâng cao của Library).
-- **is**: có trên folder theo §3. **is not**: đã kiểm xong và thiếu ít nhất một file.
-- **Chưa kiểm xong** (một file gốc chưa có hash mà NAS có ứng viên cùng cỡ chưa băm): không vào **is** lẫn **is not**.
+Người dùng 2026-11-06 ([intent also-on-nas-condition](../../_intents/2026-11-06-also-on-nas-condition.md)): đặt trong
+**Source** thì `Source is NAS Home` đọc như "hiện ảnh nằm trên NAS", trong khi album là ảnh **trong Photos** có bản giống
+hệt trên NAS. Tách ra thành trường riêng; Source thôi nhận nguồn server.
+
+- **Trường** `Also on Server` (bộ dựng dùng chung: smart album, Advanced Search, điều kiện thẻ Statistics — FS-06.08 §2).
+  Chỉ hiện trong menu trường khi có ít nhất một nguồn server (FS-19.03).
+- **Dòng điều kiện** (tier B, hàng chuẩn của bộ dựng): menu trường → dải chọn **Yes / No** (như Favorite) → menu
+  **Server** (tên các nguồn server; một nguồn thì chọn sẵn) → dòng **Folder** — trống = cả nguồn (`All Folders`), chọn
+  bằng màn duyệt folder FS-15.02 §2a, mở ở folder đang chọn; folder ngoài gốc của nguồn bị bỏ qua. Đổi server thì xoá
+  Folder. Chưa chọn server → điều kiện chưa đủ, bị bỏ qua khi biên dịch (FS-06.08 §1).
+- **Chip chỉ đọc** (smart album, Advanced Search của Library, thẻ Statistics): Yes → `Also on NAS Home › Shared`, No →
+  `Not on NAS Home › Shared`; cả nguồn → `Also on NAS Home`. VoiceOver đọc như chữ.
+  Người dùng chốt 2026-11-06: ghi tên server, không ghi tên trường.
+- **Yes**: có trên folder theo §3. **No**: đã kiểm xong và thiếu ít nhất một file.
+- **Chưa kiểm xong** (một file gốc chưa có hash mà NAS có ứng viên cùng cỡ chưa băm): không vào **Yes** lẫn **No**.
 - Chỉ mục **có bản Photos** được đếm: ảnh riêng của NAS (dòng của nó trong Library) không vào album — album là danh sách
-  mục xoá được khỏi Photos. Nguồn thư mục/ổ đĩa giữ nghĩa cũ (FS-19.04 §5: có bản ở đó, đang có, không ẩn), thu hẹp theo
-  Folder. Mục đã đổi trong Photos sau lần liệt kê file cuối thì chờ liệt kê lại, không vào **is** lẫn **is not**.
-  Mã: `OnServerPresenceSQL.swift`, gọi từ `SmartAlbumSQLBuilder.sourceClause`.
+  mục xoá được khỏi Photos. Mục đã đổi trong Photos sau lần liệt kê file cuối thì chờ liệt kê lại, không vào **Yes** lẫn
+  **No**. Mã hôm nay: `OnServerPresenceSQL.swift`, gọi từ `SmartAlbumSQLBuilder.sourceClause` — tách ra mệnh đề riêng.
+- **Source** chỉ còn Photos Library và nguồn thư mục/ổ đĩa (nghĩa FS-19.04 §5: có bản ở đó, đang có, không ẩn). Rule
+  `Source is <server>` đã lưu:
+  Người dùng chốt 2026-11-06: khi giải mã, rule Source trỏ tới nguồn server **đổi thành Also on Server** cùng server,
+  folder, *is* → Yes, *is not* → No — album ra đúng tập cũ. Đây là độ bền khi giải mã, không phải migration dữ liệu.
+  Không đổi được (server đã gỡ) thì rule rơi ra, và album **còn 0 điều kiện vì thế** hiện *No Photos Match* + nút Edit
+  Smart Album thay vì khớp cả thư viện — album "để xoá" không được nở ra.
+- **Popup Source của màn** (Statistics trên Mac, FS-18.04 §2) không phải bộ dựng điều kiện — giữ nguyên, vẫn có server.
 - Thanh điều kiện: `Checking · 12,408 of 54,920 · 38 GB to download`; lý do chờ (`Waiting for Wi‑Fi`, `Waiting for space`,
   `NAS Home isn't reachable`, `Open ShotDex to continue` ở đợt 1); xong thì `Checked 3 min ago`.
   Dòng thêm: `3 Edited — edit not on NAS Home` khi có mục chỉ thiếu bản sửa; `Only photos ShotDex can access are
-  checked.` khi quyền `.limited`; `Waiting to Charge` khi job bật Only While Charging. Tính cho điều kiện Source server
-  đầu tiên của album, đọc lại sau mỗi đợt băm (album tải lại theo). Mã: `OnServerProgressQueries`, `OnServerProgressLine`.
+  checked.` khi quyền `.limited`; `Waiting to Charge` khi job bật Only While Charging. Tính cho điều kiện **Also on
+  Server** đầu tiên của album, đọc lại sau mỗi đợt băm (album tải lại theo). Mã: `OnServerProgressQueries`,
+  `OnServerProgressLine`.
+- **Mọi thiết bị cùng lượt**, gồm Mac: rule model dùng chung (`SmartAlbumRule`), bỏ server khỏi Source mà không đổi
+  `MAC_SmartAlbumEditor` thì Mac mất điều kiện. Board phải vẽ lại trước khi code: `PH_SmartAlbumEditor`,
+  `DI_SmartAlbumEditor`, `DC_SmartAlbumEditor`, `IP_SmartAlbumEditor`, `MAC_SmartAlbumEditor` và chip trên
+  `PH_/DI_/DC_/IP_/MAC_SmartAlbum` (hôm nay vẽ `Source, NAS Home` + `Folder, Shared` — khớp code cũ).
+- AC: [07b §5](07b-on-server-check-ac.md#5-also-on-server-2026-11-06).
 
 ## 8. Dấu lưới và Photo Info (đợt 2)
 
@@ -139,7 +160,7 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 
 ## 10. Board
 
-Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Source: `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
+Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Also on Server (tới 2026-11-06: chip Source): `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
 2026-10-25). Alert sau xoá và alert *Delete Anyway* là alert hệ thống, không vẽ — chữ ghi trong comment của
 `PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info: `PH_/IP_/DI_/DC_Metadata` (vẽ 2026-10-26, dưới Shutter Count).
 
@@ -158,8 +179,8 @@ Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã 
   mặt (lệnh `checkOnServer`; đến giữa lượt thì chạy lại ngay khi lượt xong). Helper đăng waits/finishedAt qua defaults
   nhóm app + thông báo Darwin; app hiện bằng `OnServerCheck.showRemote`, số đếm đọc từ database chung. Không còn nguồn
   server → lượt dừng giữa batch; không còn job lẫn nguồn → helper thoát.
-- **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Source với nguồn server có dòng **Folder** (popup + Choose…
-  mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Source và dòng tiến độ §7 nằm ở thanh
+- **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Also on Server (tới 2026-11-06: Source với nguồn server) có dòng **Folder** (popup + Choose…
+  mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Also on Server và dòng tiến độ §7 nằm ở thanh
   dưới toolbar, cùng hàng với số mục. Lưới phẳng 7 cột, mới nhất trước, không tiêu đề ngày (như iOS). Không ảnh nào
   khớp → thanh điều kiện giữ nguyên, giữa màn là *No Photos Match* + nút **Edit Smart Album…** (tweak `empty`).
 - **Dấu lưới và Get Info:** glyph "trên server" ở góc ô lưới Mac như iOS; Get Info (`MAC_GetInfoSingle`) thêm mục
