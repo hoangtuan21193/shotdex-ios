@@ -663,6 +663,10 @@ tên ở đích chọn riêng (`IMG_1 (2).HEIC` cạnh `IMG_1.MOV` của ảnh k
 - Bỏ cột ghi chú cuối hàng (thường trống): "already in Shared" lên dòng đường dẫn (cả Copy lẫn Move); "Left out from now
   on" và "Removes N copies" vào tooltip.
 
+- **Không còn nút gạt Action** (người dùng 2026-11-06): scan dùng chung cho Copy và Move, nên cuối sheet có hai nút chạy:
+  **Move N…** (hỏi lại trước khi chạy; N gồm cả ảnh đã có ở đích, vì bản trong folder vẫn bị xoá) và **Copy N** (nút
+  chính, Return). Huỷ hộp hỏi Move thì sheet trở về như Copy.
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |

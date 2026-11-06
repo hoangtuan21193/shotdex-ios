@@ -111,7 +111,6 @@ private struct MacCommonPhotosSheetContent: View {
     static let size = CGSize(width: 640, height: 640)
     private static let labelWidth: CGFloat = 64
     private static let saveToWidth: CGFloat = 168
-    private static let segmentWidth: CGFloat = 64
     private static let statusWidth: CGFloat = 86
 
     enum FolderChoice: Identifiable {
@@ -156,7 +155,8 @@ private struct MacCommonPhotosSheetContent: View {
         .alert(moveTitle, isPresented: $confirmsMove) {
             Button(String(localized: "Move", comment: "Mac common photos: confirm the move"), role: .destructive) { start() }
             // Cancel is the default: Return removes nothing (FS-19.08 §4).
-            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+            // Back to Copy: the sheet reads as a Copy until Move is pressed.
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) { model.action = .copy }
                 .keyboardShortcut(.defaultAction)
         } message: {
             Text(moveMessage)
@@ -411,27 +411,8 @@ private struct MacCommonPhotosSheetContent: View {
             }
 
             Spacer(minLength: 8)
-            if showsAction {
-                Text("Action:", comment: "Mac common photos sheet: label")
-                Picker(selection: $model.action) {
-                    Text("Copy", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.copy)
-                    Text("Move", comment: "Mac common photos sheet: action").tag(CommonPhotosRun.Action.move)
-                } label: {
-                    Text("Action", comment: "Mac common photos sheet: label")
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(width: Self.segmentWidth * 2 + 4)
-            }
         }
         .frame(height: 28)
-    }
-
-    /// Copy or Move is chosen once the scan has found what to run; switching
-    /// keeps the results (§6c). Shown too while Move is on and nothing
-    /// scans, so it can be switched back.
-    private var showsAction: Bool {
-        model.phase == .done || (!model.isScanning && model.action == .move)
     }
 
     /// New Folder… goes inside the destination, or beside the first folder.
@@ -992,10 +973,19 @@ private struct MacCommonPhotosSheetContent: View {
                 .keyboardShortcut(.cancelAction)
     
             if model.phase == .done {
-                Button(runTitle) { model.action == .move ? (confirmsMove = true) : start() }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.canRun || isStarting)
+                // One scan for both (§6c): the run's button is the choice.
+                Button(runTitle(.move)) {
+                    model.action = .move
+                    confirmsMove = true
+                }
+                .disabled(!model.canRun || model.runCount(for: .move) == 0 || isStarting)
+                Button(runTitle(.copy)) {
+                    model.action = .copy
+                    start()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(!model.canRun || model.runCount(for: .copy) == 0 || isStarting)
             } else if model.isScanning {
                 Button(String(localized: "Stop", comment: "Mac common photos sheet: stop the scan")) { model.cancelScan() }
                     .keyboardShortcut(.defaultAction)
@@ -1061,14 +1051,15 @@ private struct MacCommonPhotosSheetContent: View {
         }
     }
 
-    private var runTitle: String {
+    private func runTitle(_ action: CommonPhotosRun.Action) -> String {
+        let runCount = model.runCount(for: action)
         // Nothing to run: the verb alone, dimmed.
-        guard model.runCount > 0 else {
-            return model.action == .move ? String(localized: "Move", comment: "Mac common photos sheet: run button, nothing to move")
-                                         : String(localized: "Copy", comment: "Mac common photos sheet: run button, nothing to copy")
+        guard runCount > 0 else {
+            return action == .move ? String(localized: "Move", comment: "Mac common photos sheet: run button, nothing to move")
+                                   : String(localized: "Copy", comment: "Mac common photos sheet: run button, nothing to copy")
         }
-        let count = model.runCount.formatted()
-        return model.action == .move
+        let count = runCount.formatted()
+        return action == .move
             ? String(localized: "Move \(count)…", comment: "Mac common photos sheet: run button, a confirmation follows")
             : String(localized: "Copy \(count)", comment: "Mac common photos sheet: run button")
     }

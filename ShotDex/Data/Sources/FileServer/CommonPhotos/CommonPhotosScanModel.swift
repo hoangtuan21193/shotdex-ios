@@ -546,7 +546,12 @@ final class CommonPhotosScanModel {
 
     /// What the run button counts (§6d): a Copy skips the photos already in
     /// the destination; a Move still takes every copy out of the folders.
-    var runCount: Int { runnable.filter { !leftOut.contains($0.sha256) }.count }
+    var runCount: Int { runCount(for: action) }
+
+    /// The same for either action, for the sheet's Copy N and Move N.
+    func runCount(for action: CommonPhotosRun.Action) -> Int {
+        runnable(for: action).filter { !leftOut.contains($0.sha256) }.count
+    }
 
     /// Rows the user can check or uncheck: a Copy skips what is already in
     /// the destination, so those rows are not choices on a Copy.
@@ -555,7 +560,9 @@ final class CommonPhotosScanModel {
     /// Bytes of what the run writes or moves.
     var runBytes: Int64 { runnable.filter { !leftOut.contains($0.sha256) }.reduce(Int64(0)) { $0 + $1.size } }
 
-    private var runnable: [CommonPhoto] {
+    private var runnable: [CommonPhoto] { runnable(for: action) }
+
+    private func runnable(for action: CommonPhotosRun.Action) -> [CommonPhoto] {
         guard action == .copy else { return listed }
         return listed.filter { photo in
             if case .alreadyThere? = landings[Self.rowId(photo.files[0][0])] { false } else { true }

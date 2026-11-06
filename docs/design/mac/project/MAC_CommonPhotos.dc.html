@@ -127,11 +127,7 @@ input{font-family:inherit}
 <button aria-label="Save to" aria-haspopup="menu" style="width:168px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;color:{{saveToFg}}">{{saveTo}}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></button>
 <button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">New Folder…</button>
 <div style="flex:1"></div>
-<!-- Copy or Move only once the scan has found what to run: a switch to Move mid-scan would throw the scan away -->
-<sc-if value="{{showsAction}}" hint-placeholder-val="{{true}}"><span style="font-size:13px;flex:none">Action:</span>
-<div role="radiogroup" aria-label="Action" style="height:28px;border-radius:8px;background:{{t.fill}};display:flex;align-items:center;padding:2px;box-sizing:border-box;flex:none">
-<sc-for list="{{action}}" as="s" hint-placeholder-count="2"><button role="radio" aria-checked="{{s.pressed}}" style="width:64px;height:24px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
-</div></sc-if>
+<!-- No Action switch (user 2026-11-06): one scan serves both; Copy N and Move N… are the two run buttons below -->
 </div>
 <!-- §6e: a server that refused to set dates on an earlier run on this connection -->
 <sc-if value="{{noDates}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;padding:6px 0 0 72px;font-size:12px;color:{{S.orangeText}};flex:none"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg>This server does not keep file dates: copies show the day they were copied.</div></sc-if>
@@ -260,6 +256,7 @@ input{font-family:inherit}
 <div style="display:flex;align-items:center;gap:8px;height:28px;flex:none">
 <span style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{footHint}}</span>
 <button style="width:84px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};font-size:13px;white-space:nowrap;flex:none">Cancel</button>
+<sc-if value="{{showsAction}}" hint-placeholder-val="{{true}}"><button title="Asks first: the copies in the folders are removed" style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{moveFg}};padding:0 14px;font-size:13px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums">{{moveLabel}}</button></sc-if>
 <button style="height:28px;border-radius:8px;border:none;background:{{runBg}};color:{{runFg}};padding:0 14px;font-size:13px;font-weight:600;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums">{{runLabel}}</button>
 </div>
 </div>
@@ -602,7 +599,9 @@ class Component extends DCLogic {
       footHint: nothingNew || before ? '' : filter !== 'all' && !(listing || checkingNow) ? 'Only some photos shown · ' + (move ? 'Move' : 'Copy') + ' takes every checked photo.' : listing || checkingNow ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
       headline: checkingNow ? 'Checking · 172 of 314 confirmed so far' : first ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before ? 'Scan' : listing || checkingNow ? 'Stop' : (first ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
+      runLabel: before ? 'Scan' : listing || checkingNow ? 'Stop' : first ? 'Copy 278' : (nothingNew ? 'Copy' : 'Copy 3'),
+      // Move takes the photos already in Shared too: their copies in the folders go.
+      moveLabel: first ? 'Move 280…' : (nothingNew ? 'Move' : 'Move 3…'), moveFg: nothingNew ? t.label3 : t.label,
       runBg: nothingNew || listing || checkingNow ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing || checkingNow ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }
