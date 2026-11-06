@@ -115,6 +115,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-103 | 01b §4 | menu | Add to Album ▸: New Album with Selection → nhập tên → Create; mở lại | hộp "New Album" có ô tên; album mới (trong Photos; demo: chỉ tên) có trong danh sách; danh sách album đọc ngoài main thread khi thư viện đổi, không lúc mở menu | `mac-contextmenu.json` (`04-albums`, `05-new-album`) |
 | AC-104 | 01b §4 | menu | Share ▸ một dịch vụ; Quick Look rồi Esc | Share liệt kê dịch vụ hệ thống cho file ảnh; file (bản trên ổ, hoặc bản gốc Photos ghi ra thư mục tạm) chỉ tạo khi chọn dịch vụ. Quick Look mở panel hệ thống với file ảnh, Esc/Space đóng | `mac-contextmenu.json` (`06-share`, `07-quicklook`) |
 | AC-105 | 01b §4, FS-19.04 | menu | Move to Trash | đi qua cùng luồng xoá với Delete của smart album (cổng server, hỏi nguồn thư mục, hộp xoá của Photos). **Chỉ bấm trên thư viện demo** (luật 2026-11-06) | `mac-contextmenu.json` (`10-trash`) |
+| AC-106 | 02 §2 | thư viện demo, inspector mở | không chọn gì; chọn 6 ô (nhấp + ⇧→ ×5) | "No Selection"; rồi đầu inspector "6 Items" (có video) + khoảng ngày · dung lượng, thanh tiêu đề "6 selected · 144 MB"; Selection (Taken, Formats, nguồn) · Gear (thanh tỉ lệ + số) · Exposure Range 4 ô — đọc ngoài main thread | `mac-selected.json` (`01-selected`), `mac-selected-dark.json` |
+| AC-107 | 02 §2, FS-01.12 | 6 ảnh chọn | bấm sao thứ 4; Pick; Favorite; bỏ Favorite; Clear Flag; bấm lại sao thứ 4 | "4 stars" và ô lưới hiện ⚑ ♥ ★4; Favorite tick rồi bỏ; cuối cùng "Unrated", không cờ | `mac-selected.json` (`02-rated`, `03-picked`, `04-marked`) |
+| AC-108 | 02 §2 | 6 ảnh chọn | Add to Album ▾ | danh sách album + New Album with Selection (như menu chuột phải) | `mac-selected.json` |
+| AC-109 | 02 §2 | 6 ảnh chọn | ⌘2 rồi ⌘1 | lựa chọn và inspector giữ nguyên qua đổi Grid/List; ảnh bị xoá rời lựa chọn | `mac-selected.json` (`05-list`) |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

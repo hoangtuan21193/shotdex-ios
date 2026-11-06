@@ -89,11 +89,12 @@
   {
    "action": "hover",
    "label": "Rating",
-   "type": "menuItem"
+   "type": "menuItem",
+   "seconds": 1.5
   },
   {
    "action": "wait",
-   "seconds": 1
+   "seconds": 2
   },
   {
    "action": "click",

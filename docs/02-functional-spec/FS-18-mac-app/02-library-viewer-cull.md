@@ -30,6 +30,14 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   **Edit · Compare · Sync Edits…** rồi **Add to Album · Export… · Share**.
 - Inspector còn: Selection (Taken, Formats, số ảnh mỗi nguồn) · Gear (máy, ống, số ảnh) · Exposure Range (ISO, tiêu cự).
 - Compare cần ≥ 2 mục; dưới 2 thì nút mờ, không ẩn.
+- Inspector còn Keywords (chip đặc = cả lựa chọn có, chip viền đứt "temple 4 of 6" = một phần) và Rating and Flags:
+  5 sao (bấm = gán cho cả lựa chọn; bấm lại đúng số sao đang có = bỏ sao), dòng "Mixed · 2 to 4 stars"; Pick · Reject ·
+  Clear Flag (segmented; không đoạn nào sáng khi lẫn hay chưa cờ); ô Favorite (chỉ ảnh trong Photos) + "2 of 6 · 4 picked".
+- Lựa chọn có cả video: tiêu đề "N Items"; chỉ video: "N Videos". Thanh tiêu đề: "6 selected · 214.8 MB".
+- Ô lưới vẽ dấu ở góc dưới trái: cờ (⚑ Pick, ✕ Reject) · ♥ · ★n — cùng nguồn với cột Rating của bảng.
+- Lựa chọn giữ qua sắp xếp, đổi Grid/List, nạp lại; ảnh đã xoá rời lựa chọn.
+- Tình trạng 2026-11-07 (Mac loop hàng 8): Edit, Compare, Sync Edits…, Export… chưa có (đến cùng màn của chúng);
+  thêm/gỡ keyword cho cả lựa chọn là hàng 8b. Inspector mở bằng nút trên toolbar; ⌘I là Get Info (§8, hàng 9–10).
 
 ## 3. Bảng (⌘2)
 

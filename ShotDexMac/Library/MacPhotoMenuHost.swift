@@ -7,6 +7,8 @@ import SwiftUI
 struct MacPhotoMenuHost: ViewModifier {
     let menu: MacPhotoMenu
     let library: LibraryModel?
+    /// Read again when a star, flag or favorite changes (the inspector).
+    var selection: MacSelectionModel?
 
     @Environment(MacDependencies.self) private var dependencies
     @State private var deletion = PhotoDeletionFlow()
@@ -60,6 +62,9 @@ struct MacPhotoMenuHost: ViewModifier {
                 delete(ids)
             }
             .task(id: dependencies.photoLibrary.assetChangeToken) { await menu.loadAlbums() }
+            .onChange(of: menu.marksGeneration) { selection?.reload() }
+            // Nothing on screen (a filter or place with no photos): nothing selected.
+            .onChange(of: library?.items.isEmpty == true) { _, isEmpty in if isEmpty { selection?.set([]) } }
     }
 
     /// Folder and server photos have no PHAsset: PhotoKit alone would drop
@@ -105,10 +110,11 @@ struct MacPhotoMenuHost: ViewModifier {
 struct MacPhotoMenuHostIfReady: ViewModifier {
     let menu: MacPhotoMenu?
     let library: LibraryModel?
+    let selection: MacSelectionModel?
 
     func body(content: Content) -> some View {
         if let menu {
-            content.modifier(MacPhotoMenuHost(menu: menu, library: library))
+            content.modifier(MacPhotoMenuHost(menu: menu, library: library, selection: selection))
         } else {
             content
         }

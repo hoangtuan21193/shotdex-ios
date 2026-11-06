@@ -24,8 +24,14 @@ struct MacPhotoGrid: NSViewRepresentable {
     var offline: Set<String> = []
     /// The selected asset ids, each time the selection changes.
     var onSelection: ((Set<String>) -> Void)? = nil
+    /// Selected when the grid appears (the list's selection, after ⌘1).
+    var initialSelection: Set<String> = []
     /// The right-click menu for these photos (board `MAC_ContextMenu`).
     var contextMenu: (([String]) -> NSMenu?)? = nil
+    /// Favorite, stars and flag per photo, drawn bottom-left on the tile
+    /// (board `MAC_LibrarySelected`); a new generation redraws the tiles on screen.
+    var marks: [String: LibraryTableQueries.Details] = [:]
+    var marksGeneration = 0
     /// The model's id-list generation (`LibraryModel.contentGeneration`):
     /// when given, an unchanged number skips the update without comparing
     /// 55k ids on every SwiftUI pass.
@@ -63,6 +69,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         collection.dataSource = context.coordinator
         collection.delegate = context.coordinator
         context.coordinator.collection = collection
+        context.coordinator.adopt(initialSelection)
         collection.contextMenu = { [weak coordinator = context.coordinator] event in coordinator?.menu(for: event) }
         let scroll = NSScrollView()
         scroll.documentView = collection
@@ -79,6 +86,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.picture = picture
         coordinator.onSelection = onSelection
         coordinator.contextMenu = contextMenu
+        coordinator.marks(marks, generation: marksGeneration)
         let glyphsChanged = coordinator.onServer != onServer || coordinator.offline != offline
         coordinator.onServer = onServer
         coordinator.offline = offline
@@ -124,16 +132,31 @@ struct MacPhotoGrid: NSViewRepresentable {
             Task { @MainActor [weak self] in self?.reloadFieldsIfChanged() }
         }
 
+        private(set) var marks: [String: LibraryTableQueries.Details] = [:]
+        private var marksGeneration = -1
+
+        func marks(_ marks: [String: LibraryTableQueries.Details], generation: Int) {
+            guard generation != marksGeneration else { return }
+            marksGeneration = generation
+            self.marks = marks
+            redrawInfo()
+        }
+
         private func reloadFieldsIfChanged() {
             let loaded = ThumbnailInfoFields.load()
-            guard loaded != fields, let collection else { return }
+            guard loaded != fields else { return }
             fields = loaded
+            redrawInfo()
+        }
+
+        private func redrawInfo() {
+            guard let collection else { return }
             // Text only: the pictures stay, nothing is fetched again.
             let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width)
             for case let tile as MacPhotoTile in collection.visibleItems() {
                 guard let indexPath = collection.indexPath(for: tile) else { continue }
                 let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
-                tile.showInfo(row, side: side, fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
+                tile.showInfo(row, side: side, fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId), marks: marks[row.assetId])
             }
         }
 
@@ -151,6 +174,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             // reverse and the day sections (51 ms at 55k) are built off the
             // main actor; the click that changed the list never waits on them.
             buildTask?.cancel()
+            let selected = selectedSet
             buildTask = Task { [weak self] in
                 let built = await Task.detached(priority: .userInitiated) {
                     let rows = isNewestFirst ? items : Array(items.reversed())
@@ -160,11 +184,35 @@ struct MacPhotoGrid: NSViewRepresentable {
                     let videos = sections.map { section in
                         rows[section.range].reduce(0) { $0 + (MediaKind(storedValue: $1.mediaType) == .video ? 1 : 0) }
                     }
-                    return (rows, sections, videos)
+                    // The photos selected before stay selected where they
+                    // are now; the ones gone (deleted) leave the selection.
+                    var kept = Set<IndexPath>(), keptIds = Set<String>()
+                    if !selected.isEmpty {
+                        for (index, section) in sections.enumerated() {
+                            for position in section.range where selected.contains(rows[position].assetId) {
+                                kept.insert(IndexPath(item: position - section.range.lowerBound, section: index))
+                                keptIds.insert(rows[position].assetId)
+                            }
+                        }
+                    }
+                    return (rows, sections, videos, kept, keptIds)
                 }.value
                 guard let self, !Task.isCancelled else { return }
-                (self.rows, self.sections, self.sectionVideos) = built
+                // A click while the rows were built wins over the snapshot.
+                let now = self.selectedSet
+                (self.rows, self.sections, self.sectionVideos) = (built.0, built.1, built.2)
                 self.collection?.reloadData()
+                if let collection = self.collection, !selected.isEmpty || !now.isEmpty {
+                    if now == selected {
+                        collection.selectionIndexPaths = built.3
+                        self.selectedSet = built.4
+                    } else {
+                        let paths = self.indexPaths(of: now)
+                        collection.selectionIndexPaths = paths
+                        self.selectedSet = Set(self.ids(at: paths))
+                    }
+                    self.reportSelection()
+                }
             }
         }
 
@@ -180,7 +228,7 @@ struct MacPhotoGrid: NSViewRepresentable {
                 guard index < rows.count, let asset = assetAt?(index) else { continue }
                 let row = rows[index]
                 tile.show(row, asset: asset, picture: nil, photoLibrary: photoLibrary, side: side,
-                          fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
+                          fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId), marks: marks[row.assetId])
             }
         }
 
@@ -200,31 +248,55 @@ struct MacPhotoGrid: NSViewRepresentable {
             let asset = picture != nil ? nil : assetAt.map { $0(index) } ?? asset(row.assetId)
             tile.show(row, asset: asset, picture: picture, photoLibrary: photoLibrary,
                       side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
-                      fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId))
+                      fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId), marks: marks[row.assetId])
             return tile
         }
 
+        /// The selected ids, kept from each change's own index paths — never
+        /// re-read from the 55k paths of a select-all.
+        private var selectedSet: Set<String> = []
+
         func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
-            reportSelection(collectionView)
+            selectedSet.formUnion(ids(at: indexPaths))
+            reportSelection()
         }
 
         func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
-            reportSelection(collectionView)
+            selectedSet.subtract(ids(at: indexPaths))
+            reportSelection()
         }
 
-        private func reportSelection(_ collectionView: NSCollectionView) {
-            onSelection?(Set(selectedIds(collectionView)))
-        }
-
-        private func selectedIds(_ collectionView: NSCollectionView) -> [String] {
-            collectionView.selectionIndexPaths.sorted().compactMap { path -> String? in
+        private func ids(at paths: some Sequence<IndexPath>) -> [String] {
+            paths.compactMap { path -> String? in
                 guard path.section < sections.count else { return nil }
                 let index = sections[path.section].range.lowerBound + path.item
                 return index < rows.count ? rows[index].assetId : nil
             }
         }
 
+        func adopt(_ ids: Set<String>) { selectedSet = ids }
+
+        private func reportSelection() {
+            onSelection?(selectedSet)
+        }
+
+        /// In grid order, for a menu.
+        private func selectedIds(_ collectionView: NSCollectionView) -> [String] {
+            ids(at: collectionView.selectionIndexPaths.sorted())
+        }
+
         var contextMenu: (([String]) -> NSMenu?)?
+
+        private func indexPaths(of ids: Set<String>) -> Set<IndexPath> {
+            guard !ids.isEmpty else { return [] }
+            var paths = Set<IndexPath>()
+            for (index, section) in sections.enumerated() {
+                for position in section.range where ids.contains(rows[position].assetId) {
+                    paths.insert(IndexPath(item: position - section.range.lowerBound, section: index))
+                }
+            }
+            return paths
+        }
 
         /// A right-click on a selected tile acts on the selection; on any
         /// other tile it selects that one alone first, as Finder and Photos.
@@ -234,9 +306,11 @@ struct MacPhotoGrid: NSViewRepresentable {
             guard let path = collection.indexPathForItem(at: point) else { return nil }
             if !collection.selectionIndexPaths.contains(path) {
                 collection.selectionIndexPaths = [path]
-                reportSelection(collection)
+                selectedSet = Set(ids(at: [path]))
+                reportSelection()
             }
-            return contextMenu(selectedIds(collection))
+            // A huge selection is read later anyway: no sort of its paths.
+            return contextMenu(selectedSet.count > MacPhotoMenu.readLimit ? Array(selectedSet) : selectedIds(collection))
         }
 
         func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
@@ -316,6 +390,9 @@ final class MacPhotoTile: NSCollectionViewItem {
     /// Every copy is on a drive or server not connected (FS-19.01b §2): top right.
     private let offlineGlyph = NSImageView(image: NSImage(systemSymbolName: "externaldrive",
                                                             accessibilityDescription: nil) ?? NSImage())
+    /// Favorite, stars, flag: bottom-left (board `MAC_LibrarySelected`).
+    private let marksLabel = NSTextField(labelWithString: "")
+    private lazy var marksLeading = marksLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8)
     private let shade = CAGradientLayer()
     private var requestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
@@ -355,7 +432,9 @@ final class MacPhotoTile: NSCollectionViewItem {
         // The time at the end always stays; a long name loses its front ("…04100.HEIC · 18:00").
         caption.lineBreakMode = .byTruncatingHead
         // Both lines keep their edge on a bright sky the shade barely darkens.
-        for label in [caption, exif] {
+        marksLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        marksLabel.textColor = .white
+        for label in [caption, exif, marksLabel] {
             label.wantsLayer = true
             label.shadow = {
                 let shadow = NSShadow()
@@ -373,7 +452,7 @@ final class MacPhotoTile: NSCollectionViewItem {
         offlineGlyph.wantsLayer = true
         offlineGlyph.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
         offlineGlyph.layer?.cornerRadius = 9
-        for subview in [photo, badge, caption, exif, serverGlyph, offlineGlyph] {
+        for subview in [photo, badge, caption, exif, serverGlyph, offlineGlyph, marksLabel] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -396,6 +475,8 @@ final class MacPhotoTile: NSCollectionViewItem {
             offlineGlyph.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
             offlineGlyph.widthAnchor.constraint(equalToConstant: 18),
             offlineGlyph.heightAnchor.constraint(equalToConstant: 18),
+            marksLeading,
+            marksLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
         ])
     }
 
@@ -419,14 +500,15 @@ final class MacPhotoTile: NSCollectionViewItem {
     private(set) var hasPicture = false
 
     func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat,
-              fields: ThumbnailInfoFields, isOnServer: Bool = false, isOffline: Bool = false) {
+              fields: ThumbnailInfoFields, isOnServer: Bool = false, isOffline: Bool = false,
+              marks: LibraryTableQueries.Details? = nil) {
         hasPicture = picture != nil || asset != nil
         // A reused tile drops a late result by its asset id, below.
         requestId = nil
         photo.layer?.contents = nil
         assetId = row.assetId
         self.photoLibrary = photoLibrary
-        showInfo(row, side: side, fields: fields, isOnServer: isOnServer, isOffline: isOffline)
+        showInfo(row, side: side, fields: fields, isOnServer: isOnServer, isOffline: isOffline, marks: marks)
         let name = row.originalFilename ?? String(localized: "Photo", comment: "Mac grid: a photo with no file name")
         view.setAccessibilityLabel(isOffline
             ? String(localized: "\(name), Offline", comment: "Mac grid: VoiceOver label of a photo only on a source not connected")
@@ -449,7 +531,18 @@ final class MacPhotoTile: NSCollectionViewItem {
 
     /// Badge, caption, exposure line and server glyph — everything over the
     /// picture; Settings changing them redraws only this.
-    func showInfo(_ row: LibraryGridItem, side: CGFloat, fields: ThumbnailInfoFields, isOnServer: Bool, isOffline: Bool = false) {
+    func showInfo(_ row: LibraryGridItem, side: CGFloat, fields: ThumbnailInfoFields, isOnServer: Bool, isOffline: Bool = false,
+                  marks: LibraryTableQueries.Details? = nil) {
+        let marksText = MacTileMarks.text(marks)
+        marksLabel.attributedStringValue = marksText
+        // A reject stays visible, dimmed (board `MAC_LibrarySelected`).
+        photo.alphaValue = marks?.flag == .reject ? 0.45 : 1
+        view.setAccessibilityValue(MacTileMarks.spoken(marks))
+        marksLabel.isHidden = marksText.length == 0
+        let glyph = isOnServer ? serverGlyph.intrinsicContentSize.width : 0
+        marksLeading.constant = isOnServer ? 8 + glyph + 4 : 8
+        let marksWidth = marksLabel.isHidden ? 0 : marksText.size().width
+        let leftWidth = glyph + (isOnServer && marksWidth > 0 ? 4 : 0) + marksWidth
         offlineGlyph.isHidden = !isOffline
         let format = MacPhotoTile.format(of: row.originalFilename)
         badge.stringValue = format.map { " \($0) " } ?? ""
@@ -459,13 +552,13 @@ final class MacPhotoTile: NSCollectionViewItem {
         exif.stringValue = ThumbnailInfoFields.fitted(
             fields.exposureFragments(for: row),
             width: { Double(($0 as NSString).size(withAttributes: [.font: font]).width) },
-            within: ThumbnailInfoFields.room(side: Double(side), glyphWidth: isOnServer ? Double(serverGlyph.intrinsicContentSize.width) : nil))
+            within: ThumbnailInfoFields.room(side: Double(side), glyphWidth: leftWidth > 0 ? Double(leftWidth) : nil))
         caption.stringValue = fields.caption(for: row) ?? ""
         caption.isHidden = caption.stringValue.isEmpty
         hasCaption = !caption.isHidden
         view.needsLayout = true
         serverGlyph.isHidden = !isOnServer
-        shade.isHidden = exif.stringValue.isEmpty && caption.isHidden && !isOnServer
+        shade.isHidden = exif.stringValue.isEmpty && caption.isHidden && !isOnServer && marksLabel.isHidden
     }
 
     /// `HEIC`, `RAW`, `JPG`, `MOV` — the extension, RAW formats as one word.
@@ -509,5 +602,59 @@ final class MacDayHeader: NSView, NSCollectionViewElement {
         case .undated: title.stringValue = String(localized: "No Date", comment: "Mac grid: header of photos with no capture date")
         }
         self.count.stringValue = count
+    }
+}
+
+extension MacTileMarks {
+    /// "4 stars, Picked, Favorite" for VoiceOver.
+    static func spoken(_ marks: LibraryTableQueries.Details?) -> String? {
+        guard let marks else { return nil }
+        var words: [String] = []
+        if marks.rating > 0 { words.append(MarkCopy.starsAccessibility(marks.rating)) }
+        if let flag = marks.flag { words.append(MarkCopy.flagWord(flag)) }
+        if marks.isFavorite { words.append(String(localized: "Favorite", comment: "Mac grid: VoiceOver, a favorite photo")) }
+        return words.isEmpty ? nil : words.joined(separator: ", ")
+    }
+}
+
+/// A tile's marks as one run of white text: ♥, ★3, then a flag or ✕ for a
+/// reject — the order the board draws them.
+enum MacTileMarks {
+    /// Each glyph made once: a tile is configured on every scroll.
+    @MainActor private static var glyphs: [String: NSAttributedString] = [:]
+
+    @MainActor private static func glyph(_ name: String) -> NSAttributedString? {
+        if let cached = glyphs[name] { return cached }
+        guard let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 9, weight: .bold).applying(.init(paletteColors: [.white]))) else { return nil }
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        attachment.bounds = CGRect(x: 0, y: -1, width: image.size.width, height: image.size.height)
+        let text = NSAttributedString(attachment: attachment)
+        glyphs[name] = text
+        return text
+    }
+
+    @MainActor static func text(_ marks: LibraryTableQueries.Details?) -> NSAttributedString {
+        guard let marks else { return NSAttributedString() }
+        let font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        let result = NSMutableAttributedString()
+        func symbol(_ name: String) {
+            guard let attachment = glyph(name) else { return }
+            if result.length > 0 { result.append(NSAttributedString(string: " ")) }
+            result.append(attachment)
+        }
+        switch marks.flag {
+        case .pick: symbol("flag.fill")
+        case .reject: symbol("xmark")
+        case nil: break
+        }
+        if marks.isFavorite { symbol("heart.fill") }
+        if marks.rating > 0 {
+            symbol("star.fill")
+            result.append(NSAttributedString(string: "\u{2009}\(marks.rating)"))
+        }
+        result.addAttributes([.font: font, .foregroundColor: NSColor.white], range: NSRange(location: 0, length: result.length))
+        return result
     }
 }

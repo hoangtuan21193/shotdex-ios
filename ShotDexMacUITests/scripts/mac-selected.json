@@ -1,0 +1,260 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No Selection",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-selected"
+  },
+  {
+   "action": "dump",
+   "name": "01-selected"
+  },
+  {
+   "action": "assertExists",
+   "label": "6 Items, Sep 28, 2026 · 144 MB",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Exposure Range",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "4 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "02-rated"
+  },
+  {
+   "action": "assertExists",
+   "label": "4 stars",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Pick",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "03-picked"
+  },
+  {
+   "action": "click",
+   "label": "Favorite",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Favorite",
+   "type": "checkBox",
+   "text": "1"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-marked"
+  },
+  {
+   "action": "click",
+   "label": "Favorite",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Favorite",
+   "type": "checkBox",
+   "text": "0"
+  },
+  {
+   "action": "click",
+   "label": "Clear Flag",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "4 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Unrated",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Add to Album"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "2",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-list"
+  },
+  {
+   "action": "assertExists",
+   "label": "6 Items, Sep 28, 2026 · 144 MB",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "1",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

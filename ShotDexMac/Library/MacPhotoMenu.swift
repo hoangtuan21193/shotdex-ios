@@ -30,13 +30,45 @@ final class MacPhotoMenu: NSObject {
 
     /// Photos' own albums, read off the main actor when the library changes
     /// — never fetched while the menu opens.
-    @ObservationIgnored private(set) var albums: [Album] = []
+    private(set) var albums: [Album] = []
     @ObservationIgnored private var quickLook: MacQuickLook?
     @ObservationIgnored private var quickLookTask: Task<Void, Never>?
     /// Photos access lets the app list and change albums.
-    @ObservationIgnored private var canUseAlbums = false
+    private var canUseAlbums = false
 
-    private func changed() { marksGeneration += 1 }
+    /// The photos whose marks the last change touched: the list and tiles
+    /// read just these again, not the whole library.
+    private(set) var changedIds: [String] = []
+
+    private func changed(_ ids: [String]) {
+        changedIds = ids
+        marksGeneration += 1
+    }
+
+    // MARK: For the inspector
+
+    var canAddToAlbums: Bool { canUseAlbums }
+    func marksChanged(_ ids: [String]) { changed(ids) }
+    func requestAlbum(for ids: [String]) { newAlbum(ids, photosCount: ids.count) }
+
+    func add(ids: [String], toAlbum albumId: String) {
+        Task { add(await resolved(Facts(), ids: ids).photosAssetIds, toAlbum: albumId) }
+    }
+
+    func setFavorite(_ isFavorite: Bool, ids: [String]) {
+        setFavorite(isFavorite, ids: ids, facts: Facts())
+    }
+
+    func share(_ ids: [String], with service: NSSharingService) {
+        Task {
+            let urls = await files(for: ids, facts: await resolved(Facts(), ids: ids))
+            guard !urls.isEmpty else {
+                failure = String(localized: "These photos couldn't be shared — they may still be downloading from iCloud.", comment: "Mac photo menu: Share found no file")
+                return
+            }
+            service.perform(withItems: urls)
+        }
+    }
     private func trash(_ ids: [String]) { trashRequest = ids }
     private func newAlbum(_ ids: [String], photosCount: Int) { albumRequest = MacAlbumRequest(ids: ids, photosCount: photosCount) }
 
@@ -112,7 +144,7 @@ final class MacPhotoMenu: NSObject {
         rating.submenu = NSMenu()
         for stars in StarRating.range.reversed() {
             let row = item(PhotoMarkMenuTitles.rating(stars), id: "rating.\(stars)") { [weak self] in
-                Task { await marks.apply(.rate(stars), to: ids); self?.changed() }
+                Task { await marks.apply(.rate(stars), to: ids); self?.changed(ids) }
             }
             row.state = single.map { marks.rating(for: $0, photosRating: facts.photosRatings[$0]) == stars } == true ? .on : .off
             row.setAccessibilityLabel(stars == 0 ? MarkCopy.noRating : MarkCopy.starsAccessibility(stars))
@@ -126,13 +158,13 @@ final class MacPhotoMenu: NSObject {
         flag.submenu?.autoenablesItems = false
         for (title, value, key) in [(MarkCopy.pick, PhotoFlag?.some(.pick), "pick"), (MarkCopy.reject, PhotoFlag?.some(.reject), "reject")] {
             let row = item(title, id: "flag.\(key)") { [weak self] in
-                Task { await marks.apply(.flag(value), to: ids); self?.changed() }
+                Task { await marks.apply(.flag(value), to: ids); self?.changed(ids) }
             }
             row.state = single.map { marks.flag(for: $0) == value } == true ? .on : .off
             flag.submenu?.addItem(row)
         }
         let clear = item(MarkCopy.clearFlag, id: "flag.clear") { [weak self] in
-            Task { await marks.apply(.flag(nil), to: ids); self?.changed() }
+            Task { await marks.apply(.flag(nil), to: ids); self?.changed(ids) }
         }
         clear.isEnabled = single.map { marks.flag(for: $0) != nil } ?? true
         flag.submenu?.addItem(clear)
@@ -246,7 +278,7 @@ final class MacPhotoMenu: NSObject {
     }()
 
     /// Asked once: loading the sharing extensions costs a click its speed.
-    private static let shareServices = NSSharingService.sharingServices(forItems: [shareSample])
+    static let shareServices = NSSharingService.sharingServices(forItems: [shareSample])
 
     private func item(_ title: String, id: String, perform: @escaping @MainActor () -> Void) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(MacMenuAction.run(_:)), keyEquivalent: "")
@@ -288,7 +320,13 @@ final class MacPhotoMenu: NSObject {
             await Task.detached(priority: .userInitiated) {
                 try? metadataStore.updateFavorites(assetIds: written, isFavorite: isFavorite)
             }.value
-            changed()
+            // Favorite is Photos' own: say what stayed as it was.
+            let skipped = ids.count - written.count
+            if skipped > 0 {
+                failure = String(localized: "\(skipped) of these photos aren't in Photos, so they stay as they were.",
+                                 comment: "Mac: favorite on a mix of Photos and folder photos (plural)")
+            }
+            changed(ids)
         }
     }
 

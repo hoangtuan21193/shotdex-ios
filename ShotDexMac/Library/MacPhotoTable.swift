@@ -27,6 +27,8 @@ struct MacPhotoTable: NSViewRepresentable {
     var onSelection: ((Set<String>) -> Void)?
     /// The right-click menu for these photos (board `MAC_ContextMenu`).
     var contextMenu: (([String]) -> NSMenu?)? = nil
+    /// Selected when the list appears (the grid's selection, after ⌘2).
+    var initialSelection: Set<String> = []
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -69,6 +71,7 @@ struct MacPhotoTable: NSViewRepresentable {
         table.autosaveName = "MacLibraryTable"
         table.autosaveTableColumns = true
         context.coordinator.table = table
+        context.coordinator.pendingSelection = initialSelection
         let scroll = NSScrollView()
         scroll.documentView = table
         scroll.hasVerticalScroller = true
@@ -148,6 +151,8 @@ struct MacPhotoTable: NSViewRepresentable {
             Task.detached(priority: .utility) { _ = dead }
         }
         private var buildTask: Task<Void, Never>?
+        /// Selected once the first rows are in.
+        var pendingSelection: Set<String> = []
 
         func update(_ items: [LibraryGridItem], generation: Int, details: [String: LibraryTableQueries.Details],
                     detailsGeneration: Int, sort: SortOption) {
@@ -180,7 +185,9 @@ struct MacPhotoTable: NSViewRepresentable {
                 }
                 let built = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
                 guard let self, !Task.isCancelled, let built else { return }
-                let selected = self.selectedIds()
+                var selected = self.selectedIds()
+                if selected.isEmpty { selected = self.pendingSelection }
+                self.pendingSelection = []
                 // The old 55k rows are let go off the main actor: freeing them
                 // here was a visible part of a sort.
                 let old = (self.rows, self.libraryIndex)

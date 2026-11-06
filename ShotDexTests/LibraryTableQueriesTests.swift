@@ -24,6 +24,8 @@ struct LibraryTableQueriesTests {
         try await database.writer.write { db in
             try db.execute(sql: "UPDATE photo_metadata SET rating = 2 WHERE assetId = 'a'")
             try db.execute(sql: "INSERT INTO pending_photo_rating (assetId, rating, ratedAt) VALUES ('a', 4, 1)")
+            try db.execute(sql: "INSERT INTO photo_flag (assetId, flag, flaggedAt) VALUES ('b', 'reject', 1)")
+            try db.execute(sql: "UPDATE photo_metadata SET isFavorite = 1 WHERE assetId = 'a'")
         }
         let details = try await LibraryTableQueries(database: database).details()
         #expect(details["a"]?.camera == "ILCE-7M4")
@@ -33,5 +35,22 @@ struct LibraryTableQueriesTests {
         #expect(details["a"]?.sourceKind == "photos")
         #expect(details["b"]?.camera == nil)
         #expect(details["b"]?.rating == 0)
+        #expect(details["a"]?.isFavorite == true)
+        #expect(details["b"]?.isFavorite == false)
+        #expect(details["b"]?.flag == .reject)
+        #expect(details["a"]?.flag == nil)
+    }
+
+    @Test func detailsOfSomePhotosReadOnlyThose() async throws {
+        let database = try AppDatabase.makeEmpty()
+        try MetadataStore(database: database).saveBatch([row("a", camera: "X-T5", lens: nil), row("b", camera: "X-T5", lens: nil)],
+                                                        cursorAssetId: nil)
+        try await database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_flag (assetId, flag, flaggedAt) VALUES ('b', 'pick', 1)")
+        }
+        let details = try await LibraryTableQueries(database: database).details(ids: ["b"])
+        #expect(details.keys.sorted() == ["b"])
+        #expect(details["b"]?.flag == .pick)
+        #expect(details["b"]?.sourceName == "Photos Library")
     }
 }

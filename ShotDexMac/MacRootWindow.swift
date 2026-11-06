@@ -73,6 +73,8 @@ struct MacRootWindow: View {
     @State private var offlinePhotoIds: Set<String> = []
     /// The right-click menu on photos (board `MAC_ContextMenu`), grid and list.
     @State private var photoMenu: MacPhotoMenu?
+    /// The photos selected in the grid or list, and their summary (inspector).
+    @State private var photoSelection: MacSelectionModel?
 
     var body: some View {
         NavigationSplitView {
@@ -147,7 +149,7 @@ struct MacRootWindow: View {
     /// `body` so the type checker can take it.
     fileprivate func requests(_ content: some View) -> some View {
         alerts(content)
-            .modifier(MacPhotoMenuHostIfReady(menu: photoMenu, library: library))
+            .modifier(MacPhotoMenuHostIfReady(menu: photoMenu, library: library, selection: photoSelection))
             .background(MacMainWindowMarker())
             .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
             .task { await start() }
@@ -633,10 +635,29 @@ struct MacRootWindow: View {
                     searchOwnsQuery = false
                 }
                 .inspector(isPresented: $showsInspector) {
-                    Text("Info", comment: "Mac inspector placeholder")
-                        .foregroundStyle(.secondary)
-                        .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
+                    Group {
+                        if let photoSelection, let photoMenu {
+                            MacSelectionInspector(selection: photoSelection, menu: photoMenu, picture: Self.demoPicture)
+                        }
+                    }
+                    .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
                 }
+    }
+
+    private func patchDetails() async {
+        guard let ids = photoMenu?.changedIds, !ids.isEmpty else { return }
+        let queries = LibraryTableQueries(database: dependencies.database)
+        guard let changed = try? await queries.details(ids: ids), !Task.isCancelled else { return }
+        let old = tableDetails
+        let patched = await Task.detached(priority: .userInitiated) {
+            var details = old
+            for id in ids { details[id] = changed[id] }
+            return details
+        }.value
+        guard !Task.isCancelled else { return }
+        tableDetails = patched
+        tableDetailsGeneration += 1
+        Task.detached(priority: .utility) { _ = old }
     }
 
     /// The photo menu, told which photos are offline as it opens.
@@ -654,35 +675,51 @@ struct MacRootWindow: View {
         if isLibraryEmpty {
             MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: { addFolderFromSidebar() },
                             connectToServer: { serverForm = MacServerFormRequest() }, addFolders: { addFolders($0) })
-        } else if let library, !library.items.isEmpty, viewMode == .list {
-            MacPhotoTable(items: library.items, generation: library.rowsGeneration, details: tableDetails,
-                          detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
-                          assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
-                          assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
-                          sort: library.sort, setSort: { library.sort = $0 },
-                          contextMenu: photoMenuBuilder)
-                // Camera, lens, rating, source: one read of the index, off the
-                // main actor — again when the set of photos changes, not on a sort.
-                // An index run changes the count often: the read waits for a
-                // pause, and a read like the last one is not handed over.
-                .task(id: "\(library.items.count)-\(library.place.map { "\($0)" } ?? "")-\(dependencies.photoLibrary.assetChangeToken)-\(photoMenu?.marksGeneration ?? 0)") {
-                    if !tableDetails.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
-                    let queries = LibraryTableQueries(database: dependencies.database)
-                    let old = tableDetails
-                    guard let details = try? await queries.details(), !Task.isCancelled else { return }
-                    let isSame = await Task.detached(priority: .userInitiated) { details == old }.value
-                    guard !isSame, !Task.isCancelled else { return }
-                    tableDetails = details
-                    tableDetailsGeneration += 1
-                    // The old 55k entries are let go off the main actor.
-                    Task.detached(priority: .utility) { _ = old }
-                }
         } else if let library, !library.items.isEmpty {
-            // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
-            MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
-                         picture: Self.demoPicture, offline: offlinePhotoIds, contextMenu: photoMenuBuilder, generation: library.rowsGeneration,
-                         assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
-                         assetGeneration: library.contentRefreshGeneration)
+            Group {
+                if viewMode == .list {
+                    MacPhotoTable(items: library.items, generation: library.rowsGeneration, details: tableDetails,
+                                  detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
+                                  assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
+                                  assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
+                                  sort: library.sort, setSort: { library.sort = $0 },
+                                  onSelection: { photoSelection?.set($0) }, contextMenu: photoMenuBuilder,
+                                  initialSelection: photoSelection?.idSet ?? [])
+                } else {
+                    // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
+                    MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
+                                 picture: Self.demoPicture, offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
+                                 initialSelection: photoSelection?.idSet ?? [],
+                                 contextMenu: photoMenuBuilder, marks: tableDetails, marksGeneration: tableDetailsGeneration,
+                                 generation: library.rowsGeneration,
+                                 assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
+                                 assetGeneration: library.contentRefreshGeneration)
+                }
+            }
+            // Camera, lens, marks, source (list columns and tile marks): one
+            // read of the index, off the main actor — again when the set of
+            // photos or a mark changes, not on a sort. An index run changes
+            // the count often: the read waits for a pause, and a read like
+            // the last one is not handed over.
+            .task(id: "\(library.items.count)-\(library.place.map { "\($0)" } ?? "")-\(dependencies.photoLibrary.assetChangeToken)") {
+                if !tableDetails.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
+                let marksAtStart = photoMenu?.marksGeneration
+                let queries = LibraryTableQueries(database: dependencies.database)
+                let old = tableDetails
+                guard let details = try? await queries.details(), !Task.isCancelled else { return }
+                let isSame = await Task.detached(priority: .userInitiated) { details == old }.value
+                guard !isSame, !Task.isCancelled else { return }
+                tableDetails = details
+                tableDetailsGeneration += 1
+                // The old 55k entries are let go off the main actor.
+                Task.detached(priority: .utility) { _ = old }
+                // A mark changed while the library was read: the read may
+                // predate it, so those photos are read again.
+                if photoMenu?.marksGeneration != marksAtStart { await patchDetails() }
+            }
+            // A star, flag or favorite: only those photos are read again
+            // and patched in, off the main actor.
+            .task(id: photoMenu?.marksGeneration ?? 0) { await patchDetails() }
         } else if let library, let error = library.loadError {
             ContentUnavailableView {
                 Label(error, systemImage: "exclamationmark.triangle")
@@ -738,6 +775,13 @@ struct MacRootWindow: View {
     private var subtitle: String {
         if isLibraryEmpty { return String(localized: "No photos yet", comment: "Mac toolbar subtitle: no source added yet") }
         guard let library else { return "" }
+        // "6 selected · 214.8 MB" (board `MAC_LibrarySelected`); the size
+        // follows once the selection's summary is read.
+        if let photoSelection, !photoSelection.ids.isEmpty {
+            let count = String(localized: "\(photoSelection.ids.count) selected", comment: "Mac toolbar subtitle: photos selected (plural)")
+            guard let summary = photoSelection.summary else { return count }
+            return count + " · " + ByteCountFormatter.string(fromByteCount: summary.totalBytes, countStyle: .file)
+        }
         let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
         let line = LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
                                          isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
@@ -815,6 +859,7 @@ struct MacRootWindow: View {
         if library == nil { library = dependencies.library ?? LibraryModel(dependencies: dependencies) }
         dependencies.library = library
         if photoMenu == nil { photoMenu = MacPhotoMenu(dependencies: dependencies) }
+        if photoSelection == nil { photoSelection = MacSelectionModel(database: dependencies.database) }
         Task { await dependencies.photoMarks.loadIfNeeded() }
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
