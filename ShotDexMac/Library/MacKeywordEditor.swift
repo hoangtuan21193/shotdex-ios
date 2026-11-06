@@ -61,6 +61,28 @@ struct MacKeywordEditor {
         }
     }
 
+    /// Creator and Copyright: ShotDex's own fields for every photo, sent on
+    /// to the sidecar of a file photo (Photos has no such field).
+    func setCreator(_ text: String, for id: String) async -> Outcome {
+        await setUserText(id) { try $0.setCreator(text, photoIds: [id]) }
+    }
+
+    func setCopyright(_ text: String, for id: String) async -> Outcome {
+        await setUserText(id) { try $0.setCopyright(text, photoIds: [id]) }
+    }
+
+    private func setUserText(_ id: String, _ write: @escaping @Sendable (PhotoUserMarksStore) throws -> Void) async -> Outcome {
+        let store = PhotoUserMarksStore(database: database)
+        do {
+            try await Task.detached(priority: .userInitiated) { try write(store) }.value
+            await sidecarQueue.schedule([id])
+            return .done
+        } catch {
+            Self.log.error("user field write failed: \(error.localizedDescription, privacy: .public)")
+            return .failed
+        }
+    }
+
     /// A file photo's title (Photos keeps none ShotDex writes).
     func setTitle(_ text: String, for id: String) async -> Outcome {
         let store = PhotoUserMarksStore(database: database)

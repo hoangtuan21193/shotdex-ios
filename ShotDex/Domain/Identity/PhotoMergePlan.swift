@@ -12,6 +12,9 @@ struct PhotoUserData: Equatable, Sendable {
     var isFavorite: Stamped<Bool>?
     var title: Stamped<String>?
     var caption: Stamped<String>?
+    /// Get Info's Creator and Copyright (v62).
+    var creator: Stamped<String>?
+    var copyright: Stamped<String>?
     var flag: Stamped<String>?
     var recipe: Stamped<Data>?
     var keywords: Set<String> = []
@@ -54,6 +57,8 @@ enum PhotoMergePlan {
         data.isFavorite = latest(winner.data.isFavorite, loser.data.isFavorite)
         data.title = latest(winner.data.title, loser.data.title)
         data.caption = latest(winner.data.caption, loser.data.caption)
+        data.creator = latest(winner.data.creator, loser.data.creator)
+        data.copyright = latest(winner.data.copyright, loser.data.copyright)
         data.flag = latest(winner.data.flag, loser.data.flag)
         data.recipe = latest(winner.data.recipe, loser.data.recipe)
         data.keywords = winner.data.keywords.union(loser.data.keywords)

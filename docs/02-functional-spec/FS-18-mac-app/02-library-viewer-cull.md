@@ -111,6 +111,8 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
 - EXIF nhiều ảnh: dòng cùng giá trị ghi giá trị, khác nhau ghi "Mixed"; Show All Raw Metadata mờ.
 - Panel mở bằng ⌘I (Image › Get Info) hoặc Get Info trên menu chuột phải (chỉ mở, không đóng); không lấy bàn phím tới khi
   bấm vào một ô (như Info của Photos). Ảnh chỉ có trong Photos: Title tắt (Photos giữ tiêu đề), ghi "Saved as you type to Photos."
-- Tình trạng 2026-11-07 (Mac loop hàng 9): Creator, Copyright, Date/Location **Adjust…** và **Show All Raw Metadata** chưa có
-  (hàng 9b); EXIF chỉ hiện trường có trong index (Make, Model, Exposure, Aperture, ISO, Focal Length, Lens, Size) — Metering và
-  White Balance chưa được đọc vào index.
+- Creator, Copyright: trường của ShotDex cho mọi ảnh (`photo_user_marks`, v62); ảnh file ghi tiếp ra sidecar (`dc:creator`,
+  `dc:rights`) và đọc về theo thời điểm như Title/Caption — chỉ từ sidecar: creator/copyright máy ảnh ghi trong file ảnh không vào. Ảnh Photos giữ trong ShotDex (Photos không có trường này).
+- Show All Raw Metadata: bảng Field/Value mọi trường ImageIO đọc được (chỉ đọc đầu file, không giải mã ảnh); ảnh Photos chỉ khi
+  bản gốc có trên máy. Metering, White Balance đọc từ file khi mở panel, không vào index.
+- Tình trạng 2026-11-07 (Mac loop hàng 9b): Date/Location **Adjust…** chưa có (hàng 9c).

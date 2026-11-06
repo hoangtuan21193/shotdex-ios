@@ -82,6 +82,8 @@ struct PhotoIdentityStore: Sendable {
             if let value: Bool = row["isFavorite"] { data.isFavorite = Stamped(value: value, at: row["favoriteAt"] ?? 0) }
             if let value: String = row["title"] { data.title = Stamped(value: value, at: row["titleAt"] ?? 0) }
             if let value: String = row["caption"] { data.caption = Stamped(value: value, at: row["captionAt"] ?? 0) }
+            if let value: String = row["creator"] { data.creator = Stamped(value: value, at: row["creatorAt"] ?? 0) }
+            if let value: String = row["copyright"] { data.copyright = Stamped(value: value, at: row["copyrightAt"] ?? 0) }
         }
         // A star waiting to reach Photos is the Photos copy's rating.
         if let row = try Row.fetchOne(db, sql: "SELECT rating, ratedAt FROM pending_photo_rating WHERE assetId = ?", arguments: [id]) {
@@ -104,12 +106,15 @@ struct PhotoIdentityStore: Sendable {
     }
 
     private static func write(_ db: Database, _ data: PhotoUserData, for id: String, now: Int) throws {
-        if data.rating != nil || data.isFavorite != nil || data.title != nil || data.caption != nil {
+        if data.rating != nil || data.isFavorite != nil || data.title != nil || data.caption != nil
+            || data.creator != nil || data.copyright != nil {
             try db.execute(sql: """
-                INSERT INTO photo_user_marks (photoId, rating, ratingAt, isFavorite, favoriteAt, title, titleAt, caption, captionAt)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO photo_user_marks (photoId, rating, ratingAt, isFavorite, favoriteAt, title, titleAt, caption, captionAt,
+                                              creator, creatorAt, copyright, copyrightAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, arguments: [id, data.rating?.value, data.rating?.at, data.isFavorite?.value, data.isFavorite?.at,
-                                 data.title?.value, data.title?.at, data.caption?.value, data.caption?.at])
+                                 data.title?.value, data.title?.at, data.caption?.value, data.caption?.at,
+                                 data.creator?.value, data.creator?.at, data.copyright?.value, data.copyright?.at])
         }
         var seen = Set<String>()
         for keyword in data.keywords.sorted() where seen.insert(KeywordInput.caseKey(keyword)).inserted {

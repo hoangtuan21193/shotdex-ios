@@ -196,7 +196,9 @@ struct SidecarWriter: Sendable {
     /// its flag, real stars, favorite and recipe.
     static func patch(_ db: Database, photoId: String) throws -> XMPPatch {
         var patch = XMPPatch()
-        let marks = try Row.fetchOne(db, sql: "SELECT rating, isFavorite, title, caption FROM photo_user_marks WHERE photoId = ?",
+        let marks = try Row.fetchOne(db, sql: """
+            SELECT rating, isFavorite, title, caption, creator, creatorAt, copyright, copyrightAt FROM photo_user_marks WHERE photoId = ?
+            """,
                                      arguments: [photoId])
         let flag = try String.fetchOne(db, sql: "SELECT flag FROM photo_flag WHERE assetId = ?", arguments: [photoId])
         let rating: Int? = marks?["rating"]
@@ -216,6 +218,18 @@ struct SidecarWriter: Sendable {
         patch.shotdex["Recipe"] = recipe.map { .set($0.base64EncodedString()) } ?? .remove
         if let title: String = marks?["title"] { patch.title = .set(title) }
         if let caption: String = marks?["caption"] { patch.caption = .set(caption) }
+        // Cleared in Get Info (a stamp, no value): the sidecar's goes too, or
+        // the next read of it would bring the old text back.
+        if let creator: String = marks?["creator"] {
+            patch.creator = .set(creator)
+        } else if (marks?["creatorAt"] as Int?) != nil {
+            patch.creator = .remove
+        }
+        if let copyright: String = marks?["copyright"] {
+            patch.rights = .set(copyright)
+        } else if (marks?["copyrightAt"] as Int?) != nil {
+            patch.rights = .remove
+        }
         let keywords = try String.fetchAll(db, sql: "SELECT keyword FROM photo_user_keyword WHERE photoId = ? ORDER BY addedAt, rowid",
                                            arguments: [photoId])
         patch.keywords = .set(keywords)

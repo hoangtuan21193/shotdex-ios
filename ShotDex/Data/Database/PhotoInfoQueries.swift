@@ -17,12 +17,17 @@ struct PhotoInfoQueries: Sendable {
         var metadata: PhotoMetadata?
         var title: String?
         var caption: String?
+        var creator: String?
+        var copyright: String?
         var place: ResolvedPlace?
         /// One spelling per word, alphabetical.
         var keywords: [String] = []
         var isInPhotos = false
         /// The first file copy's name, for "Saved as you type to ‹name›.xmp".
         var fileName: String?
+        /// Where that copy is, to read the file's own metadata.
+        var fileSourceId: String?
+        var filePath: String?
         var serverCopies: [ServerCopy] = []
 
         var hasFileCopy: Bool { fileName != nil }
@@ -33,14 +38,18 @@ struct PhotoInfoQueries: Sendable {
             var info = Info()
             info.metadata = try PhotoMetadata.fetchOne(db, key: photoId)
             let copies = try Row.fetchAll(db, sql: """
-                SELECT c.kind, c.relativePath, s.name FROM photo_copies c LEFT JOIN sources s ON s.id = c.sourceId
+                SELECT c.kind, c.relativePath, s.name, c.sourceId FROM photo_copies c LEFT JOIN sources s ON s.id = c.sourceId
                 WHERE c.photoId = ? AND c.missingSince IS NULL ORDER BY s.createdAt, c.relativePath
                 """, arguments: [photoId])
             for copy in copies {
                 switch copy[0] as String? {
                 case "photos": info.isInPhotos = true
                 case "file":
-                    if info.fileName == nil, let path: String = copy[1] { info.fileName = (path as NSString).lastPathComponent }
+                    if info.fileName == nil, let path: String = copy[1] {
+                        info.fileName = (path as NSString).lastPathComponent
+                        info.filePath = path
+                        info.fileSourceId = copy[3]
+                    }
                 case "server":
                     if let path: String = copy[1] { info.serverCopies.append(ServerCopy(serverName: copy[2] ?? "", path: path)) }
                 default: break
@@ -51,9 +60,12 @@ struct PhotoInfoQueries: Sendable {
             if copies.isEmpty, try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE photoId = ?", arguments: [photoId]) == 0 {
                 info.isInPhotos = true
             }
-            let marks = try Row.fetchOne(db, sql: "SELECT title, caption FROM photo_user_marks WHERE photoId = ?", arguments: [photoId])
+            let marks = try Row.fetchOne(db, sql: "SELECT title, caption, creator, copyright FROM photo_user_marks WHERE photoId = ?",
+                                         arguments: [photoId])
             info.title = marks?["title"]
             info.caption = marks?["caption"]
+            info.creator = marks?["creator"]
+            info.copyright = marks?["copyright"]
             if info.caption == nil {
                 info.caption = try String.fetchOne(db, sql: "SELECT caption FROM photo_caption WHERE assetId = ?", arguments: [photoId])
             }

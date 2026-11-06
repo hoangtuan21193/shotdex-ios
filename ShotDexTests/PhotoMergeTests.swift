@@ -76,4 +76,19 @@ import Testing
         #expect(merged.data.keywords == ["Kyoto", "Night"])
         #expect(PhotoMergePlan.latest(Stamped(value: 1, at: 5), Stamped(value: 2, at: 5))?.value == 1)
     }
+
+    /// Get Info's Creator and Copyright go through a merge like the title.
+    @Test func creatorAndCopyrightSurviveAMerge() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = PhotoUserMarksStore(database: database)
+        try store.setCreator("Linh", photoIds: ["A"], at: Date(timeIntervalSince1970: 10))
+        try store.setCreator("Linh Pham", photoIds: ["B"], at: Date(timeIntervalSince1970: 20))
+        try store.setCopyright("© Linh", photoIds: ["A"], at: Date(timeIntervalSince1970: 30))
+        let (a, b) = try database.reader.read { db in
+            (try PhotoIdentityStore.userData(db, "A"), try PhotoIdentityStore.userData(db, "B"))
+        }
+        let merged = PhotoMergePlan.merge(PhotoMergePlan.Side(id: "B", createdAt: 2, data: b), PhotoMergePlan.Side(id: "A", createdAt: 1, data: a))
+        #expect(merged.data.creator?.value == "Linh Pham")
+        #expect(merged.data.copyright?.value == "© Linh")
+    }
 }

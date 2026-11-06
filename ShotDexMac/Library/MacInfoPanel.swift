@@ -68,6 +68,13 @@ struct MacInfoView: View {
     @State private var titleText = ""
     @State private var captionText = ""
     @State private var keywordText = ""
+    @State private var creatorText = ""
+    @State private var copyrightText = ""
+    /// Metering and White Balance, read from the file itself (the index has neither).
+    @State private var fileExif: [(String, String)] = []
+    @State private var rawEntries: [MacRawMetadata.Entry]?
+    @State private var showsRaw = false
+    @State private var rawUnavailable: String?
     @State private var pendingSave: Task<Void, Never>?
     /// Writes waiting for typing to pause, one per field; all run at once
     /// when the photo changes, the panel closes or the app quits.
@@ -78,7 +85,7 @@ struct MacInfoView: View {
     @State private var lastWrite: Task<Void, Never>?
     @State private var saveState: SaveState = .idle
 
-    enum Field: Hashable { case title, caption }
+    enum Field: Hashable { case title, caption, creator, copyright }
     enum SaveState: Equatable { case idle, saving, saved, failed }
     @State private var showsExif = true
     @State private var showsServers = true
@@ -115,6 +122,7 @@ struct MacInfoView: View {
         .onChange(of: photoId) { old, _ in
             if let old { commitKeyword(for: old) }
             flushSave()
+            fileExif = []
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in flushSave() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { _ in flushSave() }
@@ -137,7 +145,20 @@ struct MacInfoView: View {
             loadedId = photoId
             titleText = read.title ?? ""
             captionText = read.caption ?? ""
-            lastSaved = [.title: titleText, .caption: captionText]
+            creatorText = read.creator ?? ""
+            copyrightText = read.copyright ?? ""
+            lastSaved = [.title: titleText, .caption: captionText, .creator: creatorText, .copyright: copyrightText]
+            fileExif = []
+            rawEntries = nil
+            keywordText = ""
+            saveState = .idle
+            if let url = fileURL(read) {
+                let properties = await MacRawMetadata.properties(of: url)
+                guard !Task.isCancelled, loadedId == photoId, let properties else { return }
+                fileExif = [(String(localized: "Metering", comment: "Mac Get Info: EXIF"), MacRawMetadata.metering(properties)),
+                            (String(localized: "White Balance", comment: "Mac Get Info: EXIF"), MacRawMetadata.whiteBalance(properties))]
+                    .compactMap { label, value in value.map { (label, $0) } }
+            }
             keywordText = ""
             saveState = .idle
         }
@@ -289,6 +310,28 @@ struct MacInfoView: View {
                 }
             }
             MacInfoRow {
+                label(String(localized: "Creator", comment: "Mac Get Info: field"))
+                TextField("", text: $creatorText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: .infinity)
+                    .onChange(of: creatorText) { _, text in
+                        guard loadedId == id else { return }
+                        scheduleSave(.creator, text: text, id) { await $0.setCreator(text, for: id) }
+                    }
+                    .accessibilityLabel(String(localized: "Creator", comment: "Mac Get Info: field"))
+            }
+            MacInfoRow {
+                label(String(localized: "Copyright", comment: "Mac Get Info: field"))
+                TextField("", text: $copyrightText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: .infinity)
+                    .onChange(of: copyrightText) { _, text in
+                        guard loadedId == id else { return }
+                        scheduleSave(.copyright, text: text, id) { await $0.setCopyright(text, for: id) }
+                    }
+                    .accessibilityLabel(String(localized: "Copyright", comment: "Mac Get Info: field"))
+            }
+            MacInfoRow {
                 Color.clear.frame(width: 80, height: 1)
                 VStack(alignment: .leading, spacing: 2) {
                     if !info.hasFileCopy && !canWritePhotos {
@@ -344,7 +387,7 @@ struct MacInfoView: View {
     private func exif(_ info: PhotoInfoQueries.Info) -> some View {
         DisclosureGroup(isExpanded: $showsExif) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 6) {
-                let rows = MacInfoText.exifRows(info.metadata)
+                let rows = MacInfoText.exifRows(info.metadata) + fileExif
                 ForEach(Array(stride(from: 0, to: rows.count, by: 2)), id: \.self) { index in
                     GridRow {
                         exifCell(rows[index])
@@ -354,7 +397,54 @@ struct MacInfoView: View {
             }
             .padding(.top, 6)
         } label: {
-            Text("EXIF", comment: "Mac Get Info: section").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+            HStack {
+                Text("EXIF", comment: "Mac Get Info: section").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                Spacer()
+                Button(String(localized: "Show All Raw Metadata", comment: "Mac Get Info: every metadata field of the file")) {
+                    showRaw(info)
+                }
+                .controlSize(.small)
+            }
+        }
+        .sheet(isPresented: $showsRaw) {
+            MacRawMetadataSheet(name: info.metadata?.originalFilename ?? "", entries: rawEntries, unavailable: rawUnavailable)
+        }
+    }
+
+    private func fileURL(_ info: PhotoInfoQueries.Info) -> URL? {
+        guard let source = info.fileSourceId, let path = info.filePath else { return nil }
+        return dependencies.folderRoots.fileURL(sourceId: source, relativePath: path)
+    }
+
+    /// Every field the file carries, read when asked (a Photos original is
+    /// read only if it is on this Mac).
+    private func showRaw(_ info: PhotoInfoQueries.Info) {
+        guard let id = loadedId else { return }
+        rawEntries = nil
+        showsRaw = true
+        let url = fileURL(info)
+        // A folder photo whose drive is not connected: no file to read, and
+        // it is not in Photos either.
+        if url == nil, info.fileSourceId != nil, !info.isInPhotos {
+            rawUnavailable = String(localized: "The drive this photo is on isn’t connected.", comment: "Mac raw metadata: source offline")
+            rawEntries = []
+            return
+        }
+        rawUnavailable = nil
+        Task {
+            var properties: [String: Any]?
+            if let url {
+                properties = await MacRawMetadata.properties(of: url)
+            } else {
+                #if DEBUG
+                if MacDemoLibrary.isOn, let demo = await Task.detached(operation: { MacDemoLibrary.pictureFiles(for: [id]).first }).value {
+                    properties = await MacRawMetadata.properties(of: demo)
+                }
+                #endif
+                if properties == nil { properties = await MacRawMetadata.properties(ofAsset: id) }
+            }
+            guard loadedId == id else { return }
+            rawEntries = properties.map(MacRawMetadata.entries) ?? []
         }
     }
 
@@ -572,10 +662,52 @@ enum MacInfoText {
             return String(localized: "Saved as you type to \(sidecar) next to the file. The image file itself is never edited.",
                           comment: "Mac Get Info: where a folder photo's changes go")
         }
-        return String(localized: "Saved as you type to Photos.", comment: "Mac Get Info: where a Photos photo's changes go")
+        return String(localized: "Saved as you type: caption and keywords to Photos, creator and copyright in ShotDex.",
+                      comment: "Mac Get Info: where a Photos photo's changes go")
     }
 }
 
 private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+/// Show All Raw Metadata: every field ImageIO reads from the file.
+struct MacRawMetadataSheet: View {
+    let name: String
+    let entries: [MacRawMetadata.Entry]?
+    var unavailable: String?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(name).font(.headline).lineLimit(1).truncationMode(.middle)
+            Group {
+                if let entries, entries.isEmpty {
+                    Text(unavailable ?? String(localized: "This file’s metadata can’t be read here — it may be in iCloud only.",
+                                               comment: "Mac raw metadata: nothing to show"))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let entries {
+                    Table(entries) {
+                        TableColumn(String(localized: "Field", comment: "Mac raw metadata: column")) { Text($0.key).textSelection(.enabled) }
+                        TableColumn(String(localized: "Value", comment: "Mac raw metadata: column")) { Text($0.value).textSelection(.enabled) }
+                    }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(minHeight: 300)
+            HStack {
+                Spacer()
+                Button(String(localized: "Done", comment: "Mac raw metadata: close")) { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 520, height: 460)
+    }
+}
+
+extension MacRawMetadata.Entry: Identifiable {
+    var id: String { key }
 }

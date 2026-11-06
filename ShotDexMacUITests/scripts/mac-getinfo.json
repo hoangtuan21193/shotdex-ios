@@ -97,6 +97,10 @@
    "type": "textField"
   },
   {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
    "action": "typeText",
    "label": "Caption",
    "text": "Deer crossing the lawn",
@@ -162,6 +166,54 @@
    "seconds": 3
   },
   {
+   "action": "typeText",
+   "label": "Creator",
+   "type": "textField",
+   "text": "Linh Pham"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Copyright",
+   "type": "textField",
+   "text": "© 2026 Linh Pham"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Show All Raw Metadata",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Field",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-raw",
+   "window": "Info"
+  },
+  {
+   "action": "click",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
    "action": "click",
    "x": 0.33,
    "y": 0.2,
@@ -186,6 +238,12 @@
    "label": "Caption",
    "type": "textField",
    "text": "Deer crossing the lawn"
+  },
+  {
+   "action": "assertValue",
+   "label": "Creator",
+   "type": "textField",
+   "text": "Linh Pham"
   },
   {
    "action": "key",

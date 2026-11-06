@@ -3,8 +3,9 @@ import GRDB
 
 /// Stars, favorite, title, caption and keywords of file photos —
 /// `photo_user_marks` and `photo_user_keyword` of `v30-photoSources`
-/// (FS-19.05 §3). User data: the indexer never rewrites these rows, and
-/// Clear Local Metadata Index keeps them.
+/// (FS-19.05 §3). User data: the indexer writes them only from the file's
+/// own XMP or its sidecar, time-stamped so a newer change made in ShotDex
+/// wins, and Clear Local Metadata Index keeps them.
 ///
 /// Every single-value field carries the time it changed, so a sidecar read
 /// and a change made in ShotDex settle the same way a merge does: the later
@@ -92,6 +93,12 @@ struct PhotoUserMarksStore: Sendable {
         if let caption = values.caption {
             try setField(db, "caption", "captionAt", value: caption, photoId: photoId, at: at)
         }
+        if let creator = values.creator {
+            try setField(db, "creator", "creatorAt", value: creator, photoId: photoId, at: at)
+        }
+        if let rights = values.rights {
+            try setField(db, "copyright", "copyrightAt", value: rights, photoId: photoId, at: at)
+        }
         if let isFavorite = values.isFavorite {
             try setField(db, "isFavorite", "favoriteAt", value: isFavorite, photoId: photoId, at: at)
         }
@@ -143,6 +150,14 @@ struct PhotoUserMarksStore: Sendable {
 
     func setCaption(_ caption: String, photoIds: [String], at date: Date = Date()) throws {
         try setText(caption, column: "caption", stamp: "captionAt", photoIds: photoIds, at: date)
+    }
+
+    func setCreator(_ creator: String, photoIds: [String], at date: Date = Date()) throws {
+        try setText(creator, column: "creator", stamp: "creatorAt", photoIds: photoIds, at: date)
+    }
+
+    func setCopyright(_ copyright: String, photoIds: [String], at date: Date = Date()) throws {
+        try setText(copyright, column: "copyright", stamp: "copyrightAt", photoIds: photoIds, at: date)
     }
 
     private func setText(_ text: String, column: String, stamp: String, photoIds: [String], at date: Date) throws {

@@ -14,6 +14,9 @@ struct SidecarValues: Equatable, Sendable {
     var keywords: [String] = []
     var title: String?
     var caption: String?
+    /// `dc:creator` (the first) and `dc:rights` (FS-18.02 §8).
+    var creator: String?
+    var rights: String?
     /// ShotDex's namespace: Pick, favorite and the edit recipe — fields
     /// other apps skip (FS-19.02 §5).
     var isPicked = false
@@ -48,7 +51,11 @@ enum SidecarReader {
     /// a Photos asset takes its stars from Photos (FS-01.12 §7).
     static func embedded(in source: CGImageSource) -> SidecarValues? {
         guard let metadata = CGImageSourceCopyMetadataAtIndex(source, 0, nil) else { return nil }
-        let values = values(metadata)
+        var values = values(metadata)
+        // A camera's own creator and copyright stay the file's: only a
+        // sidecar (or Get Info) sets ShotDex's Creator and Copyright.
+        values.creator = nil
+        values.rights = nil
         return values.isEmpty ? nil : values
     }
 
@@ -67,6 +74,9 @@ enum SidecarReader {
         out.keywords += embedded.keywords.filter { seen.insert(KeywordInput.caseKey($0)).inserted }
         out.title = sidecar.title ?? embedded.title
         out.caption = sidecar.caption ?? embedded.caption
+        // Creator and Copyright: the sidecar's only (`embedded` drops them).
+        out.creator = sidecar.creator
+        out.rights = sidecar.rights
         out.isFavorite = sidecar.isFavorite ?? embedded.isFavorite
         out.recipe = sidecar.recipe ?? embedded.recipe
         return out
@@ -114,6 +124,8 @@ enum SidecarReader {
         values.keywords = strings(metadata, "dc:subject")
         values.title = strings(metadata, "dc:title").first
         values.caption = strings(metadata, "dc:description").first
+        values.creator = strings(metadata, "dc:creator").first
+        values.rights = strings(metadata, "dc:rights").first
         values.isPicked = own["Flag"] == PhotoFlag.pick.rawValue && !values.isRejected
         values.isFavorite = own["Favorite"].map { $0.lowercased() == "true" }
         values.recipe = own["Recipe"].flatMap { Data(base64Encoded: $0) }
