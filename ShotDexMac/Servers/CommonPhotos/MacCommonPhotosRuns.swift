@@ -406,6 +406,14 @@ final class MacCommonPhotosRuns {
         let photoDone = progress.doneCount != entry.progress.doneCount
         if let last, !photoDone, now - last.at < .milliseconds(100) { return }
         shownProgress[runId] = (number, now)
+        var progress = progress
+        // Between two photos the runner clears the name: the last one stays
+        // up until the next lands, so the window's detail line does not
+        // blink empty after every photo.
+        if progress.currentName == nil, progress.doneCount < progress.totalCount {
+            progress.currentName = entry.progress.currentName
+            progress.currentStep = entry.progress.currentStep
+        }
         entry.progress = progress
         var samples = (rateSamples[runId] ?? []).filter { now - $0.at < .seconds(30) }
         samples.append((now, progress.doneBytes))

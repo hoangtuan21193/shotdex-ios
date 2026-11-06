@@ -156,14 +156,17 @@ final class MacCommonPhotosLogModel {
     }
 
     private func reshow() {
-        shown = rows.filter { row in
+        let filtered = rows.filter { row in
             switch filter {
             case .all: true
             case .done: isUndo ? row.status == .undone : [.copied, .moved, .undone].contains(row.status)
             case .skipped: row.status == .skipped
             case .failed: row.status == .failed
             }
-        }.sorted(using: sortOrder)
+        }
+        // The store reads them in position order: sorted by it, they
+        // already are — 14,000 rows twice a second is not sorted again.
+        shown = sortOrder == [KeyPathComparator(\Row.id)] ? filtered : filtered.sorted(using: sortOrder)
     }
 
     private static func counts(_ rows: [Row], isUndo: Bool) -> Counts {
@@ -203,15 +206,16 @@ final class MacCommonPhotosLogModel {
         let generation = readGeneration
         let store = store
         let runId = runId
-        let read: (CommonPhotosRun, [CommonPhotosItem], [Row], Set<String>)? = await Task.detached(priority: .userInitiated) {
+        let read: (CommonPhotosRun, [CommonPhotosItem], [Row], Set<String>, [CommonPhotosItem])? = await Task.detached(priority: .userInitiated) {
             guard let run = (try? store.run(id: runId)) ?? nil else { return nil }
             let items = (try? store.items(runId: runId)) ?? []
             let setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
             let leftOut = run.state == .ready
                 ? Set(((try? CommonPhotosLeftOutStore(database: store.database).entries(setKey: setKey)) ?? []).map(\.sha256)) : []
-            return (run, items, items.map { Self.row($0, run: run, leftOut: leftOut) }, leftOut)
+            return (run, items, items.map { Self.row($0, run: run, leftOut: leftOut) }, leftOut,
+                    CommonPhotosInfoRestorer.candidates(items, run: run))
         }.value
-        guard let (run, items, rows, leftOut) = read, generation == readGeneration else { return }
+        guard let (run, items, rows, leftOut, restorable) = read, generation == readGeneration else { return }
         self.leftOut = leftOut
         setKey = CommonPhotosIncremental.setKey(connectionId: run.connectionId, folders: run.folders, destination: run.destination)
         connectionId = run.connectionId
@@ -219,7 +223,6 @@ final class MacCommonPhotosLogModel {
         runUpdatedAt = run.updatedAt
         isUndo = run.isUndo
         self.items = items
-        let restorable = CommonPhotosInfoRestorer.candidates(items, run: run)
         restorableLost = restorable.count(where: { $0.fileInfo == .datesNotKept })
         restorableUnknown = restorable.count(where: { $0.fileInfo == nil })
         if rows != self.rows { self.rows = rows }
@@ -258,7 +261,7 @@ final class MacCommonPhotosLogModel {
         let notRestored = item.fileInfo != .kept && (item.failure?.reason).map { CommonPhotosInfoRestorer.ownReasons.contains($0) } == true
         return Row(id: item.position, status: item.status, statusText: status, name: name,
                    from: item.sources.map { place($0.path, run: run, name: name) }.joined(separator: " · "),
-                   to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
+                   to: item.destinationPath.map { landing($0, run: run) } ?? "",
                    shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 && !item.sha256.hasPrefix(CommonPhoto.quickPrefix)
                        ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
@@ -272,6 +275,16 @@ final class MacCommonPhotosLogModel {
                    csvCheck: run.isUndo || item.status == .skipped ? "" : item.checkMethod?.rawValue ?? "",
                    fromPaths: item.sources.map(\.path).joined(separator: "; "), toPath: item.destinationPath ?? "",
                    sha256: item.sha256.hasPrefix(CommonPhoto.quickPrefix) ? "" : item.sha256)
+    }
+
+    /// "Shared/2025/10/12/DSC04388.ARW": where the copy is under the
+    /// destination, its dated or kept folders included (FS-19.08 §6e).
+    nonisolated static func landing(_ path: String, run: CommonPhotosRun) -> String {
+        let root = ServerUploadPath.normalizedFolder(run.destination)
+        let full = ServerUploadPath.normalizedFolder(path)
+        let name = ServerUploadPath.lastComponent(of: run.destination)
+        guard full.hasPrefix(root + "/") else { return ServerUploadPath.join(name, ServerUploadPath.lastComponent(of: path)) }
+        return ServerUploadPath.join(name, String(full.dropFirst(root.count + 1)))
     }
 
     /// "Tuấn/Da Lat", or "Vợ/Phone/2025-06-01 IMG_4021.HEIC" when the name
@@ -336,7 +349,10 @@ private struct MacCommonPhotosRunContent: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
                 .padding(.bottom, 10)
-            table
+            MacCommonPhotosLogTable(log: log, run: run, isReady: entry.isReady, isRunning: entry.isRunning,
+                                    isFinished: entry.isFinished, canUndo: canUndo, isRestoring: restore?.isRunning == true,
+                                    undo: { undoing = .some($0) }, restore: { askRestore($0) })
+                .equatable()
                 .padding(.horizontal, 16)
             footer
                 .padding(.horizontal, 16)
@@ -532,10 +548,11 @@ private struct MacCommonPhotosRunContent: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(headline).fontWeight(.semibold).monospacedDigit().lineLimit(1)
-                    if let detail {
-                        Text(detail).font(.subheadline).foregroundStyle(entry.problem != nil ? Color(nsColor: .systemRed) : .secondary)
-                            .monospacedDigit().lineLimit(2)
-                    }
+                    // One line, kept when empty (board): the bar under it
+                    // never moves as the line changes.
+                    Text(detail ?? " ").font(.subheadline).foregroundStyle(entry.problem != nil ? Color(nsColor: .systemRed) : .secondary)
+                        .monospacedDigit().lineLimit(1)
+                        .help(detail ?? "")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 actions
@@ -720,124 +737,6 @@ private struct MacCommonPhotosRunContent: View {
         }
     }
 
-    private var table: some View {
-        Table(log.shown, selection: $log.selection, sortOrder: $log.sortOrder) {
-            TableColumn(String(localized: "Status", comment: "Common photos log column"), value: \.statusText) { row in
-                statusCell(row)
-            }
-            .width(min: 110, ideal: 140)
-            TableColumn(String(localized: "Name", comment: "Common photos log column"), value: \.name) { row in
-                Text(row.name).lineLimit(1)
-            }
-            .width(min: 80, ideal: 100)
-            TableColumn(String(localized: "From", comment: "Common photos log column"), value: \.from) { row in
-                Text(row.from).foregroundStyle(.secondary).lineLimit(1).help(row.fromPaths)
-            }
-            .width(min: 90, ideal: 120)
-            TableColumn(String(localized: "To", comment: "Common photos log column"), value: \.to) { row in
-                Text(row.to).foregroundStyle(.secondary).lineLimit(1).help(row.toPath)
-            }
-            .width(min: 100, ideal: 170)
-            TableColumn(String(localized: "Check", comment: "Common photos log column: how Same was proven, Quick or Full (FS-19.08 §6e)"), value: \.check) { row in
-                Text(row.check).foregroundStyle(.secondary).lineLimit(1)
-            }
-            .width(min: 50, ideal: 64)
-            TableColumn(String(localized: "File info", comment: "Common photos log column: whether the copy kept its source's dates (FS-19.08 §6e)"), value: \.fileInfo) { row in
-                Text(row.fileInfo).foregroundStyle(row.datesLost ? Color.orange : .secondary).lineLimit(1)
-            }
-            .width(min: 96, ideal: 110)
-            TableColumn(String(localized: "SHA-256", comment: "Common photos log column"), value: \.sha256) { row in
-                Text(row.shortSHA).foregroundStyle(.secondary).monospacedDigit().help(row.sha256)
-            }
-            .width(min: 64, ideal: 84)
-            TableColumn(String(localized: "Reason", comment: "Common photos log column"), value: \.reason) { row in
-                Text(row.reason).foregroundStyle(row.status == .failed ? Color(nsColor: .systemRed) : .secondary).lineLimit(1)
-            }
-            .width(min: 60, ideal: 90)
-        }
-        .alternatingRowBackgrounds()
-        .contextMenu(forSelectionType: Int.self) { positions in
-            if !positions.isEmpty {
-                Button(String(localized: "Undo Selected…", comment: "Common photos log: undo the chosen rows")) {
-                    undoing = .some(positions)
-                }
-                .disabled(!canUndo || undoable(positions).isEmpty)
-                if entry.isFinished, run.action == .copy, !run.isUndo {
-                    Button(String(localized: "Restore File Info…", comment: "Common photos log: restore the chosen rows' dates")) {
-                        askRestore(positions)
-                    }
-                    .disabled(restore?.isRunning == true || restorable(positions).isEmpty)
-                }
-            }
-        }
-        .overlay {
-            if log.shown.isEmpty, !log.rows.isEmpty { emptyFilter }
-        }
-        .onCopyCommand {
-            let text = log.copyText()
-            return text.isEmpty ? [] : [NSItemProvider(object: text as NSString)]
-        }
-        .accessibilityLabel(String(localized: "Files", comment: "Common photos log table"))
-    }
-
-    private var emptyFilter: some View {
-        Text(emptyFilterText).foregroundStyle(.secondary)
-    }
-
-    private var emptyFilterText: String {
-        switch log.filter {
-        case .failed: String(localized: "No failed files", comment: "Common photos log: the Failed filter is empty")
-        case .skipped: String(localized: "No skipped files", comment: "Common photos log: the Skipped filter is empty")
-        case .done: run.action == .move ? String(localized: "No files moved yet", comment: "Common photos log: the Moved filter is empty")
-                                        : String(localized: "No files copied yet", comment: "Common photos log: the Copied filter is empty")
-        case .all: ""
-        }
-    }
-
-    @ViewBuilder
-    private func statusCell(_ row: MacCommonPhotosLogModel.Row) -> some View {
-        let inFlight = [.copying, .moving, .placed].contains(row.status)
-        if entry.isReady, row.status == .pending {
-            // §6d: a photo waiting to move — checked, or left out of the set.
-            let isLeftOut = log.leftOut.contains(row.sha256)
-            HStack(spacing: 6) {
-                Toggle(isOn: Binding(get: { !isLeftOut }, set: { log.setLeftOut(!$0, row: row) })) { EmptyView() }
-                    .toggleStyle(.checkbox)
-                    .labelsHidden()
-                    .accessibilityLabel(row.name)
-                    .help(String(localized: "Unchecked: left out of this set from now on. Check it again to include it.",
-                                 comment: "Common photos log: ready row checkbox tooltip"))
-                    .accessibilityValue(isLeftOut
-                        ? String(localized: "Left out", comment: "Common photos log: ready row checkbox, VoiceOver value")
-                        : String(localized: "Included", comment: "Common photos log: ready row checkbox, VoiceOver value"))
-                Text(row.statusText).lineLimit(1).foregroundStyle(.secondary)
-            }
-        } else if inFlight, !entry.isRunning {
-            // Not going: a photo left mid-step is unfinished, not busy.
-            Text("Unfinished", comment: "Common photos log status: a photo left mid-step while the run is not going")
-                .foregroundStyle(.orange).lineLimit(1)
-        } else {
-            busyOrDoneCell(row)
-        }
-    }
-
-    @ViewBuilder
-    private func busyOrDoneCell(_ row: MacCommonPhotosLogModel.Row) -> some View {
-        HStack(spacing: 6) {
-            switch row.status {
-            case .copied, .moved: Image(systemName: "checkmark").fontWeight(.bold)
-            case .skipped: Image(systemName: "minus.circle")
-            case .failed: Image(systemName: "exclamationmark.triangle")
-            case .undone: Image(systemName: "arrow.uturn.backward")
-            case .copying, .moving, .placed: ProgressView().controlSize(.mini)
-            case .pending: EmptyView()
-            }
-            Text(row.statusText).lineLimit(1)
-        }
-        .foregroundStyle(row.status == .copied || row.status == .moved || row.status == .undone ? Color.green
-                         : row.status == .failed ? Color(nsColor: .systemRed) : .secondary)
-    }
-
     // MARK: Footer
 
     /// "280 copied · 12 skipped · 0 failed".
@@ -963,6 +862,147 @@ private struct MacCommonPhotosRunContent: View {
             }
         }
     }
+}
+
+/// The log's table, apart from the header: the run's progress lands ten
+/// times a second, and redrawing 14,000 rows on each tick made the list
+/// stutter while scrolled. It redraws when the rows are read again or
+/// what it shows changes — never for the progress bar.
+private struct MacCommonPhotosLogTable: View, Equatable {
+    @Bindable var log: MacCommonPhotosLogModel
+    let run: CommonPhotosRun
+    let isReady: Bool
+    let isRunning: Bool
+    let isFinished: Bool
+    let canUndo: Bool
+    let isRestoring: Bool
+    /// Undo Selected… and Restore File Info… asked, for these rows.
+    let undo: (Set<Int>) -> Void
+    let restore: (Set<Int>) -> Void
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.log === rhs.log && lhs.run == rhs.run && lhs.isReady == rhs.isReady && lhs.isRunning == rhs.isRunning
+            && lhs.isFinished == rhs.isFinished && lhs.canUndo == rhs.canUndo && lhs.isRestoring == rhs.isRestoring
+    }
+
+    var body: some View {
+        Table(log.shown, selection: $log.selection, sortOrder: $log.sortOrder) {
+            TableColumn(String(localized: "Status", comment: "Common photos log column"), value: \.statusText) { row in
+                statusCell(row)
+            }
+            .width(min: 110, ideal: 140)
+            TableColumn(String(localized: "Name", comment: "Common photos log column"), value: \.name) { row in
+                Text(row.name).lineLimit(1)
+            }
+            .width(min: 80, ideal: 100)
+            TableColumn(String(localized: "From", comment: "Common photos log column"), value: \.from) { row in
+                Text(row.from).foregroundStyle(.secondary).lineLimit(1).help(row.fromPaths)
+            }
+            .width(min: 90, ideal: 120)
+            TableColumn(String(localized: "To", comment: "Common photos log column"), value: \.to) { row in
+                Text(row.to).foregroundStyle(.secondary).lineLimit(1).help(row.toPath)
+            }
+            .width(min: 100, ideal: 170)
+            TableColumn(String(localized: "Check", comment: "Common photos log column: how Same was proven, Quick or Full (FS-19.08 §6e)"), value: \.check) { row in
+                Text(row.check).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .width(min: 50, ideal: 64)
+            TableColumn(String(localized: "File info", comment: "Common photos log column: whether the copy kept its source's dates (FS-19.08 §6e)"), value: \.fileInfo) { row in
+                Text(row.fileInfo).foregroundStyle(row.datesLost ? Color.orange : .secondary).lineLimit(1)
+            }
+            .width(min: 96, ideal: 110)
+            TableColumn(String(localized: "SHA-256", comment: "Common photos log column"), value: \.sha256) { row in
+                Text(row.shortSHA).foregroundStyle(.secondary).monospacedDigit().help(row.sha256)
+            }
+            .width(min: 64, ideal: 84)
+            TableColumn(String(localized: "Reason", comment: "Common photos log column"), value: \.reason) { row in
+                Text(row.reason).foregroundStyle(row.status == .failed ? Color(nsColor: .systemRed) : .secondary).lineLimit(1)
+            }
+            .width(min: 60, ideal: 90)
+        }
+        .alternatingRowBackgrounds()
+        .contextMenu(forSelectionType: Int.self) { positions in
+            if !positions.isEmpty {
+                Button(String(localized: "Undo Selected…", comment: "Common photos log: undo the chosen rows")) {
+                    undo(positions)
+                }
+                .disabled(!canUndo || !log.items.contains { (run.isUndo ? $0.status == .failed : $0.isUndoable) && positions.contains($0.position) })
+                if isFinished, run.action == .copy, !run.isUndo {
+                    Button(String(localized: "Restore File Info…", comment: "Common photos log: restore the chosen rows' dates")) {
+                        restore(positions)
+                    }
+                    .disabled(isRestoring || CommonPhotosInfoRestorer.candidates(log.items, run: run, positions: positions).isEmpty)
+                }
+            }
+        }
+        .overlay {
+            if log.shown.isEmpty, !log.rows.isEmpty { emptyFilter }
+        }
+        .onCopyCommand {
+            let text = log.copyText()
+            return text.isEmpty ? [] : [NSItemProvider(object: text as NSString)]
+        }
+        .accessibilityLabel(String(localized: "Files", comment: "Common photos log table"))
+    }
+
+    private var emptyFilter: some View {
+        Text(emptyFilterText).foregroundStyle(.secondary)
+    }
+
+    private var emptyFilterText: String {
+        switch log.filter {
+        case .failed: String(localized: "No failed files", comment: "Common photos log: the Failed filter is empty")
+        case .skipped: String(localized: "No skipped files", comment: "Common photos log: the Skipped filter is empty")
+        case .done: run.action == .move ? String(localized: "No files moved yet", comment: "Common photos log: the Moved filter is empty")
+                                        : String(localized: "No files copied yet", comment: "Common photos log: the Copied filter is empty")
+        case .all: ""
+        }
+    }
+
+    @ViewBuilder
+    private func statusCell(_ row: MacCommonPhotosLogModel.Row) -> some View {
+        let inFlight = [.copying, .moving, .placed].contains(row.status)
+        if isReady, row.status == .pending {
+            // §6d: a photo waiting to move — checked, or left out of the set.
+            let isLeftOut = log.leftOut.contains(row.sha256)
+            HStack(spacing: 6) {
+                Toggle(isOn: Binding(get: { !isLeftOut }, set: { log.setLeftOut(!$0, row: row) })) { EmptyView() }
+                    .toggleStyle(.checkbox)
+                    .labelsHidden()
+                    .accessibilityLabel(row.name)
+                    .help(String(localized: "Unchecked: left out of this set from now on. Check it again to include it.",
+                                 comment: "Common photos log: ready row checkbox tooltip"))
+                    .accessibilityValue(isLeftOut
+                        ? String(localized: "Left out", comment: "Common photos log: ready row checkbox, VoiceOver value")
+                        : String(localized: "Included", comment: "Common photos log: ready row checkbox, VoiceOver value"))
+                Text(row.statusText).lineLimit(1).foregroundStyle(.secondary)
+            }
+        } else if inFlight, !isRunning {
+            // Not going: a photo left mid-step is unfinished, not busy.
+            Text("Unfinished", comment: "Common photos log status: a photo left mid-step while the run is not going")
+                .foregroundStyle(.orange).lineLimit(1)
+        } else {
+            busyOrDoneCell(row)
+        }
+    }
+
+    @ViewBuilder
+    private func busyOrDoneCell(_ row: MacCommonPhotosLogModel.Row) -> some View {
+        HStack(spacing: 6) {
+            switch row.status {
+            case .copied, .moved: Image(systemName: "checkmark").fontWeight(.bold)
+            case .skipped: Image(systemName: "minus.circle")
+            case .failed: Image(systemName: "exclamationmark.triangle")
+            case .undone: Image(systemName: "arrow.uturn.backward")
+            case .copying, .moving, .placed: ProgressView().controlSize(.mini)
+            case .pending: EmptyView()
+            }
+            Text(row.statusText).lineLimit(1)
+        }
+        .foregroundStyle(row.status == .copied || row.status == .moved || row.status == .undone ? Color.green
+                         : row.status == .failed ? Color(nsColor: .systemRed) : .secondary)
+    }
+
 }
 
 /// The Library window, remembered so another window can bring it forward.

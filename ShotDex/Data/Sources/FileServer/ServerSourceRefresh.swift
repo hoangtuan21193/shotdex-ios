@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import OSLog
 
 /// When a server source's listing is compared again (FS-19.03 §3, FS-19.07
 /// §5): each time the app comes to the foreground — `OnServerCheck` asks,
@@ -8,6 +9,8 @@ import GRDB
 /// whole tree on the NAS, and SMB, SFTP and WebDAV say nothing reliable
 /// about changes in between. A pass already running is not started again.
 actor ServerSourceRefresh {
+    nonisolated static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "ServerSource")
+
     let database: AppDatabase
     let servers: FileServerStore
     let composer: MetadataComposer
@@ -90,6 +93,12 @@ actor ServerSourceRefresh {
         else { return nil }
         let client = makeClient(server, servers.password(for: server.id) ?? "")
         let indexer = ServerSourceIndexer(database: database, composer: composer, client: client, thumbnails: thumbnails)
-        return try? await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: found.pairs)
+        do {
+            return try await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: found.pairs)
+        } catch {
+            // The caller only learns the pass did not finish; why goes here.
+            Self.logger.error("server pass \(sourceId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 }

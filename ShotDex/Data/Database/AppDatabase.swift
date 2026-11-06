@@ -19,8 +19,18 @@ final class AppDatabase: Sendable {
         let folderURL = try supportFolder().appendingPathComponent("Database", isDirectory: true)
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
         let databaseURL = folderURL.appendingPathComponent("shotdex.sqlite")
-        let pool = try DatabasePool(path: databaseURL.path)
+        let pool = try DatabasePool(path: databaseURL.path, configuration: sharedConfiguration)
         return try AppDatabase(pool)
+    }
+
+    /// Two processes write this file on the Mac — the app and its helper
+    /// (a server pass, Backup) — and GRDB's default fails a write at once
+    /// with "database is locked" while the other holds the lock. It waits
+    /// instead; every write here is short.
+    static var sharedConfiguration: Configuration {
+        var configuration = Configuration()
+        configuration.busyMode = .timeout(10)
+        return configuration
     }
 
     /// The app group the Mac app and its helper share. Team-prefixed: a
