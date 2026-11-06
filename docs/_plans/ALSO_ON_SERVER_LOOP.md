@@ -32,8 +32,8 @@ Review rows run agents (two rounds), merge findings into the row, fix each in it
 | 2 | Normalizer old `Source is <server>` → Also on Server (AC-253) | done (this commit) | `AlsoOnServerMigration` trong `SmartAlbumStore.fetchAllOrdered` |
 | 3 | Editor iOS + Mac (AC-246…250, 258) | code done; ảnh còn ở row 11 | |
 | 4 | Progress line from Also on Server (AC-256, 259) | code done; test còn | `refreshOnServer` nhận cả `.alsoOnServer` |
-| 5 | Migration + `SmartAlbumPhotosAlbumStore` | todo | |
-| 6 | `PhotosAlbumDiff` + `PhotosAlbumSync` (FS-06.12 AC-2…8, 10, 12, 13, 15, 17) | todo | |
+| 5 | Migration + `SmartAlbumPhotosAlbumStore` | done (this commit) | `v61-smartAlbumPhotosAlbum` |
+| 6 | `PhotosAlbumDiff` + `PhotosAlbumSync` (FS-06.12 AC-2…8, 10, 12, 13, 15, 17) | done (this commit) | 13 test; PhotoKit qua `PhotosAlbumWriting` |
 | 7 | UI: switch, status line, delete alert, limited (AC-9, 11) | todo | |
 | 8 | Triggers: save, On Server batch, library change, background (AC-4, 14) | todo | |
 | 9 | Review round 1: cavecrew-reviewer + photokit-guard + data-migration | todo | |

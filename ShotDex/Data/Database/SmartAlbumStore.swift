@@ -28,9 +28,12 @@ struct SmartAlbumStore: Sendable {
         }
     }
 
+    /// Deletes the smart album and its Keep in Photos link; the album in
+    /// Photos stays (FS-06.12 §4).
     func delete(id: String) throws {
         _ = try database.writer.write { db in
-            try SmartAlbum.deleteOne(db, key: id)
+            try SmartAlbumPhotosAlbum.deleteOne(db, key: id)
+            return try SmartAlbum.deleteOne(db, key: id)
         }
     }
 }
