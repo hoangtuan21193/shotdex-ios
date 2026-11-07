@@ -1,0 +1,112 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "uploads"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Where They Are",
+   "type": "staticText",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-onserver"
+  },
+  {
+   "action": "dump",
+   "name": "01-onserver"
+  },
+  {
+   "action": "assertExists",
+   "label": "NAS Home",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "photos/Uploads/2026-09-21",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-picked"
+  },
+  {
+   "action": "assertExists",
+   "label": "photos/Uploads/2026-09-21",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Every photo on any server",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Free Up Space\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-confirm"
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove 40 photos from This Mac?"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove 40 photos from This Mac?"
+  },
+  {
+   "action": "click",
+   "label": "Free Up Space\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-after"
+  }
+ ]
+}

@@ -216,6 +216,36 @@ enum MacDemoLibrary {
         return .source(sourceId)
     }
 
+    /// `-ShotDexSection uploads` (board `MAC_ServerUpload`): upload history
+    /// for the On Server place — 40 photos in three places on two servers,
+    /// keyed like the demo's own upload files, so Free Up Space has photos.
+    @MainActor
+    static func seedUploads(_ dependencies: MacDependencies) {
+        guard isOn else { return }
+        seedUploadServer(dependencies)
+        // The demo database's newest photos: the window's rows may not be read yet.
+        let rows = (try? dependencies.database.reader.read { db in
+            try Row.fetchAll(db, sql: "SELECT assetId, originalFilename FROM photo_metadata ORDER BY creationDate DESC LIMIT 40")
+                .map { (assetId: $0["assetId"] as String, originalFilename: $0["originalFilename"] as String?) }
+        }) ?? []
+        // A place with no connection row: an upload whose connection was deleted (name kept).
+        let places: [(String?, String, String)] = [("demo-smb-upload", "Test SMB", "photos/Uploads/2026-09-28"),
+                      ("demo-smb-upload", "Test SMB", "photos/Uploads/2026-09-21"),
+                      (nil, "NAS Home", "Photos/2026")]
+        let now = Int(Date().timeIntervalSince1970)
+        // Again on a kept demo database (-ShotDexDemoDatabase): the same 40, not 40 more.
+        try? dependencies.database.writer.write { db in try db.execute(sql: "DELETE FROM server_uploads WHERE fileKey LIKE 'demo:%'") }
+        for (index, row) in rows.enumerated() {
+            let place = places[index % places.count]
+            let name = ((row.originalFilename ?? "\(row.assetId).JPG") as NSString).deletingPathExtension + ".JPG"
+            let record = ServerUploadRecord(assetId: row.assetId, fileKey: "demo:\(name)", serverId: place.0, serverName: place.1,
+                                            remotePath: "\(place.2)/\(name)", byteCount: 400_000, sha256: "demo",
+                                            uploadedAt: now - (index % places.count) * 86_400 * 7)
+            try? dependencies.serverUploads.record(record)
+        }
+        dependencies.serverUploadIndex.reload()
+    }
+
     /// `-ShotDexSection upload`: a connection to the local test SMB server,
     /// uploading into `photos/Uploads` — never a real server.
     @MainActor

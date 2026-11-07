@@ -189,6 +189,8 @@ struct MacRootWindow: View {
                 })
             } else if selection == .hidden {
                 MacHiddenScreen(sources: sources, photoMenu: photoMenu, showsInspector: $showsInspector)
+            } else if selection == .onServer {
+                MacOnServerScreen(menu: photoMenu, picture: Self.demoPicture)
             } else if let source = serverSource {
                 MacServerBrowserScreen(source: source)
             } else if let selection, selection.isPendingScreen {
@@ -1686,6 +1688,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "albums" { selection = .albums }
+        if MacDemoLibrary.section == "uploads" { MacDemoLibrary.seedUploads(dependencies); selection = .onServer }
         if MacDemoLibrary.section == "albumDetail" { selection = .album("demo-album-Iceland 2026") }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }

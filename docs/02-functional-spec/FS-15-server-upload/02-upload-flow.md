@@ -167,3 +167,23 @@ Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo
 - Demo (`-ShotDexDemoLibrary`) chỉ tới được 127.0.0.1: mọi host khác trỏ vào cổng đóng, nên không bao giờ ghi lên server LAN thật.
 - *Còn lại:* chạy nền trong Activity popover thay cho sheet (board `MAC_ServerUpload`, hàng 25c); duyệt folder trên server
   và **Upload…** của màn duyệt server (25b); upload ảnh chỉ có ở thư mục/server.
+
+## 10. Mac — chỗ On Server (hàng 25b, board `MAC_ServerUpload`, 2026-11-08)
+
+Sidebar › Utilities › **On Server**: bản Mac của Uploaded to Server (§8), trong cửa sổ Library.
+
+- Tiêu đề "On Server", dòng phụ "40 photos · 2 servers" (ảnh trên server bất kỳ · số server đã đẩy tới).
+- **Free Up Space** (thẻ đầu): "N photos · ~X GB are safely on a server and can leave this Mac" — chỉ ảnh mà **mọi** file gốc
+  đã khớp checksum trên một server (`ServerUploadEligibility`, theo lịch sử upload — như iOS §7, không hỏi lại server).
+  Thẻ ghi thêm "N more photos on a server can't leave yet…" khi bảng có nhiều ảnh hơn. Nút **Free Up Space…** (chữ đỏ, không
+  nổi bật — lệnh xoá) hỏi "Remove N photos from This Mac?" (bản trên server không đổi; Photos → Recently Deleted, file thư mục →
+  Thùng rác; + `FreeUpSpaceNote`) → **Continue** kiểm lại ngay lúc đó rồi chạy luồng Move to Trash của lưới (FS-19.04). Kiểm lại
+  không còn ảnh nào: hộp "Nothing Was Removed". 0 ảnh: "Nothing to remove: …", nút mờ. Nút tắt khi đang đọc/kiểm.
+- **Where They Are** (bảng): Server · Folder · Photos · Last Upload, mỗi nơi đã đẩy tới một hàng (mới nhất trước), hàng cuối
+  **Every photo on any server** (ảnh đã đẩy ∪ ảnh có mặt ở nguồn server, FS-19.07 §11). Chọn hàng → lưới dưới là ảnh của nơi đó,
+  tiêu đề "folder · server". Mặc định hàng cuối.
+- Lưới: ô vuông 140–200 cách 2, nhãn định dạng (RAW/HEIC/JPG/MOV) và **On Server**; tối đa 600 ảnh mới nhất ("The newest 600 of N"). Chưa có gì: "Nothing on a Server Yet" + cách đẩy (File › Upload to Server…).
+- Đọc cả thư viện từ DB (không phải lưới đang mở). Đọc lại sau mỗi lần đẩy (gom 1,5 s) và khi ảnh rời thư viện; danh sách
+  file của từng ảnh (PhotoKit) giữ lại giữa các lần đọc, chỉ hỏi ảnh mới. Mọi đọc DB/PhotoKit ngoài main thread.
+- *Sau:* trạng thái Uploading/Waiting trong ô và thanh tiến độ ở cột Last Upload (hàng 25c).
+

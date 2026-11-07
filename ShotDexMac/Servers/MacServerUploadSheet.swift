@@ -1,4 +1,5 @@
 import AppKit
+import GRDB
 import SwiftUI
 
 /// File › Upload to Server… ⇧⌘U on the selected photos (FS-15.02, Mac).
@@ -381,13 +382,18 @@ struct MacServerUploadSheet: View {
 enum MacDemoUpload {
     @MainActor
     static func entries(dependencies: MacDependencies) -> @Sendable ([String]) async -> [AssetUploadEntry] {
-        // The demo's few hundred rows, read now on the main actor.
-        let rows = Dictionary((dependencies.library?.items ?? []).map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
+        let database = dependencies.database
         return { ids in
-            ids.compactMap { id -> AssetUploadEntry? in
+            // The demo database's rows, not the window's grid, which may be filtered to another place.
+            let rows = (try? await database.reader.read { db in
+                try Dictionary(Row.fetchAll(db, sql: "SELECT assetId, originalFilename, creationDate FROM photo_metadata")
+                    .map { ($0["assetId"] as String, (name: $0["originalFilename"] as String?, date: $0["creationDate"] as Int?)) },
+                    uniquingKeysWith: { first, _ in first })
+            }) ?? [:]
+            return ids.compactMap { id -> AssetUploadEntry? in
                 guard let row = rows[id] else { return nil }
-                let name = ((row.originalFilename ?? "\(id).JPG") as NSString).deletingPathExtension + ".JPG"
-                let date = row.creationDateValue ?? Date()
+                let name = ((row.name ?? "\(id).JPG") as NSString).deletingPathExtension + ".JPG"
+                let date = row.date.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
                 let file = AssetUploadFile(key: "demo:\(name)", filename: name, isRAW: false, role: .original, estimatedBytes: 400_000)
                 return AssetUploadEntry(assetId: id, captureDate: date, files: [file], takenAt: date)
             }
