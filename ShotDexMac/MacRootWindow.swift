@@ -1010,8 +1010,9 @@ struct MacRootWindow: View {
                     // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
                     MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
                                  picture: Self.demoPicture,
-                                 // An album is one run of photos (board `MAC_AlbumDetail`), no day headers.
-                                 showsDays: !isAlbumOpen,
+                                 // An album is one run of photos (board `MAC_AlbumDetail`), no day headers;
+                                 // neither is a size order, where neighbours are days apart (FS-01.05 §5.1).
+                                 showsDays: !isAlbumOpen && library.sort.isDateOrdered,
                                  yearHeaders: selection == .onThisDay ? MacYearHeaders(currentYear: Calendar.current.component(.year, from: Date()), showsAge: isOnThisDayToday, places: onThisDayPlaces) : nil,
                                  endKey: selection == .onThisDay ? "\(onThisDayDate)" : nil,
                                  columns: isAlbumOpen ? MacGridMetrics.albumColumns : MacGridMetrics.columns,
@@ -1494,6 +1495,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "backupOrganize" { selection = .backup; opensNewBackup = true }
         if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
         if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
+        if MacDemoLibrary.section == "onServer" { selection = .smartAlbum(MacDemoLibrary.onServerAlbumId) }
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         // The board's album: a line of each kind and a nested Any group.

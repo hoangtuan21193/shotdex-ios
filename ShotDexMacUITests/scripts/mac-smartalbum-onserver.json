@@ -1,0 +1,8 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-ShotDexSection", "onServer"]},
+  {"action": "wait", "seconds": 8},
+  {"action": "screenshot", "name": "01-onserver"},
+  {"action": "dump", "name": "01-onserver"}
+ ]
+}

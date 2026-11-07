@@ -57,6 +57,7 @@ enum MacDemoLibrary {
         // `deleteCopies` (board `MAC_DeleteCopies`): RAW photos also on a
         // drive (the copy they open from) and on the NAS — three copies each.
         if section == "deleteCopies" { seedDeleteCopies(dependencies) }
+        if section == "onServer" { seedOnServer(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {
             var recipe = PhotoEditRecipe.identity
@@ -352,6 +353,62 @@ enum MacDemoLibrary {
                     """, arguments: [source, source, kind, now])
             }
         }
+    }
+
+    /// `-ShotDexSection onServer` (board `MAC_SmartAlbum`): the smart album
+    /// "On NAS — Shared" (Also on Server · Yes · NAS Home › Shared) over a
+    /// server source with no connection — no network, only rows. Of the 60
+    /// newest photos, 40 have every file hashed and the same bytes under
+    /// Shared (on the server), 20 have a file of their size there still
+    /// unhashed (being checked).
+    static let onServerAlbumId = "demo-on-server"
+
+    private static func seedOnServer(_ dependencies: MacDependencies) {
+        let now = Int(Date().timeIntervalSince1970)
+        try? dependencies.database.writer.write { db in
+            // A connection id with no connection row: the album reads it as a
+            // server source (its On Server line), nothing can dial it.
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO sources (id, kind, name, pairsRawAndJpeg, connectionId, createdAt)
+                VALUES ('demo-nas', 'server', 'NAS Home', 1, 'demo-nas-connection', ?)
+                """, arguments: [now])
+            let photos = try Row.fetchAll(db, sql: """
+                SELECT assetId, originalFilename, modificationDate FROM photo_metadata ORDER BY creationDate DESC LIMIT 60
+                """)
+            for (index, photo) in photos.enumerated() {
+                let assetId: String = photo["assetId"]
+                let name: String = photo["originalFilename"] ?? "\(assetId).HEIC"
+                let copyId = "demo-ph:" + assetId
+                let size = 2_000_000 + index
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO photo_copies (id, photoId, sourceId, kind, photoKitId, isOnline, lastSeenAt)
+                    VALUES (?, ?, ?, 'photos', ?, 1, ?)
+                    """, arguments: [copyId, assetId, PhotoLibrarySource.id, assetId, now])
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO copy_files (copyId, fileKey, role, size, sha256, origin, hashedAt)
+                    VALUES (?, ?, 'photo', ?, ?, 'hashed', ?)
+                    """, arguments: [copyId, "photo:" + name, size, "demo-sha-" + assetId, now])
+                try db.execute(sql: "INSERT OR REPLACE INTO copy_file_listings (copyId, stamp, listedAt) VALUES (?, ?, ?)",
+                               arguments: [copyId, photo["modificationDate"] as DatabaseValue, now])
+                // Demo names repeat; one folder a photo keeps every server path its own.
+                let path = "Shared/2026/\(index)/" + name
+                let serverId = "demo-srv:" + assetId
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, isOnline, lastSeenAt)
+                    VALUES (?, ?, 'demo-nas', 'server', ?, ?, 1, ?)
+                    """, arguments: [serverId, "demo-srv-photo:" + assetId, path, path.lowercased(), now])
+                // On the server: the same bytes; being checked: its size there, no hash yet.
+                let isOnServer = index < 40
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO copy_files (copyId, fileKey, role, size, sha256, origin, hashedAt)
+                    VALUES (?, 'primary', 'photo', ?, ?, 'hashed', ?)
+                    """, arguments: [serverId, size, isOnServer ? "demo-sha-" + assetId : nil, isOnServer ? now : nil])
+            }
+        }
+        try? dependencies.smartAlbums.upsert(SmartAlbum(
+            id: onServerAlbumId, name: "On NAS — Shared",
+            query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .alsoOnServer, text: "demo-nas", boolValue: true, folder: "Shared")]),
+            createdAt: now))
     }
 
     /// The demo's albums (the photo menu's Add to Album list): each a slice
