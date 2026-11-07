@@ -17,6 +17,12 @@ struct MacPhotoGrid: NSViewRepresentable {
     /// Day sections with headers (the Library, board `Main`); off, one flat
     /// run of tiles (a smart album, board `MAC_SmartAlbum`, as on iOS).
     var showsDays = true
+    /// On This Day (board `MAC_OnThisDay`): each day section is a year,
+    /// headed "2021  5 years ago · Hanoi, Vietnam".
+    var yearHeaders: MacYearHeaders? = nil
+    /// A new key opens the grid at its end (On This Day's newest year, on a
+    /// new day); a delete or an index refresh keeps the scroll where it is.
+    var endKey: String? = nil
     /// Photos with a copy on a server (FS-19.07 §8): the drive glyph.
     var onServer: Set<String> = []
     /// Photos whose every copy is on a drive or server not connected
@@ -90,6 +96,15 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.contextMenu = contextMenu
         (scroll.documentView as? MacGridCollectionView)?.markKey = markKey
         coordinator.marks(marks, generation: marksGeneration)
+        coordinator.isOldestFirst = yearHeaders != nil
+        if coordinator.endKey != endKey {
+            coordinator.endKey = endKey
+            coordinator.scrollsToEnd = endKey != nil
+        }
+        if coordinator.yearHeaders != yearHeaders {
+            coordinator.yearHeaders = yearHeaders
+            (scroll.documentView as? NSCollectionView)?.reloadData()
+        }
         let glyphsChanged = coordinator.onServer != onServer || coordinator.offline != offline
         coordinator.onServer = onServer
         coordinator.offline = offline
@@ -122,6 +137,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         private var sectionVideos: [Int] = []
 
         private var showsDays = true
+        var yearHeaders: MacYearHeaders?
 
         override init() {
             super.init()
@@ -163,6 +179,12 @@ struct MacPhotoGrid: NSViewRepresentable {
             }
         }
 
+        /// Sections run oldest first (On This Day: 2021 above 2025).
+        var isOldestFirst = false
+        var endKey: String?
+        /// Set by a new `endKey`, spent by the first build after it.
+        var scrollsToEnd = false
+
         func update(_ items: [LibraryGridItem], isNewestFirst: Bool, showsDays: Bool, generation: Int?, forceReload: Bool) {
             if let generation {
                 guard forceReload || showsDays != self.showsDays || generation != lastGeneration else { return }
@@ -178,9 +200,10 @@ struct MacPhotoGrid: NSViewRepresentable {
             // main actor; the click that changed the list never waits on them.
             buildTask?.cancel()
             let selected = selectedSet
+            let isOldestFirst = self.isOldestFirst
             buildTask = Task { [weak self] in
                 let built = await Task.detached(priority: .userInitiated) {
-                    let rows = isNewestFirst ? items : Array(items.reversed())
+                    let rows = isNewestFirst != isOldestFirst ? items : Array(items.reversed())
                     let sections = showsDays
                         ? PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
                         : rows.isEmpty ? [] : [PhotoGridSection(kind: .undated, range: 0..<rows.count)]
@@ -205,6 +228,12 @@ struct MacPhotoGrid: NSViewRepresentable {
                 let now = self.selectedSet
                 (self.rows, self.sections, self.sectionVideos) = (built.0, built.1, built.2)
                 self.collection?.reloadData()
+                // Oldest on top opens at the newest year, at the bottom (FS-06.07 §4).
+                if self.scrollsToEnd, !built.0.isEmpty, let collection = self.collection, let last = built.1.indices.last {
+                    self.scrollsToEnd = false
+                    collection.layoutSubtreeIfNeeded()
+                    collection.scrollToItems(at: [IndexPath(item: built.1[last].range.count - 1, section: last)], scrollPosition: .bottom)
+                }
                 if let collection = self.collection, !selected.isEmpty || !now.isEmpty {
                     if now == selected {
                         collection.selectionIndexPaths = built.3
@@ -321,7 +350,8 @@ struct MacPhotoGrid: NSViewRepresentable {
             let header = collectionView.makeSupplementaryView(ofKind: kind, withIdentifier: MacDayHeader.identifier, for: indexPath) as! MacDayHeader
             let section = sections[indexPath.section]
             let videos = indexPath.section < sectionVideos.count ? sectionVideos[indexPath.section] : 0
-            header.show(section, count: LibraryCountLine.text(shown: section.range.count, videos: videos, total: nil, isFiltered: false))
+            header.show(section, count: LibraryCountLine.text(shown: section.range.count, videos: videos, total: nil, isFiltered: false),
+                        years: yearHeaders)
             return header
         }
 
@@ -584,6 +614,7 @@ final class MacPhotoTile: NSCollectionViewItem {
 final class MacDayHeader: NSView, NSCollectionViewElement {
     static let identifier = NSUserInterfaceItemIdentifier("MacDayHeader")
     private let title = NSTextField(labelWithString: "")
+    private let detail = NSTextField(labelWithString: "")
     private let count = NSTextField(labelWithString: "")
 
     override init(frame: NSRect) {
@@ -591,7 +622,11 @@ final class MacDayHeader: NSView, NSCollectionViewElement {
         title.font = .systemFont(ofSize: 15, weight: .semibold)
         count.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         count.textColor = .secondaryLabelColor
-        for label in [title, count] {
+        detail.font = .systemFont(ofSize: 13)
+        detail.textColor = .secondaryLabelColor
+        detail.lineBreakMode = .byTruncatingTail
+        detail.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        for label in [title, detail, count] {
             label.translatesAutoresizingMaskIntoConstraints = false
             addSubview(label)
         }
@@ -600,18 +635,53 @@ final class MacDayHeader: NSView, NSCollectionViewElement {
             title.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
             count.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -MacGridMetrics.sideInset),
             count.firstBaselineAnchor.constraint(equalTo: title.firstBaselineAnchor),
+            detail.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 8),
+            detail.firstBaselineAnchor.constraint(equalTo: title.firstBaselineAnchor),
+            detail.trailingAnchor.constraint(lessThanOrEqualTo: count.leadingAnchor, constant: -12),
         ])
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     /// `count`: "48 photos", "3 photos · 2 videos" — the toolbar line's words.
-    func show(_ section: PhotoGridSection, count: String) {
+    func show(_ section: PhotoGridSection, count: String, years: MacYearHeaders? = nil) {
+        detail.stringValue = ""
         switch section.kind {
-        case .date(let date): title.stringValue = date.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        case .date(let date):
+            if let years {
+                title.stringValue = date.formatted(.dateTime.year())
+                detail.stringValue = years.detail(for: date)
+            } else {
+                title.stringValue = date.formatted(.dateTime.weekday(.wide).month(.wide).day())
+            }
         case .undated: title.stringValue = String(localized: "No Date", comment: "Mac grid: header of photos with no capture date")
         }
         self.count.stringValue = count
+    }
+}
+
+/// On This Day's section words: how long ago, and where most of that
+/// year's photos were taken when the index knows.
+struct MacYearHeaders: Equatable {
+    /// This year, in the user's calendar: "5 years ago" counts from it.
+    var currentYear: Int
+    /// "5 years ago" is true only of today; another day shows the place alone.
+    var showsAge = true
+    /// "Hanoi, Vietnam" per year, read off the main actor.
+    var places: [Int: String] = [:]
+
+    func detail(for date: Date) -> String {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        // By calendar year, as the section is: "1 year ago", "5 years ago".
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .numeric
+        formatter.unitsStyle = .full
+        let words = formatter.localizedString(from: DateComponents(year: year - currentYear))
+        let place = places[year]
+        guard showsAge else { return place ?? "" }
+        guard let place else { return words }
+        return words + " · " + place
     }
 }
 

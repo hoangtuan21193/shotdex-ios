@@ -13,6 +13,8 @@ enum LibraryPlace: Equatable, Sendable {
     /// re-read after an edit counts as added again — close enough for files,
     /// which carry no "added" date of their own.
     case recentlyAdded
+    /// Photos taken on this month and day in earlier years (FS-06.07).
+    case onThisDay(month: Int, day: Int)
 
     static let favorites = LibraryPlace.rules(SmartAlbumQuery(rules: [SmartAlbumRule(field: .favorite, boolValue: true)]))
     static let videos = LibraryPlace.rules(SmartAlbumQuery(rules: [
@@ -30,11 +32,18 @@ enum LibraryPlace: Equatable, Sendable {
     /// window Photos' own album uses.
     static let recentWindow: TimeInterval = 30 * 24 * 3600
 
+    /// The order the place always shows, whatever the Library's sort: On
+    /// This Day's year sections need date order (FS-06.07 §4).
+    var fixedSort: SortOption? {
+        if case .onThisDay = self { return .dateTakenNewest }
+        return nil
+    }
+
     /// The place's conditions as index filters.
     func filters() async throws -> [LibraryQueries.IndexFilter] {
         switch self {
         case .rules(let query): [.query(query)]
-        case .recentlyAdded: []
+        case .recentlyAdded, .onThisDay: []
         }
     }
 
@@ -43,6 +52,8 @@ enum LibraryPlace: Equatable, Sendable {
         switch self {
         case .rules:
             return nil
+        case .onThisDay(let month, let day):
+            return try await queries.assetIdsOnThisDay(month: month, day: day, now: now)
         case .recentlyAdded:
             let fromPhotos = await Task.detached(priority: .userInitiated) { Self.photosRecentlyAdded() }.value
             let fromFiles = try await queries.assetIdsOutsidePhotos(indexedSince: now.addingTimeInterval(-Self.recentWindow))

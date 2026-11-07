@@ -35,6 +35,13 @@ struct MacRootWindow: View {
     /// Add Photos Library… came back without access.
     @State private var showsPhotosDenied = false
     @State private var showsInspector = false
+    /// On This Day's day (FS-06.07 §4): only its month and day are matched.
+    @State private var onThisDayDate = MacOnThisDayDatePicker.day(of: Date())
+    @State private var showsDatePicker = false
+    /// "Hanoi, Vietnam" per year for On This Day's headers.
+    @State private var onThisDayPlaces: [Int: String] = [:]
+    /// How many years the day's photos span, counted off the main actor.
+    @State private var onThisDayYears = 0
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
@@ -84,7 +91,8 @@ struct MacRootWindow: View {
     @State private var photoSelection: MacSelectionModel?
 
     var body: some View {
-        root.focusedSceneValue(\.macGo, MacGoTarget(go: { selection = $0 }))
+        root.focusedSceneValue(\.macGo, MacGoTarget(go: { selection = $0 },
+                                                      chooseDate: selection == .onThisDay ? { showsDatePicker = true } : nil))
     }
 
     private var root: some View {
@@ -116,12 +124,44 @@ struct MacRootWindow: View {
                 if !searchOwnsQuery { searchText = "" }
                 // A scope is part of a search: it does not follow to the next place on its own.
                 if !searchOwnsQuery { library?.sourceScope = nil }
+                // On This Day has no filter (board): a Library filter must not narrow it unseen.
+                // It opens on today; a day picked last visit is not kept.
+                if selection == .onThisDay {
+                    if !searchOwnsQuery {
+                        library?.criteria = .empty
+                        library?.advancedQuery = nil
+                    }
+                    onThisDayDate = MacOnThisDayDatePicker.day(of: Date())
+                }
                 library?.place = place(for: selection)
             }
         }
         // One LibraryModel serves every Library window: the key window's
         // place is the one it shows.
         .background(MacKeyWindowObserver { if let selection, isGridPlace(selection) { library?.place = place(for: selection) } })
+        // Another day picked: the grid follows (only its month and day count).
+        .onChange(of: onThisDayDate) {
+            guard selection == .onThisDay else { return }
+            onThisDayPlaces = [:]
+            library?.place = place(for: selection)
+        }
+        // Each year's place for the headers, read on GRDB's pool.
+        .task(id: selection == .onThisDay ? "\(onThisDayDate)-\(library?.rowsGeneration ?? 0)-\(library?.items.count ?? 0)" : "") {
+            guard selection == .onThisDay, let ids = library?.items.map(\.assetId), !ids.isEmpty else {
+                if !onThisDayPlaces.isEmpty { onThisDayPlaces = [:] }
+                onThisDayYears = 0
+                return
+            }
+            let items = library?.items ?? []
+            let years = await Task.detached(priority: .userInitiated) {
+                let calendar = Calendar.current
+                return Set(items.compactMap { $0.creationDateValue.map { calendar.component(.year, from: $0) } }).count
+            }.value
+            let places = (try? await dependencies.libraryQueries.placesByYear(ids: ids)) ?? [:]
+            guard !Task.isCancelled else { return }
+            if years != onThisDayYears { onThisDayYears = years }
+            if places != onThisDayPlaces { onThisDayPlaces = places }
+        }
         .task(id: countsKey) { await reloadPlaceCounts() }
         // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
         // browser goes to the destination.
@@ -392,7 +432,7 @@ struct MacRootWindow: View {
     /// The row shows the library grid (and so its search field).
     private func isGridPlace(_ item: MacSidebarItem) -> Bool {
         switch item {
-        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded: true
+        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded, .onThisDay: true
         case .source: serverSource == nil
         default: false
         }
@@ -405,6 +445,9 @@ struct MacRootWindow: View {
         case .videos: .videos
         case .raw: .raw
         case .recentlyAdded: .recentlyAdded
+        case .onThisDay:
+            .onThisDay(month: Calendar.current.component(.month, from: onThisDayDate),
+                       day: Calendar.current.component(.day, from: onThisDayDate))
         case .source(let id): .source(id)
         default: nil
         }
@@ -423,6 +466,8 @@ struct MacRootWindow: View {
         case .videos: String(localized: "No Videos", comment: "Mac library: Videos is empty")
         case .raw: String(localized: "No RAW Photos", comment: "Mac library: RAW is empty")
         case .recentlyAdded: String(localized: "Nothing Added Recently", comment: "Mac library: Recently Added is empty")
+        case .onThisDay: String(localized: "Nothing from \(onThisDayDate.formatted(.dateTime.month(.wide).day()))",
+                                comment: "Mac On This Day: no photo on this day in earlier years")
         default: String(localized: "No Photos", comment: "Mac library: a source with no photos")
         }
     }
@@ -592,7 +637,10 @@ struct MacRootWindow: View {
                     if let total = await library.unfilteredCount(), !Task.isCancelled { libraryTotal = total }
                 }
                 .macWatchesOriginalOnDevice(library?.criteria.originalOnDeviceOnly == true) { library?.reload() }
-                .onReceive(NotificationCenter.default.publisher(for: .macShowFilterPopover)) { _ in showsFilterPopover = true }
+                .onReceive(NotificationCenter.default.publisher(for: .macShowFilterPopover)) { _ in
+                    // On This Day has no filter (board `MAC_OnThisDay`): say so, not nothing.
+                    if selection == .onThisDay { NSSound.beep() } else { showsFilterPopover = true }
+                }
                 .sheet(isPresented: $showsAdvancedFilter) {
                     MacSmartAlbumEditorSheet(initialQuery: libraryQuery,
                                              applyFilter: {
@@ -751,7 +799,7 @@ struct MacRootWindow: View {
                             connectToServer: { serverForm = MacServerFormRequest() }, addFolders: { addFolders($0) })
         } else if let library, !library.items.isEmpty {
             Group {
-                if viewMode == .list {
+                if viewMode == .list, selection != .onThisDay {
                     MacPhotoTable(items: library.items, generation: library.rowsGeneration, details: tableDetails,
                                   detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
                                   assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
@@ -763,7 +811,10 @@ struct MacRootWindow: View {
                 } else {
                     // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
                     MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
-                                 picture: Self.demoPicture, offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
+                                 picture: Self.demoPicture,
+                                 yearHeaders: selection == .onThisDay ? MacYearHeaders(currentYear: Calendar.current.component(.year, from: Date()), showsAge: isOnThisDayToday, places: onThisDayPlaces) : nil,
+                                 endKey: selection == .onThisDay ? "\(onThisDayDate)" : nil,
+                                 offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
                                  initialSelection: photoSelection?.idSet ?? [],
                                  contextMenu: photoMenuBuilder, markKey: markKey, marks: tableDetails, marksGeneration: tableDetailsGeneration,
                                  generation: library.rowsGeneration,
@@ -842,8 +893,19 @@ struct MacRootWindow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let library, !library.isLoading, library.items.isEmpty, !library.hasActiveQuery, library.place != nil {
             // A place with nothing in it says so; the spinner is only for loading.
-            ContentUnavailableView(emptyPlaceTitle, systemImage: selection?.systemImage ?? "photo")
+            if selection == .onThisDay {
+                ContentUnavailableView {
+                    Label(emptyPlaceTitle, systemImage: selection?.systemImage ?? "photo")
+                } description: {
+                    Text("No photo was taken on this day in an earlier year.", comment: "Mac On This Day: empty, why")
+                } actions: {
+                    Button(String(localized: "Choose Date…", comment: "Mac On This Day: pick another day")) { showsDatePicker = true }
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ContentUnavailableView(emptyPlaceTitle, systemImage: selection?.systemImage ?? "photo")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         } else if dependencies.photoLibrary.authorizationState == .denied {
             ContentUnavailableView(String(localized: "No Access to Photos", comment: "Mac library: Photos access denied"),
                                    systemImage: "photo.on.rectangle",
@@ -866,6 +928,7 @@ struct MacRootWindow: View {
             guard let summary = photoSelection.summary else { return count }
             return count + " · " + ByteCountFormatter.string(fromByteCount: summary.totalBytes, countStyle: .file)
         }
+        if selection == .onThisDay { return onThisDayLine(library) }
         let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
         let line = LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
                                          isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
@@ -874,6 +937,28 @@ struct MacRootWindow: View {
         let offline = offlinePhotoIds.count
         guard offline > 0, library.place == nil, !library.hasActiveQuery else { return line }
         return line + " · " + String(localized: "\(offline) offline", comment: "Mac toolbar subtitle: photos on sources not connected")
+    }
+
+    /// The day picked is today's month and day.
+    private var isOnThisDayToday: Bool {
+        onThisDayDate == MacOnThisDayDatePicker.day(of: Date())
+    }
+
+    /// "October 4 · 26 photos from 3 years" (board `MAC_OnThisDay`).
+    private func onThisDayLine(_ library: LibraryModel) -> String {
+        let day = onThisDayDate.formatted(.dateTime.month(.wide).day())
+        guard !library.items.isEmpty else { return day }
+        // A search here narrows the day: say so with the Library's own words.
+        if library.hasActiveQuery {
+            return day + " · " + LibraryCountLine.text(shown: library.items.count, videos: library.videoCount, total: nil, isFiltered: true)
+        }
+        guard onThisDayYears > 0 else {
+            return day + " · " + String(AttributedString(localized: "^[\(library.items.count) photo](inflect: true)",
+                                                         comment: "Mac On This Day subtitle before the years are counted").characters)
+        }
+        let words = AttributedString(localized: "^[\(library.items.count) photo](inflect: true) from ^[\(onThisDayYears) year](inflect: true)",
+                                     comment: "Mac On This Day subtitle: 26 photos from 3 years")
+        return day + " · " + String(words.characters)
     }
 
     /// What narrows the grid as rules: the Advanced Filter, or the quick
@@ -935,41 +1020,69 @@ struct MacRootWindow: View {
             Button { } label: { Label(String(localized: "Forward", comment: "Mac toolbar"), systemImage: "chevron.right") }
                 .disabled(true)
         }
-        ToolbarItemGroup(placement: .primaryAction) {
-            Picker(selection: $viewMode) {
-                Label(String(localized: "Grid", comment: "Mac toolbar view mode"), systemImage: "square.grid.2x2").tag(MacViewMode.grid)
-                Label(String(localized: "List", comment: "Mac toolbar view mode"), systemImage: "list.bullet").tag(MacViewMode.list)
-            } label: {
-                Text("View", comment: "Mac toolbar view mode picker")
+        if selection == .onThisDay {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button { showsDatePicker.toggle() } label: {
+                    Label(String(localized: "Choose Date", comment: "Mac On This Day toolbar"), systemImage: "calendar")
+                }
+                .help(String(localized: "Choose Date…", comment: "Mac On This Day toolbar"))
+                .popover(isPresented: $showsDatePicker, arrowEdge: .bottom) {
+                    MacOnThisDayDatePicker(date: $onThisDayDate)
+                }
+                Button { } label: {
+                    Label(String(localized: "Play Slideshow", comment: "Mac toolbar"), systemImage: "play")
+                }
+                .disabled(true)
+                .help(String(localized: "Play Slideshow", comment: "Mac toolbar"))
             }
-            .pickerStyle(.segmented)
-            .disabled(isLibraryEmpty)
-            Button { showsFilterPopover.toggle() } label: {
-                // Filled while something narrows the grid, as in Photos.
-                // One symbol, its variant switched: a new image would rebuild
-                // the item and close a popover open on it.
-                Label(String(localized: "Filter and Sort", comment: "Mac toolbar"), systemImage: "line.3.horizontal.decrease.circle")
-                    .symbolVariant(library?.hasActiveQuery == true ? .fill : .none)
-            }
-            .help(String(localized: "Filter and Sort", comment: "Mac toolbar"))
-            .disabled(isLibraryEmpty)
-            .popover(isPresented: $showsFilterPopover, arrowEdge: .bottom) {
-                if let library {
-                    MacFilterPopover(library: library, countLine: subtitle,
-                                     advancedFilter: {
-                                         showsFilterPopover = false
-                                         showsAdvancedFilter = true
-                                     },
-                                     saveAsSmartAlbum: {
-                                         showsFilterPopover = false
-                                         smartAlbumForm = MacSmartAlbumFormRequest(query: libraryQuery)
-                                     })
+        }
+        if selection != .onThisDay {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Picker(selection: $viewMode) {
+                    Label(String(localized: "Grid", comment: "Mac toolbar view mode"), systemImage: "square.grid.2x2").tag(MacViewMode.grid)
+                    Label(String(localized: "List", comment: "Mac toolbar view mode"), systemImage: "list.bullet").tag(MacViewMode.list)
+                } label: {
+                    Text("View", comment: "Mac toolbar view mode picker")
+                }
+                .pickerStyle(.segmented)
+                .disabled(isLibraryEmpty)
+                Button { showsFilterPopover.toggle() } label: {
+                    // Filled while something narrows the grid, as in Photos.
+                    // One symbol, its variant switched: a new image would rebuild
+                    // the item and close a popover open on it.
+                    Label(String(localized: "Filter and Sort", comment: "Mac toolbar"), systemImage: "line.3.horizontal.decrease.circle")
+                        .symbolVariant(library?.hasActiveQuery == true ? .fill : .none)
+                }
+                .help(String(localized: "Filter and Sort", comment: "Mac toolbar"))
+                .disabled(isLibraryEmpty)
+                .popover(isPresented: $showsFilterPopover, arrowEdge: .bottom) {
+                    if let library {
+                        MacFilterPopover(library: library, countLine: subtitle,
+                                         advancedFilter: {
+                                             showsFilterPopover = false
+                                             showsAdvancedFilter = true
+                                         },
+                                         saveAsSmartAlbum: {
+                                             showsFilterPopover = false
+                                             smartAlbumForm = MacSmartAlbumFormRequest(query: libraryQuery)
+                                         })
+                    }
                 }
             }
         }
         ToolbarItemGroup(placement: .primaryAction) {
-            Button { } label: { Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up") }
-                .disabled(isLibraryEmpty)
+            // Share the selection's files (Photos versions written out first).
+            Menu {
+                ForEach(MacPhotoMenu.shareServices, id: \.title) { service in
+                    Button(service.menuItemTitle) { photoMenu?.share(photoSelection?.ids ?? [], with: service) }
+                }
+            } label: {
+                Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up")
+            }
+            .menuIndicator(.hidden)
+            .help(photoSelection?.ids.isEmpty != false ? String(localized: "Select photos to share", comment: "Mac toolbar: Share is off with nothing selected")
+                                                       : String(localized: "Share", comment: "Mac toolbar"))
+            .disabled(isLibraryEmpty || photoSelection?.ids.isEmpty != false)
             // The label says what a click does (FS-18.01 §3).
             Button { showsInspector.toggle() } label: {
                 Label(showsInspector ? String(localized: "Hide Inspector", comment: "Mac toolbar")
@@ -989,6 +1102,7 @@ struct MacRootWindow: View {
         Task { await dependencies.photoMarks.loadIfNeeded() }
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
+        if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.
@@ -1174,5 +1288,44 @@ private struct MacKeyWindowObserver: NSViewRepresentable {
                 MainActor.assumeIsolated { self?.becameKey() }
             }
         }
+    }
+}
+
+/// On This Day's Choose Date… (FS-06.07 §4): a month calendar and Today;
+/// only the month and day are matched, so any year's calendar works.
+struct MacOnThisDayDatePicker: View {
+    @Binding var date: Date
+
+    /// The calendar is 2024's, a leap year: every month and day, Feb 29
+    /// included, and the year is never the point.
+    static let leapYear = 2024
+
+    static func day(of date: Date) -> Date {
+        let calendar = Calendar(identifier: .gregorian)
+        let parts = Calendar.current.dateComponents([.month, .day], from: date)
+        return calendar.date(from: DateComponents(year: leapYear, month: parts.month, day: parts.day)) ?? date
+    }
+
+    private static let range: ClosedRange<Date> = {
+        let calendar = Calendar(identifier: .gregorian)
+        return calendar.date(from: DateComponents(year: leapYear, month: 1, day: 1))!
+            ... calendar.date(from: DateComponents(year: leapYear, month: 12, day: 31))!
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            DatePicker(String(localized: "Day", comment: "Mac On This Day: the date picker"), selection: $date, in: Self.range, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                // The chosen day in ShotDex amber, not system blue (MAC_STYLE).
+                .tint(.accentColor)
+            HStack {
+                Spacer()
+                Button(String(localized: "Today", comment: "Mac On This Day: back to today")) { date = Self.day(of: Date()) }
+                    .disabled(date == Self.day(of: Date()))
+            }
+        }
+        .padding(12)
+        .fixedSize()
     }
 }

@@ -17,12 +17,39 @@ Support thành cửa sổ riêng.
   "412 photos · 18 videos · 61.4 GB"; lưới cùng engine với Library (8 cột ở 1440), Grid/List như Library.
 - Smart album: sheet **640×560**, Match all/any, nhóm điều kiện lồng, thân cuộn
   ([FS-06.08](../FS-06-collections/08-smart-albums.md)); điều kiện Source thêm theo FS-19.
-- On This Day: lưới theo năm. (Places với inspector cụm và nút Show Trip đã bỏ cùng Places/Trips, 2026-10-24.)
+- On This Day: lưới theo năm (§1.1). (Places với inspector cụm và nút Show Trip đã bỏ cùng Places/Trips, 2026-10-24.)
 - Duplicates: segmented mức khớp **Exact · Similar · Series · Bursts**, danh sách nhóm 340 bên trái, hai bản cạnh
   nhau, Rescan, **Merge N Groups…**; chỉ gom trong một nguồn (D7, FS-19,
   [FS-06.06](../FS-06-collections/06-duplicates.md)).
 - Collages (`MAC_Creations`): thẻ theo tháng; chuột phải Open in Collage · Show in Library · Export… · Share… ·
   Remove from Collages…. Video Projects: thẻ project, New Video Project, xác nhận xoá bằng alert.
+
+### 1.1 On This Day (board `MAC_OnThisDay`, hành vi theo [FS-06.07](../FS-06-collections/07-on-this-day.md))
+
+- Sidebar › Collections › On This Day, Go › On This Day. Là một **chỗ của Library** (`LibraryPlace.onThisDay`): ảnh
+  chụp đúng tháng/ngày này ở các năm trước, đọc từ index bằng một khoảng thời gian mỗi năm (`OnThisDayWindows`,
+  giờ máy, 29/2 chỉ năm nhuận) trên pool GRDB — không quét PhotoKit, không chặn click. Mọi nguồn (Photos, thư mục,
+  server) đều vào.
+- Toolbar: ◀ ▶ · "On This Day" + "October 4 · 26 photos from 3 years" · **Choose Date** (popover lịch tháng +
+  Today, Today mờ khi đang là hôm nay; chỉ tháng/ngày được so) · **Play Slideshow** (mờ cho tới khi có
+  Viewer) · **Share ▾** (dịch vụ chia sẻ cho ảnh đang chọn; mờ khi chưa chọn) · Show/Hide
+  Inspector. Không có Grid/List và Filter and Sort (board không vẽ); ⇧⌘L ở đây kêu beep, không mở gì.
+- Lưới: mỗi năm một đoạn, **năm cũ ở trên** (board; FS-06.07 §4 "cùng chiều Library"), đầu đoạn "2021" (15 semibold, như đầu ngày của Library)
+  + "5 years ago · Hanoi, Vietnam" (nơi chụp nhiều nhất năm đó, khi index đã biết) + số ảnh bên phải. Chọn, chuột
+  phải, phím đánh dấu, inspector như Library.
+- Ngày không có ảnh: "Nothing from November 8" + "No photo was taken on this day in an earlier year." + nút
+  **Choose Date…**.
+- Vào On This Day luôn mở **hôm nay**, và bỏ filter của Library (chỗ này không có nút Filter nên filter không được
+  lọc ngầm); một search đang chạy thì giữ. Tiêu đề phụ luôn mở đầu bằng ngày; khi search thu hẹp: "November 7 ·
+  12 photos". Năm đếm ngoài luồng chính.
+- Lịch của Choose Date là lịch **2024** (năm nhuận) để chọn được 29/2; năm không có nghĩa. Go › **Choose Date…**
+  (không phím tắt — ⌥⌘D là của Dock) là đường bàn phím. Ngày chọn được tô màu hệ thống (NSDatePicker không theo
+  `tint`) — ngoại lệ control hệ thống, không phải amber.
+- "5 years ago" chỉ hiện khi ngày là hôm nay; ngày khác chỉ ghi nơi chụp.
+- Mở ra (đổi ngày, vào chỗ) thì cuộn tới năm mới nhất ở đáy; xoá ảnh hay index thêm ảnh thì giữ nguyên chỗ cuộn.
+- Thứ tự luôn theo ngày chụp, không theo Sort By của Library; năm tính theo lịch Gregorian (lịch Nhật/Phật lịch
+  vẫn đúng ngày).
+- Chưa có: lời nhắc hằng ngày trên Mac (Settings › On This Day Reminder), mở thẳng ngày từ thông báo, Slideshow.
 
 ## 2. Statistics (D18)
 

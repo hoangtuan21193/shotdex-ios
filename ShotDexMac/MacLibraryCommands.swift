@@ -22,6 +22,8 @@ struct MacLibraryTarget {
 /// Go's way into the front window, whatever it shows (Backup, a server).
 struct MacGoTarget {
     var go: (MacSidebarItem) -> Void
+    /// On This Day's Choose Date…, nil on any other place.
+    var chooseDate: (() -> Void)?
 }
 
 extension FocusedValues {
@@ -145,6 +147,10 @@ struct MacGoCommands: Commands {
                 Button(item.title) { target?.go(item) }
                     .disabled(target == nil)
             }
+            Divider()
+            // The keyboard's way to another day (no shortcut: ⌥⌘D is the Dock's).
+            Button(String(localized: "Choose Date…", comment: "Mac menu: Go › Choose Date… (On This Day)")) { target?.chooseDate?() }
+                .disabled(target?.chooseDate == nil)
         }
     }
 }

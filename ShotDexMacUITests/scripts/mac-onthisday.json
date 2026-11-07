@@ -1,0 +1,355 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "onThisDay"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-onthisday"
+  },
+  {
+   "action": "dump",
+   "name": "01-onthisday"
+  },
+  {
+   "action": "assertExists",
+   "label": "2021",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "5 years ago · Hanoi, Vietnam",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "7 photos",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "1 year ago · Kyoto, Japan",
+   "type": "staticText"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Play Slideshow",
+   "type": "button"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "menu",
+   "text": "Go>Choose Date…"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Today",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Choose Date",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-picker"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Today",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "x": 0.635,
+   "y": 0.149,
+   "window": "On This Day"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-other-day"
+  },
+  {
+   "action": "dump",
+   "name": "03-other-day"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Today",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "2021",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Choose Date…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Today",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "2021",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "1 selected · 24 MB",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Share"
+  },
+  {
+   "action": "click",
+   "label": "Share"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "04-share"
+  },
+  {
+   "action": "dump",
+   "name": "04-share"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "p"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-inspector"
+  },
+  {
+   "action": "dump",
+   "name": "05-inspector"
+  },
+  {
+   "action": "key",
+   "text": "u"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "x": 0.23,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "photoMenu.quickLook",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "l",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Reset",
+   "type": "button"
+  },
+  {
+   "action": "menu",
+   "text": "Go>All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "menu",
+   "text": "Go>On This Day"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "2021",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "onThisDay",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "06-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

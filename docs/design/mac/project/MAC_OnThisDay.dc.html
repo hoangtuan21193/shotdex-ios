@@ -18,6 +18,15 @@ input{font-family:inherit}
 
 <!-- CONTENT: shared Library grid grouped by year, oldest on top, newest at the bottom; opens scrolled to the bottom -->
 <div style="position:absolute;left:244px;right:0;top:0;bottom:0;overflow:hidden">
+<!-- Empty: a day with no photo in an earlier year (tweak `empty`) -->
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:{{t.label2}}">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5"></path></svg>
+<div style="font-size:17px;font-weight:600;color:{{t.label}}">Nothing from November 8</div>
+<div style="font-size:13px">No photo was taken on this day in an earlier year.</div>
+<button style="margin-top:4px;height:28px;padding:0 12px;border-radius:7px;border:1px solid {{t.glassStroke}};background:{{t.fill2}};color:{{t.label}};font-size:13px">Choose Date…</button>
+</div>
+</sc-if>
 <div style="position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px">
 <sc-for list="{{years}}" as="y" hint-placeholder-count="3">
 <div style="display:flex;flex-direction:column;gap:8px">
@@ -54,13 +63,13 @@ input{font-family:inherit}
 </div>
 <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
 <div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">On This Day</div>
-<div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">October 4 · 26 photos from 3 years</div>
+<div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">{{subtitle}}</div>
 </div>
 <div style="flex:1"></div>
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px">
 <button aria-label="Choose Date" title="Choose Date…" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5"></path></svg></button>
-<button aria-label="Play Slideshow" title="Play Slideshow (⌥⌘S)" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"></path></svg></button>
-<button aria-label="Share" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button>
+<button aria-label="Play Slideshow" title="Play Slideshow (⌥⌘S)" disabled style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"></path></svg></button>
+<button aria-label="Share" disabled style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button>
 <button aria-label="Show Inspector" aria-pressed="false" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button>
 </div>
 <label style="width:220px;height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;color:{{t.label2}}">
@@ -100,7 +109,7 @@ input{font-family:inherit}
 </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"empty":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -158,12 +167,16 @@ function tiles(n, seed, o){
   return out;
 }
 const SEL='On This Day';
-function vals(t, dark){
+function vals(t, dark, empty){
   const mk=(n,seed,metaOff)=>{const out=[];for(let i=0;i<n;i++){const k=i+seed;const isVideo=(k%11)===4;
     out.push({bg:tile(k*5+2),ft:isVideo?'MOV':FT[k%FT.length],isVideo,dur:DUR[k%DUR.length],meta:isVideo?'4K · 24 fps':META[(k+metaOff)%META.length],
       label:(isVideo?'Video':'Photo')+', '+(isVideo?'4K':META[(k+metaOff)%META.length])});}return out;};
-  const y=(year,ago,place,n,seed,o)=>Object.assign({year,ago,place,count:n+' photos',tiles:mk(n,seed,year%5)},o||{});
-  return { years:[
+  // The Library's count words: videos apart ("13 photos · 1 video").
+  const words=(tiles)=>{const v=tiles.filter(p=>p.isVideo).length, ph=tiles.length-v;
+    return ph+(ph===1?' photo':' photos')+(v?' · '+v+(v===1?' video':' videos'):'');};
+  const y=(year,ago,place,n,seed,o)=>{const tiles=mk(n,seed,year%5);return Object.assign({year,ago,place,count:words(tiles),tiles},o||{});};
+  if (empty) return { years:[], subtitle:'November 8' };
+  return { subtitle:'October 4 · 26 photos from 3 years', years:[
     y(2021,'5 years ago','Hanoi, Vietnam',5,31),
     y(2023,'3 years ago','Banff, Canada',7,49),
     y(2025,'1 year ago','Kyoto, Japan',14,7)
@@ -183,8 +196,8 @@ function sidebarGroups(t, sel){
 
 class Component extends DCLogic {
   renderVals() {
-    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
-    return Object.assign({ t, groups: sidebarGroups(t, SEL), edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' }, vals(t, dark));
+    const dark=!!this.props.dark; const empty=!!this.props.empty; const t = dark ? DARK : LIGHT;
+    return Object.assign({ t, empty, groups: sidebarGroups(t, SEL), edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' }, vals(t, dark, empty));
   }
 }
 </script>

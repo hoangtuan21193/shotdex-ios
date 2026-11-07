@@ -412,7 +412,7 @@ final class LibraryModel {
                         filters.append(.criteria(criteria))
                     }
                     let rows = try await libraryQueries.gridItems(
-                        matchingAll: filters, restrictedTo: try await place.assetIds(queries: libraryQueries), sort: sort
+                        matchingAll: filters, restrictedTo: try await place.assetIds(queries: libraryQueries), sort: place.fixedSort ?? sort
                     )
                     guard let self, !Task.isCancelled else { return }
                     self.cloudPlaceholderCount = 0

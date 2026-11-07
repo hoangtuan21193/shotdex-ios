@@ -160,6 +160,59 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// On This Day (FS-06.07 §1, Mac FS-18.04 §1.1): photos taken on this
+    /// month and day in earlier years — one indexed range per year, built by
+    /// `OnThisDayWindows` in local time, never `strftime` on the column.
+    func assetIdsOnThisDay(month: Int, day: Int, calendar userCalendar: Calendar = .current, now: Date = Date()) async throws -> [String] {
+        // Years and Feb 29 in Gregorian — a Japanese era year or a Buddhist
+        // year would break both — with the user's time zone for day bounds.
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = userCalendar.timeZone
+        let calendar = gregorian
+        return try await database.reader.read { db in
+            guard let earliest = try Int.fetchOne(db, sql: "SELECT MIN(creationDate) FROM photo_metadata") else { return [] }
+            let earliestYear = calendar.component(.year, from: Date(timeIntervalSince1970: TimeInterval(earliest)))
+            var components = calendar.dateComponents([.year], from: now)
+            components.month = month
+            components.day = day
+            // Feb 29 asked in a year without one: windows of the leap years only.
+            if month == 2, day == 29 { components.year = 2024 }
+            guard let reference = calendar.date(from: components) else { return [] }
+            let windows = OnThisDayWindows.windows(for: reference, earliestYear: earliestYear, calendar: calendar, now: now)
+            guard !windows.isEmpty else { return [] }
+            let ranges = windows.map { _ in "(creationDate >= ? AND creationDate < ?)" }.joined(separator: " OR ")
+            let arguments = windows.flatMap { [Int64($0.start.timeIntervalSince1970), Int64($0.end.timeIntervalSince1970)] }
+            return try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata WHERE \(ranges)",
+                                       arguments: StatementArguments(arguments))
+        }
+    }
+
+    /// The place most of each year's photos were taken, "Hanoi, Vietnam" —
+    /// On This Day's section headers. Years whose photos have no resolved
+    /// place are left out.
+    func placesByYear(ids: [String], calendar: Calendar = .current) async throws -> [Int: String] {
+        guard !ids.isEmpty else { return [:] }
+        var tally: [Int: [String: Int]] = [:]
+        for chunk in stride(from: 0, to: ids.count, by: 900).map({ Array(ids[$0..<min($0 + 900, ids.count)]) }) {
+            let rows: [(date: Int, name: String)] = try await database.reader.read { db in
+                try Row.fetchAll(db, sql: """
+                    SELECT creationDate, placeLocality, placeAdminArea, placeCountry FROM photo_metadata
+                    WHERE assetId IN (\(Array(repeating: "?", count: chunk.count).joined(separator: ",")))
+                      AND creationDate IS NOT NULL AND placeCountry IS NOT NULL
+                    """, arguments: StatementArguments(chunk)).map { row in
+                    let town: String? = row["placeLocality"] ?? row["placeAdminArea"]
+                    let country: String = row["placeCountry"]
+                    return (row["creationDate"], [town, country].compactMap { $0 }.joined(separator: ", "))
+                }
+            }
+            for row in rows {
+                let year = calendar.component(.year, from: Date(timeIntervalSince1970: TimeInterval(row.date)))
+                tally[year, default: [:]][row.name, default: 0] += 1
+            }
+        }
+        return tally.compactMapValues { names in names.max { $0.value < $1.value || ($0.value == $1.value && $0.key > $1.key) }?.key }
+    }
+
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"

@@ -50,6 +50,7 @@ enum MacDemoLibrary {
         // albums; Add Photos Library… calls seedRows.
         guard section != "emptyLibrary" else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
+        if section == "onThisDay" { seedOnThisDay(dependencies) }
         // The sidebar foot as on board `Main`: "Up to date · indexed 2 min ago".
         if var state = try? dependencies.metadataStore.indexState() {
             state.lastIndexedAt = Int(Date().timeIntervalSince1970) - 120
@@ -253,6 +254,39 @@ enum MacDemoLibrary {
         case "enabled": return .enabled
         case "notRegistered": return .notRegistered
         default: return nil
+        }
+    }
+
+    /// `-ShotDexSection onThisDay` (board `MAC_OnThisDay`): 26 photos taken on
+    /// today's month and day 5, 3 and 1 years ago, each year in one place.
+    private static func seedOnThisDay(_ dependencies: MacDependencies) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let now = Date()
+        let today = calendar.dateComponents([.year, .month, .day], from: now)
+        let years: [(ago: Int, count: Int, town: String, country: String)] = [
+            (5, 5, "Hanoi", "Vietnam"), (3, 7, "Banff", "Canada"), (1, 14, "Kyoto", "Japan"),
+        ]
+        let shots = Self.rows()
+        var rows: [PhotoMetadata] = []
+        var places: [(String, String, String)] = []
+        for year in years {
+            guard let start = calendar.date(from: DateComponents(year: today.year! - year.ago, month: today.month, day: today.day, hour: 17)) else { continue }
+            for n in 0..<year.count {
+                var row = shots[(n * 7 + year.ago) % 200]
+                row.assetId = "demo-otd-\(year.ago)-\(n)"
+                row.creationDate = Int(start.timeIntervalSince1970) - n * 120
+                row.isFavorite = false
+                rows.append(row)
+                places.append((row.assetId, year.town, year.country))
+            }
+        }
+        try? dependencies.metadataStore.saveBatch(rows, cursorAssetId: nil)
+        try? dependencies.database.writer.write { db in
+            for (id, town, country) in places {
+                try db.execute(sql: "UPDATE photo_metadata SET placeLocality = ?, placeCountry = ? WHERE assetId = ?",
+                               arguments: [town, country, id])
+            }
         }
     }
 

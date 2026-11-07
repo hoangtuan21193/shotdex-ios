@@ -1,0 +1,72 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoDatabase",
+    "demo55k.sqlite",
+    "-ShotDexDemoScale",
+    "200"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "menu",
+   "text": "Go>On This Day"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-otd-55k"
+  },
+  {
+   "action": "click",
+   "label": "Choose Date",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "menu",
+   "text": "Go>All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "menu",
+   "text": "Go>On This Day"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
