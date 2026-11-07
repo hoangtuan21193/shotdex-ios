@@ -1,7 +1,7 @@
 # FS-01.05 — Lọc và sắp xếp
 
 `FS-01.05` · `Features/Shared/RuleBuilderSections.swift` · `AdvancedSearchSheet`
-· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-10-02
+· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-11-07 (§5.1 sắp theo dung lượng)
 
 **Một câu:** một bộ dựng điều kiện dùng chung cho Advanced Search và Smart Album, cộng một menu lọc nhanh
 trên toolbar.
@@ -88,13 +88,45 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
   Capture Kind ▸ · **Camera ▸** · **Lens ▸** ([05b §1](05b-gear-menu-missing-data-and-sheet.md)) · **Advanced Filter…**
 - Ngay sau Favorites: hai hàng phẳng **Picks**, **Rejected** và menu con **Rating ▸** ([FS-01.12 §7](12-rating-and-flags.md)).
   Bộ lọc Rejected đang bật thì thanh điều kiện có viên đỏ **Delete N** ([FS-01.12b §5](12b-culling-pass.md)).
-- Menu con **`Sort By`**: Date Taken (Newest/Oldest) + **Date Modified** (Newest/Oldest). Hệ thống **không
+- Menu con **`Sort By`**: Date Taken (Newest/Oldest) + **Date Modified** (Newest/Oldest) + **File Size**
+  (Largest/Smallest) — §5.1. Hệ thống **không
   có** ngày-thêm-vào-thư-viện, chỉ có ngày chụp và ngày sửa — nên nhãn phải ghi đúng là *Modified*.
   Migration thêm chỉ mục cho ngày sửa.
 - Đường nhanh của hệ thống mở cho **cả hai kiểu sắp theo ngày**, không chỉ ngày chụp.
 - Sắp theo thông số (ISO, tiêu cự, khẩu, tốc độ) **vẫn còn** cho truy vấn nhưng **không xuất hiện trong
-  menu**; nếu giá trị đang lưu không phải sắp theo ngày thì menu hiện `Newest`.
-- **Không có** sắp theo dung lượng (dù đã index), và **không có** ô chọn số cột — pinch để đổi mật độ.
+  menu**; nếu giá trị đang lưu không nằm trong menu thì menu hiện `Newest`.
+- **Không có** ô chọn số cột — pinch để đổi mật độ.
+
+### 5.1 Sắp theo dung lượng (chốt 2026-11-07)
+
+Mục đích: tìm ảnh/video nặng nhất để dọn chỗ. Người dùng chốt trong phiên 2026-11-07 (thay cho intent —
+đường tắt "Đổi hành vi đã có" ở `docs/PROCESS.md` §4); đảo dòng cũ "Không có sắp theo dung lượng".
+
+- Hai thứ tự mới trong `SortOption`: **`fileSizeLargest`** và **`fileSizeSmallest`**, nhãn
+  `File Size (Largest)` / `File Size (Smallest)`, nằm sau hai dòng Date Modified trong `menuOrders`.
+- Giá trị là cột `photo_metadata.fileSize` (byte, đã index — tổng resource gốc). Không đọc PhotoKit lúc sắp.
+- Thứ tự SQL: `fileSize DESC|ASC NULLS LAST, creationDate DESC NULLS LAST, assetId` — ảnh **chưa biết dung
+  lượng xếp cuối** theo ngày chụp mới nhất (người dùng chốt), cả hai chiều; `assetId` phá hoà (§1).
+- Không có đường nhanh PhotoKit (`photoKitSortKey == nil`): lưới đọc từ index như các thứ tự thông số.
+  Ảnh iCloud chưa index (`cloudPlaceholderItems`) nối vào **cuối**, sau các hàng `fileSize` rỗng.
+- Lựa chọn được lưu như các thứ tự khác (`SettingsKeys.librarySort`) và còn sau khi mở lại app.
+- Ảnh và video sắp chung một danh sách; bộ lọc Photos Only / Videos Only vẫn áp trước.
+- Mac: popover `Sort By` có field thứ ba **File Size**; hàng `Order` đổi nhãn thành **Largest First /
+  Smallest First** khi field là File Size (Newest First ↔ Largest First, cùng một công tắc).
+- Hiệu năng: 55.000 hàng sắp theo một cột không có chỉ mục là quét toàn bảng. Thêm migration
+  `CREATE INDEX photo_metadata_on_fileSize` (chỉ mục, không đụng dữ liệu người dùng — BD-02 không vướng).
+
+Đã chốt 2026-11-07:
+
+- **Scrubber chỉ hiện ở bốn thứ tự ngày** (Date Taken / Date Modified); File Size và các thứ tự thông số
+  ẩn nó.
+- **Chỉ Library.** Album Detail / Smart Album giữ `AlbumSortOrder` như cũ.
+- **Board về đúng code:** `IP_MenuBar` và `MAC_MenuBar` (View ▸ Sort By) chỉ còn Date Taken · Date Modified ·
+  File Size, rồi Newest/Largest First · Oldest/Smallest First; bỏ Name/ISO/Focal Length/Aperture/Shutter
+  Speed. `MAC_FilterPopover` thêm field File Size. `PH_LibraryMore` chỉ vẽ `Sort By ▸` đóng — không sửa.
+  Bảng List iPad (`IP_LibraryList`) không thêm cột Size — ngoài phạm vi.
+- **Lần index đầu chưa xong:** như các thứ tự thông số — ảnh chưa vào `photo_metadata` chưa có mặt, dòng đếm
+  `N of M` cho thấy thiếu; không thêm UI.
 
 ## 6. Chip điều kiện
 
@@ -103,6 +135,32 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
 - Giữ nguyên bộ lọc khi mở ảnh rồi quay lại.
 
 ## 7. Tiêu chí nghiệm thu
+
+### 7.1 Sắp theo dung lượng (§5.1)
+
+Dữ liệu chung (S): DB in-memory 6 hàng — A 48 MB (2026-01-03), B 3 MB (2026-05-01), C 3 MB (2026-05-01, id
+lớn hơn B), D video 210 MB (2025-12-24), E `fileSize` NULL (2026-06-10), F `fileSize` NULL (2026-02-02).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-S1 | (S) | `LibraryQueries.items(sort: .fileSizeLargest)` | thứ tự D, A, B, C, E, F | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeLargest` |
+| AC-S2 | (S) | `.fileSizeSmallest` | thứ tự B, C, A, D, E, F — NULL vẫn cuối, B trước C nhờ `assetId` | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeSmallest` |
+| AC-S3 | (S), bật Videos Only | `.fileSizeLargest` | chỉ D | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeRespectsFilter` |
+| AC-S4 | (S) chạy hai lần | `.fileSizeLargest` | hai mảng id giống hệt | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeIsStable` |
+| AC-S5 | `SortOption` | đọc `menuOrders` | 6 phần tử, hai phần tử cuối là `.fileSizeLargest`, `.fileSizeSmallest`; cả hai có `photoKitSortKey == nil` | ⚠️ chưa có — `SortOptionTests.menuOffersFileSize` |
+| AC-S6 | `UserDefaults[librarySort] = "fileSizeLargest"` | tạo `LibraryModel` mới | `model.sort == .fileSizeLargest` (không rơi về mặc định) | ⚠️ chưa có — `LibraryModelSortTests.restoresFileSize` |
+| AC-S7 | lưới đọc từ index + 2 placeholder iCloud chưa index | `.fileSizeLargest` | placeholder nằm sau mọi hàng có `fileSize`, kể cả NULL | ⚠️ chưa có — `LibraryModelSortTests.placeholdersLast` |
+| AC-S8 | DB sau migration | `EXPLAIN QUERY PLAN` câu sắp `.fileSizeLargest` không lọc | dùng `photo_metadata_on_fileSize`, không `SCAN` + `USE TEMP B-TREE FOR ORDER BY` | ⚠️ chưa có — `DatabaseTests.fileSizeSortUsesIndex` |
+| AC-S9 | Mac popover, sort = Date Taken / Newest First | chọn field File Size | `library.sort == .fileSizeLargest`; hàng Order hiện `Largest First` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeField` |
+| AC-S10 | Mac, sort = `.fileSizeSmallest` | `LibrarySortField(sort)` + `isNewestFirst` | `.fileSize`, `false` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeDirection` |
+| AC-S11 | iPhone 17 (26.5), Library | mở Filter and sort ▸ Sort By, chọn File Size (Largest) | menu có 6 dòng, dấu ✓ ở dòng vừa chọn; ô đầu lưới là ảnh lớn nhất demo library | ⚠️ chưa có — `ShotDexUITests/scripts/library-sort-filesize.json` + ảnh |
+| AC-S12 | như AC-S11 trên iOS 18.6 (nhánh pre-26) và iPad 13" | cùng thao tác | cùng kết quả; menu không cắt chữ | ⚠️ chưa có — cùng script, 2 máy + ảnh |
+| AC-S13 | iPhone 17, sort = File Size (Largest), cuộn lưới | đổi Sort By về Date Taken (Newest) | trước: không có scrubber mép phải; sau: scrubber hiện | ⚠️ chưa có — ảnh trước/sau từ AC-S11 |
+| AC-S14 | board `IP_MenuBar`, `MAC_MenuBar`, `MAC_FilterPopover` | `Tools/design-board render` | Sort By chỉ có Date Taken · Date Modified · File Size; không còn Name/ISO/Focal Length/Aperture/Shutter Speed | ⚠️ chưa có — PNG render + `design-parity` |
+
+**Chưa chứng minh được:** AC-S1…AC-S14 — chưa có code.
+
+### 7.2 Phần cũ
 
 Menu Camera/Lens, dữ liệu thiếu, bố cục và nháp của sheet Advanced Search: [05b §5](05b-gear-menu-missing-data-and-sheet.md)
 AC-1…AC-27. **Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Hai mục mới có AC ở spec
