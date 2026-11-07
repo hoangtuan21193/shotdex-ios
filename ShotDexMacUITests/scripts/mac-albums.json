@@ -38,7 +38,8 @@
   },
   {
    "action": "assertExists",
-   "label": "Kyoto Autumn"
+   "label": "Kyoto Autumn",
+   "type": "button"
   },
   {
    "action": "assertExists",
@@ -97,11 +98,13 @@
   },
   {
    "action": "assertExists",
-   "label": "Kyoto Autumn"
+   "label": "Kyoto Autumn",
+   "type": "button"
   },
   {
    "action": "assertMissing",
-   "label": "Iceland 2026"
+   "label": "Iceland 2026",
+   "type": "button"
   },
   {
    "action": "screenshot",
@@ -122,7 +125,8 @@
   {
    "action": "assertExists",
    "label": "Iceland 2026",
-   "seconds": 3
+   "seconds": 3,
+   "type": "button"
   },
   {
    "action": "rightClick",
@@ -374,7 +378,7 @@
   },
   {
    "action": "assertExists",
-   "label": "7 photos · 1 video",
+   "label": "7 photos · 1 video · 192 MB",
    "type": "staticText",
    "seconds": 4
   },

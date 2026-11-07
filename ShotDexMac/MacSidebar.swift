@@ -16,6 +16,9 @@ struct MacSidebar: View {
     var smartAlbums: [SmartAlbum] = []
     /// Photos ShotDex hid: the Hidden row shows while there is one (or it is open).
     var hiddenCount = 0
+    /// Photos' albums, listed under Albums when it is open (board `MAC_AlbumDetail`).
+    var albums: [AlbumSummary] = []
+    @AppStorage("macSidebarShowsAlbums") private var showsAlbums = true
     var newSmartAlbum: () -> Void = {}
     /// The Sources header's + (board `Main`): the Add a Source sheet
     /// (`MAC_AddSource`) — Photos, a folder or drive, or a server.
@@ -69,7 +72,40 @@ struct MacSidebar: View {
                 .accessibilityAction(named: String(localized: "Add Source", comment: "Mac sidebar: add a folder, drive or server"), addSource)
             }
             Section {
-                ForEach(MacSidebarItem.collections) { row($0, count: nil) }
+                ForEach(MacSidebarItem.collections) { item in
+                    if item == .albums {
+                        albumsRow
+                        if showsAlbums {
+                            // A long list does not bury the rest: the first 12, then Albums for all.
+                            ForEach(albums.prefix(MacSidebar.albumRowsShown)) { album in
+                                Label {
+                                    HStack {
+                                        Text(album.title).lineLimit(1)
+                                        Spacer(minLength: 4)
+                                        if album.count > 0 { MacSidebar.countText(album.count) }
+                                    }
+                                } icon: { MacSidebar.icon(MacSidebarItem.album(album.id).systemImage) }
+                                .padding(.leading, 18)
+                                .help(album.title)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(album.title)
+                                .accessibilityValue(String(AttributedString(localized: "^[\(album.count) photo](inflect: true)",
+                                                                            comment: "Mac sidebar: an album's count, VoiceOver").characters))
+                                .tag(MacSidebarItem.album(album.id))
+                                .listRowBackground(ground(.album(album.id)))
+                            }
+                            if albums.count > MacSidebar.albumRowsShown {
+                                Label {
+                                    Text("Show All Albums…", comment: "Mac sidebar: open Albums for the rest of a long list").foregroundStyle(.secondary)
+                                } icon: { MacSidebar.icon("ellipsis") }
+                                .padding(.leading, 18)
+                                .tag(MacSidebarItem.albums)
+                            }
+                        }
+                    } else {
+                        row(item, count: nil)
+                    }
+                }
                 ForEach(smartAlbums) { album in
                     Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
                         .tag(MacSidebarItem.smartAlbum(album.id))
@@ -113,11 +149,40 @@ struct MacSidebar: View {
     /// accent, blue, once the list is clicked.
     @ViewBuilder
     private func ground(_ item: MacSidebarItem) -> some View {
-        if selection == item || (item == .albums && selection?.isOpenedFromAlbums == true) {
+        if selection == item || (item == .albums && selection?.isOpenedFromAlbums == true && !(showsAlbums && selection?.isListedAlbum(in: albums) == true)) {
             RoundedRectangle(cornerRadius: 8).fill(MacTheme.rowSelection).padding(.horizontal, 8)
         } else {
             Color.clear
         }
+    }
+
+    /// Albums with its count and the chevron that shows or hides the list.
+    private var albumsRow: some View {
+        Label {
+            HStack(spacing: 6) {
+                Text(MacSidebarItem.albums.title)
+                Spacer(minLength: 4)
+                // Beside the count, as the board draws it.
+                Button { showsAlbums.toggle() } label: {
+                    Image(systemName: showsAlbums ? "chevron.down" : "chevron.right").font(.system(size: 9, weight: .semibold))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityValue(showsAlbums ? String(localized: "expanded", comment: "Mac sidebar: the album list shows")
+                                                : String(localized: "collapsed", comment: "Mac sidebar: the album list is hidden"))
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(showsAlbums ? String(localized: "Hide Albums", comment: "Mac sidebar: collapse the album list")
+                                                : String(localized: "Show Albums", comment: "Mac sidebar: expand the album list"))
+                .help(showsAlbums ? String(localized: "Hide Albums", comment: "Mac sidebar: collapse the album list")
+                                  : String(localized: "Show Albums", comment: "Mac sidebar: expand the album list"))
+                if !albums.isEmpty { MacSidebar.countText(albums.count) }
+            }
+        } icon: {
+            MacSidebar.icon(MacSidebarItem.albums.systemImage)
+        }
+        .tag(MacSidebarItem.albums)
+        .listRowBackground(ground(.albums))
     }
 
     private func row(_ item: MacSidebarItem, count: Int?) -> some View {
@@ -209,6 +274,9 @@ struct MacSidebar: View {
                       comment: "Mac sidebar foot: the index finished; the argument is a whole relative phrase such as '2 min. ago'")
     }
 
+    /// Albums listed under the Albums row before "Show All Albums…".
+    static let albumRowsShown = 12
+
     /// A row's count: 11, tabular, secondary (DESIGN.md §10b).
     static func countText(_ count: Int) -> some View {
         Text(count.formatted()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
@@ -279,6 +347,11 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .statistics, .duplicates, .collages, .videoProjects, .onServer: true
         default: false
         }
+    }
+
+    /// One of `albums`, so its own row in the list is the lit one.
+    func isListedAlbum(in albums: [AlbumSummary]) -> Bool {
+        if case .album(let id) = self { albums.contains { $0.id == id } } else { false }
     }
 
     /// An album, People or Pets: opened from Albums, so Albums stays lit.

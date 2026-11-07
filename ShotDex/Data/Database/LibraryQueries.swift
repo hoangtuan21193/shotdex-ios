@@ -214,6 +214,28 @@ struct LibraryQueries: Sendable {
         return tally.compactMapValues { names in names.max { $0.value < $1.value || ($0.value == $1.value && $0.key > $1.key) }?.key }
     }
 
+    /// The towns most of these photos were taken in, most first — an album's
+    /// header ("Reykjavík, Vík, Höfn, Akureyri").
+    func topPlaces(ids: [String], limit: Int) async throws -> [String] {
+        guard !ids.isEmpty else { return [] }
+        // One read, chunked inside: one snapshot, one hop.
+        let tally: [String: Int] = try await database.reader.read { db in
+            var tally: [String: Int] = [:]
+            for start in stride(from: 0, to: ids.count, by: 900) {
+                let chunk = Array(ids[start..<min(start + 900, ids.count)])
+                for row in try Row.fetchAll(db, sql: """
+                    SELECT COALESCE(placeLocality, placeAdminArea) AS town, COUNT(*) AS n FROM photo_metadata
+                    WHERE assetId IN (\(databaseQuestionMarks(count: chunk.count))) AND COALESCE(placeLocality, placeAdminArea) IS NOT NULL
+                    GROUP BY town
+                    """, arguments: StatementArguments(chunk)) {
+                    tally[row["town"], default: 0] += row["n"] as Int
+                }
+            }
+            return tally
+        }
+        return tally.sorted { $0.value > $1.value || ($0.value == $1.value && $0.key < $1.key) }.prefix(limit).map(\.key)
+    }
+
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"

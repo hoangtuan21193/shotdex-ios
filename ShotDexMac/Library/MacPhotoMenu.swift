@@ -25,6 +25,9 @@ final class MacPhotoMenu: NSObject {
     /// Bumped when stars, flags or favorites changed: the list reads its
     /// details again.
     private(set) var marksGeneration = 0
+    /// The Photos album the window shows, if any: its photos can be taken
+    /// out of it, and it is not offered as a place to add them.
+    @ObservationIgnored var openAlbumId: String?
     /// Photos whose every copy is on a drive or server not connected.
     @ObservationIgnored var offline: Set<String> = []
 
@@ -326,6 +329,13 @@ final class MacPhotoMenu: NSObject {
                 self?.requestHide(ids)
             })
         }
+        // In an album: out of the album, the photo stays in the library.
+        if let albumId = openAlbumId {
+            menu.addItem(item(String(localized: "Remove from Album", comment: "Mac photo menu: take the photos out of the open album"), id: "removeFromAlbum") { [weak self] in
+                guard let self else { return }
+                Task { self.remove(await self.resolved(facts, ids: ids).photosAssetIds, fromAlbum: albumId) }
+            })
+        }
         menu.addItem(item(String(localized: "Move to Trash", comment: "Mac photo menu"), id: "trash") { [weak self] in
             self?.trash(ids)
         })
@@ -352,7 +362,7 @@ final class MacPhotoMenu: NSObject {
         if !albums.isEmpty {
             submenu.addItem(.separator())
             submenu.addItem(.sectionHeader(title: String(localized: "Albums", comment: "Mac photo menu: Add to Album, the list")))
-            for entry in albums {
+            for entry in albums where entry.id != openAlbumId {
                 submenu.addItem(item(entry.title, id: "album.\(entry.id)") { [weak self] in
                     guard let self else { return }
                     Task { self.add(await self.resolved(facts, ids: ids).photosAssetIds, toAlbum: entry.id) }
@@ -468,6 +478,30 @@ final class MacPhotoMenu: NSObject {
         markChain = Task {
             await previous?.value
             await work()
+        }
+    }
+
+    func remove(_ assetIds: [String], fromAlbum albumId: String) {
+        let photoLibrary = dependencies.photoLibrary
+        Task {
+            #if DEBUG
+            // The demo's albums are slices of rows: Photos is never asked.
+            if MacDemoLibrary.isOn {
+                failure = String(localized: "The demo library's albums can't be changed.", comment: "Mac Albums: demo")
+                return
+            }
+            #endif
+            let found = await Task.detached(priority: .userInitiated) {
+                (MacAssetMap(PhotoLibraryService.fetchAssets(ids: assetIds)),
+                 MacCollectionBox(PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [albumId], options: nil).firstObject))
+            }.value
+            guard let collection = found.1.collection, !found.0.byId.isEmpty else { return }
+            do {
+                try await photoLibrary.removeAssets(Array(found.0.byId.values), from: collection)
+                NotificationCenter.default.post(name: .macAlbumChanged, object: albumId)
+            } catch {
+                failure = error.localizedDescription
+            }
         }
     }
 
@@ -758,4 +792,10 @@ enum MacPhotosExport {
         }
         return urls
     }
+}
+
+extension Notification.Name {
+    /// An album's photos changed from the app (Remove from Album): the open
+    /// album reads its photos again.
+    static let macAlbumChanged = Notification.Name("macAlbumChanged")
 }

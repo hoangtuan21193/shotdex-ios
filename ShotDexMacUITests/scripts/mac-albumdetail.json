@@ -1,0 +1,219 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "albumDetail"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-album"
+  },
+  {
+   "action": "dump",
+   "name": "01-album"
+  },
+  {
+   "action": "assertExists",
+   "label": "Iceland 2026",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "11 photos · 264 MB",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "11 photos · 264 MB · 2 selected",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-selected"
+  },
+  {
+   "action": "click",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "7 photos · 1 video · 192 MB",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "03-kyoto"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "photoMenu.removeFromAlbum",
+   "type": "menuItem",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "photoMenu.album.demo-album-Kyoto Autumn",
+   "type": "menuItem"
+  },
+  {
+   "action": "screenshot",
+   "name": "03a-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "2",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-list"
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "key",
+   "text": "1",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Hide Albums",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Night Walks"
+  },
+  {
+   "action": "click",
+   "label": "Show Albums",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "Night Walks"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Monday, September 28",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "albumDetail",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

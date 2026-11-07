@@ -1,3 +1,4 @@
+import Photos
 import SwiftUI
 
 /// The Library window (board `Main`, FS-18 01 §1): sidebar 228 with
@@ -46,6 +47,14 @@ struct MacRootWindow: View {
     @State private var hiddenCount = 0
     /// Names of Photos' albums opened from Albums, for the window title.
     @State private var albumTitles: [String: String] = [:]
+    /// Photos' albums for the sidebar's list under Albums, read off the main actor.
+    @State private var sidebarAlbums: [AlbumSummary] = []
+    /// The open album's header (board `MAC_AlbumDetail`).
+    @State private var albumHeader: MacAlbumHeaderSummary?
+    @State private var headerAlbumId: String?
+    /// Where Back goes from an album, People or Pets: the place it was opened from.
+    @State private var backTarget: MacSidebarItem?
+    @AppStorage("macSidebarShowsAlbums") private var sidebarShowsAlbums = true
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
@@ -125,6 +134,15 @@ struct MacRootWindow: View {
         .tint(MacTheme.accent)
         .onAppear { reloadSources() }
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
+        // Back from an album returns where it was opened from (Albums, or the sidebar's last place).
+        .onChange(of: selection) { old, new in
+            if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
+            if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
+        }
+        // Remove from Album: the open album reads its photos again.
+        .onReceive(NotificationCenter.default.publisher(for: .macAlbumChanged)) { _ in
+            if isAlbumOpen { library?.place = place(for: selection) }
+        }
         .onChange(of: selection) {
             // Only a row that shows the grid moves it: Backup or Statistics
             // must not reload 55k rows nobody sees.
@@ -175,6 +193,29 @@ struct MacRootWindow: View {
         }
         .task(id: countsKey) { await reloadPlaceCounts() }
         .task(id: countsKey) { await reloadHiddenCount() }
+        // The list under Albums: read only while it shows, again when access or albums change.
+        .task(id: "\(dependencies.photoLibrary.collectionChangeToken)-\(dependencies.photoLibrary.authorizationState)-\(sidebarShowsAlbums)") {
+            if sidebarShowsAlbums || isAlbumOpen { await reloadSidebarAlbums() }
+        }
+        // The open album's header: when, where and how much, read off the main actor.
+        // The count is in the key: a delete removes rows without a new generation.
+        .task(id: isAlbumOpen ? "\(selection?.id ?? "")-\(library?.rowsGeneration ?? 0)-\(library?.items.count ?? 0)" : "") {
+            guard isAlbumOpen, let library else { albumHeader = nil; headerAlbumId = nil; return }
+            // Another album: never A's numbers under B's name while B loads.
+            if headerAlbumId != selection?.id { albumHeader = nil; headerAlbumId = selection?.id }
+            // An index run bumps the generation in bursts: one read once it settles.
+            if albumHeader != nil { try? await Task.sleep(for: .milliseconds(250)) }
+            guard !Task.isCancelled else { return }
+            let items = library.items, queries = dependencies.libraryQueries
+            var summary = await Task.detached(priority: .userInitiated) {
+                let places = (try? await queries.topPlaces(ids: items.map(\.assetId), limit: 4)) ?? []
+                return MacAlbumHeaderSummary.make(items, places: places)
+            }.value
+            // A search narrows the rows, not the album: its cover stays.
+            if library.hasActiveQuery, let cover = albumHeader?.cover { summary.cover = cover }
+            guard !Task.isCancelled else { return }
+            albumHeader = summary
+        }
         .onReceive(NotificationCenter.default.publisher(for: .macHiddenChanged)) { _ in Task { await reloadHiddenCount() } }
         // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
         // browser goes to the destination.
@@ -323,7 +364,7 @@ struct MacRootWindow: View {
         // The first run counts nothing (board `MAC_EmptyLibrary`): no row of zeros.
         MacSidebar(selection: $selection, library: library, counts: isLibraryEmpty ? [:] : placeCounts,
                    sources: photosAdded ? sources : sources.filter { $0.kind != "photos" },
-                   backup: backupBadge, smartAlbums: smartAlbums, hiddenCount: hiddenCount,
+                   backup: backupBadge, smartAlbums: smartAlbums, hiddenCount: hiddenCount, albums: sidebarAlbums,
                    newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
                    addSource: {
                        // A request left by a close that never reached onDismiss is not run later.
@@ -488,6 +529,7 @@ struct MacRootWindow: View {
         case .videos: String(localized: "No Videos", comment: "Mac library: Videos is empty")
         case .raw: String(localized: "No RAW Photos", comment: "Mac library: RAW is empty")
         case .recentlyAdded: String(localized: "Nothing Added Recently", comment: "Mac library: Recently Added is empty")
+        case .album: String(localized: "Empty Album — add photos with Add to Album", comment: "Mac library: an album with no photo")
         case .onThisDay: String(localized: "Nothing from \(onThisDayDate.formatted(.dateTime.month(.wide).day()))",
                                 comment: "Mac On This Day: no photo on this day in earlier years")
         default: String(localized: "No Photos", comment: "Mac library: a source with no photos")
@@ -497,8 +539,39 @@ struct MacRootWindow: View {
     /// The window title: the row's name — a source's own name, not "Source".
     private var placeTitle: String {
         if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
-        if case .album(let id) = selection, let title = albumTitles[id] { return title }
+        if case .album(let id) = selection { return albumTitle(id) }
         return selection?.title ?? "ShotDex"
+    }
+
+    private var isAlbumOpen: Bool {
+        if case .album = selection { true } else { false }
+    }
+
+    /// An album's name: as opened from Albums, else from the sidebar's list.
+    private func albumTitle(_ id: String) -> String {
+        // The fresh list first: a rename in Photos shows at once.
+        sidebarAlbums.first { $0.id == id }?.title ?? albumTitles[id] ?? MacSidebarItem.album(id).title
+    }
+
+    /// The sidebar's albums: on album changes, off the main actor.
+    private func reloadSidebarAlbums() async {
+        let albums: [AlbumSummary]
+        #if DEBUG
+        if MacDemoLibrary.isOn { albums = MacDemoLibrary.albumSummaries() } else { albums = await Self.readSidebarAlbums() }
+        #else
+        albums = await Self.readSidebarAlbums()
+        #endif
+        guard !Task.isCancelled, albums != sidebarAlbums else { return }
+        sidebarAlbums = albums
+        // The open album was deleted in Photos: leave it rather than show an empty name.
+        if case .album(let id) = selection, !albums.isEmpty, !albums.contains(where: { $0.id == id }) {
+            selection = .albums
+        }
+    }
+
+    private static func readSidebarAlbums() async -> [AlbumSummary] {
+        guard [.authorized, .limited].contains(PHPhotoLibrary.authorizationStatus(for: .readWrite)) else { return [] }
+        return await Task.detached(priority: .utility) { PhotoLibraryService.fetchUserAlbumCounts() }.value
     }
 
     /// The Hidden row's count, off the main actor.
@@ -631,8 +704,15 @@ struct MacRootWindow: View {
     private var libraryDetail: some View {
             VStack(spacing: 0) {
                 sourceBanners
+                // From the first frame: the name at once, the numbers when read.
+                if case .album(let id) = selection {
+                    MacAlbumHeader(title: albumTitle(id), summary: albumHeader ?? MacAlbumHeaderSummary(),
+                                   selected: photoSelection?.ids.count ?? 0,
+                                   total: library?.hasActiveQuery == true ? sidebarAlbums.first { $0.id == id }?.count : nil)
+                }
                 // Once a search is run, or a scope set — not while words are only typed.
-                if let library, searchOwnsQuery || library.sourceScope != nil {
+                // An album's search is the album's: no source scope there.
+                if let library, !isAlbumOpen, searchOwnsQuery || library.sourceScope != nil {
                     MacSearchScopeBar(scope: Binding(get: { searchScope }, set: { setScope($0) }), count: subtitle,
                                       canSave: canSaveSearch,
                                       saveAsSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest(query: savedSearchQuery) })
@@ -703,7 +783,10 @@ struct MacRootWindow: View {
                 .toolbar { toolbar }
                 .searchable(text: $searchText, placement: .toolbar,
                             prompt: isLibraryEmpty ? Text("Search", comment: "Mac search field placeholder before any photo")
+                                  : isAlbumOpen ? Text("Search Album", comment: "Mac search field placeholder in an album")
                                                    : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
+                // The album's header carries its name (board): no title in the toolbar.
+                .toolbar(removing: isAlbumOpen ? .title : nil)
                 .searchFocused($isSearchFocused)
                 .searchSuggestions { searchSuggestions }
                 // The suggestions, a beat after typing stops: the parser's
@@ -843,8 +926,11 @@ struct MacRootWindow: View {
                     // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
                     MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
                                  picture: Self.demoPicture,
+                                 // An album is one run of photos (board `MAC_AlbumDetail`), no day headers.
+                                 showsDays: !isAlbumOpen,
                                  yearHeaders: selection == .onThisDay ? MacYearHeaders(currentYear: Calendar.current.component(.year, from: Date()), showsAge: isOnThisDayToday, places: onThisDayPlaces) : nil,
                                  endKey: selection == .onThisDay ? "\(onThisDayDate)" : nil,
+                                 columns: isAlbumOpen ? MacGridMetrics.albumColumns : MacGridMetrics.columns,
                                  offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
                                  initialSelection: photoSelection?.idSet ?? [],
                                  contextMenu: photoMenuBuilder, markKey: markKey, marks: tableDetails, marksGeneration: tableDetailsGeneration,
@@ -1047,12 +1133,17 @@ struct MacRootWindow: View {
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
             // Back from a place opened in Albums returns to Albums; a full history comes later.
-            Button { selection = .albums } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
+            Button { selection = backTarget ?? .albums } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
                 .keyboardShortcut("[", modifiers: .command)
                 .disabled(selection?.isOpenedFromAlbums != true)
-                .help(selection?.isOpenedFromAlbums == true ? String(localized: "Back to Albums", comment: "Mac toolbar: Back to Albums") : "")
+                .help(selection?.isOpenedFromAlbums == true
+                      ? String(localized: "Back to \((backTarget ?? .albums).title)", comment: "Mac toolbar: Back to the place an album was opened from") : "")
             Button { } label: { Label(String(localized: "Forward", comment: "Mac toolbar"), systemImage: "chevron.right") }
                 .disabled(true)
+        }
+        // No title in an album's toolbar (its header has it): the groups stay at the right.
+        if isAlbumOpen {
+            if #available(macOS 26, *) { ToolbarSpacer(.flexible) }
         }
         if selection == .onThisDay {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -1139,6 +1230,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "albums" { selection = .albums }
+        if MacDemoLibrary.section == "albumDetail" { selection = .album("demo-album-Iceland 2026") }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.

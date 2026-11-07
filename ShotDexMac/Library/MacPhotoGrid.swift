@@ -23,6 +23,8 @@ struct MacPhotoGrid: NSViewRepresentable {
     /// A new key opens the grid at its end (On This Day's newest year, on a
     /// new day); a delete or an index refresh keeps the scroll where it is.
     var endKey: String? = nil
+    /// Tiles a row: 7 in the Library, 8 in an album (board `MAC_AlbumDetail`).
+    var columns = MacGridMetrics.columns
     /// Photos with a copy on a server (FS-19.07 §8): the drive glyph.
     var onServer: Set<String> = []
     /// Photos whose every copy is on a drive or server not connected
@@ -97,6 +99,11 @@ struct MacPhotoGrid: NSViewRepresentable {
         (scroll.documentView as? MacGridCollectionView)?.markKey = markKey
         coordinator.marks(marks, generation: marksGeneration)
         coordinator.isOldestFirst = yearHeaders != nil
+        if coordinator.columns != columns {
+            coordinator.columns = columns
+            // New tile sizes: every tile asks again at its new side.
+            (scroll.documentView as? NSCollectionView)?.reloadData()
+        }
         if coordinator.endKey != endKey {
             coordinator.endKey = endKey
             coordinator.scrollsToEnd = endKey != nil
@@ -171,7 +178,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         private func redrawInfo() {
             guard let collection else { return }
             // Text only: the pictures stay, nothing is fetched again.
-            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width)
+            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width, columns: columns)
             for case let tile as MacPhotoTile in collection.visibleItems() {
                 guard let indexPath = collection.indexPath(for: tile) else { continue }
                 let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
@@ -182,6 +189,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         /// Sections run oldest first (On This Day: 2021 above 2025).
         var isOldestFirst = false
         var endKey: String?
+        var columns = MacGridMetrics.columns
         /// Set by a new `endKey`, spent by the first build after it.
         var scrollsToEnd = false
 
@@ -253,7 +261,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         func assetsResolved(_ generation: Int) {
             guard generation != lastAssetGeneration, let collection else { return }
             lastAssetGeneration = generation
-            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width)
+            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width, columns: columns)
             for case let tile as MacPhotoTile in collection.visibleItems() where !tile.hasPicture {
                 guard let indexPath = collection.indexPath(for: tile) else { continue }
                 let index = sections[indexPath.section].range.lowerBound + indexPath.item
@@ -279,7 +287,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             // without one (a smart album).
             let asset = picture != nil ? nil : assetAt.map { $0(index) } ?? asset(row.assetId)
             tile.show(row, asset: asset, picture: picture, photoLibrary: photoLibrary,
-                      side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
+                      side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width, columns: columns),
                       fields: fields, isOnServer: onServer.contains(row.assetId), isOffline: offline.contains(row.assetId), marks: marks[row.assetId])
             return tile
         }
@@ -357,7 +365,7 @@ struct MacPhotoGrid: NSViewRepresentable {
 
         func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout,
                             sizeForItemAt indexPath: IndexPath) -> NSSize {
-            let side = MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width)
+            let side = MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width, columns: columns)
             return NSSize(width: side, height: side)
         }
 
@@ -402,6 +410,8 @@ final class MacGridCollectionView: NSCollectionView {
 /// 1440, 2pt gaps, 16pt from the content's edges.
 enum MacGridMetrics {
     static let columns = 7
+    /// An album's grid (board `MAC_AlbumDetail`): 8 at 1440.
+    static let albumColumns = 8
     static let spacing: CGFloat = 2
     static let sideInset: CGFloat = 16
     static let headerHeight: CGFloat = 44
@@ -409,7 +419,7 @@ enum MacGridMetrics {
     /// A flat grid's gap under the bar above it (board `MAC_SmartAlbum`).
     static let flatTopInset: CGFloat = 8
 
-    static func tileSide(contentWidth: CGFloat) -> CGFloat {
+    static func tileSide(contentWidth: CGFloat, columns: Int = columns) -> CGFloat {
         let usable = contentWidth - sideInset * 2 - spacing * CGFloat(columns - 1)
         return max(80, floor(usable / CGFloat(columns)))
     }

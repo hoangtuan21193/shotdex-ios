@@ -51,6 +51,23 @@ Support thành cửa sổ riêng.
 - Chưa có: danh sách album con dưới hàng Albums ở sidebar và kéo ảnh vào album (board vẽ), album dùng chung (Shared),
   thư mục album của Photos, Customize thứ tự mục.
 
+### 1.0b Một album (board `MAC_AlbumDetail`)
+
+- Mở từ Albums hoặc từ danh sách dưới hàng **Albums** ở sidebar (chevron Show/Hide Albums cạnh số, nhớ qua lần mở; mỗi album
+  một hàng thụt vào, số ảnh bên phải, tên dài có tooltip; tối đa 12 hàng rồi "Show All Albums…" mở Albums; album đang mở sáng
+  hàng của nó; danh sách chỉ đọc khi đang hiện, bằng số ước tính của Photos).
+- Đầu trang thay tiêu đề toolbar: bìa 104 góc 12 (ảnh mới nhất) · tên 26 bold · "August 9 – 22, 2026 · Reykjavík, Vík, Höfn,
+  Akureyri" (khoảng ngày + tối đa 4 nơi chụp nhiều nhất, khi index biết) · "412 photos · 18 videos · 61.4 GB · 2 selected".
+  Đọc ngoài luồng chính khi album đổi.
+- Lưới phẳng 8 cột ở 1440 (không chia ngày), Grid/List, Filter and Sort, Share, Inspector, chọn, chuột phải, phím như
+  Library; ô tìm "Search Album" tìm trong album (không có thanh phạm vi nguồn); khi tìm, dòng số là "3 of 412 photos" và bìa
+  giữ nguyên. Chuột phải có **Remove from Album** (bỏ khỏi album, ảnh còn trong thư viện) và Add to Album không liệt kê
+  chính album đang mở. Album rỗng: "Empty Album — add photos with Add to Album". **Back ⌘[** về chỗ đã mở album (Albums
+  hoặc chỗ trước ở sidebar). Album bị xoá trong Photos khi đang mở → về Albums.
+- Chưa có: kéo ảnh vào một album ở sidebar (board vẽ), toolbar khi bỏ tiêu đề nằm giữa thay vì sát phải (macOS 26+
+  `ToolbarSpacer`), sắp xếp riêng của album (Album Order), đổi bìa, Undo cho Remove from Album, mở album 20k ảnh còn chờ
+  PhotoKit liệt kê id (~1 s, ngoài luồng chính); hàng sidebar cao 32 thay vì 28 của board (cả sidebar, chờ quyết).
+
 ### 1.1 On This Day (board `MAC_OnThisDay`, hành vi theo [FS-06.07](../FS-06-collections/07-on-this-day.md))
 
 - Sidebar › Collections › On This Day, Go › On This Day. Là một **chỗ của Library** (`LibraryPlace.onThisDay`): ảnh

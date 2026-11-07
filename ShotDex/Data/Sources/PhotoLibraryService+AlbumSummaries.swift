@@ -32,6 +32,19 @@ extension PhotoLibraryService {
         }
     }
 
+    /// Names and counts only, for a list (the Mac sidebar): Photos' own
+    /// estimate where it has one, no cover — a fetch per album only when it
+    /// has none.
+    nonisolated static func fetchUserAlbumCounts() -> [AlbumSummary] {
+        let counting = PHFetchOptions()
+        counting.predicate = browsableMediaPredicate
+        return fetchUserAlbums().map { album in
+            let estimate = album.estimatedAssetCount
+            let count = estimate == NSNotFound ? PHAsset.fetchAssets(in: album, options: counting).count : estimate
+            return AlbumSummary(id: album.localIdentifier, title: album.localizedTitle ?? "", count: count, coverAssetId: nil)
+        }
+    }
+
     /// The photos of one album, in the album's order — an album opened as a
     /// place (the grid sorts them its own way).
     nonisolated static func assetIds(inAlbum albumId: String) -> [String] {
