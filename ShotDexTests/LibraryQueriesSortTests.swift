@@ -93,6 +93,39 @@ struct LibraryQueriesSortTests {
         }
     }
 
+    // AC-S3 — the media filter applies before the order and the limit:
+    // photos only, smallest first, the first two are B and C, not D.
+    @Test func fileSizeRespectsFilter() async throws {
+        let queries = try makeQueries()
+        var videosOnly = FilterCriteria()
+        videosOnly.mediaKinds = [.video]
+        #expect(try await queries.gridItems(matching: videosOnly, sort: .fileSizeLargest).map(\.assetId) == ["D"])
+        var photosOnly = FilterCriteria()
+        photosOnly.mediaKinds = [.photo]
+        #expect(try await queries.gridItems(matching: photosOnly, sort: .fileSizeSmallest).map(\.assetId)
+            == ["B", "C", "A", "E", "F"])
+        #expect(try await queries.gridItems(matching: photosOnly, sort: .fileSizeSmallest, limit: 2).map(\.assetId)
+            == ["B", "C"])
+    }
+
+    // AC-S4 — three rows equal in size and date, saved out of id order: the
+    // id decides, the same way in both directions and on every run.
+    @Test func fileSizeIsStable() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let day = Self.date("2026-04-04")
+        try MetadataStore(database: database).saveBatch([
+            record("M", size: 7_000_000, creation: day),
+            record("K", size: 7_000_000, creation: day),
+            record("L", size: 7_000_000, creation: day),
+        ], cursorAssetId: nil)
+        let queries = LibraryQueries(database: database)
+        for sort in [SortOption.fileSizeLargest, .fileSizeSmallest] {
+            for _ in 0..<2 {
+                #expect(try await queries.gridItems(matching: FilterCriteria(), sort: sort).map(\.assetId) == ["K", "L", "M"])
+            }
+        }
+    }
+
     // AC-S5
     @Test func menuOffersFileSize() {
         #expect(SortOption.menuOrders.count == 6)
