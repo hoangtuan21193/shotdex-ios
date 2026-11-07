@@ -274,7 +274,8 @@ class Component extends DCLogic {
     const mView=M([['as Grid','⌘1','c'],['as List','⌘2'],'-',['Sort By','','s'],['Filter','','s'],['Filter and Sort…','⇧⌘L'],['Show Filter Bar','','c'],'-',
       ['Zoom In','⌘+'],['Zoom Out','⌘−'],['Show Info on Thumbnails','⇧⌘M','c'],['Show File Type Badges','','c'],['Group by Day','','c'],'-',
       ['Show Original','\\'],'-',['Hide Sidebar','⌃⌘S'],['Show Inspector','⌥⌘I'],'-',['Play Slideshow','⌥⌘S']]);
-    const sSort=M([['Date Taken','','c'],['Date Modified'],['Name'],['ISO'],['Focal Length'],['Aperture'],['Shutter Speed'],'-',['Newest First','','c'],['Oldest First']]);
+    // Sort By (FS-01.05 §5.1): with File Size checked the two direction rows read Largest First / Smallest First.
+    const sSort=M([['Date Taken','','c'],['Date Modified'],['File Size'],'-',['Newest First','','c'],['Oldest First']]);
     const mImage=M([['Edit','⌘E'],['Compare','⌥⌘C'],['Quick Look','Space'],['Get Info','⌘I'],'-',
       ['Rotate Counterclockwise','⌘R'],['Rotate Clockwise','⌥⌘R'],'-',
       ['Favorite','.'],['Rating','','s'],['Pick','P'],['Reject','X'],['Clear Flag','U'],['Start Culling Pass','⌥⌘P'],['Keywords…','⇧⌘K'],'-',
