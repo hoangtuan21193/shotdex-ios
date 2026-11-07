@@ -1,0 +1,482 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "smartAlbumEditor"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "New Smart Album",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-editor"
+  },
+  {
+   "action": "dump",
+   "name": "01-editor"
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 56 photos",
+   "type": "staticText"
+  },
+  {
+   "action": "assertValue",
+   "label": "From",
+   "type": "textField",
+   "text": "100"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Create",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Add Condition",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 6
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 56 photos · 1 incomplete condition ignored",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Add Condition",
+   "type": "button",
+   "index": 0,
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Group",
+   "type": "button",
+   "index": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-new-group"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove Group",
+   "type": "button",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Group",
+   "type": "button",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Add Condition to Group",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Condition",
+   "type": "button",
+   "index": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Group match",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "All",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Group match",
+   "text": "All"
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 0 photos",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Group match",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Any",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 56 photos",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "5 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "03-stars"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "5 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 56 photos",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Condition field",
+   "type": "popUpButton",
+   "index": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Favorite"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Condition field",
+   "index": 3,
+   "text": "Favorite"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Video",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Match",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "any",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-any-video"
+  },
+  {
+   "action": "dump",
+   "name": "04-any-video"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Match",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "all",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "All",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Help",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Smart Album Conditions",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-help"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "New Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "text": "Aurora Keepers",
+   "type": "textField"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Create",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Create",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "New Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "waitFor",
+   "label": "Aurora Keepers",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "06-created"
+  },
+  {
+   "action": "key",
+   "text": "n",
+   "modifiers": "cmd,option"
+  },
+  {
+   "action": "waitFor",
+   "label": "New Smart Album",
+   "type": "staticText",
+   "seconds": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "New Smart Album",
+   "type": "staticText"
+  }
+ ]
+}

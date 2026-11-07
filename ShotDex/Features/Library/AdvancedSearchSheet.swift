@@ -70,7 +70,7 @@ struct AdvancedSearchSheet: View {
 
     /// Rules complete enough to compile — the query actually applied/saved.
     private var cleaned: SmartAlbumQuery {
-        SmartAlbumQuery(matchMode: query.matchMode, rules: query.validRules)
+        query.cleaned
     }
 
     private var canApply: Bool { !query.isEmpty }
@@ -156,10 +156,7 @@ struct AdvancedSearchSheet: View {
     /// Live match count off the main thread; skipped when no rule compiles.
     @MainActor
     private func recomputeCount(for snapshot: SmartAlbumQuery) async {
-        let cleanedSnapshot = SmartAlbumQuery(
-            matchMode: snapshot.matchMode,
-            rules: snapshot.validRules
-        )
+        let cleanedSnapshot = snapshot.cleaned
         guard !cleanedSnapshot.isEmpty else {
             matchCount = nil
             return
@@ -191,7 +188,7 @@ struct AdvancedSearchBar: View {
         HStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    if rules.count > 1 {
+                    if rules.count + query.validGroups.count > 1 {
                         // A control, not a caption. It used to be dead text that
                         // said "Match all" and did nothing, while being the one
                         // thing on the bar that changes what every condition
@@ -210,6 +207,14 @@ struct AdvancedSearchBar: View {
                             label: rule.compactDisplaySummary(naming: sourceNames),
                             removalAccessibilityLabel: "Remove condition: \(rule.displaySummary(naming: sourceNames))",
                             onRemove: { onRemoveRule(rule.id) }
+                        )
+                    }
+                    // A nested group is one chip; × takes the whole group.
+                    ForEach(query.validGroups) { group in
+                        ActiveConditionChip(
+                            label: group.displaySummary(naming: sourceNames, compact: true),
+                            removalAccessibilityLabel: "Remove condition: \(group.displaySummary(naming: sourceNames))",
+                            onRemove: { onRemoveRule(group.id) }
                         )
                     }
                 }

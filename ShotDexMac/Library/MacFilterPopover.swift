@@ -398,14 +398,21 @@ struct MacFilterBar: View {
 
     private var chips: [Chip] {
         if let advanced = library.advancedQuery, !advanced.isEmpty {
-            return advanced.validRules.map { rule in
+            func remove(_ id: UUID) {
+                let updated = advanced.removingCondition(id)
+                library.advancedQuery = updated.isEmpty ? nil : updated
+            }
+            let rules = advanced.validRules.map { rule in
                 Chip(id: rule.id.uuidString, field: nil, value: rule.compactDisplaySummary,
                      removalLabel: String(localized: "Remove condition: \(rule.compactDisplaySummary)",
-                                          comment: "Mac filter bar: remove an Advanced Filter condition")) {
-                    var updated = advanced
-                    updated.rules.removeAll { $0.id == rule.id }
-                    library.advancedQuery = updated.isEmpty ? nil : updated
-                }
+                                          comment: "Mac filter bar: remove an Advanced Filter condition")) { remove(rule.id) }
+            }
+            // A nested group is one chip; × takes the whole group.
+            return rules + advanced.validGroups.map { group in
+                let summary = group.displaySummary(compact: true)
+                return Chip(id: group.id.uuidString, field: nil, value: summary,
+                            removalLabel: String(localized: "Remove condition: \(summary)",
+                                                 comment: "Mac filter bar: remove an Advanced Filter condition")) { remove(group.id) }
             }
         }
         return ActiveFilterToken.tokens(for: library.criteria).map { token in

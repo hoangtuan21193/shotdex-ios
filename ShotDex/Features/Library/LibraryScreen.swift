@@ -556,8 +556,7 @@ struct LibraryScreen: View {
                     query: advancedQuery,
                     onEdit: { isAdvancedSearchPresented = true },
                     onRemoveRule: { ruleId in
-                        var updated = advancedQuery
-                        updated.rules.removeAll { $0.id == ruleId }
+                        let updated = advancedQuery.removingCondition(ruleId)
                         model.advancedQuery = updated.isEmpty ? nil : updated
                     },
                     onClear: { model.advancedQuery = nil },

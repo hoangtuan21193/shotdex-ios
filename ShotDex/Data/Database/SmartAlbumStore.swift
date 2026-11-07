@@ -28,6 +28,14 @@ struct SmartAlbumStore: Sendable {
         }
     }
 
+    /// `upsert` without holding the caller's thread while the writer is busy
+    /// (an index batch): for a click on the main actor.
+    func save(_ album: SmartAlbum) async throws {
+        try await database.writer.write { db in
+            try album.upsert(db)
+        }
+    }
+
     /// Deletes the smart album and its Keep in Photos link; the album in
     /// Photos stays (FS-06.12 §4).
     func delete(id: String) throws {

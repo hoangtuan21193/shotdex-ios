@@ -63,6 +63,17 @@ biểu đồ Statistics — cùng bộ dựng, cùng SQL.
 **Loại media** chỉ đặt được qua dải All / Photo / Video, **không** có trong menu chọn trường
 ([FS-01.05](../FS-01-library/05-filtering-and-sorting.md)).
 
+### 2b. Nhóm điều kiện lồng (2026-11-07)
+
+- Một album có thể có **nhóm**: một danh sách điều kiện với Any/All riêng ("Any of the following are true"), tính như
+  **một điều kiện** của album. Ví dụ: khớp tất cả — ISO 100–6400, *và* (ống kính FE 85mm *hoặc* XF56mm).
+- **Một tầng** (như board `MAC_SmartAlbumEditor`); nhóm vẽ sau các điều kiện thường. Lưu trong JSON dưới khoá `groups`
+  (không có nhóm thì không ghi khoá — đúng dạng cũ); đọc khoan dung: một nhóm hỏng chỉ mất nhóm đó.
+- Dòng trống / dở và nhóm không còn điều kiện nào hợp lệ bị bỏ khi lưu (`cleaned`), nhóm vẫn được giữ — mọi sheet
+  (iOS editor, Advanced Search, biểu đồ) lưu qua `cleaned` nên **không làm rơi nhóm** dù không sửa được nó.
+- Dựng nhóm: chỉ trên Mac (⌥-click **+**). iOS hiện mỗi nhóm thành một hàng chỉ đọc có nút xoá; thanh điều kiện / chip
+  (iOS và Mac) hiện nhóm là **một chip** "(A or B)", × xoá cả nhóm.
+
 ## 3. Sheet soạn
 
 Board: `PH_SmartAlbumEditor` · `IP_SmartAlbumEditor` · `DI_SmartAlbumEditor` · `DC_SmartAlbumEditor`.
@@ -99,7 +110,8 @@ tiêu đề kèm **số ảnh khớp** · ô **tên** · **một hàng** loại 
 ## 4. Biên dịch sang truy vấn
 
 Mỗi điều kiện thành một mệnh đề, nối bằng VÀ (khớp tất cả) hoặc HOẶC (khớp bất kỳ). Cùng một bộ dịch được
-dùng cho lưới và cho câu đếm.
+dùng cho lưới và cho câu đếm. Một nhóm (§2b) là một mệnh đề trong ngoặc; nhóm có điều kiện hợp lệ mà không dịch ra
+được gì thành `0` (không khớp ảnh nào) — không bao giờ nới album thành cả thư viện.
 
 Bộ lọc đơn giản (chỉ VÀ) vẫn là đường của drill-down từ Statistics, của ô tìm kiếm và của chip trên thanh
 điều kiện.
@@ -149,3 +161,5 @@ Phần cũ (§1, §2 trừ *is missing* / vị trí, §4–§5) **chưa có AC**
 | AC-15 | (Q7) smart album 300 ảnh, lưới density 3 | mở ảnh thứ 5, vuốt tới ảnh thứ 120, đóng viewer | ô ảnh 120 thấy trọn trên lưới | ⚠️ chưa có |
 | AC-16 | (S5, K3) 100 ảnh: 20 không toạ độ, 30 có toạ độ nhưng lượt tra địa chỉ chưa tới, 50 có địa chỉ | thêm *Place is missing* | dòng điều kiện ghi *Includes photos not yet looked up.*; *Matches 50 photos* | ⚠️ chưa có |
 | AC-17 | (C1) như AC-11, trên iPad 1376×1032 | chạm ra ngoài sheet | sheet không đóng; alert *Discard Changes?* hiện | ⚠️ chưa có |
+| AC-18 | (§2b) 5 ảnh sao 1–5, r1 r2 r5 được Pick | album *flag is Pick* + nhóm Any *(rating = 5, rating = 1)* | lưới và câu đếm ra đúng r1, r5; cùng các điều kiện để phẳng dưới All ra 0 | `SmartAlbumGroupTests.groupIsOneConditionOfTheAlbum` |
+| AC-19 | (§2b, §5) JSON có `groups` | giải mã / mã hoá lại; JSON cũ không có `groups`; một nhóm hỏng | khứ hồi bằng nhau; cũ ra 0 nhóm và mã hoá lại không có khoá `groups`; nhóm hỏng rơi một mình | `SmartAlbumGroupTests` (`groupsRoundTripAndOldJSONHasNone`, `unreadableGroupDropsAlone`, `cleanedDropsBlankLinesAndEmptyGroupsButKeepsGroups`, `albumOfOnlyAGroupIsNotEmpty`) |

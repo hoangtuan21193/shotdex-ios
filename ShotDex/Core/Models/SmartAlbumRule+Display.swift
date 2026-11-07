@@ -276,3 +276,24 @@ extension SmartAlbumRule {
         }
     }
 }
+
+extension SmartAlbumRuleGroup {
+    /// `(Lens is FE 85mm F1.8 or Lens is XF56mm)` — a group as one chip:
+    /// its conditions joined by its own and/or (FS-06.08 §2b).
+    func displaySummary(naming sourceNames: [String: String] = [:], compact: Bool = false) -> String {
+        let parts = validRules.map { compact ? $0.compactDisplaySummary(naming: sourceNames) : $0.displaySummary(naming: sourceNames) }
+        let joined = matchMode == .any ? parts.formatted(.list(type: .or)) : parts.formatted(.list(type: .and))
+        return "(\(joined))"
+    }
+}
+
+extension SmartAlbumQuery {
+    /// The query less one condition — a rule or a whole nested group — as a
+    /// chip's × removes it.
+    func removingCondition(_ id: UUID) -> SmartAlbumQuery {
+        var updated = self
+        updated.rules.removeAll { $0.id == id }
+        updated.groups.removeAll { $0.id == id }
+        return updated
+    }
+}

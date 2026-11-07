@@ -142,6 +142,31 @@ Support thành cửa sổ riêng.
 - Chưa có: sheet này trong smart album và Duplicates (vẫn hộp thường, cùng một lệnh nên hai hành vi); glyph ổ đĩa cho bản
   sao trên ổ (đang là thư mục); chọn bản sao theo từng ảnh khi nhiều ảnh (hiện theo nguồn).
 
+### 1.4 Soạn smart album (board `MAC_SmartAlbumEditor`, hành vi theo [FS-06.08](../FS-06-collections/08-smart-albums.md) §2–§4, §2b)
+
+- Sheet 640×560 nền `sheet`: tiêu đề 15 semibold ("New Smart Album" / "Edit Smart Album" / "Advanced Filter"), dưới là
+  dòng đếm sống "Matches 64 photos" (đếm sau 300 ms, ngoài luồng chính; "· Photos not checked yet aren't counted" khi
+  có điều kiện Original; "· 1 incomplete condition ignored" khi có dòng dở; "Add conditions to choose the photos." khi
+  chưa có gì).
+- Hàng Name (300), Media Type All/Photo/Video (segmented amber; dưới Match any ghi "Counts as one condition under Match
+  any."), "Match [all ▾] of the following conditions:".
+- Khung điều kiện 590×314 r10 nền `card`, cuộn: mỗi điều kiện **một dòng** 32 — trường 136, phép so 128, giá trị
+  (ô chữ có gợi ý cho hãng/thân máy/ống kính, popup cho lựa chọn, số + "s"/"mm" + Actual/FF Equiv., ngày dạng ô,
+  tháng/năm, "N days" + stepper, 5 sao), **−** xoá dòng, **+** thêm dòng ngay sau. Also on Server: Yes/No ở chỗ phép
+  so, server ở chỗ giá trị, dòng Folder ("All Folders"/thư mục, Choose… duyệt server — đọc server + mật khẩu ngoài luồng
+  chính). Favorite: "is / is not".
+- **⌥-click +** (dòng ngoài cùng) thêm **nhóm**: dòng "[Any ▾] of the following are true" − (xoá cả nhóm) + (thêm điều
+  kiện vào nhóm), các dòng con thụt 20; glyph + đổi thành … khi giữ ⌥, tooltip và VoiceOver action "Add Group" nói
+  vậy; nhóm mới được cuộn tới. Luôn còn ít nhất một dòng ngoài cùng (để còn + và ⌥+).
+- **?** mở popover giải thích all/any và nhóm. **Cancel** (Esc) đóng không lưu. **Create** / **Save** / **Filter**
+  (Return, `accentFill`) tắt khi chưa có tên, tên trùng (báo đỏ), chưa có điều kiện hợp lệ, hoặc tên các album chưa
+  đọc xong; ghi album ngoài luồng chính, lỗi ghi hiện "Couldn't save: …" và sheet ở lại.
+- Demo `-ShotDexSection smartAlbumEditor`: Albums + sheet với ISO range, Shutter, Date in the last, Rating và nhóm Any
+  của hai ống kính.
+- Chưa có (board vẽ): phép "is not" / "is in year" cho ngày, đơn vị weeks/months/years cho "is in the last" (model chỉ
+  có ngày); sheet hiện giữa cửa sổ (hệ thống) chứ không sát dưới toolbar; nút thêm nhóm chỉ qua ⌥ (không có nút riêng —
+  board không vẽ); dựng nhóm trên iOS.
+
 ## 2. Statistics (D18)
 
 - Sidebar › Utilities › Statistics, Go ⌥⌘6. Tầng A. Toolbar: ◀ ▶ · "Statistics" + "54,027 photos · 1,204 videos" ·

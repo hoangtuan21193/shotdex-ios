@@ -273,8 +273,7 @@ struct AlbumDetailScreen: View {
                     query: advanced,
                     onEdit: { isAdvancedFilterPresented = true },
                     onRemoveRule: { ruleId in
-                        var updated = advanced
-                        updated.rules.removeAll { $0.id == ruleId }
+                        let updated = advanced.removingCondition(ruleId)
                         filter.setAdvancedQuery(updated)
                     },
                     onClear: { filter.clear() },

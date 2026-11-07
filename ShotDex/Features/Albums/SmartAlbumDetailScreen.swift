@@ -309,8 +309,7 @@ struct SmartAlbumDetailScreen: View {
                     query: advanced,
                     onEdit: { isAdvancedFilterPresented = true },
                     onRemoveRule: { ruleId in
-                        var updated = advanced
-                        updated.rules.removeAll { $0.id == ruleId }
+                        let updated = advanced.removingCondition(ruleId)
                         filter.setAdvancedQuery(updated)
                     },
                     onClear: { filter.clear() },
@@ -334,16 +333,20 @@ struct SmartAlbumDetailScreen: View {
 
     private var filterChips: [SmartAlbumConditionsBar.FilterChip] {
         if let advanced = filter.advancedQuery {
+            let names = model?.sourceNames ?? [:]
             return advanced.validRules.map { rule in
                 SmartAlbumConditionsBar.FilterChip(
                     id: rule.id.uuidString,
-                    label: rule.compactDisplaySummary(naming: model?.sourceNames ?? [:]),
-                    removalAccessibilityLabel: "Remove condition: \(rule.displaySummary(naming: model?.sourceNames ?? [:]))",
-                    onRemove: {
-                        var updated = advanced
-                        updated.rules.removeAll { $0.id == rule.id }
-                        filter.setAdvancedQuery(updated)
-                    }
+                    label: rule.compactDisplaySummary(naming: names),
+                    removalAccessibilityLabel: "Remove condition: \(rule.displaySummary(naming: names))",
+                    onRemove: { filter.setAdvancedQuery(advanced.removingCondition(rule.id)) }
+                )
+            } + advanced.validGroups.map { group in
+                SmartAlbumConditionsBar.FilterChip(
+                    id: group.id.uuidString,
+                    label: group.displaySummary(naming: names, compact: true),
+                    removalAccessibilityLabel: "Remove condition: \(group.displaySummary(naming: names))",
+                    onRemove: { filter.setAdvancedQuery(advanced.removingCondition(group.id)) }
                 )
             }
         }

@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// How the conditions of a smart album combine.
 enum RuleMatchMode: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -381,15 +382,49 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-/// A named smart album's saved conditions: a match mode plus an ordered list
-/// of rules. Stored as JSON in `smart_albums.criteria` (see `SmartAlbum`).
-struct SmartAlbumQuery: Codable, Equatable, Sendable {
+/// A nested set of conditions with its own match mode — "Any of the
+/// following are true" inside an album that matches all (FS-06.08 §2b). One
+/// level deep, as the Mac editor draws it; the group is one condition of the
+/// query it sits in.
+struct SmartAlbumRuleGroup: Identifiable, Codable, Equatable, Sendable {
+    var id: UUID
     var matchMode: RuleMatchMode
     var rules: [SmartAlbumRule]
 
-    init(matchMode: RuleMatchMode = .all, rules: [SmartAlbumRule] = []) {
+    init(id: UUID = UUID(), matchMode: RuleMatchMode = .any, rules: [SmartAlbumRule] = [SmartAlbumRule()]) {
+        self.id = id
         self.matchMode = matchMode
         self.rules = rules
+    }
+
+    var validRules: [SmartAlbumRule] { rules.filter(\.isValid) }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, matchMode, rules
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        matchMode = (try? c.decodeIfPresent(RuleMatchMode.self, forKey: .matchMode)) ?? .any
+        rules = (try? c.decodeIfPresent([LossyRule].self, forKey: .rules))?.compactMap(\.rule) ?? []
+    }
+}
+
+/// A named smart album's saved conditions: a match mode, an ordered list of
+/// rules and any nested groups. Stored as JSON in `smart_albums.criteria`
+/// (see `SmartAlbum`).
+struct SmartAlbumQuery: Codable, Equatable, Sendable {
+    var matchMode: RuleMatchMode
+    var rules: [SmartAlbumRule]
+    /// Nested condition groups, each one more condition of this query
+    /// (FS-06.08 §2b). Screens that only list `rules` leave them as they are.
+    var groups: [SmartAlbumRuleGroup]
+
+    init(matchMode: RuleMatchMode = .all, rules: [SmartAlbumRule] = [], groups: [SmartAlbumRuleGroup] = []) {
+        self.matchMode = matchMode
+        self.rules = rules
+        self.groups = groups
     }
 
     static let empty = SmartAlbumQuery()
@@ -397,20 +432,40 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
     /// Only the rules complete enough to compile.
     var validRules: [SmartAlbumRule] { rules.filter(\.isValid) }
 
+    /// Groups with at least one rule complete enough to compile.
+    var validGroups: [SmartAlbumRuleGroup] {
+        groups.compactMap { group in
+            let rules = group.validRules
+            return rules.isEmpty ? nil : SmartAlbumRuleGroup(id: group.id, matchMode: group.matchMode, rules: rules)
+        }
+    }
+
     /// No compilable condition — the album would have no predicate.
-    var isEmpty: Bool { validRules.isEmpty }
+    var isEmpty: Bool { validRules.isEmpty && validGroups.isEmpty }
+
+    /// What a sheet saves or applies: blank rows and empty groups dropped,
+    /// nested groups kept.
+    var cleaned: SmartAlbumQuery {
+        SmartAlbumQuery(matchMode: matchMode, rules: validRules, groups: validGroups)
+    }
+
+    /// Every rule, the groups' included — for questions any condition answers.
+    var allRules: [SmartAlbumRule] { rules + groups.flatMap(\.rules) }
 
     // MARK: Codable (tolerant + legacy migration)
 
     private enum CodingKeys: String, CodingKey {
-        case matchMode, rules
+        case matchMode, rules, groups
     }
 
     init(from decoder: Decoder) throws {
-        // New shape: { matchMode, rules }.
+        groups = []
+        // New shape: { matchMode, rules, groups? }.
         if let c = try? decoder.container(keyedBy: CodingKeys.self), c.contains(.rules) {
             matchMode = try c.decodeIfPresent(RuleMatchMode.self, forKey: .matchMode) ?? .all
             rules = try c.decodeIfPresent([LossyRule].self, forKey: .rules)?.compactMap(\.rule) ?? []
+            // One unreadable group drops itself, not the album.
+            groups = (try? c.decodeIfPresent(LossyArray<SmartAlbumRuleGroup>.self, forKey: .groups))?.elements ?? []
             return
         }
         // Legacy shape: a JSON-encoded `FilterCriteria` (pre-rule smart albums).
@@ -426,6 +481,7 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(matchMode, forKey: .matchMode)
         try c.encode(rules, forKey: .rules)
+        if !groups.isEmpty { try c.encode(groups, forKey: .groups) }
     }
 
     /// Best-effort conversion of a legacy AND-only `FilterCriteria` into rules
@@ -601,5 +657,5 @@ extension SmartAlbumQuery {
 extension SmartAlbumQuery {
     /// Whether a condition reads the original-on-device check (FS-06.10):
     /// a screen showing it keeps the check going while it is open.
-    var usesOriginal: Bool { rules.contains { $0.field == .original } }
+    var usesOriginal: Bool { allRules.contains { $0.field == .original } }
 }

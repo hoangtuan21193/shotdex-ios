@@ -92,7 +92,7 @@ struct SmartAlbumPhotosAlbumStore: Sendable {
         // Never the whole library: no condition, or one that compiles to
         // nothing (a term that folds to empty), would widen the album to
         // every photo (review 2026-11-07).
-        let rules = query.validRules
+        let rules = query.validRules + query.validGroups.flatMap(\.rules)
         guard !rules.isEmpty, rules.allSatisfy({ SmartAlbumSQLBuilder.clause(for: $0) != nil }) else { return [] }
         let (whereSQL, arguments) = SmartAlbumSQLBuilder.whereClause(for: query)
         return try database.reader.read { db in

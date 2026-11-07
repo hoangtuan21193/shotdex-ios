@@ -87,7 +87,7 @@ final class SmartAlbumDetailModel {
     /// after each batch the check runs.
     func refreshOnServer(_ check: OnServerCheck, isLimited: Bool) async {
         let servers = (try? sourceStore.serverConnections()) ?? [:]
-        guard let rule = query.validRules.first(where: {
+        guard let rule = query.cleaned.allRules.first(where: {
             ($0.field == .alsoOnServer || $0.field == .source) && servers[$0.text] != nil
         }) else {
             onServerLines = []

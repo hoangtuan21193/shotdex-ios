@@ -136,6 +136,14 @@ struct MacSmartAlbumScreen: View {
                     .padding(.vertical, 4)
                     .background(.quaternary, in: Capsule())
             }
+            // A nested group: one chip, its conditions joined by its and/or.
+            ForEach(album.query.validGroups) { group in
+                Text(group.displaySummary(naming: model.sourceNames))
+                    .font(.callout)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.quaternary, in: Capsule())
+            }
             Text(model.matchCount == 1
                  ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
                  : String(localized: "\(model.matchCount.formatted()) photos", comment: "Mac toolbar subtitle"))

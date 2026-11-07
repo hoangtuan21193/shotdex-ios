@@ -89,6 +89,22 @@ enum MacDemoLibrary {
 
     static let originalAlbumId = "demo-original"
 
+    /// `-ShotDexSection smartAlbumEditor` (board `MAC_SmartAlbumEditor`): a
+    /// line of each value shape and a nested "Any" group of two lenses.
+    static var editorBoardQuery: SmartAlbumQuery {
+        SmartAlbumQuery(matchMode: .all, rules: [
+            SmartAlbumRule(field: .iso, op: .inRange, number: 100, numberUpper: 6400),
+            SmartAlbumRule(field: .shutter, op: .lessThan, number: 1.0 / 125),
+            SmartAlbumRule(field: .dateTaken, op: .inLastDays, number: 365),
+            SmartAlbumRule(field: .rating, op: .atLeast, number: 0),
+        ], groups: [
+            SmartAlbumRuleGroup(matchMode: .any, rules: [
+                SmartAlbumRule(field: .lens, op: .isExactly, text: "FE 85mm F1.8"),
+                SmartAlbumRule(field: .lens, op: .isExactly, text: "XF56mmF1.2 R WR"),
+            ]),
+        ])
+    }
+
     /// `-ShotDexOriginalCheck checking|checked`: the originals check part
     /// way through, or done 3 minutes ago, with every third photo in iCloud
     /// only — the demo's ids are not in Photos, so the real probe would

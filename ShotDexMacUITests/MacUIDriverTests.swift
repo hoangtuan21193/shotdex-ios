@@ -12,7 +12,8 @@ import XCTest
 /// - `launch` `arguments` — always adds `-ApplePersistenceIgnoreState YES`.
 /// - `click` / `rightClick` / `doubleClick` / `hover` — `label` (label, title or
 ///   identifier), optional `type` and `index`; or `x`/`y` normalized to the
-///   first window, or to the one whose title starts with `window`.
+///   first window, or to the one whose title starts with `window`; keys held
+///   through the click in `modifiers` (`option` for ⌥-click).
 /// - `menu` `text` — a menu bar path, `"File>New Album…"`.
 /// - `typeText` `text` (into `label` when given), `key` `text` + modifiers in
 ///   `modifiers` (`cmd,shift,option,ctrl`).
@@ -136,13 +137,16 @@ final class MacUIDriverTests: XCTestCase {
             // Find first, then press: the lookup reads the app's accessibility
             // tree on its main thread, so a hang before `pressAt` is the
             // driver's and one after it is the app answering the click.
-            let point = try windowPoint(step) ?? pressPoint(for: try element(step))
+            let point = try windowPoint(step) ?? pressPoint(for: step)
             Thread.sleep(forTimeInterval: 0.3)
             pressAt = Date()
-            switch step.action {
-            case "rightClick": point.rightClick()
-            case "doubleClick": point.doubleClick()
-            default: point.click()
+            // `modifiers` held through the click: ⌥-click and the like.
+            XCUIElement.perform(withKeyModifiers: Self.modifiers(step.modifiers)) {
+                switch step.action {
+                case "rightClick": point.rightClick()
+                case "doubleClick": point.doubleClick()
+                default: point.click()
+                }
             }
             return describe(step) + " pressAt=\(Self.clock.string(from: pressAt!))"
         case "hover":
@@ -181,9 +185,11 @@ final class MacUIDriverTests: XCTestCase {
             _ = try element(step, timeout: step.seconds ?? 5)
         case "assertMissing":
             let query = step.label == nil ? app.descendants(matching: Self.elementType(step.type)) : self.query(step)
+            // With `index`: fewer than index + 1 such elements (a row removed).
+            let match = query.element(boundBy: step.index ?? 0)
             let deadline = Date().addingTimeInterval(step.seconds ?? 2)
-            while query.firstMatch.exists, Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
-            if query.firstMatch.exists { throw DriverError.assertion("\(step.label ?? "?") still on screen") }
+            while match.exists, Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
+            if match.exists { throw DriverError.assertion("\(step.label ?? "?") still on screen") }
         case "assertValue":
             let found = try element(step)
             let value = "\(found.value ?? "")"
@@ -228,8 +234,21 @@ final class MacUIDriverTests: XCTestCase {
 
     /// The element's centre as a point on its window, read once — pressing
     /// it needs no second accessibility lookup.
-    private func pressPoint(for element: XCUIElement) -> XCUICoordinate {
-        let frame = element.frame
+    /// The element's frame through `snapshot()`, which throws where
+    /// `.frame` fails the test outright: SwiftUI may rebuild an element
+    /// between the lookup and the read (a sheet redrawn by a live count),
+    /// so a stale one is looked up again, up to three times.
+    private func pressPoint(for step: Step) throws -> XCUICoordinate {
+        var frame: CGRect?
+        for attempt in 0..<3 {
+            do {
+                frame = try element(step).snapshot().frame
+                break
+            } catch where attempt < 2 {
+                Thread.sleep(forTimeInterval: 0.3)
+            }
+        }
+        guard let frame else { throw DriverError.notFound("\(step.type ?? "any") \(step.label ?? "")") }
         let window = app.windows.firstMatch
         let origin = window.frame.origin
         return window.coordinate(withNormalizedOffset: .zero)

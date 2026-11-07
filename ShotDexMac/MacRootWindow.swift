@@ -1120,7 +1120,7 @@ struct MacRootWindow: View {
         if let scope = library?.sourceScope, scope.rules.count == 1, query.matchMode == .all {
             query.rules += scope.rules
         }
-        return query.rules.isEmpty ? nil : query
+        return query.isEmpty ? nil : query
     }
 
     private var libraryQuery: SmartAlbumQuery? {
@@ -1239,6 +1239,11 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
+        // The board's album: a line of each kind and a nested Any group.
+        if MacDemoLibrary.section == "smartAlbumEditor" {
+            selection = .albums
+            smartAlbumForm = MacSmartAlbumFormRequest(query: MacDemoLibrary.editorBoardQuery)
+        }
         if MacDemoLibrary.section == "settings" { openSettings() }
         // With `-ShotDexOriginalCheck`: the album on the Original rule, or its editor.
         if MacDemoLibrary.section == "originalAlbum" { selection = .smartAlbum(MacDemoLibrary.originalAlbumId) }

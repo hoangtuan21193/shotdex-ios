@@ -65,7 +65,7 @@ struct SmartAlbumConditionsBar: View {
                     .glassBackground(Capsule())
                     .fixedSize(horizontal: true, vertical: false)
                 }
-                if rules.count > 1 {
+                if rules.count + query.validGroups.count > 1 {
                     Text("Match \(query.matchMode.word)")
                         .font(.caption.weight(.medium))
                         .padding(.horizontal, 8)
@@ -79,6 +79,15 @@ struct SmartAlbumConditionsBar: View {
                 HStack(spacing: 8) {
                     ForEach(rules) { rule in
                         Text(rule.displaySummary(naming: sourceNames))
+                            .font(.footnote)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color(.secondarySystemFill), in: Capsule())
+                            .foregroundStyle(Color(.label))
+                    }
+                    // A nested group (made on the Mac) is one chip.
+                    ForEach(query.validGroups) { group in
+                        Text(group.displaySummary(naming: sourceNames))
                             .font(.footnote)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)

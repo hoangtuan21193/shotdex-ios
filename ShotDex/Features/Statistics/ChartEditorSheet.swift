@@ -78,7 +78,7 @@ struct ChartEditorSheet: View {
             kind: kind,
             dimension: kind.requiresDimension ? dimension : dimension,
             metric: metric,
-            filter: SmartAlbumQuery(matchMode: filter.matchMode, rules: filter.validRules),
+            filter: filter.cleaned,
             seriesSplit: kind == .line ? seriesSplit : nil,
             topN: topN,
             scope: scope

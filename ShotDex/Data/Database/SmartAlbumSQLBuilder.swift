@@ -14,15 +14,20 @@ enum SmartAlbumSQLBuilder {
     /// parentheses so an outer `AND` (date scope, NOT-NULL guards) can't bind
     /// across the inner `OR`. Empty when the query has no compilable rule.
     static func predicate(for query: SmartAlbumQuery) -> (sql: String, values: [DatabaseValueConvertible]) {
-        let rules = query.validRules
-        guard !rules.isEmpty else { return ("", []) }
-
         var clauses: [String] = []
         var values: [DatabaseValueConvertible] = []
-        for rule in rules {
+        for rule in query.validRules {
             guard let compiled = clause(for: rule) else { continue }
             clauses.append(compiled.sql)
             values.append(contentsOf: compiled.values)
+        }
+        // A nested group is one more condition, in parentheses (FS-06.08 §2b).
+        for group in query.validGroups {
+            let inner = predicate(for: SmartAlbumQuery(matchMode: group.matchMode, rules: group.rules))
+            // Terms that fold to nothing: the group matches no photo rather
+            // than vanish (a group-only album would become the library).
+            clauses.append(inner.sql.isEmpty ? "0" : "(\(inner.sql))")
+            values.append(contentsOf: inner.values)
         }
         guard !clauses.isEmpty else { return ("", []) }
 

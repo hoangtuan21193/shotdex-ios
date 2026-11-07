@@ -185,7 +185,7 @@ struct SmartAlbumEditorSheet: View {
     private func save() {
         guard canSave else { return }
         // Persist only the compilable rules — blank rows are dropped.
-        let cleaned = SmartAlbumQuery(matchMode: query.matchMode, rules: query.validRules)
+        let cleaned = query.cleaned
         let album = SmartAlbum(
             id: existing?.id ?? UUID().uuidString,
             name: trimmedName,

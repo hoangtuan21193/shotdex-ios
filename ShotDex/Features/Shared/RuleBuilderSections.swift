@@ -148,6 +148,23 @@ struct RuleBuilderSections: View {
                 query.rules.removeAll { deleted.contains($0.id) }
             }
 
+            // Nested groups are built on the Mac (FS-06.08 §2b): shown whole
+            // here, kept on Save, and removable.
+            ForEach(query.groups) { group in
+                HStack {
+                    Text(group.displaySummary())
+                        .font(.subheadline)
+                    Spacer(minLength: 8)
+                    Button(role: .destructive) {
+                        query.groups.removeAll { $0.id == group.id }
+                    } label: {
+                        Image(systemName: "minus.circle.fill").font(.title3).foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Delete condition")
+                }
+            }
+
             Button {
                 query.rules.append(SmartAlbumRule())
             } label: {
