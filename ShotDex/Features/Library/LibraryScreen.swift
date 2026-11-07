@@ -770,7 +770,9 @@ struct LibraryScreen: View {
             scrubber: scrubberModel
         )
         .overlay(alignment: .trailing) {
-            PhotoGridScrubber(model: scrubberModel, topInset: 12, bottomInset: 96)
+            if model.appliedSort.isDateOrdered {
+                PhotoGridScrubber(model: scrubberModel, topInset: 12, bottomInset: 96)
+            }
         }
         // Fill behind the top nav bar too (not just bottom): the collection
         // view's automatic content-inset adjustment + anchor() position items
@@ -1156,7 +1158,15 @@ struct LibraryScreen: View {
             // Stays while selecting on the Duo's inner display: every other
             // item is in the rail there, so without the date the bar's row
             // would empty and the grid would jump up when selection starts.
-            if let visibleDate, !isSelecting || isDuoInner {
+            // Under a size order neighbouring photos are years apart, so a
+            // date here would only flicker; the order's name says what the
+            // grid is instead (FS-01.05 §5.1).
+            if let model, !model.appliedSort.isDateOrdered, !isSelecting || isDuoInner {
+                Text(model.appliedSort.displayName)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .accessibilityLabel("Sorted by \(model.appliedSort.displayName)")
+            } else if let visibleDate, !isSelecting || isDuoInner {
                 Text(visibleDate)
                     .font(.headline)
                     .monospacedDigit()

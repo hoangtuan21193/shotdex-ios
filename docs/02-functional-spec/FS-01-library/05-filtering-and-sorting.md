@@ -123,6 +123,11 @@ Mục đích: tìm ảnh/video nặng nhất để dọn chỗ. Người dùng c
 - **Scrubber chỉ hiện ở bốn thứ tự ngày** (Date Taken / Date Modified); File Size và các thứ tự thông số
   ẩn nó. Cùng lý do, lưới Library trên **Mac bỏ tiêu đề ngày** khi thứ tự không phải ngày (thêm 2026-11-07 sau
   review: chia theo ngày trên danh sách sắp theo dung lượng ra một tiêu đề cho gần như mỗi ảnh).
+- Tiêu đề giữa thanh trên (iPhone/iPad/Duo), bình thường là ngày của ảnh đang xem, đổi thành **tên thứ tự**
+  (`File Size (Largest)`) khi thứ tự không phải ngày — ngày ở đó sẽ nhảy năm theo từng hàng (thêm sau review UX).
+- Đã chấp nhận: thứ tự dung lượng không có cách nhảy nhanh (scrubber ẩn, lưới neo đáy nên chạm thanh trạng thái
+  không cuộn) — việc là đọc N ảnh nặng nhất ở chỗ lưới mở ra. Scrubber hiện dung lượng, huy hiệu dung lượng trên ô
+  và dòng tổng dung lượng là việc sau.
 - **Chỉ Library.** Album Detail / Smart Album giữ `AlbumSortOrder` như cũ.
 - **Board:** `MAC_MenuBar` (View ▸ Sort By) vẽ lại thành 6 dòng phẳng như code (`menuOrders`: Date Taken
   Newest/Oldest, Date Modified Newest/Oldest, File Size Largest/Smallest). `IP_MenuBar` là thiết kế đi trước
@@ -161,6 +166,7 @@ lớn hơn B), D video 210 MB (2025-12-24), E `fileSize` NULL (2026-06-10), F `f
 | AC-S10 | Mac, sort = `.fileSizeSmallest` | `LibrarySortField(sort)` + `isNewestFirst` | `.fileSize`, `false` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeDirection` |
 | AC-S11 | iPhone 17 (26.5), Library | mở Filter and sort ▸ Sort By, chọn File Size (Largest) | menu có 6 dòng, dấu ✓ ở dòng vừa chọn; ô dưới cùng của lưới (chỗ lưới mở ra) là ảnh lớn nhất demo library | ⚠️ chưa có — `ShotDexUITests/scripts/library-sort-filesize.json` + ảnh |
 | AC-S12 | như AC-S11 trên iOS 18.6 (nhánh pre-26) và iPad 13" | cùng thao tác | cùng kết quả; menu không cắt chữ | ⚠️ chưa có — cùng script, 2 máy + ảnh |
+| AC-S16 | iPhone 17, sort = File Size (Largest) | mở Library | tiêu đề giữa thanh trên là `File Size (Largest)`, không phải ngày | ảnh `build/shots/ph-size-largest.png` |
 | AC-S13 | iPhone 17, sort = File Size (Largest), cuộn lưới | đổi Sort By về Date Taken (Newest) | trước: không có scrubber mép phải; sau: scrubber hiện | ⚠️ chưa có — ảnh trước/sau từ AC-S11 |
 | AC-S15 | Mac, Library, sort = File Size (Largest) | mở lưới | không có tiêu đề ngày; đổi về Date Taken thì tiêu đề ngày hiện lại | ⚠️ chưa có — ảnh `mac-shot` trước/sau |
 | AC-S14 | board `IP_MenuBar`, `MAC_MenuBar`, `MAC_FilterPopover` | `Tools/design-board render` | Mac menu: 6 dòng phẳng như `menuOrders`; iPad menu: field Date Taken · Date Modified · File Size; popover có File Size; không còn Name/ISO/Focal Length/Aperture/Shutter Speed | ⚠️ chưa có — PNG render + `design-parity` |

@@ -133,4 +133,10 @@ struct LibraryQueriesSortTests {
         #expect(SortOption.fileSizeLargest.photoKitSortKey == nil)
         #expect(SortOption.fileSizeSmallest.photoKitSortKey == nil)
     }
+
+    // AC-S13, AC-S15, AC-S16 — date chrome follows exactly the four date orders.
+    @Test func onlyDateOrdersCarryDateChrome() {
+        let dated = SortOption.allCases.filter(\.isDateOrdered)
+        #expect(dated == [.dateTakenNewest, .dateTakenOldest, .dateModifiedNewest, .dateModifiedOldest])
+    }
 }

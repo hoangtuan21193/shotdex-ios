@@ -21,10 +21,12 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: String { rawValue }
 
-    /// Date-taken orders: the ones PhotoKit's own `creationDate` matches, so a
-    /// grid on one of them can be driven straight from the photo library.
-    var isDateSort: Bool {
+    /// The four date orders: the ones a date scrubber or day headers can
+    /// follow. Under any other order neighbouring photos are days or years
+    /// apart, so the grid drops both (FS-01.05 §5.1).
+    var isDateOrdered: Bool {
         self == .dateTakenNewest || self == .dateTakenOldest
+            || self == .dateModifiedNewest || self == .dateModifiedOldest
     }
 
     /// The `PHAsset` key this order maps to, or nil for the metric orders,

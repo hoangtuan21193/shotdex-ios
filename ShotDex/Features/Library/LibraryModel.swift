@@ -250,6 +250,11 @@ final class LibraryModel {
         }
     }
 
+    /// The order the grid is actually in: a place with a fixed order (On
+    /// This Day) keeps it whatever `sort` says. Date chrome — scrubber, title
+    /// date, day headers — follows this, not `sort` (FS-01.05 §5.1).
+    var appliedSort: SortOption { place?.fixedSort ?? sort }
+
     /// The stored order, or the default. An order from a build that no longer
     /// offers it falls back rather than leaving the grid in a state the sort
     /// menu cannot show.
