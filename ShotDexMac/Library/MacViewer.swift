@@ -30,6 +30,8 @@ struct MacViewerView: View {
     var asset: (String) -> PHAsset?
     /// The grid's cached asset for a filmstrip tile (no fetch on the main actor).
     var cachedAsset: (String) -> PHAsset? = { _ in nil }
+    /// Z: Fit ↔ 100% (01b §3, every viewing surface).
+    var toggleZoom: () -> Void = {}
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -62,7 +64,9 @@ struct MacViewerView: View {
         }
         .onKeyPress(.escape) { photoId = nil; return .handled }
         .onKeyPress(phases: .down) { press in
-            guard press.modifiers.isEmpty, let id = photoId, let key = press.characters.first, let menu else { return .ignored }
+            guard press.modifiers.isEmpty, let key = press.characters.first else { return .ignored }
+            if key == "z" { toggleZoom(); return .handled }
+            guard let id = photoId, let menu else { return .ignored }
             if key == "." { menu.toggleFavorite([id]); return .handled }
             guard let action = MarkKeyCommand.action(for: key) else { return .ignored }
             menu.apply(action, to: [id])
@@ -88,6 +92,12 @@ struct MacViewerPhoto: View {
     let zoom: MacViewerZoom
     var picture: ((String) -> CGImage?)?
     var asset: (String) -> PHAsset?
+    /// Actual Size at this percentage (full screen's steps); nil is 100%.
+    var percent: Int? = nil
+    /// The window viewer's margins around a fitted photo; none in full screen.
+    var insets = true
+    /// The part on screen while zoomed, in the photo's unit square (the Navigator).
+    var onViewport: ((CGRect) -> Void)? = nil
 
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.displayScale) private var displayScale
@@ -109,13 +119,23 @@ struct MacViewerPhoto: View {
                             .interpolation(.high)
                             .scaledToFit()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding(.horizontal, 42)
-                            .padding(.vertical, 28)
+                            .padding(.horizontal, insets ? 42 : 0)
+                            .padding(.vertical, insets ? 28 : 0)
                     case .actual:
                         ScrollView([.horizontal, .vertical]) {
-                            Image(decorative: image, scale: displayScale)
+                            Image(decorative: image, scale: displayScale * 100 / CGFloat(percent ?? 100))
+                                .interpolation(.high)
                         }
                         .defaultScrollAnchor(.center)
+                        // Full screen has its Navigator: no scroller tracks over the photo.
+                        .scrollIndicators(insets ? .automatic : .never)
+                        .onScrollGeometryChange(for: CGRect.self) { geometry in
+                            let size = geometry.contentSize
+                            guard size.width > 0, size.height > 0 else { return .zero }
+                            let visible = geometry.visibleRect
+                            return CGRect(x: max(0, visible.minX / size.width), y: max(0, visible.minY / size.height),
+                                          width: min(1, visible.width / size.width), height: min(1, visible.height / size.height))
+                        } action: { _, rect in onViewport?(rect) }
                         // Each photo starts centred, not where the last one was scrolled.
                         .id(id)
                     }

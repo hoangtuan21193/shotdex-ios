@@ -1,0 +1,339 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoLargePhotos",
+    "-ShotDexSection",
+    "viewerFullScreen"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "waitFor",
+   "label": "Previous Photo",
+   "type": "button",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "screenshot",
+   "name": "01-fullscreen"
+  },
+  {
+   "action": "dump",
+   "name": "01-fullscreen"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Navigator"
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Zoom In",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Navigator"
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Zoom Level",
+   "text": "200%"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-zoomed"
+  },
+  {
+   "action": "dump",
+   "name": "02-zoomed"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Zoom In",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Zoom Level",
+   "text": "400%"
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Zoom In",
+   "type": "button"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Zoom Out",
+   "type": "button"
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Zoom Out",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Zoom Level",
+   "text": "Fit"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Navigator"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Zoom Out",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Zoom Level",
+   "text": "100%"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Navigator"
+  },
+  {
+   "action": "key",
+   "text": "z"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertValue",
+   "label": "Zoom Level",
+   "text": "Fit"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Next Photo",
+   "type": "button"
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertExists",
+   "label": "13 of 226",
+   "type": "staticText"
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Previous Photo",
+   "type": "button"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "assertExists",
+   "label": "12 of 226",
+   "type": "staticText"
+  },
+  {
+   "action": "hover",
+   "x": 0.6,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Rate 3 Stars",
+   "type": "button"
+  },
+  {
+   "action": "hover",
+   "x": 0.4,
+   "y": 0.45,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating and Flag",
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-inspector"
+  },
+  {
+   "action": "hover",
+   "x": 0.5,
+   "y": 0.55,
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "04-hud-hidden"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Previous Photo",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Filmstrip"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-window"
+  }
+ ]
+}

@@ -117,6 +117,15 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   Edits** đặt look lên recipe của ảnh) · **Location** (bản đồ 56, ghim amber, ↗ và nhấp bản đồ mở Apple Maps). Menu View ›
   **Zoom to Fit ⌘0** / **Actual Size ⌘9** (như Photos), chỉ bật khi đang xem. Nhấp vào ảnh lấy lại phím từ ô trong
   inspector.
+- **Toàn màn hình** (2026-11-07, board `MAC_ViewerFullScreen`, `MacViewerFullScreen.swift`): cửa sổ vào toàn màn (⌃⌘F,
+  Window menu) khi đang xem ảnh → ảnh tràn màn trên nền đen, không toolbar, sidebar và inspector cất (inspector trả lại khi
+  ra). **HUD** đáy (viên kính tối `MacTheme.hud*`, cao 44, tooltip có phím tắt): ‹ · tên file + "12 of 226" · › | − · mức phóng ▾ (Fit, 25 %, 50 %, 100 %,
+  200 %, 400 %) · + | 5 sao (nhấp lại sao đang có = bỏ) | Show/Hide Inspector. HUD hiện khi di chuột hoặc bấm phím, ẩn sau 2 s đứng yên — không ẩn khi con trỏ
+  nằm trên HUD. − / + đi theo bậc phóng, Fit nằm đúng chỗ theo độ phóng thật của nó (ảnh nhỏ: + từ Fit là phóng to thêm).
+  Mỗi ảnh mới bắt đầu ở Fit. **Navigator** góc phải trên (216 rộng: ảnh nhỏ trong hộp 200×133, ngoài phần đang thấy tối đi,
+  khung trắng + "Zoom 200%") chỉ hiện khi ảnh lớn hơn màn hình.
+  Phím: ← → ảnh trước/sau, **Z** Fit ↔ 100 %, "." Favorite, 0–5 P X U, **Esc** ra khỏi toàn màn (viewer vẫn mở trong cửa
+  sổ). Z cũng là Fit ↔ Actual Size trong viewer cửa sổ (01b §3). Demo `-ShotDexSection viewerFullScreen`.
 - Còn: dòng "−0.3 EV · Aperture Priority · Multi-segment" (đọc từ file), huy hiệu định dạng cạnh tên, bỏ ô tìm khi xem ảnh
   (`toolbar(removing: .search)` không có tác dụng trên cửa sổ này), offline (preview đã lưu + nút mờ), viewer chưa vẽ ảnh
   theo recipe (ảnh gốc), Rotate/Edit khi có editor Mac, nút ảnh trước/sau cho chuột, thứ tự theo cột đang sắp của bảng.

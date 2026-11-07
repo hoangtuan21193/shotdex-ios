@@ -52,6 +52,11 @@ struct MacRootWindow: View {
     /// The rows' generation when the viewer opened: the hidden grid ignores
     /// index-run reloads while it is covered, and catches up on close.
     @State private var frozenRowsGeneration: Int?
+    /// The window in full screen (⌃⌘F): with a photo open it is the full-screen viewer.
+    @State private var isFullScreen = false
+    @State private var fullScreen = MacFullScreenControl()
+    /// The inspector as it was before full screen hid it; put back on exit.
+    @State private var inspectorBeforeFullScreen: Bool?
     @State private var columnVisibility = NavigationSplitViewVisibility.automatic
     /// The sidebar as it was before the viewer hid it (MAC_STYLE: the viewer
     /// has the window to itself); put back on close.
@@ -129,6 +134,9 @@ struct MacRootWindow: View {
     var body: some View {
         root.focusedSceneValue(\.macGo, MacGoTarget(go: { selection = $0 },
                                                       chooseDate: selection == .onThisDay ? { showsDatePicker = true } : nil))
+            // A photo in full screen has the screen (board `MAC_ViewerFullScreen`): no toolbar
+            // over it — the HUD carries its commands, the menu bar comes at the top edge.
+            .toolbar(viewerId != nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
     }
 
     private var root: some View {
@@ -835,6 +843,19 @@ struct MacRootWindow: View {
                 // The album's header carries its name (board): no title in the toolbar.
                 .toolbar(removing: isAlbumOpen ? .title : nil)
                 .modifier(MacViewerChrome(isViewing: viewerId != nil, zoom: $viewerZoom))
+                .background(MacFullScreenObserver(control: fullScreen) { isFullScreen = $0 })
+                // The photo has the screen: the inspector waits for the HUD's button,
+                // and comes back as it was when the full-screen viewer goes —
+                // whichever of the two (full screen, the viewer) went first.
+                .onChange(of: viewerId != nil && isFullScreen) { _, isFullScreenViewer in
+                    if isFullScreenViewer {
+                        inspectorBeforeFullScreen = showsInspector
+                        showsInspector = false
+                    } else if let before = inspectorBeforeFullScreen {
+                        showsInspector = before
+                        inspectorBeforeFullScreen = nil
+                    }
+                }
                 .searchFocused($isSearchFocused)
                 .searchSuggestions { searchSuggestions }
                 // The suggestions, a beat after typing stops: the parser's
@@ -1059,7 +1080,8 @@ struct MacRootWindow: View {
             #if DEBUG
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.
             Color.clear.task(id: library.items.count) {
-                if MacDemoLibrary.section == "viewer", viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                if MacDemoLibrary.section == "viewer" || MacDemoLibrary.section == "viewerFullScreen",
+                   viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     showsInspector = true
                     // The 12th newest, as the board, edited in ShotDex as the board's is.
@@ -1069,10 +1091,21 @@ struct MacRootWindow: View {
                         await Task.detached { try? store.save(MacDemoLibrary.viewerRecipe, photoId: id) }.value
                     }
                     viewerId = id
+                    // `viewerFullScreen` (board `MAC_ViewerFullScreen`): the window goes full screen too.
+                    if MacDemoLibrary.section == "viewerFullScreen" {
+                        try? await Task.sleep(for: .seconds(1))
+                        fullScreen.toggle()
+                    }
                 }
             }
             #endif
-            if viewerId != nil {
+            if viewerId != nil, isFullScreen {
+                // Full screen with a photo open (board `MAC_ViewerFullScreen`).
+                MacViewerFullScreen(photoId: $viewerId, ids: viewerOrder, positions: viewerPositions, title: placeTitle, menu: photoMenu,
+                                    marks: viewerId.flatMap { tableDetails[$0] }, picture: Self.demoPicture,
+                                    asset: { library.asset(for: $0) }, showsInspector: $showsInspector,
+                                    exit: { fullScreen.toggle() })
+            } else if viewerId != nil {
                 MacViewerView(photoId: $viewerId, ids: viewerOrder, positions: viewerPositions, zoom: viewerZoom, menu: photoMenu,
                               marks: viewerId.flatMap { tableDetails[$0] },
                               picture: Self.demoPicture, asset: { library.asset(for: $0) },
@@ -1081,7 +1114,8 @@ struct MacRootWindow: View {
                                   guard let position = viewerPositions[id] else { return nil }
                                   let flat = selection == .onThisDay ? position : library.items.count - 1 - position
                                   return library.asset(atFlatIndex: flat)
-                              })
+                              },
+                              toggleZoom: { viewerZoom = viewerZoom == .fit ? .actual : .fit })
             }
           }
             // Camera, lens, marks, source (list columns and tile marks): one
@@ -1689,12 +1723,14 @@ private struct MacViewerChrome: ViewModifier {
     @Binding var zoom: MacViewerZoom
 
     func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
-            content
-                .toolbar(removing: isViewing ? .search : nil)
-                .focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
-        } else {
-            content.focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
+        Group {
+            if #available(macOS 26, *) {
+                content
+                    .toolbar(removing: isViewing ? .search : nil)
+                    .focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
+            } else {
+                content.focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
+            }
         }
     }
 }

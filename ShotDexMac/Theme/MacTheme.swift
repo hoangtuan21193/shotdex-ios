@@ -58,6 +58,14 @@ enum MacTheme {
     static let segmentOn = dynamic(light: .white, dark: NSColor(white: 1, alpha: 0.20))
     static let segmentShadow = dynamic(light: NSColor(white: 0, alpha: 0.18), dark: NSColor(white: 0, alpha: 0.30))
 
+    /// `hud`: the full-screen viewer's floating controls over the photo — a dark
+    /// glass (on `.ultraThinMaterial`) with a hairline and a soft shadow
+    /// (board `MAC_ViewerFullScreen`); always dark, the photo decides nothing.
+    static let hudFill = Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255).opacity(0.62)
+    static let hudStroke = Color.white.opacity(0.12)
+    static let hudSecondary = Color.white.opacity(0.62)
+    static let hudSeparator = Color.white.opacity(0.16)
+
     /// `rowAlt`: every other row of a table or list (DESIGN.md §10b).
     static let rowAlternate = dynamic(light: NSColor(white: 0, alpha: 0.03), dark: NSColor(white: 1, alpha: 0.04))
 

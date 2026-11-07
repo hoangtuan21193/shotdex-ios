@@ -449,14 +449,28 @@ enum MacDemoLibrary {
         let names = ["Big Sur Coastline", "Catalina Rock", "Big Sur Mountains", "Catalina Coast", "Big Sur Waters Edge",
                      "Catalina Evening", "Big Sur Horizon", "Catalina Shoreline", "Big Sur Road", "Catalina Clouds",
                      "Big Sur Shore Rocks", "Catalina Sunset", "Big Sur Aerial", "Catalina Silhouette"]
-        return names.compactMap { name in
+        // `-ShotDexDemoLargePhotos`: four pictures blown up to 2400 px, so the
+        // full-screen viewer has a photo bigger than the screen (its Navigator).
+        let isLarge = ProcessInfo.processInfo.arguments.contains("-ShotDexDemoLargePhotos")
+        return (isLarge ? Array(names.prefix(4)) : names).compactMap { name in
             let url = folder.appendingPathComponent(name + ".heic")
             // Decoded now, once: a lazy HEIC would decode on the main thread
             // at every display and show up as the app's own cost.
             let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
-            return CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, options) }
+            let image = CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, options) }
+            return isLarge ? image.flatMap { scaled($0, side: 2400) } : image
         }
     }()
+
+    private static func scaled(_ image: CGImage, side: Int) -> CGImage? {
+        let height = side * image.height / max(1, image.width)
+        guard let context = CGContext(data: nil, width: side, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: height))
+        return context.makeImage()
+    }
 
     static func picture(for assetId: String) -> CGImage? {
         guard !pictures.isEmpty else { return nil }
