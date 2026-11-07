@@ -71,6 +71,19 @@ struct MacFilterPopoverLogicTests {
             == .dateModifiedOldest)
     }
 
+    /// File Size is the popover's third field; Largest is its "first" end.
+    @Test func fileSizeField() {
+        #expect(LibrarySortField.allCases == [.dateTaken, .dateModified, .fileSize])
+        #expect(LibrarySortField(.fileSizeLargest) == .fileSize)
+        #expect(LibrarySortField(.fileSizeSmallest) == .fileSize)
+        #expect(LibrarySortField.isNewestFirst(.fileSizeLargest))
+        #expect(!LibrarySortField.isNewestFirst(.fileSizeSmallest))
+        #expect(LibrarySortField.fileSize.sort(newestFirst: false) == .fileSizeSmallest)
+        // Switching the field from Date Taken (Oldest) keeps the direction.
+        #expect(LibrarySortField.fileSize.sort(newestFirst: LibrarySortField.isNewestFirst(.dateTakenOldest))
+            == .fileSizeSmallest)
+    }
+
     /// A metric order (not in the menu) reads as Date Taken, Newest First.
     @Test func metricOrderReadsAsDateTaken() {
         #expect(LibrarySortField(.isoDescending) == .dateTaken)

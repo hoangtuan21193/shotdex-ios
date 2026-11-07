@@ -616,6 +616,8 @@ struct LibraryQueries: Sendable {
         case .apertureDescending: "aperture DESC NULLS LAST, creationDate DESC NULLS LAST"
         case .shutterSpeedFastest: "shutterSpeedSeconds ASC NULLS LAST, creationDate DESC NULLS LAST"
         case .shutterSpeedSlowest: "shutterSpeedSeconds DESC NULLS LAST, creationDate DESC NULLS LAST"
+        case .fileSizeLargest: "fileSize DESC NULLS LAST, creationDate DESC NULLS LAST"
+        case .fileSizeSmallest: "fileSize ASC NULLS LAST, creationDate DESC NULLS LAST"
         }
         return clause + ", assetId ASC"
     }

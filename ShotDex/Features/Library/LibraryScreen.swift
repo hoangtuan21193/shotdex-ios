@@ -1217,9 +1217,9 @@ struct LibraryScreen: View {
     }
 
     /// The shared filter menu (FS-01.05 §5), wired to the Library's query.
-    /// Only the date orders are offered — the metric orders (ISO, focal
-    /// length, aperture, shutter) stay in `SortOption` for the queries, but
-    /// not in this menu.
+    /// Offers `SortOption.menuOrders` — the date orders and File Size; the
+    /// other metric orders (ISO, focal length, aperture, shutter) stay in
+    /// `SortOption` for the queries, but not in this menu.
     private func filterMenu(_ model: LibraryModel) -> some View {
         PhotoFilterMenu(
             criteria: Binding(

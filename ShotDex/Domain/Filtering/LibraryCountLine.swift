@@ -37,11 +37,12 @@ enum LibraryCountLine {
     }
 }
 
-/// The Mac popover's Sort By pair (board `MAC_FilterPopover`): a date field
-/// and a direction, over the four orders `SortOption.menuOrders` offers.
+/// The Mac popover's Sort By pair (board `MAC_FilterPopover`): a field and a
+/// direction, over the six orders `SortOption.menuOrders` offers.
 enum LibrarySortField: String, CaseIterable, Identifiable, Sendable {
     case dateTaken
     case dateModified
+    case fileSize
 
     var id: String { rawValue }
 
@@ -49,23 +50,32 @@ enum LibrarySortField: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dateTaken: String(localized: "Date Taken", comment: "Mac Filter and Sort: sort by capture date")
         case .dateModified: String(localized: "Date Modified", comment: "Mac Filter and Sort: sort by modification date")
+        case .fileSize: String(localized: "File Size", comment: "Mac Filter and Sort: sort by file size")
         }
     }
 
     /// The field of `sort`; a metric order (not in the menu) reads as Date Taken.
     init(_ sort: SortOption) {
-        self = (sort == .dateModifiedNewest || sort == .dateModifiedOldest) ? .dateModified : .dateTaken
+        switch sort {
+        case .dateModifiedNewest, .dateModifiedOldest: self = .dateModified
+        case .fileSizeLargest, .fileSizeSmallest: self = .fileSize
+        default: self = .dateTaken
+        }
     }
 
+    /// `newestFirst` is the direction toggle's "first" end: newest for a
+    /// date, largest for a size.
     func sort(newestFirst: Bool) -> SortOption {
         switch self {
         case .dateTaken: newestFirst ? .dateTakenNewest : .dateTakenOldest
         case .dateModified: newestFirst ? .dateModifiedNewest : .dateModifiedOldest
+        case .fileSize: newestFirst ? .fileSizeLargest : .fileSizeSmallest
         }
     }
 
-    /// Newest First unless `sort` is one of the two oldest-first date orders.
+    /// Newest (or Largest) First unless `sort` is one of the three
+    /// oldest/smallest-first menu orders.
     static func isNewestFirst(_ sort: SortOption) -> Bool {
-        !(sort == .dateTakenOldest || sort == .dateModifiedOldest)
+        !(sort == .dateTakenOldest || sort == .dateModifiedOldest || sort == .fileSizeSmallest)
     }
 }

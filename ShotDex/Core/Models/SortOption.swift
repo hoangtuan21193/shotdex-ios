@@ -16,6 +16,8 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
     case apertureDescending
     case shutterSpeedFastest
     case shutterSpeedSlowest
+    case fileSizeLargest
+    case fileSizeSmallest
 
     var id: String { rawValue }
 
@@ -42,9 +44,11 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 
     /// The orders the Library's filter menu offers. The metric orders stay in
-    /// the enum (queries and smart albums still use them) but not in the menu.
+    /// the enum (queries and smart albums still use them) but not in the menu;
+    /// file size is the one metric the menu does offer (FS-01.05 §5.1).
     static let menuOrders: [SortOption] = [
         .dateTakenNewest, .dateTakenOldest, .dateModifiedNewest, .dateModifiedOldest,
+        .fileSizeLargest, .fileSizeSmallest,
     ]
 
     var displayName: String {
@@ -63,6 +67,8 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
         case .apertureDescending: "Aperture (Narrow to Wide)"
         case .shutterSpeedFastest: "Shutter Speed (Fastest)"
         case .shutterSpeedSlowest: "Shutter Speed (Slowest)"
+        case .fileSizeLargest: "File Size (Largest)"
+        case .fileSizeSmallest: "File Size (Smallest)"
         }
     }
 
