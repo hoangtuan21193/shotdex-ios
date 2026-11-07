@@ -1254,6 +1254,7 @@ struct MacRootWindow: View {
                 .first { $0.id == MacDemoLibrary.originalAlbumId })
         }
         if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
+        if MacDemoLibrary.section == "support" { openWindow(id: MacSupportWindow.id) }
         // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
         if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {
             Task { @MainActor in

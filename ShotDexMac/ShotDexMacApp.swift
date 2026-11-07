@@ -64,6 +64,7 @@ struct ShotDexMacApp: App {
             MacBackupCommands()
             MacCommonPhotosCommands()
             MacActivityCommands()
+            MacSupportCommands()
             MacFilterCommands()
             MacLibraryCommands()
             MacImageCommands()
@@ -94,6 +95,14 @@ struct ShotDexMacApp: App {
         .defaultSize(width: MacActivityWindow.size.width, height: MacActivityWindow.size.height)
         // The scene's own Window-menu item carries no shortcut; MacActivityCommands
         // puts Activity ⌥⌘0 there instead (FS-18.01b).
+        .commandsRemoved()
+        // Help › ShotDex Support… (FS-18.04 §6): one window.
+        Window(String(localized: "ShotDex Support", comment: "Mac window: support"), id: MacSupportWindow.id) {
+            MacSupportWindow()
+                .environment(dependencies)
+        }
+        .defaultSize(width: MacSupportWindow.size.width, height: MacSupportWindow.size.height)
+        .windowStyle(.hiddenTitleBar)
         .commandsRemoved()
         Settings {
             MacSettingsWindow()
@@ -221,6 +230,19 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
         runs.pauseAll { sender.reply(toApplicationShouldTerminate: true) }
         return .terminateLater
+    }
+}
+
+/// Help › ShotDex Support… (FS-18.04 §6, FS-13).
+struct MacSupportCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .help) {
+            Button(String(localized: "ShotDex Support…", comment: "Mac menu: Help › ShotDex Support…")) {
+                openWindow(id: MacSupportWindow.id)
+            }
+        }
     }
 }
 

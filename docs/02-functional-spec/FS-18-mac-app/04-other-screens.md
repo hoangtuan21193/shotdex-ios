@@ -254,3 +254,30 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
   thái, số trả lời chưa đọc) · What People Asked For (bỏ phiếu); phải là hội thoại + ô trả lời + **Send Reply**.
 - Câu riêng tư: "No account and no email. A message carries your words, the app and macOS version, the Mac model and
   roughly how many photos you have — never a photo or a name." Luật: [FS-13](../FS-13-support.md), NF-03 §2.
+- Đã làm (2026-11-07, `MacSupportWindow`, model chung `SupportModel` — nay trong `Tools/mac-membership.shared`):
+  cửa sổ một bản, title bar ẩn, header thread nằm trên cùng. Sidebar 228: **Report a Bug…** / **Request a Feature…**
+  (nền `fill` r8, mở sheet soạn) · **Your Messages** (tiêu đề, "In Progress · 2 days ago", huy hiệu số trả lời chưa đọc
+  `accentFill`; chọn = nền xám `rowSel`; thread đang mở được đánh dấu đã đọc sau 1,5 s trên màn hình, kể cả khi trả lời
+  mới tới lúc nó đang mở) · **What People Asked For** (viên "↑ 412": bấm bỏ phiếu, bấm lại rút; chưa bỏ = nền `fill`, đã
+  bỏ = nổi `segOn`; mờ khi đang gửi, không bấm chồng) · câu riêng tư ở đáy. Không đọc được danh sách → "Couldn't load." +
+  **Try Again**. Phải: tiêu đề 15 semibold + "Bug report · 2 replies"
+  + viên trạng thái (amber Planned/In Progress, xanh Shipped, xám còn lại) · thẻ tin đầu (chip Bug/Feature, "You · ngày",
+  nội dung) · **Conversation**: bong bóng ShotDex trái nền `card`, You phải nền `accentSoft`, giờ dưới mỗi tin · ô "Add to
+  this message" + **Send Reply** (⌘Return, tắt khi trống nhưng vẫn đọc được — `MacFilledButtonStyle`; chữ giữ lại nếu gửi
+  lỗi, chỉ xoá nếu không gõ thêm lúc đang gửi). Thread chưa có trả lời: "Sent. A reply from the ShotDex team will appear
+  here — there is no notification, so check back." Làm mới khi app trở lại phía trước thì im lặng (không alert khi
+  offline), các lần làm mới không chồng nhau, lần cũ về muộn bị bỏ.
+- Sheet soạn 480: Title, What happened / What you would like (gợi ý dưới), **Include Diagnostic Log** (checkbox amber; bật
+  cho bug, tắt cho feature) + **Read the Log…**, câu "Goes to the ShotDex team… no notification, so check back… Also
+  sent…", Cancel (Esc, bấm được cả lúc đang gửi) / **Send** (Return, cần tiêu đề ≥ 4 và nội dung ≥ 10 ký tự). Log đọc
+  **lúc bấm Send** (có cả lần tái hiện); số ảnh đếm ngoài luồng chính. Đang gửi: "Sending…"; lỗi: dòng đỏ + **Email This
+  Instead** (mailto với tiêu đề và nội dung đã viết), sheet ở lại.
+- Bản build không chứng thực được (App Attest) → phần phải thành **Support by Email**: lý do bằng lời thường, địa chỉ
+  chọn được, Contact Support by Email (mailto kèm phiên bản app/macOS và model Mac — nói ngay dưới nút; không có app mail
+  → báo địa chỉ + Copy Address); nút soạn và bỏ phiếu tắt, câu đáy sidebar đổi theo. Lỗi mạng khi người dùng bấm → alert.
+- Demo `-ShotDexDemoLibrary -ShotDexSection support`: ba thread và năm yêu cầu dựng sẵn, không bao giờ gọi máy chủ.
+- Chưa có: dòng "Sent with ShotDex 1.0 (24) · macOS · Mac · about 55,000 photos · log …" dưới tin đầu (API không trả lại
+  những gì đã gửi); phím ↑↓ giữa các thread; báo có trả lời khi cửa sổ đóng (số trên Help/Dock); hỏi trước khi bỏ bản nháp.
+  Việc của dịch vụ chung (`SupportService`/`SupportAttestation`), chưa đụng: lỗi attest tạm thời cũng hạ xuống mail cho cả
+  phiên; POST tạo ticket thành công mà đọc body lỗi thì báo lỗi (gửi lại = ticket trùng); `isTestFlightBuild` luôn false
+  trên macOS; bản Release Mac chưa có quyền App Attest (`ShotDexMac.entitlements`) nên hiện là màn mail.

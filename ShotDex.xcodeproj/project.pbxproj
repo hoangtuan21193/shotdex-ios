@@ -507,7 +507,6 @@
 				Features/Statistics/StatisticsModel.swift,
 				Features/Statistics/StatisticsScreen.swift,
 				Features/Support/SupportComposeScreen.swift,
-				Features/Support/SupportModel.swift,
 				Features/Support/SupportScreen.swift,
 				Features/Support/SupportThreadScreen.swift,
 				Features/Utilities/StatisticsOverviewCard.swift,

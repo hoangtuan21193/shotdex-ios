@@ -69,6 +69,9 @@ final class MacDependencies: LibraryServices {
     /// deleted (FS-19.07 §9).
     let photoDeletionGate: PhotoDeletionGate
     let smartAlbums: SmartAlbumStore
+    /// Help › ShotDex Support… (FS-13, FS-18.04 §6): this install's threads
+    /// and the public roadmap.
+    let support: SupportModel
     /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns
@@ -214,6 +217,14 @@ final class MacDependencies: LibraryServices {
         )
         photoLibrary.deletionGate = photoDeletionGate
         smartAlbums = SmartAlbumStore(database: database)
+        #if DEBUG
+        // The demo never talks to the support server.
+        support = MacDemoLibrary.isOn
+            ? .demo(service: SupportService(), metadataStore: metadataStore)
+            : SupportModel(service: SupportService(), metadataStore: metadataStore)
+        #else
+        support = SupportModel(service: SupportService(), metadataStore: metadataStore)
+        #endif
         commonPhotos = MacCommonPhotosRuns(database: database, servers: fileServers, refresh: serverSources) { server in
             LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
                                    lock: connectionLock, connectionId: server.id, priority: .normal)

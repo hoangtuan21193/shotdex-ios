@@ -41,7 +41,7 @@ struct SupportScreen: View {
         ) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Write to \(Self.supportAddress) from wherever you read your mail.")
+            Text("Write to \(SupportModel.supportAddress) from wherever you read your mail.")
         }
         .alert(item: $model.error) { error in
             Alert(
@@ -157,8 +157,6 @@ struct SupportScreen: View {
 
     // MARK: Helpers
 
-    static let supportAddress = "support@shotdex.app"
-
     private func openMail() {
         let diagnostics = SupportDiagnostics(libraryCount: nil)
         let body = """
@@ -168,7 +166,7 @@ struct SupportScreen: View {
         ShotDex \(diagnostics.appVersion) (\(diagnostics.buildNumber))
         iOS \(diagnostics.osVersion) · \(diagnostics.deviceModel)
         """
-        var components = URLComponents(string: "mailto:\(Self.supportAddress)")
+        var components = URLComponents(string: "mailto:\(SupportModel.supportAddress)")
         components?.queryItems = [
             URLQueryItem(name: "subject", value: "ShotDex support"),
             URLQueryItem(name: "body", value: body),
@@ -250,12 +248,4 @@ private struct SupportRoadmapRow: View {
             .accessibilityValue(Text("\(item.votes) votes"))
         }
     }
-}
-
-extension SupportTicketKind: Identifiable {
-    var id: String { rawValue }
-}
-
-extension SupportError: Identifiable {
-    var id: String { localizedDescription }
 }

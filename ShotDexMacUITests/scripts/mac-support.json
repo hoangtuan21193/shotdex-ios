@@ -1,0 +1,306 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "support"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Upload to SMB server stops at 99% on large HEIC files",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-support",
+   "window": "ShotDex Support"
+  },
+  {
+   "action": "dump",
+   "name": "01-support"
+  },
+  {
+   "action": "assertExists",
+   "label": "Conversation",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Upload to SMB server stops at 99% on large HEIC files",
+   "seconds": 3,
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Bug report · 2 replies",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Vote for this request",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove your vote",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove your vote",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove your vote",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Filter Smart Albums by lens focal range",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Feature request · 1 reply",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Upload to SMB server stops at 99% on large HEIC files",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Send Reply",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Add to this message",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "text": "Tried build 25, the upload finishes now."
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Send Reply",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Send Reply",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Add to this message",
+   "type": "textField",
+   "text": ""
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Send Reply",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-replied",
+   "window": "ShotDex Support"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Report a Bug…",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "waitFor",
+   "label": "Report a Bug",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Send",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-compose",
+   "window": "ShotDex Support"
+  },
+  {
+   "action": "typeText",
+   "label": "Title",
+   "text": "Grid flickers on scroll"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "tab"
+  },
+  {
+   "action": "typeText",
+   "text": "Scrolling fast in All Photos makes tiles flash white."
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Send",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Read the Log…",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Diagnostic Log",
+   "type": "staticText",
+   "seconds": 10
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Send",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Report a Bug",
+   "type": "staticText"
+  },
+  {
+   "action": "waitFor",
+   "label": "Grid flickers on scroll",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Request a Feature…",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "waitFor",
+   "label": "Request a Feature",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Request a Feature",
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-after",
+   "window": "ShotDex Support"
+  }
+ ]
+}
