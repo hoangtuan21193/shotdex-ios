@@ -1,0 +1,52 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "backupOrganize",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Organize",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Day",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Custom…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Day Folder Name",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-dark"
+  }
+ ]
+}

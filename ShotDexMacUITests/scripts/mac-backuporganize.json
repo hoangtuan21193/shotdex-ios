@@ -1,0 +1,523 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "backupOrganize"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Organize",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-organize"
+  },
+  {
+   "action": "dump",
+   "name": "01-organize"
+  },
+  {
+   "action": "assertExists",
+   "label": "Folder Names:",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Day",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Custom…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Day Folder Name",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-custom-day"
+  },
+  {
+   "action": "dump",
+   "name": "02-custom-day"
+  },
+  {
+   "action": "assertExists",
+   "label": "Preview, 2025.10.12"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "25",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Preview, 25.10.12"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "October",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Preview, 25.October.12"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Space",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Preview, 25 October 12"
+  },
+  {
+   "action": "click",
+   "label": "Custom separator",
+   "type": "textField"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "/x"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Custom separator",
+   "type": "textField",
+   "text": "x"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Order",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Day Month Year",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Preview, 12xOctoberx25"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Done with Day Folder Name",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Day Folder Name",
+   "type": "staticText"
+  },
+  {
+   "action": "assertValue",
+   "label": "Day",
+   "text": "12xOctoberx25"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Month",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Custom…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Month Folder Name",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Order",
+   "type": "popUpButton"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Month Folder Name",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Folder Names:",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Month",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Custom…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Month Folder Name",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Month Folder Name",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Month",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "10",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Month",
+   "text": "10"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Year",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "25",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Year",
+   "type": "popUpButton",
+   "text": "25"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Videos",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Together",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Videos",
+   "type": "popUpButton",
+   "text": "Together"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "File Names",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Date and Time",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "File Names",
+   "type": "popUpButton",
+   "text": "Date and Time"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-changed"
+  },
+  {
+   "action": "dump",
+   "name": "03-changed"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Levels",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Date Only",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Month",
+   "type": "menuButton"
+  },
+  {
+   "action": "assertExists",
+   "label": "Day",
+   "type": "menuButton"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Year",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "waitFor",
+   "label": "Organize…",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Organize…",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Folder Names:",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Organize…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Organize…",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Folder Names:",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Organize…",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "New Backup",
+   "type": "staticText"
+  }
+ ]
+}

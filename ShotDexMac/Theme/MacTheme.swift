@@ -53,6 +53,11 @@ enum MacTheme {
     static let greenSoft = dynamic(light: NSColor(red: 52 / 255, green: 199 / 255, blue: 89 / 255, alpha: 0.16),
                                    dark: NSColor(red: 48 / 255, green: 209 / 255, blue: 88 / 255, alpha: 0.18))
 
+    /// `segOn`: a drawn segmented control's selected segment, raised
+    /// (board `MAC_BackupOrganize`); `segShadow` under it.
+    static let segmentOn = dynamic(light: .white, dark: NSColor(white: 1, alpha: 0.20))
+    static let segmentShadow = dynamic(light: NSColor(white: 0, alpha: 0.18), dark: NSColor(white: 0, alpha: 0.30))
+
     /// `rowAlt`: every other row of a table or list (DESIGN.md §10b).
     static let rowAlternate = dynamic(light: NSColor(white: 0, alpha: 0.03), dark: NSColor(white: 1, alpha: 0.04))
 

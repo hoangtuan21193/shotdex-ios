@@ -99,6 +99,20 @@ nguồn, helper giữ bookmark của nó. Đã bỏ phương án "thư mục ch�
   What to Copy · Automatic Backup (hàng theo §4). Start / Save · Cancel ở chân; Return = Start khi sáng.
 - Organize: một hàng tóm tắt + đường dẫn ví dụ; **Organize…** đẩy trang thứ hai trong cùng sheet (3/5 + 4/5 gộp): Levels,
   kiểu từng mức, Videos, RAW Files, File Names, Preview cây ở trên. Custom… mở popover cạnh popup (4/5).
+- Trang Organize (2026-11-07, `MacBackupOrganizePage`): nút ‹ (r8, ⌘[) + "Organize" + "Photos Library → NAS Home";
+  **Preview** là cây có icon trong hộp r10, gốc "Backup folder on NAS Home", chuỗi thư mục chỉ có một con gộp thành một
+  dòng "2025 › Oct › 2025.10.12". Hàng nhãn 128 căn phải: **Levels** (200) · **Folder Names** — Year (80, khi có mức Năm,
+  Month "2025-10", hoặc Date Only với tên ngày có năm không phải Custom) · Month (96) · Day (132), Month/Day là menu tên
+  ví dụ + **Custom…** (có dấu tick khi đang dùng) · ghi chú "From the date…" · **Videos** · **RAW Files** (Levels đổi mà
+  chỗ cũ không còn: Videos về Apart at the Top, RAW về Together) · **File Names** + tên mẫu. Chân: ghi chú (Edit Backup:
+  "Changing this affects new photos only. Photos already copied stay where they are." — cũng hiện dưới hàng Organize trang
+  1 khi đã đổi), **Done** (Return, `accentFill` + `onAccentFill`). **Esc** về trang 1, không đóng cả sheet.
+- Popover Custom… (320, cạnh popup): "Day/Month Folder Name" + tên sống ở góc phải; Order (Day), Year 2025/25, Month
+  10/Oct/October, Day 12, Separator None - . _ Space + ô gõ (ký tự NAS không nhận bị bỏ); đoạn chữ dạng segment nâng
+  `segOn` co theo chữ (`MacFittedSegments`); mọi thay đổi áp ngay, Done/Return/Esc/nhấp ngoài đóng. Demo
+  `-ShotDexSection backupOrganize`.
+- Chưa có: Cancel trong popover (thay đổi áp ngay), cảnh báo thứ tự Day/Month trước Year làm thư mục không xếp theo
+  ngày, đổi Organize khi job đang chạy (sổ theo asset hay đường dẫn — chưa kiểm).
 - Destination › Folder mở `MAC_ServerBrowser` dạng sheet chồng.
 - Nguồn thư mục theo Q-M1: sau Start, nếu helper bật, helper hiện hộp chọn thư mục điền sẵn; người dùng Cancel →
   job vẫn lưu, chạy khi app mở, dòng trạng thái `Allow access to keep backing up after quit` + nút **Allow…**.
@@ -135,6 +149,7 @@ Server giả như 04: WebDAV (wsgidav) và SMB (impacket) ở 127.0.0.1. Máy: M
 | AC-51 | New Backup… trên Mac, mạng là hotspot iPhone (mạng đắt) | nhìn Automatic Backup; Start với 12 mục | không có hàng Only on Wi‑Fi; job chép đủ 12 mục, không bao giờ `Waiting for Wi‑Fi` | ⚠️ chưa có (`BackupJobFormTests.macHasNoWiFiRow` + `BackupRunnerTests` với cờ tắt) |
 | AC-52 | job đang lỗi `Can't Reach NAS Home` | nhìn sidebar | hàng Backup có chấm cảnh báo thay số; chuột phải job có Edit…, Back Up Now, Delete Job… | ⚠️ chưa có (`mac-backup-states.json`) |
 | AC-53 | job Up to Date, app đã Quit, thêm 3 ảnh vào Photos trên Mac | chờ | ≤ 30 s sau 3 file lên đích (helper nghe sự kiện đổi thư viện) | ⚠️ chưa có (`MacAgentTests.libraryChangeWhileAppQuit` + thư viện Photos thử trên Mac) |
+| AC-54 | §5.3 trang Organize, demo `-ShotDexSection backupOrganize` (Day đặt Custom) | Day › Custom…; 25; October; Space; gõ "/x" vào ô; Order Day Month Year; Done; Month › Custom…, Return; Month › Custom…, Esc; Month 10; Year 25; Videos Together; File Names Date and Time; Levels Date Only; ‹; Organize…, Return; Organize…, Esc; giao diện tối | popover "Day Folder Name" tên 2025.10.12 → 25.10.12 → 25.October.12 → 25 October 12; ô giữ "x" ("/" bị bỏ); 12xOctoberx25 và popup Day mang tên đó; popover Month không có Order, Return/Esc chỉ đóng popover; các popup mang giá trị mới; Date Only bỏ Month và Year (Day Custom), giữ Day; ‹, Return và Esc về trang 1 (New Backup, Organize…); Done chữ đen trên amber ở tối | `mac-backuporganize.json` (`01-organize`, `02-custom-day`, `03-changed`), `mac-backuporganize-dark.json` |
 
 ## 7. Spike (máy thật, trước khi chốt AC)
 

@@ -19,7 +19,10 @@ struct MacBackupFormSheet: View {
         VStack(spacing: 0) {
             switch page {
             case .main: main
-            case .organize: MacBackupOrganizePage(organize: $model.settings.organize, back: { page = .main })
+            case .organize:
+                MacBackupOrganizePage(organize: $model.settings.organize, back: { page = .main },
+                                      subtitle: organizeSubtitle, previewRoot: organizeRoot,
+                                      affectsNewOnly: model.isEditing)
             }
         }
         .frame(width: 640, height: 560)
@@ -31,10 +34,29 @@ struct MacBackupFormSheet: View {
             }
         }
         .onAppear {
+            #if DEBUG
+            // `-ShotDexSection backupOrganize`: the board's page, Day on Custom….
+            if MacDemoLibrary.section == "backupOrganize" {
+                model.settings.organize.dayStyle = .custom
+                page = .organize
+            }
+            #endif
             // The Mac has no Only on Wi‑Fi row: every network will do (Q-M2).
             model.settings.onlyOnWiFi = false
             if !Self.hasBattery { model.settings.onlyWhileCharging = false }
         }
+    }
+
+    /// "Photos Library → NAS Home" under Organize's title.
+    private var organizeSubtitle: String? {
+        guard let source = model.sources.first(where: { $0.id == model.sourceId })?.name,
+              let server = model.connection?.name else { return nil }
+        return "\(source) → \(server)"
+    }
+
+    /// "Backup folder on NAS Home", the preview's top row.
+    private var organizeRoot: String? {
+        model.connection.map { String(localized: "Backup folder on \($0.name)", comment: "Organize preview: the backup's root folder on a server") }
     }
 
     private var main: some View {
@@ -91,6 +113,11 @@ struct MacBackupFormSheet: View {
                                 Text(BackupOrganizeText.summary(model.settings.organize))
                                 Text(BackupOrganizeText.sampleTree(model.settings.organize).replacingOccurrences(of: " › ", with: "/"))
                                     .font(.caption).foregroundStyle(.secondary)
+                                if let saved = model.editing?.settings.organize, saved != model.settings.organize {
+                                    Text("Changing this affects new photos only. Photos already copied stay where they are.",
+                                         comment: "Organize, Edit Backup: a change does not move what was copied (FS-22.01 §2)")
+                                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -149,79 +176,6 @@ struct MacBackupFormSheet: View {
         return list.contains { source in
             let description = IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any]
             return description?[kIOPSTypeKey] as? String == kIOPSInternalBatteryType
-        }
-    }
-}
-
-/// Organize, page 2 of the sheet (board `MAC_BackupOrganize`): the preview
-/// tree on top, then Levels, folder name styles, Videos, RAW Files, File
-/// Names.
-struct MacBackupOrganizePage: View {
-    @Binding var organize: BackupOrganize
-    var back: () -> Void
-    /// Find Common Photos opens this page too (FS-19.08 §6e), naming its
-    /// first folder: Same as Source joins the levels, Album leaves them.
-    var commonPhotosFirstFolder: String? = nil
-    /// What the sheet behind is doing, shown beside Done.
-    var status: String? = nil
-
-    private var levels: [BackupOrganize.Levels] {
-        commonPhotosFirstFolder == nil ? BackupOrganize.Levels.backup : BackupOrganize.Levels.commonPhotos
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Button(action: back) { Image(systemName: "chevron.left") }
-                    .accessibilityLabel(String(localized: "Back", comment: "Mac toolbar"))
-                Text("Organize", comment: "Mac Backup: Organize page title").font(.headline)
-            }
-            .padding([.horizontal, .top], 24)
-            .padding(.bottom, 12)
-            Form {
-                Section(String(localized: "Preview", comment: "Organize: the example tree")) {
-                    Text(commonPhotosFirstFolder == nil ? BackupOrganizeText.sampleTree(organize) : BackupOrganizeText.commonPhotosTree(organize))
-                        .font(.callout.monospaced()).textSelection(.enabled)
-                }
-                Section {
-                    Picker(selection: $organize.levels) {
-                        ForEach(levels, id: \.self) { Text(BackupOrganizeText.levels($0)).tag($0) }
-                    } label: {
-                        Text("Levels:", comment: "Organize: folder levels")
-                        if let first = commonPhotosFirstFolder, !first.isEmpty, organize.levels == .sameAsSource {
-                            Text("Each photo keeps the folder it has in \(first), the first folder listed in Find Common Photos.",
-                                 comment: "Organize, Find Common Photos: what Same as Source does")
-                        }
-                    }
-                    Picker(String(localized: "Videos:", comment: "Organize: where videos go"), selection: $organize.videoPlacement) {
-                        ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) { Text(BackupOrganizeText.videos($0)).tag($0) }
-                    }
-                    Picker(String(localized: "RAW Files:", comment: "Organize: where RAW files go"), selection: $organize.rawPlacement) {
-                        ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) { Text(BackupOrganizeText.videos($0)).tag($0) }
-                    }
-                }
-                Section {
-                    Picker(String(localized: "File Names:", comment: "Organize: how files are named"), selection: $organize.fileNames) {
-                        ForEach(BackupOrganize.FileNames.allCases, id: \.self) { Text(BackupOrganizeText.fileNames($0)).tag($0) }
-                    }
-                } footer: {
-                    if commonPhotosFirstFolder != nil {
-                        Text("A name already taken in that folder gets a number, like IMG_0001 (2).JPG.",
-                             comment: "Organize, Find Common Photos: the next free name rule")
-                    } else {
-                        Text("A file with the same name but different size is kept as a second copy.", comment: "Organize: Keep Both rule")
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            HStack {
-                if let status {
-                    Text(status).font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1)
-                }
-                Spacer()
-                Button(String(localized: "Done", comment: "Mac sheet: done"), action: back).keyboardShortcut(.defaultAction)
-            }
-            .padding(20)
         }
     }
 }

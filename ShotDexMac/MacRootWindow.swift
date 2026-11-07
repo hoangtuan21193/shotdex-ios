@@ -1235,6 +1235,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.
         if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
+        if MacDemoLibrary.section == "backupOrganize" { selection = .backup; opensNewBackup = true }
         if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
         if MacDemoLibrary.section == "onNAS" { selection = .smartAlbum(OnServerMismatchDemo.albumId) }
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }

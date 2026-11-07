@@ -81,3 +81,53 @@ enum BackupOrganizeText {
         }
     }
 }
+
+/// The merged tree behind the preview: folders first, then files, in the
+/// order the paths reach them.
+enum BackupPreviewTree {
+    struct Row: Equatable {
+        var name: String
+        var depth: Int
+        var isFolder: Bool
+        var symbol: String
+    }
+
+    static let samples: [(BackupPlacementInput, String)] = [
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: false, originalFilename: "IMG_8812.HEIC",
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "photo"),
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: false, originalFilename: "IMG_8812.CR3", isRAW: true,
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "camera.aperture"),
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: true, originalFilename: BackupOrganizeText.sampleVideo,
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "video"),
+    ]
+
+    static func rows(organize: BackupOrganize) -> [Row] {
+        let planner = BackupPathPlanner(organize: organize, names: BackupOrganizeText.names)
+        final class Node {
+            var children: [(String, Node)] = []
+            var files: [(String, String)] = []
+            func child(_ name: String) -> Node {
+                if let found = children.first(where: { $0.0 == name }) { return found.1 }
+                let node = Node()
+                children.append((name, node))
+                return node
+            }
+        }
+        let root = Node()
+        for (input, symbol) in samples {
+            var node = root
+            for folder in planner.folders(for: input) { node = node.child(folder) }
+            node.files.append((planner.fileName(for: input), symbol))
+        }
+        var rows: [Row] = []
+        func walk(_ node: Node, depth: Int) {
+            for (name, symbol) in node.files { rows.append(Row(name: name, depth: depth, isFolder: false, symbol: symbol)) }
+            for (name, child) in node.children {
+                rows.append(Row(name: name, depth: depth, isFolder: true, symbol: "folder"))
+                walk(child, depth: depth + 1)
+            }
+        }
+        walk(root, depth: 0)
+        return rows
+    }
+}
