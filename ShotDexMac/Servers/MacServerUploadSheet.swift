@@ -369,6 +369,8 @@ enum MacDemoUpload {
 
     struct Exporter: AssetFileExporting {
         func export(assetId: String, file: AssetUploadFile, into directory: URL) async throws -> URL {
+            // `-ShotDexUploadSlow`: 8 s a file, so a screenshot catches the upload going.
+            if ProcessInfo.processInfo.arguments.contains("-ShotDexUploadSlow") { try await Task.sleep(for: .seconds(8)) }
             let image = await MainActor.run { MacDemoLibrary.picture(for: assetId) }
             guard let image else { throw CocoaError(.fileNoSuchFile) }
             let data = NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.8])

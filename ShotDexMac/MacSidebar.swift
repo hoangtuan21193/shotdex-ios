@@ -19,6 +19,7 @@ struct MacSidebar: View {
     /// Photos' albums, listed under Albums when it is open (board `MAC_AlbumDetail`).
     var albums: [AlbumSummary] = []
     @AppStorage("macSidebarShowsAlbums") private var showsAlbums = true
+    @Environment(MacDependencies.self) private var dependencies
     var newSmartAlbum: () -> Void = {}
     /// The Sources header's + (board `Main`): the Add a Source sheet
     /// (`MAC_AddSource`) — Photos, a folder or drive, or a server.
@@ -222,7 +223,12 @@ struct MacSidebar: View {
 
     @ViewBuilder
     private var status: some View {
-        if let busyFooter {
+        // An upload under way leads the foot (board `MAC_ServerUpload`): the index line returns after.
+        let uploading = dependencies.uploads.entries.filter { $0.model.stage == .uploading }
+        if !uploading.isEmpty {
+            MacUploadFoot(entries: uploading,
+                          indexLine: library?.isIndexing == true ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running") : nil)
+        } else if let busyFooter {
             busyFooter
         } else if let sourcesModel, sourcesModel.hasReadProgress {
             MacReadFoot(model: sourcesModel, showBanner: showReadBanner)

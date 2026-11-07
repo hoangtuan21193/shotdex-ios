@@ -167,7 +167,11 @@ Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo
   quit?" (Keep Uploading · Stop and Quit; có lượt Common Photos thì câu phụ nói nó tạm dừng) → dừng mọi lô, chờ tới 10 s để xoá
   file dở trên server, rồi mới thoát.
 - Demo (`-ShotDexDemoLibrary`) chỉ tới được 127.0.0.1: mọi host khác trỏ vào cổng đóng, nên không bao giờ ghi lên server LAN thật.
-- *Còn lại:* Pause/Resume, danh sách từng file, trạng thái trong bảng On Server / ô ảnh / chân sidebar (hàng 25e); duyệt folder
+- **Ngoài Activity** (hàng 25e): chân sidebar thay dòng index bằng "Uploading to Test SMB · 42%" + thanh 4pt khi có lô đang đẩy
+  (bấm → Activity); bảng On Server: hàng có cùng server và folder (hoặc folder ngày bên trong) của lô đang đẩy ghi "Uploading 2 of 3"
+  + thanh 60pt ở cột Last Upload. Model dùng chung đọc Keychain, ghi DB, dọn thư mục tạm và tính kết quả ngoài main thread; tiến
+  độ byte cập nhật tối đa 10 lần/giây.
+- *Còn lại:* Pause/Resume, danh sách từng file, ô ảnh Uploading/Waiting, giữ kết quả qua lần mở app (hàng 25f); duyệt folder
   trên server và **Upload…** của màn duyệt server (25d); upload ảnh chỉ có ở thư mục/server.
 
 ## 10. Mac — chỗ On Server (hàng 25b, board `MAC_ServerUpload`, 2026-11-08)

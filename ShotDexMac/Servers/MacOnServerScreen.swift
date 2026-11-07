@@ -202,14 +202,43 @@ struct MacOnServerScreen: View {
                 }
                 .width(min: 60, ideal: 80)
                 TableColumn(String(localized: "Last Upload", comment: "Mac On Server column")) { row in
-                    Text(row.last.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "").foregroundStyle(.secondary)
+                    // An upload going into this place right now (board): its count and a small bar.
+                    if let running = running(into: row) {
+                        HStack(spacing: 6) {
+                            // Date Folders spread one batch over several rows: no batch count on each.
+                            Text(running.usesDateFolders
+                                 ? String(localized: "Uploading", comment: "Mac On Server: an upload into this place (one of its date folders) is going")
+                                 : String(localized: "Uploading \(min(running.progress.fileIndex + 1, running.progress.fileCount)) of \(running.progress.fileCount) files",
+                                          comment: "Mac On Server: an upload into this place is going"))
+                                .monospacedDigit()
+                            ProgressView(value: running.progress.fraction).frame(width: 60).tint(MacTheme.accent)
+                        }
+                    } else {
+                        Text(row.last.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "").foregroundStyle(.secondary)
+                    }
                 }
-                .width(min: 100, ideal: 140)
+                .width(min: 150, ideal: 180)
             }
             .font(.system(size: 13))
             .tableStyle(.inset(alternatesRowBackgrounds: true))
             .frame(height: CGFloat(min(rows(snapshot).count, 6) + 1) * Self.tableRow + 8)
         }
+    }
+
+    /// The upload under way into a row's place: same server, and the
+    /// place is the upload's folder or one of its date folders.
+    private func running(into row: Row) -> ServerUploadModel? {
+        guard row.id != Self.everyPhotoRow else { return nil }
+        return dependencies.uploads.entries.first { entry in
+            let model = entry.model
+            guard model.stage == .uploading, entry.serverName == row.server else { return false }
+            // Rows show the top as "/"; the upload's folder is "" there.
+            let folder = ServerUploadPath.normalizedFolder(model.folder)
+            let rowFolder = row.folder == "/" ? "" : ServerUploadPath.normalizedFolder(row.folder)
+            if rowFolder == folder { return true }
+            // Only Date Folders put files below the folder picked.
+            return model.usesDateFolders && (folder.isEmpty || rowFolder.hasPrefix(folder + "/"))
+        }?.model
     }
 
     private struct Row: Identifiable, Hashable {

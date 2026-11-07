@@ -223,8 +223,7 @@ final class ServerUploadModel {
                 )
             }
         }
-        if remembersChoice { try? fileServers.markUsed(server.id, folder: folder, usesDateFolders: usesDateFolders) }
-        run(items, on: server)
+        run(items, on: server, marksUsed: remembersChoice)
     }
 
     /// Everything the last batch did not get onto the server, skipped files
@@ -245,19 +244,48 @@ final class ServerUploadModel {
         lastOutcomes.contains { if case .failed = $0 { true } else { $0 == .notAttempted } }
     }
 
-    private func run(_ items: [ServerUploadItem], on server: FileServer) {
+    private func run(_ items: [ServerUploadItem], on server: FileServer, marksUsed: Bool = false) {
         guard task == nil else { return }
         lastItems = items
         stage = .uploading
         progress = Progress(fileCount: items.count)
         samples = []
+        lastBytesShown = .distantPast
         beginHold()
 
-        let password = fileServers.password(for: server.id) ?? ""
         let workDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(TemporaryWorkspace.serverUploadPrefix)\(UUID().uuidString)", isDirectory: true)
         let uploads = uploads
-        let session = ServerUploadSession(
+        let fileServers = fileServers
+        let remembered = marksUsed ? (folder: folder, dated: usesDateFolders) : nil
+        task = Task { [weak self] in
+            // The Keychain read (it may ask the user): off the main actor.
+            let password = await Task.detached(priority: .userInitiated) { fileServers.password(for: server.id) ?? "" }.value
+            // Stopped before a byte went: the connection's remembered folder stays as it was.
+            if let remembered, !Task.isCancelled {
+                Task.detached(priority: .utility) {
+                    try? fileServers.markUsed(server.id, folder: remembered.folder, usesDateFolders: remembered.dated)
+                }
+            }
+            // `self` stays weak across the batch: a sheet that went away does not keep the model.
+            guard let session = self?.makeSession(server: server, password: password, items: items,
+                                                  workDirectory: workDirectory, uploads: uploads) else { return }
+            self?.session = session
+            let result = await session.run(items)
+            await Task.detached(priority: .utility) {
+                try? FileManager.default.removeItem(at: workDirectory)
+                // Whether this server keeps dates, as Common Photos records it (§6e).
+                if let keeps = ServerFileInfoSupport.keepsDates(from: result.fileInfo) {
+                    try? ServerFileInfoSupport.record(connectionId: server.id, keepsDates: keeps, in: uploads.database)
+                }
+            }.value
+            await self?.finish(result, items: items)
+        }
+    }
+
+    private func makeSession(server: FileServer, password: String, items: [ServerUploadItem],
+                             workDirectory: URL, uploads: ServerUploadStore) -> ServerUploadSession {
+        ServerUploadSession(
             client: uploadClient(server, password: password),
             exporter: exporter,
             serverId: server.id,
@@ -271,17 +299,11 @@ final class ServerUploadModel {
             },
             record: { try uploads.record($0) }
         )
-        self.session = session
-        task = Task { [weak self] in
-            let result = await session.run(items)
-            try? FileManager.default.removeItem(at: workDirectory)
-            // Whether this server keeps dates, as Common Photos records it (§6e).
-            if let keeps = ServerFileInfoSupport.keepsDates(from: result.fileInfo) {
-                try? ServerFileInfoSupport.record(connectionId: server.id, keepsDates: keeps, in: uploads.database)
-            }
-            self?.finish(result, items: items)
-        }
     }
+
+    /// When the bytes line last changed: the bar moves ten times a second,
+    /// not once per network chunk.
+    @ObservationIgnored private var lastBytesShown = Date.distantPast
 
     /// The Cancel button, and leaving the app: stop after cleaning the part
     /// on the server.
@@ -323,8 +345,11 @@ final class ServerUploadModel {
     #endif
 
     private func handle(_ event: ServerUploadEvent, items: [ServerUploadItem]) {
+        // A late event of a batch that already ended (or is ending) moves nothing.
+        guard stage == .uploading, session != nil else { return }
         switch event {
         case .fileStarted(let index, let phase):
+            lastBytesShown = .distantPast
             progress.fileIndex = index
             progress.filename = items[index].file.filename
             progress.phase = phase
@@ -332,6 +357,9 @@ final class ServerUploadModel {
             progress.fileIndex = index
             progress.phase = phase
         case .bytes(let done, let total):
+            let now = Date()
+            guard done >= total || now.timeIntervalSince(lastBytesShown) >= 0.1 else { return }
+            lastBytesShown = now
             progress.bytesDone = max(progress.bytesDone, done)
             progress.bytesTotal = total
             recordSample(done)
@@ -349,8 +377,8 @@ final class ServerUploadModel {
         progress.secondsLeft = rate > 0 ? Double(progress.bytesTotal - bytes) / rate : nil
     }
 
-    private func finish(_ result: ServerUploadResult, items: [ServerUploadItem]) {
-        task = nil
+    private func finish(_ result: ServerUploadResult, items: [ServerUploadItem]) async {
+        // `task` stays set until the result is in: no second batch starts in between.
         session = nil
         lastOutcomes = result.outcomes
         endHold()
@@ -380,16 +408,20 @@ final class ServerUploadModel {
         // Every picked photo, not just this run's: after Upload Remaining the
         // ones the first run finished are still safe to delete. The history
         // decides, so a photo sent last month to another server counts too.
-        let keys = (try? uploads.uploadedFileKeys(assetIds: assetIds)) ?? [:]
-        let verdict = ServerUploadEligibility.evaluate(
-            assets: (entries ?? []).map { ($0.assetId, $0.files) },
-            uploadedKeys: keys
-        )
+        // A whole selection's history and files: read and weighed off the main actor.
+        let uploads = uploads
+        let assetIds = assetIds
+        let assets = (entries ?? []).map { ($0.assetId, $0.files) }
+        let verdict = await Task.detached(priority: .userInitiated) {
+            let keys = (try? uploads.uploadedFileKeys(assetIds: assetIds)) ?? [:]
+            return ServerUploadEligibility.evaluate(assets: assets, uploadedKeys: keys)
+        }.value
         summary.deletableAssetIds = verdict.deletable
         summary.partiallyUploaded = verdict.missing
         index?.insert(uploadedAssets)
         self.summary = summary
         stage = .finished
+        task = nil
     }
 
     // MARK: Conflicts

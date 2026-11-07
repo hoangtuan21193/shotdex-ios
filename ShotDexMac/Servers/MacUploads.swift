@@ -251,3 +251,73 @@ struct MacUploadRow: View {
         .accessibilityAddTraits(.updatesFrequently)
     }
 }
+
+/// The sidebar's foot while uploads run (board `MAC_ServerUpload`):
+/// where they go, how far, and a click away from Activity.
+struct MacUploadFoot: View {
+    /// The uploads going now, newest first.
+    let entries: [MacUploads.Entry]
+    /// The index's own line, kept under the upload while both run.
+    var indexLine: String?
+
+    private var models: [ServerUploadModel] { entries.map(\.model) }
+    private var bytesTotal: Int64 { models.reduce(0) { $0 + $1.progress.bytesTotal } }
+    private var fraction: Double {
+        bytesTotal > 0 ? min(1, Double(models.reduce(0) { $0 + $1.progress.bytesDone }) / Double(bytesTotal)) : 0
+    }
+    private var needsAnswer: Bool { models.contains { $0.pendingConflict != nil } }
+
+    private var title: String {
+        entries.count == 1
+            ? String(localized: "Uploading to \(entries[0].serverName)", comment: "Mac sidebar foot: an upload is running")
+            : String(localized: "Uploading \(entries.count) batches", comment: "Mac sidebar foot: several uploads are running")
+    }
+
+    var body: some View {
+        Button {
+            MacWindowRequest.showsActivity = true
+            NotificationCenter.default.post(name: .macShowActivity, object: nil)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(title).lineLimit(1)
+                    Spacer(minLength: 8)
+                    if needsAnswer {
+                        Text("Needs answer", comment: "Mac sidebar foot: an upload waits on an already-there question")
+                            .foregroundStyle(MacTheme.accent).fontWeight(.semibold)
+                    } else if bytesTotal == 0 {
+                        // Files still being read out of Photos: no number yet, rather than a stuck 0%.
+                        Text("Preparing…", comment: "Mac sidebar foot: an upload before its first bytes go")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(fraction.formatted(.percent.precision(.fractionLength(0)))).monospacedDigit()
+                    }
+                }
+                .font(.caption)
+                if bytesTotal == 0 {
+                    ProgressView().progressViewStyle(.linear).tint(MacTheme.accent).controlSize(.mini)
+                } else {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(MacTheme.fill)
+                            Capsule().fill(MacTheme.accent).frame(width: geometry.size.width * fraction)
+                        }
+                    }
+                    .frame(height: 4)
+                }
+                if let indexLine {
+                    Text(indexLine).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .help(String(localized: "Show the upload in Activity", comment: "Mac sidebar foot: upload tooltip"))
+        .accessibilityLabel(title)
+        .accessibilityValue(needsAnswer ? String(localized: "Needs answer", comment: "Mac sidebar foot: an upload waits on an already-there question")
+                                        : fraction.formatted(.percent.precision(.fractionLength(0))))
+    }
+}
