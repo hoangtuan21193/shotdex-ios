@@ -1,8 +1,275 @@
 {
  "steps": [
-  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-ShotDexSection", "onServer"]},
-  {"action": "wait", "seconds": 8},
-  {"action": "screenshot", "name": "01-onserver"},
-  {"action": "dump", "name": "01-onserver"}
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "onServer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Condition: Also on NAS Home › Shared",
+   "type": "button",
+   "seconds": 25
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-onserver"
+  },
+  {
+   "action": "dump",
+   "name": "01-onserver"
+  },
+  {
+   "action": "assertExists",
+   "label": "40 photos",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Checking · 40 of 226",
+   "type": "staticText",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Filter and Sort",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Share",
+   "type": "menuButton"
+  },
+  {
+   "action": "click",
+   "label": "List",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-list"
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Filter and Sort",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-filter"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-inspector"
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Condition: Also on NAS Home › Shared",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Edit Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 40 photos",
+   "type": "staticText",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-editor"
+  },
+  {
+   "action": "click",
+   "label": "No",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Matches 40 photos",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Yes",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Matches 40 photos",
+   "type": "staticText",
+   "seconds": 5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Edit Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Edit…"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Edit Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Edit Smart Album",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.22
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Share",
+   "type": "menuButton"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Filmstrip"
+  },
+  {
+   "action": "screenshot",
+   "name": "06-viewer"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Filmstrip"
+  },
+  {
+   "action": "assertExists",
+   "label": "Condition: Also on NAS Home › Shared",
+   "type": "button"
+  }
  ]
 }

@@ -86,12 +86,21 @@ final class SmartAlbumDetailModel {
     /// condition (or a Source condition on a server, not yet rewritten) —
     /// after each batch the check runs.
     func refreshOnServer(_ check: OnServerCheck, isLimited: Bool) async {
-        let servers = (try? sourceStore.serverConnections()) ?? [:]
+        onServerLines = await Self.onServerLines(query: query, check: check, database: database,
+                                                 sourceNames: sourceNames, isLimited: isLimited)
+    }
+
+    /// The on-server check's lines for a query with a server condition
+    /// (FS-19.07 §7); empty when it has none. Also the Mac's smart album
+    /// header, which shows the album through the Library grid.
+    static func onServerLines(query: SmartAlbumQuery, check: OnServerCheck, database: AppDatabase,
+                              sourceNames: [String: String], isLimited: Bool) async -> [String] {
+        let store = SourceStore(database: database)
+        let servers = (try? await Task.detached { try store.serverConnections() }.value) ?? [:]
         guard let rule = query.cleaned.allRules.first(where: {
             ($0.field == .alsoOnServer || $0.field == .source) && servers[$0.text] != nil
         }) else {
-            onServerLines = []
-            return
+            return []
         }
         let queries = OnServerProgressQueries(database: database)
         let folder = rule.folder
@@ -101,7 +110,7 @@ final class SmartAlbumDetailModel {
             ?? OnServerProgress()
         let names = (try? await Task.detached { try shared.deviceNames(caught) }.value) ?? [:]
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
-        onServerLines = OnServerProgressLine.lines(.init(
+        return OnServerProgressLine.lines(.init(
             progress: progress, wait: wait, finishedAt: check.finishedAt,
             sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited,
             mismatchFrom: caught.map { names[$0] }, thisDevice: Self.thisDevice

@@ -89,6 +89,8 @@ struct MacRootWindow: View {
     @State private var serverForm: MacServerFormRequest?
     @State private var smartAlbumForm: MacSmartAlbumFormRequest?
     @State private var smartAlbums: [SmartAlbum] = []
+    /// Photos with every file on some server folder: the smart album's tile glyph.
+    @State private var onServerPhotoIds: Set<String> = []
     /// Why the sidebar's Add Folder… could not add (Settings shows its own).
     @State private var addFolderFailure: SourcesModel.Failure?
     /// Grid or list (FS-18.02 §3), kept between launches.
@@ -154,8 +156,6 @@ struct MacRootWindow: View {
                 MacHiddenScreen(sources: sources, photoMenu: photoMenu, showsInspector: $showsInspector)
             } else if let source = serverSource {
                 MacServerBrowserScreen(source: source)
-            } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
-                MacSmartAlbumScreen(album: album, edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) })
             } else if let selection, selection.isPendingScreen {
                 MacPendingPlace(item: selection)
             } else {
@@ -176,7 +176,16 @@ struct MacRootWindow: View {
         .onChange(of: library?.items.isEmpty ?? true) { _, isEmpty in if isEmpty { viewerId = nil } }
         // Remove from Album: the open album reads its photos again.
         .onReceive(NotificationCenter.default.publisher(for: .macAlbumChanged)) { _ in
-            if isAlbumOpen { library?.place = place(for: selection) }
+            // The place is unchanged, so setting it again would do nothing: read it again.
+            if isAlbumOpen { library?.reload() }
+        }
+        // A smart album edited (or its list first read): the grid follows its rules.
+        .onChange(of: smartAlbums) { if isSmartAlbumOpen { library?.place = place(for: selection) } }
+        // The "on server" glyph on a smart album's tiles (FS-19.07 §11): again on each check pass.
+        .task(id: isSmartAlbumOpen ? dependencies.onServerCheck.generation : -1) {
+            guard isSmartAlbumOpen else { onServerPhotoIds = []; return }
+            let queries = OnServerProgressQueries(database: dependencies.database)
+            onServerPhotoIds = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
         }
         .onChange(of: selection) {
             // Only a row that shows the grid moves it: Backup or Statistics
@@ -197,12 +206,14 @@ struct MacRootWindow: View {
                     }
                     onThisDayDate = MacOnThisDayDatePicker.day(of: Date())
                 }
-                library?.place = place(for: selection)
+                // A smart album not read yet waits for its list (onChange of smartAlbums):
+                // a nil place would be the whole library under its name.
+                if isPlaceKnown(selection) { library?.place = place(for: selection) }
             }
         }
         // One LibraryModel serves every Library window: the key window's
         // place is the one it shows.
-        .background(MacKeyWindowObserver { if let selection, isGridPlace(selection) { library?.place = place(for: selection) } })
+        .background(MacKeyWindowObserver { if let selection, isGridPlace(selection), isPlaceKnown(selection) { library?.place = place(for: selection) } })
         // Another day picked: the grid follows (only its month and day count).
         .onChange(of: onThisDayDate) {
             guard selection == .onThisDay else { return }
@@ -527,10 +538,16 @@ struct MacRootWindow: View {
     /// The row shows the library grid (and so its search field).
     private func isGridPlace(_ item: MacSidebarItem) -> Bool {
         switch item {
-        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded, .onThisDay, .album, .people, .pets: true
+        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded, .onThisDay, .album, .smartAlbum, .people, .pets: true
         case .source: serverSource == nil
         default: false
         }
+    }
+
+    /// A smart album's rules are known once the list is read.
+    private func isPlaceKnown(_ item: MacSidebarItem) -> Bool {
+        guard case .smartAlbum(let id) = item else { return true }
+        return smartAlbums.contains { $0.id == id }
     }
 
     /// What the grid shows for a sidebar row; nil is the whole library.
@@ -541,6 +558,8 @@ struct MacRootWindow: View {
         case .raw: .raw
         case .recentlyAdded: .recentlyAdded
         case .album(let id): .album(id)
+        // A smart album is its rules over the Library (board `MAC_SmartAlbum`).
+        case .smartAlbum(let id): smartAlbums.first { $0.id == id }.map { .rules($0.query) }
         case .people: .people
         case .pets: .pets
         case .onThisDay:
@@ -565,6 +584,7 @@ struct MacRootWindow: View {
         case .raw: String(localized: "No RAW Photos", comment: "Mac library: RAW is empty")
         case .recentlyAdded: String(localized: "Nothing Added Recently", comment: "Mac library: Recently Added is empty")
         case .album: String(localized: "Empty Album — add photos with Add to Album", comment: "Mac library: an album with no photo")
+        case .smartAlbum: String(localized: "No Photos Match", comment: "Mac smart album: nothing matches the conditions")
         case .onThisDay: String(localized: "Nothing from \(onThisDayDate.formatted(.dateTime.month(.wide).day()))",
                                 comment: "Mac On This Day: no photo on this day in earlier years")
         default: String(localized: "No Photos", comment: "Mac library: a source with no photos")
@@ -576,6 +596,7 @@ struct MacRootWindow: View {
         if let viewerItem { return viewerItem.originalFilename ?? String(localized: "Photo", comment: "Mac viewer: a photo with no file name") }
         if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
         if case .album(let id) = selection { return albumTitle(id) }
+        if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) { return album.name }
         return selection?.title ?? "ShotDex"
     }
 
@@ -601,6 +622,16 @@ struct MacRootWindow: View {
     private var isAlbumOpen: Bool {
         if case .album = selection { true } else { false }
     }
+
+    private var isSmartAlbumOpen: Bool {
+        if case .smartAlbum = selection { true } else { false }
+    }
+
+    /// An album or a smart album: one run of photos, no day headers.
+    private var isCollectionOpen: Bool { isAlbumOpen || isSmartAlbumOpen }
+
+    /// The "on server" glyph's photos: a smart album's only (board `MAC_SmartAlbum`).
+    private var gridOnServer: Set<String> { isSmartAlbumOpen ? onServerPhotoIds : [] }
 
     /// An album's name: as opened from Albums, else from the sidebar's list.
     private func albumTitle(_ id: String) -> String {
@@ -760,6 +791,18 @@ struct MacRootWindow: View {
             VStack(spacing: 0) {
                 sourceBanners
                 // From the first frame: the name at once, the numbers when read.
+                if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
+                    MacSmartAlbumHeader(album: album, shown: library?.hasActiveQuery == true ? library?.items.count : nil,
+                                        generation: library?.rowsGeneration ?? 0,
+                                        edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) },
+                                        reload: { library?.reload() })
+                        // The photo has the window while the viewer is open (board `MAC_Viewer`);
+                        // kept mounted, so its checks do not restart on each open and close.
+                        .frame(height: viewerId == nil ? nil : 0)
+                        .opacity(viewerId == nil ? 1 : 0)
+                        .clipped()
+                        .accessibilityHidden(viewerId != nil)
+                }
                 if case .album(let id) = selection {
                     MacAlbumHeader(title: albumTitle(id), summary: albumHeader ?? MacAlbumHeaderSummary(),
                                    selected: photoSelection?.ids.count ?? 0,
@@ -767,7 +810,7 @@ struct MacRootWindow: View {
                 }
                 // Once a search is run, or a scope set — not while words are only typed.
                 // An album's search is the album's: no source scope there.
-                if let library, !isAlbumOpen, searchOwnsQuery || library.sourceScope != nil {
+                if let library, !isCollectionOpen, searchOwnsQuery || library.sourceScope != nil {
                     MacSearchScopeBar(scope: Binding(get: { searchScope }, set: { setScope($0) }), count: subtitle,
                                       canSave: canSaveSearch,
                                       saveAsSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest(query: savedSearchQuery) })
@@ -838,7 +881,7 @@ struct MacRootWindow: View {
                 .toolbar { toolbar }
                 .searchable(text: $searchText, placement: .toolbar,
                             prompt: isLibraryEmpty ? Text("Search", comment: "Mac search field placeholder before any photo")
-                                  : isAlbumOpen ? Text("Search Album", comment: "Mac search field placeholder in an album")
+                                  : isAlbumOpen || isSmartAlbumOpen ? Text("Search Album", comment: "Mac search field placeholder in an album")
                                                    : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
                 // The album's header carries its name (board): no title in the toolbar.
                 .toolbar(removing: isAlbumOpen ? .title : nil)
@@ -1012,10 +1055,11 @@ struct MacRootWindow: View {
                                  picture: Self.demoPicture,
                                  // An album is one run of photos (board `MAC_AlbumDetail`), no day headers;
                                  // neither is a size order, where neighbours are days apart (FS-01.05 §5.1).
-                                 showsDays: !isAlbumOpen && library.appliedSort.isDateOrdered,
+                                 showsDays: !isCollectionOpen && library.appliedSort.isDateOrdered,
                                  yearHeaders: selection == .onThisDay ? MacYearHeaders(currentYear: Calendar.current.component(.year, from: Date()), showsAge: isOnThisDayToday, places: onThisDayPlaces) : nil,
                                  endKey: selection == .onThisDay ? "\(onThisDayDate)" : nil,
                                  columns: isAlbumOpen ? MacGridMetrics.albumColumns : MacGridMetrics.columns,
+                                 onServer: gridOnServer,
                                  offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
                                  initialSelection: photoSelection?.idSet ?? [],
                                  contextMenu: photoMenuBuilder, markKey: markKey, focusGeneration: gridFocusGeneration, onOpen: openViewer, marks: tableDetails, marksGeneration: tableDetailsGeneration,
@@ -1205,6 +1249,19 @@ struct MacRootWindow: View {
                     Button(String(localized: "Choose Date…", comment: "Mac On This Day: pick another day")) { showsDatePicker = true }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
+                // The one way out is the conditions (board `MAC_SmartAlbum`, `empty` tweak).
+                ContentUnavailableView {
+                    Label(emptyPlaceTitle, systemImage: "gearshape.2")
+                } description: {
+                    Text("Photos that match these conditions appear here as they're added.",
+                         comment: "Mac smart album: empty state explanation")
+                } actions: {
+                    Button(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album")) {
+                        smartAlbumForm = MacSmartAlbumFormRequest(editing: album)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ContentUnavailableView(emptyPlaceTitle, systemImage: selection?.systemImage ?? "photo")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1239,6 +1296,8 @@ struct MacRootWindow: View {
             return count + " · " + ByteCountFormatter.string(fromByteCount: summary.totalBytes, countStyle: .file)
         }
         if selection == .onThisDay { return onThisDayLine(library) }
+        // The count is in the album's header (board `MAC_SmartAlbum`): the toolbar says what it is.
+        if isSmartAlbumOpen { return String(localized: "Smart Album", comment: "Mac toolbar subtitle of a smart album") }
         let shown = library.hasActiveQuery && library.isLoading ? settledMatchCount ?? library.items.count : library.items.count
         let line = LibraryCountLine.text(shown: shown, videos: library.videoCount, total: libraryTotal,
                                          isFiltered: library.hasActiveQuery, libraryHasVideos: libraryHasVideos)
@@ -1483,6 +1542,9 @@ struct MacRootWindow: View {
         if photoSelection == nil { photoSelection = MacSelectionModel(database: dependencies.database) }
         Task { await dependencies.photoMarks.loadIfNeeded() }
         #if DEBUG
+        // The demo starts from the board's window: a sidebar hidden in an
+        // earlier run (the viewer hides it) is not restored into a script.
+        if MacDemoLibrary.isOn { columnVisibility = .all }
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }

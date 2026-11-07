@@ -1,161 +1,59 @@
-import Photos
 import SwiftUI
 
-/// A smart album in the Library window (board `MAC_SmartAlbum`, FS-19.07 §11):
-/// the read-only conditions and the On Server line under the toolbar, the
-/// grid with the "on server" glyph, and Delete (⌘⌫) through the gate that
-/// asks the server first (§9). A selection with a folder or server copy goes
-/// through the sources instead (FS-19.04 §2), as on iOS: a server copy is
-/// hidden in ShotDex, never deleted on the server.
-struct MacSmartAlbumScreen: View {
+/// A smart album's header in the Library window (board `MAC_SmartAlbum`,
+/// FS-19.07 §11): its conditions as chips — a click opens the editor — and
+/// the count on the left, the On Server and originals lines on the right.
+/// The album itself is the Library grid on `LibraryPlace.rules`, so it has
+/// the Library's toolbar, list, filter, share, inspector, viewer and the
+/// delete that asks the server first (§9).
+struct MacSmartAlbumHeader: View {
     let album: SmartAlbum
-    var edit: () -> Void
+    /// What the grid shows while a filter or search narrows the album; nil
+    /// when it shows the whole album.
+    let shown: Int?
+    /// The Library's rows: a delete or an index pass changes the album.
+    let generation: Int
+    let edit: () -> Void
+    /// The originals check moved photos in or out (FS-06.10 §3): read again.
+    let reload: () -> Void
     @Environment(MacDependencies.self) private var dependencies
-    @State private var model: SmartAlbumDetailModel?
-    @State private var selection: Set<String> = []
-    @State private var onServer: Set<String> = []
-    @State private var deletion = PhotoDeletionFlow()
-    @State private var sourceDeletion: DeletionTargetQueries.Request?
-    @State private var deleteError: String?
-    /// The first load has finished; until then an empty list means "not yet".
-    @State private var hasLoaded = false
+    @State private var sourceNames: [String: String] = [:]
+    @State private var onServerLines: [String] = []
     /// When an `Original is …` album last read again for the check.
     @State private var lastOriginalReload = Date.distantPast
+    /// The check pass the grid last read again for: a task restarted for
+    /// another reason (names read) does not reload.
+    @State private var reloadedGeneration = 0
+    /// The album's own size, whatever narrows the grid.
+    @State private var total: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let model {
-                conditionsBar(model)
-                Divider()
-                if hasLoaded, model.items.isEmpty, !model.isLoading {
-                    emptyState
-                } else {
-                    MacPhotoGrid(items: model.items, photoLibrary: dependencies.photoLibrary,
-                                 asset: { model.asset(for: $0) }, picture: MacRootWindow.demoPicture,
-                                 isNewestFirst: true, showsDays: false, onServer: onServer, onSelection: { selection = $0 })
-                }
-            } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .navigationTitle(album.name)
-        .navigationSubtitle(String(localized: "Smart Album", comment: "Mac toolbar subtitle of a smart album"))
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(action: edit) {
-                    Label(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"), systemImage: "slider.horizontal.3")
-                }
-                Button(role: .destructive, action: delete) {
-                    Label(selection.count == 1
-                          ? String(localized: "Delete 1 Photo…", comment: "Mac: delete the selected photo")
-                          : String(localized: "Delete \(selection.count) Photos…", comment: "Mac: delete the selected photos"),
-                          systemImage: "trash")
-                }
-                .keyboardShortcut(.delete, modifiers: .command)
-                .disabled(selection.isEmpty || deletion.isChecking)
-            }
-        }
-        .photoDeletionPrompts(deletion)
-        .sourceDeletion($sourceDeletion, context: dependencies.sourceDeletion) { removed, _ in
-            model?.removeDeleted(ids: removed)
-            selection.subtract(removed)
-        }
-        .alert(String(localized: "Couldn't Delete", comment: "Mac: a delete failed"),
-               isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button(String(localized: "OK", comment: "Delete: dismiss"), role: .cancel) {}
-        } message: {
-            Text(deleteError ?? "")
-        }
-        .task(id: album) {
-            let model = SmartAlbumDetailModel(album: album, libraryQueries: dependencies.libraryQueries,
-                                              metadataStore: dependencies.metadataStore, photoLibrary: dependencies.photoLibrary,
-                                              pipeline: dependencies.indexPipeline, database: dependencies.database)
-            self.model = model
-            selection = []
-            hasLoaded = false
-            await model.load()
-            hasLoaded = true
-        }
-        .task(id: "\(dependencies.onServerCheck.generation)-\(model != nil)") {
-            guard let model else { return }
-            await model.refreshOnServer(dependencies.onServerCheck,
-                                        isLimited: dependencies.photoLibrary.authorizationState == .limited)
-            let queries = OnServerProgressQueries(database: dependencies.database)
-            onServer = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
-            if dependencies.onServerCheck.generation > 0 { await model.load() }
-        }
-        // An album on the Original rule asks for fresh answers (FS-06.10 §4)
-        // for as long as it is open — keyed by album, because the sidebar
-        // swaps albums in this same view without a disappear.
-        .task(id: album) {
-            guard album.query.usesOriginal else { return }
-            let check = dependencies.originalPresenceCheck
-            check.screenOpened()
-            while !Task.isCancelled { try? await Task.sleep(for: .seconds(3600)) }
-            check.screenClosed()
-        }
-        // Each batch of the original check can move photos in or out (§3).
-        // At most one reload every 3 s: a pass runs ~275 batches, and a grid
-        // reloading on each one flickers. Other albums never read it.
-        .task(id: "\(album.query.usesOriginal ? dependencies.originalPresenceCheck.generation : 0)-\(model != nil)") {
-            guard album.query.usesOriginal, let model else { return }
-            let wait = 3 - Date().timeIntervalSince(lastOriginalReload)
-            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
-            guard !Task.isCancelled else { return }
-            lastOriginalReload = Date()
-            // Not tied to this task: the next batch re-keys it, and a load
-            // cut off half-way would drop the rows it had not read yet.
-            Task { await model.load() }
-        }
-    }
-
-    /// No photo matches (board `MAC_SmartAlbum`, `empty` tweak): say so in
-    /// the album's words and offer the one way out, editing the conditions.
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label(String(localized: "No Photos Match", comment: "Mac smart album: nothing matches the conditions"),
-                  systemImage: "gearshape.2")
-        } description: {
-            Text("Photos that match these conditions appear here as they're added.",
-                 comment: "Mac smart album: empty state explanation")
-        } actions: {
-            Button(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"), action: edit)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// Under the toolbar (board `MAC_SmartAlbum`): the conditions as
-    /// read-only chips and the count on the left, the On Server line on the
-    /// right.
-    private func conditionsBar(_ model: SmartAlbumDetailModel) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        // Chips and count centred on the lines at the right, one or three (board).
+        HStack(alignment: .center, spacing: 8) {
             ForEach(album.query.validRules) { rule in
-                Text(rule.displaySummary(naming: model.sourceNames))
-                    .font(.callout)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(.quaternary, in: Capsule())
+                chip(rule.displaySummary(naming: sourceNames), symbol: symbol(rule.field))
             }
             // A nested group: one chip, its conditions joined by its and/or.
             ForEach(album.query.validGroups) { group in
-                Text(group.displaySummary(naming: model.sourceNames))
-                    .font(.callout)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(.quaternary, in: Capsule())
+                chip(group.displaySummary(naming: sourceNames), symbol: "line.3.horizontal.decrease")
             }
-            Text(model.matchCount == 1
-                 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
-                 : String(localized: "\(model.matchCount.formatted()) photos", comment: "Mac toolbar subtitle"))
-                .font(.callout.weight(.semibold))
+            Text(countLine)
+                .font(.system(size: 13, weight: .semibold))
                 .monospacedDigit()
-                .padding(.vertical, 4)
+                .frame(height: 24)
+                .padding(.leading, 4)
+            // Said, not only hinted on the chips: the conditions can be changed here.
+            Button(String(localized: "Edit…", comment: "Mac smart album header: edit the conditions"), action: edit)
+                .buttonStyle(.link)
+                .font(.system(size: 13))
+                .frame(height: 24)
+                .help(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"))
             Spacer(minLength: 12)
-            if !model.onServerLines.isEmpty || originalCheck != nil {
-                VStack(alignment: .trailing, spacing: 2) {
+            if !onServerLines.isEmpty || originalCheck != nil {
+                VStack(alignment: .trailing, spacing: 1) {
                     // The counts keep to one line; the sentences after them
                     // (a hash mismatch names a device, FS-19.07 §12.4) wrap.
-                    if let first = model.onServerLines.first {
+                    if let first = onServerLines.first {
                         Text(first).lineLimit(1)
                             .accessibilityAddTraits(.updatesFrequently)
                     }
@@ -170,7 +68,7 @@ struct MacSmartAlbumScreen: View {
                         .accessibilityLabel(originalCheck.line.replacingOccurrences(of: " · ", with: ", "))
                         .accessibilityAddTraits(.updatesFrequently)
                     }
-                    ForEach(Array(model.onServerLines.dropFirst().enumerated()), id: \.offset) { _, line in
+                    ForEach(Array(onServerLines.dropFirst().enumerated()), id: \.offset) { _, line in
                         Text(line).multilineTextAlignment(.trailing)
                     }
                 }
@@ -182,6 +80,100 @@ struct MacSmartAlbumScreen: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .overlay(alignment: .bottom) { Divider() }
+        // The album's size: again when its rules or the Library's rows change.
+        .task(id: TotalKey(query: album.query, generation: generation)) {
+            let queries = dependencies.libraryQueries
+            let query = album.query
+            total = try? await queries.count(matching: query)
+        }
+        .task(id: album.query) {
+            let store = SourceStore(database: dependencies.database)
+            sourceNames = await Task.detached {
+                Dictionary(((try? store.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
+            }.value
+        }
+        // The check's progress: again on each of its passes.
+        .task(id: OnServerKey(query: album.query, generation: dependencies.onServerCheck.generation, rows: generation, names: sourceNames)) {
+            onServerLines = await SmartAlbumDetailModel.onServerLines(
+                query: album.query, check: dependencies.onServerCheck, database: dependencies.database,
+                sourceNames: sourceNames, isLimited: dependencies.photoLibrary.authorizationState == .limited)
+            // Only an album with a server condition moves with the check, once per pass batch.
+            let generation = dependencies.onServerCheck.generation
+            if !onServerLines.isEmpty, generation > 0, generation != reloadedGeneration {
+                reloadedGeneration = generation
+                reload()
+            }
+        }
+        // An album on the Original rule asks for fresh answers (FS-06.10 §4)
+        // for as long as it is open — keyed by album, because the sidebar
+        // swaps albums in this same view without a disappear.
+        .task(id: album.id) {
+            guard album.query.usesOriginal else { return }
+            let check = dependencies.originalPresenceCheck
+            check.screenOpened()
+            while !Task.isCancelled { try? await Task.sleep(for: .seconds(3600)) }
+            check.screenClosed()
+        }
+        // Each batch of the original check can move photos in or out (§3).
+        // At most one reload every 3 s: a pass runs ~275 batches.
+        .task(id: album.query.usesOriginal ? dependencies.originalPresenceCheck.generation : 0) {
+            guard album.query.usesOriginal else { return }
+            let wait = 3 - Date().timeIntervalSince(lastOriginalReload)
+            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+            guard !Task.isCancelled else { return }
+            lastOriginalReload = Date()
+            reload()
+        }
+    }
+
+    private struct OnServerKey: Equatable {
+        let query: SmartAlbumQuery
+        let generation: Int
+        /// A delete changes the counts before the next check pass.
+        let rows: Int
+        let names: [String: String]
+    }
+
+    private struct TotalKey: Equatable {
+        let query: SmartAlbumQuery
+        let generation: Int
+    }
+
+    /// "40 photos"; "12 of 40 photos" while a filter or search narrows the grid.
+    private var countLine: String {
+        guard let total else { return shown.map { "\($0.formatted())" } ?? "" }
+        if let shown, shown != total {
+            return String(localized: "\(shown.formatted()) of \(total.formatted()) photos",
+                          comment: "Mac smart album header: photos shown by a filter of the album's")
+        }
+        return total == 1 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
+                          : String(localized: "\(total.formatted()) photos", comment: "Mac toolbar subtitle")
+    }
+
+    /// A condition, read-only (board): a click opens the editor on it.
+    private func chip(_ text: String, symbol: String) -> some View {
+        Button(action: edit) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(text).font(.system(size: 12)).lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 24)
+            .background(MacTheme.fill, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Condition: \(text)", comment: "Mac smart album: a condition chip; the condition"))
+        .help(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"))
+    }
+
+    private func symbol(_ field: RuleField) -> String {
+        switch field {
+        case .alsoOnServer, .source: "externaldrive.connected.to.line.below"
+        case .original: "icloud"
+        default: "line.3.horizontal.decrease"
+        }
     }
 
     /// The original check's line and how far it is, for an album on the
@@ -217,31 +209,5 @@ struct MacSmartAlbumScreen: View {
                 .frame(width: 12, height: 12)
                 .accessibilityHidden(true)
         }
-    }
-
-    /// Delete through the gate (FS-19.07 §9): photos that rely on a server
-    /// are checked there first; Can't Reach asks Delete Anyway or Cancel.
-    private func delete() {
-        guard let model, !selection.isEmpty else { return }
-        let ids = Array(selection)
-        // Folder and server photos have no PHAsset: PhotoKit alone would
-        // drop them and report success (FS-19.04 §2).
-        let roots = dependencies.folderRoots
-        if var request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
-            .request(photoIds: ids, selection: .photos) {
-            request.plan.trashName = MixedDeletionPlan.macTrashName
-            sourceDeletion = request
-            return
-        }
-        deletion.delete(ids, gate: dependencies.photoDeletionGate, perform: { targets in
-            try await model.deleteAssets(ids: Set(targets), checkingServer: false)
-        }, finished: { result in
-            switch result {
-            case .success: selection = []
-            case .failure(let error) where error is CancellationError: break
-            case .failure(let error):
-                if (error as? PHPhotosError)?.code != .userCancelled { deleteError = error.localizedDescription }
-            }
-        })
     }
 }

@@ -43,6 +43,14 @@ Support thành cửa sổ riêng.
   demo không bao giờ gọi Photos: đổi tên / xoá báo "The demo library's albums can't be changed.".
 - Bấm thẻ: album của Photos mở như một chỗ của Library (lưới, chọn, menu như Library; tiêu đề là tên album; hàng Albums ở
   sidebar vẫn sáng; **Back ⌘[** về Albums), smart album → màn smart album, People/Pets → lưới ảnh có mặt người / chó mèo.
+- **Màn smart album** (board `MAC_SmartAlbum`, 2026-11-07, `MacSmartAlbumHeader`): là Library trên luật của album
+  (`LibraryPlace.rules`) nên có đủ toolbar của Library — ◀ ▶ · Grid | List · Filter and Sort · Share · Show Inspector ·
+  **Search Album** — viewer (Return / double-click), menu chuột phải, chọn, xoá qua cổng hỏi server trước (FS-19.07 §9).
+  Tiêu đề toolbar là tên album, dòng phụ "Smart Album" (đang chọn thì "N selected · size"). Dưới toolbar, header: mỗi
+  điều kiện một chip (biểu tượng + chữ, cao 24, nền fill) — **bấm chip mở Edit Smart Album…** — rồi "40 photos"; bên phải
+  dòng tiến độ On Server ("Checking · 40 of 226", câu mismatch xuống dòng) và dòng kiểm originals (vòng tiến độ). Ô ảnh
+  có dấu "on server". Không có header ngày (một dải ảnh như album). Header ẩn khi viewer mở. Không ảnh nào khớp:
+  "No Photos Match". Lượt kiểm On Server / originals xong một đợt thì lưới đọc lại (originals tối đa 3 s một lần).
   Recently Viewed (ảnh đã Quick Look) / Recently Shared (ảnh đã Share) chỉ là ảnh, chưa mở được (chờ Viewer).
 - VoiceOver: mỗi thẻ là một nút "Kyoto Autumn, 8 photos, pinned" / "…, smart album"; Pin/Unpin là action.
 - Hiệu năng: album đọc lại khi album/ảnh đổi (gom 1 s), phần còn lại (On This Day, People/Pets, bìa smart album) đọc riêng;
