@@ -38,6 +38,11 @@ final class SupportModel {
 
     /// Team replies not yet read, for the badge on the Settings row.
     var unreadCount: Int { tickets.reduce(0) { $0 + $1.unread } }
+    /// What was typed and not sent, by thread (replies) and by kind (a new
+    /// report's title and message): a support screen closed by habit — the
+    /// Mac's sheet on Esc — keeps it for this launch.
+    var replyDrafts: [String: String] = [:]
+    var composeDrafts: [SupportTicketKind: (title: String, message: String)] = [:]
 
     init(service: SupportService, metadataStore: MetadataStore) {
         self.service = service

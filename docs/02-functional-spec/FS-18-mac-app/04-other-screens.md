@@ -4,7 +4,7 @@
 `MAC_Collage` · `MAC_Compress` · `MAC_Merge` · `MAC_VideoStudio*` · `MAC_Support` · cập nhật 2026-10-04
 
 **Một câu:** mỗi màn của iOS có một chỗ trên Mac — điểm đến ở sidebar, công cụ tầng D trong cửa sổ, Settings và
-Support thành cửa sổ riêng.
+Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Settings là cửa sổ riêng của hệ thống.
 
 ## 1. Albums và các điểm đến (D19)
 
@@ -258,12 +258,15 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 
 ## 6. Support
 
-- Help › **ShotDex Support…** mở cửa sổ **760×600**: trái Report a Bug… · Request a Feature… · Your Messages (trạng
+- Help › **ShotDex Support…** đưa cửa sổ Library lên trước và mở **sheet 760×600** trên nó (không còn cửa sổ riêng, user
+  2026-11-07); **Done** (Esc) ở góc trên trái sidebar đóng: trái Report a Bug… · Request a Feature… · Your Messages (trạng
   thái, số trả lời chưa đọc) · What People Asked For (bỏ phiếu); phải là hội thoại + ô trả lời + **Send Reply**.
 - Câu riêng tư: "No account and no email. A message carries your words, the app and macOS version, the Mac model and
   roughly how many photos you have — never a photo or a name." Luật: [FS-13](../FS-13-support.md), NF-03 §2.
-- Đã làm (2026-11-07, `MacSupportWindow`, model chung `SupportModel` — nay trong `Tools/mac-membership.shared`):
-  cửa sổ một bản, title bar ẩn, header thread nằm trên cùng. Sidebar 228: **Report a Bug…** / **Request a Feature…**
+- Đã làm (2026-11-07, `MacSupportSheet` — trước là `MacSupportWindow`, model chung `SupportModel` — nay trong
+  `Tools/mac-membership.shared`): sheet trên cửa sổ Library, **Done** góc trên trái, header thread nằm trên cùng; chữ đang gõ
+  (trả lời, báo lỗi) giữ trong model cho lượt chạy này nên Esc không làm mất; trả lời mới chưa đọc hiện số trên Dock
+  (đọc lại mỗi lần ShotDex lên trước). Sidebar 228: **Report a Bug…** / **Request a Feature…**
   (nền `fill` r8, mở sheet soạn) · **Your Messages** (tiêu đề, "In Progress · 2 days ago", huy hiệu số trả lời chưa đọc
   `accentFill`; chọn = nền xám `rowSel`; thread đang mở được đánh dấu đã đọc sau 1,5 s trên màn hình, kể cả khi trả lời
   mới tới lúc nó đang mở) · **What People Asked For** (viên "↑ 412": bấm bỏ phiếu, bấm lại rút; chưa bỏ = nền `fill`, đã

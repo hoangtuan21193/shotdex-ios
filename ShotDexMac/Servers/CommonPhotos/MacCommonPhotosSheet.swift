@@ -211,7 +211,7 @@ private struct MacCommonPhotosSheetContent: View {
                 close()
                 if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosAskMove") { dependencies.commonPhotos.moveAsked = gathered.runId }
                 openWindow(id: MacCommonPhotosRunWindow.id, value: gathered.runId)
-                if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { NotificationCenter.default.post(name: .macShowActivity, object: nil) }
+                if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { MacWindowRequest.showsActivity = true; NotificationCenter.default.post(name: .macShowActivity, object: nil) }
             }
         }
         #endif

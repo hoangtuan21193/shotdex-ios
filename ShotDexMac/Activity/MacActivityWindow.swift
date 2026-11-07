@@ -492,10 +492,10 @@ struct MacActivityToolbar: ViewModifier {
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .macShowActivity)) { _ in
-                guard appearsActive else { return }
-                isPresented = true
-            }
+            // Window › Activity: the window in front takes the request, whenever it becomes so.
+            .onReceive(NotificationCenter.default.publisher(for: .macShowActivity)) { _ in takeRequest() }
+            .onAppear { takeRequest() }
+            .onChange(of: appearsActive) { takeRequest() }
             // A question answered "no": back to the list it was asked from.
             .onChange(of: prompts.reopens) { _, reopens in
                 guard reopens else { return }
@@ -546,6 +546,12 @@ struct MacActivityToolbar: ViewModifier {
         try? CommonPhotosWatchStore(database: dependencies.database).stopGathering(id: row.id)
         dependencies.watchesChanged()
         dependencies.commonPhotos.storeChanged()
+    }
+
+    private func takeRequest() {
+        guard appearsActive, MacWindowRequest.showsActivity else { return }
+        MacWindowRequest.showsActivity = false
+        isPresented = true
     }
 }
 

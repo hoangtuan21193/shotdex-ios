@@ -19,8 +19,7 @@
   },
   {
    "action": "screenshot",
-   "name": "01-support",
-   "window": "ShotDex Support"
+   "name": "01-support"
   },
   {
    "action": "dump",
@@ -163,8 +162,7 @@
   },
   {
    "action": "screenshot",
-   "name": "02-replied",
-   "window": "ShotDex Support"
+   "name": "02-replied"
   },
   {
    "action": "wait",
@@ -193,8 +191,7 @@
   },
   {
    "action": "screenshot",
-   "name": "03-compose",
-   "window": "ShotDex Support"
+   "name": "03-compose"
   },
   {
    "action": "typeText",
@@ -299,8 +296,75 @@
   },
   {
    "action": "screenshot",
-   "name": "04-after",
-   "window": "ShotDex Support"
+   "name": "04-after"
+  },
+  {
+   "action": "click",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Conversation",
+   "type": "staticText"
+  },
+  {
+   "action": "menu",
+   "text": "Help>ShotDex Support…"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Done",
+   "type": "button",
+   "seconds": 4
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "menu",
+   "text": "Help>ShotDex Support…"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "Done",
+   "type": "button",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-reopened"
   }
  ]
 }

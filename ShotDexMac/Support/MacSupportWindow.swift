@@ -1,35 +1,47 @@
 import AppKit
 import SwiftUI
 
-/// Help › ShotDex Support… (board `MAC_Support`, FS-13, FS-18.04 §6): one
-/// 760×600 window — Report a Bug… / Request a Feature…, this install's
-/// threads and the public roadmap on the left, the open thread and its reply
-/// box on the right. No account and no email: the install's App Attest key
-/// is the identity, and a build that cannot attest turns into mail.
-struct MacSupportWindow: View {
-    static let id = "support"
+/// Help › ShotDex Support… (board `MAC_Support`, FS-13, FS-18.04 §6): a
+/// 760×600 sheet on the Library window, not a window of its own (user
+/// 2026-11-07: fewer windows) — Report a Bug… / Request a Feature…, this
+/// install's threads and the public roadmap on the left, the open thread and
+/// its reply box on the right; Done or Esc closes it. No account and no
+/// email: the install's App Attest key is the identity, and a build that
+/// cannot attest turns into mail.
+struct MacSupportSheet: View {
     static let size = CGSize(width: 760, height: 600)
 
     @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.dismiss) private var dismiss
     @State private var selection: String?
     @State private var composing: SupportTicketKind?
 
     private var model: SupportModel { dependencies.support }
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-                .navigationSplitViewColumnWidth(228)
-                .toolbar(removing: .sidebarToggle)
-        } detail: {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                // Where the window's lights were (board): the way out.
+                HStack {
+                    Button(String(localized: "Done", comment: "Mac support: close the sheet")) { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                        .controlSize(.small)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+                sidebar
+            }
+            .frame(width: 228)
+            .background(.regularMaterial)
+            Divider()
             detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationTitle(String(localized: "ShotDex Support", comment: "Mac window: support"))
-        // The thread's own title heads the window (board): no title row.
-        .toolbar(removing: .title)
-        .toolbarBackground(.hidden, for: .windowToolbar)
-        // The hidden title bar's band sits on top of the content: 548 + 52 = the board's 600.
-        .frame(minWidth: 680, idealWidth: Self.size.width, minHeight: 480, idealHeight: Self.size.height - 52)
+        .frame(width: Self.size.width, height: Self.size.height)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "ShotDex Support", comment: "Mac window: support"))
         .tint(MacTheme.accent)
         .task {
             await model.refresh()
@@ -40,10 +52,11 @@ struct MacSupportWindow: View {
             Task { await model.refresh(reportsErrors: false) }
         }
         .sheet(item: $composing) { kind in
-            MacSupportComposeSheet(kind: kind) { title, body, log in
+            MacSupportComposeSheet(kind: kind, model: model) { title, body, log in
                 let before = Set(model.tickets.map(\.id))
                 let sent = await model.submit(kind: kind, title: title, body: body, logs: log)
                 if sent {
+                    model.composeDrafts[kind] = nil
                     selection = model.tickets.first { !before.contains($0.id) }?.id ?? selection
                     return nil
                 }
@@ -217,8 +230,6 @@ struct MacSupportWindow: View {
         } else if let ticket = model.tickets.first(where: { $0.id == selection }) {
             MacSupportThreadView(ticket: ticket, model: model)
                 .id(ticket.id)
-                // Up into the hidden title bar: the thread's title heads the window (board).
-                .ignoresSafeArea(.container, edges: .top)
         } else {
             VStack(spacing: 10) {
                 Text(model.tickets.isEmpty
@@ -362,6 +373,9 @@ struct MacSupportThreadView: View {
     private var replyBox: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField(String(localized: "Add to this message", comment: "Mac support: reply field placeholder"), text: $reply, axis: .vertical)
+                // Kept by the model: the sheet closed by Esc leaves the draft for next time.
+                .onAppear { if reply.isEmpty { reply = model.replyDrafts[ticket.id] ?? "" } }
+                .onChange(of: reply) { _, text in model.replyDrafts[ticket.id] = text.isEmpty ? nil : text }
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .lineLimit(2...5)
@@ -447,6 +461,8 @@ struct MacSupportMailView: View {
 /// and what else is sent.
 struct MacSupportComposeSheet: View {
     let kind: SupportTicketKind
+    /// Keeps the title and message when the sheet is closed unsent.
+    var model: SupportModel? = nil
     /// Nil when the message reached the server, else what went wrong.
     let onSend: (String, String, String?) async -> String?
     @Environment(\.dismiss) private var dismiss
@@ -458,10 +474,15 @@ struct MacSupportComposeSheet: View {
     @State private var showsLog = false
     @State private var isSending = false
 
-    init(kind: SupportTicketKind, onSend: @escaping (String, String, String?) async -> String?) {
+    init(kind: SupportTicketKind, model: SupportModel? = nil, onSend: @escaping (String, String, String?) async -> String?) {
         self.kind = kind
+        self.model = model
         self.onSend = onSend
         _includesLog = State(initialValue: kind == .bug)
+    }
+
+    private func keepDraft() {
+        model?.composeDrafts[kind] = title.isEmpty && message.isEmpty ? nil : (title, message)
     }
 
     var body: some View {
@@ -469,6 +490,15 @@ struct MacSupportComposeSheet: View {
             Text(kind == .bug ? String(localized: "Report a Bug", comment: "Mac support compose title")
                               : String(localized: "Request a Feature", comment: "Mac support compose title"))
                 .font(.system(size: 15, weight: .semibold))
+                // What was typed and left unsent comes back; Esc or Cancel keeps it for this launch.
+                .onAppear {
+                    if title.isEmpty, message.isEmpty, let draft = model?.composeDrafts[kind] {
+                        title = draft.title
+                        message = draft.message
+                    }
+                }
+                .onChange(of: title) { keepDraft() }
+                .onChange(of: message) { keepDraft() }
             TextField(String(localized: "Title", comment: "Mac support compose: title field"), text: $title,
                       prompt: Text(kind == .bug ? "One line: what went wrong" : "One line: what you want to do",
                                    comment: "Mac support compose: title placeholder"))
@@ -522,6 +552,8 @@ struct MacSupportComposeSheet: View {
                 Spacer()
                 // Never locked: a hung send can always be left.
                 Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) { dismiss() }
+                    // A send in flight answers here: closed, its failure would be told to nobody.
+                    .disabled(isSending)
                     .keyboardShortcut(.cancelAction)
                 Button { send() } label: {
                     Text("Send", comment: "Mac support compose: send").frame(minWidth: 56)
@@ -606,5 +638,52 @@ struct MacFilledButtonStyle: ButtonStyle {
             .background(isEnabled ? AnyShapeStyle(MacTheme.accentFill) : AnyShapeStyle(MacTheme.fill), in: Capsule())
             .opacity(configuration.isPressed ? 0.8 : 1)
             .contentShape(Capsule())
+    }
+}
+
+extension Notification.Name {
+    /// Help › ShotDex Support…: the front Library window shows the sheet.
+    static let macShowSupport = Notification.Name("ShotDexMacShowSupport")
+}
+
+/// A menu command for a Library window (Support, Activity) waiting for one
+/// to be in front: set by the menu, taken by the first active window — so
+/// it is not lost when the window has to be opened first.
+@MainActor
+enum MacWindowRequest {
+    static var showsSupport = false
+    static var showsActivity = false
+}
+
+/// The Support sheet on a Library window: Help › ShotDex Support… brings
+/// that window forward and the front one shows it.
+struct MacSupportSheetHost: ViewModifier {
+    @State private var isPresented = false
+    @Environment(\.appearsActive) private var appearsActive
+    @Environment(MacDependencies.self) private var dependencies
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $isPresented) { MacSupportSheet() }
+            // A reply lands while the sheet is shut: the Dock says so (there is
+            // no notification). Read again each time ShotDex comes forward.
+            .task { await dependencies.support.refresh(reportsErrors: false) }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                Task { await dependencies.support.refresh(reportsErrors: false) }
+            }
+            .onChange(of: dependencies.support.unreadCount, initial: true) { _, unread in
+                NSApp.dockTile.badgeLabel = unread > 0 ? unread.formatted() : nil
+            }
+            // Asked from the Help menu: the window in front takes the request,
+            // whenever it becomes so — one opened for it included.
+            .onReceive(NotificationCenter.default.publisher(for: .macShowSupport)) { _ in takeRequest() }
+            .onAppear { takeRequest() }
+            .onChange(of: appearsActive) { takeRequest() }
+    }
+
+    private func takeRequest() {
+        guard appearsActive, MacWindowRequest.showsSupport else { return }
+        MacWindowRequest.showsSupport = false
+        isPresented = true
     }
 }

@@ -87,14 +87,6 @@ struct ShotDexMacApp: App {
                 .environment(dependencies)
         }
         .defaultSize(width: MacCommonPhotosCompareWindow.size.width, height: MacCommonPhotosCompareWindow.size.height)
-        // Help › ShotDex Support… (FS-18.04 §6): one window.
-        Window(String(localized: "ShotDex Support", comment: "Mac window: support"), id: MacSupportWindow.id) {
-            MacSupportWindow()
-                .environment(dependencies)
-        }
-        .defaultSize(width: MacSupportWindow.size.width, height: MacSupportWindow.size.height)
-        .windowStyle(.hiddenTitleBar)
-        .commandsRemoved()
         Settings {
             MacSettingsWindow()
                 .environment(dependencies)
@@ -231,7 +223,11 @@ struct MacSupportCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .help) {
             Button(String(localized: "ShotDex Support…", comment: "Mac menu: Help › ShotDex Support…")) {
-                openWindow(id: MacSupportWindow.id)
+                // A sheet on the Library window (no window of its own): that
+                // window comes forward first, then the front one shows it.
+                MacWindowRequest.showsSupport = true
+                MacMainWindow.bringForward(openWindow)
+                NotificationCenter.default.post(name: .macShowSupport, object: nil)
             }
         }
     }
@@ -246,11 +242,9 @@ struct MacActivityCommands: Commands {
             Button(String(localized: "Activity", comment: "Mac menu: Window › Activity")) {
                 // From a log or Compare window too: the Library window comes forward
                 // first, then its toolbar opens the popover (only the front one answers).
+                MacWindowRequest.showsActivity = true
                 MacMainWindow.bringForward(openWindow)
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(150))
-                    NotificationCenter.default.post(name: .macShowActivity, object: nil)
-                }
+                NotificationCenter.default.post(name: .macShowActivity, object: nil)
             }
             .keyboardShortcut("0", modifiers: [.option, .command])
         }

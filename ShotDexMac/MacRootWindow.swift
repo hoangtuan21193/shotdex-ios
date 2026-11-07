@@ -166,6 +166,7 @@ struct MacRootWindow: View {
         }
         .tint(MacTheme.accent)
         .modifier(MacActivityToolbar())
+        .modifier(MacSupportSheetHost())
         // Get Info answers on every screen of the window, as the old panel did.
         .modifier(MacGetInfoCommand(showsInspector: $showsInspector, pane: $inspectorPane,
                                     selectionCount: photoSelection?.ids.count ?? 0,
@@ -1592,9 +1593,20 @@ struct MacRootWindow: View {
                 .first { $0.id == MacDemoLibrary.originalAlbumId })
         }
         if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") {
-            Task { try? await Task.sleep(for: .seconds(1)); NotificationCenter.default.post(name: .macShowActivity, object: nil) }
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                MacWindowRequest.showsActivity = true
+                NotificationCenter.default.post(name: .macShowActivity, object: nil)
+            }
         }
-        if MacDemoLibrary.section == "support" { openWindow(id: MacSupportWindow.id) }
+        if MacDemoLibrary.section == "support" {
+            // After the window's first frame: its host is listening by then.
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                MacWindowRequest.showsSupport = true
+                NotificationCenter.default.post(name: .macShowSupport, object: nil)
+            }
+        }
         // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
         if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {
             Task { @MainActor in
