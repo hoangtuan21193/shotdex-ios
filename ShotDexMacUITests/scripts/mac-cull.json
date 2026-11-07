@@ -1,0 +1,427 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "cull"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Hide",
+   "type": "button",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-cull"
+  },
+  {
+   "action": "dump",
+   "name": "01-cull"
+  },
+  {
+   "action": "assertExists",
+   "label": "Move 0 Rejected…",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "p"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 1, Picked",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "3"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2, 3 stars",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "x"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2, 3 stars, Rejected",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "1 rejected in this pass",
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-marked"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2, 3 stars",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "0 rejected in this pass",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Undo",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Reject",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2, Rejected",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "4 Stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 3, 4 stars",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Pick",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 3, 4 stars, Picked",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "u"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 4",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "z"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "z"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Show All",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Rejected",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "1 photo",
+   "type": "staticText"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Photo 1, Picked",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-rejected"
+  },
+  {
+   "action": "key",
+   "text": "u"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "No Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "03b-empty"
+  },
+  {
+   "action": "click",
+   "label": "Show All",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Show All",
+   "type": "menuButton"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 2, Rejected",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Grid",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-grid"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Hide",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "g"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Hide",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Hide",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Keyboard shortcuts"
+  },
+  {
+   "action": "menu",
+   "text": "View>Show Shortcut Strip"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Keyboard shortcuts"
+  },
+  {
+   "action": "click",
+   "label": "Photo 10",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Image>Pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 10, Picked",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Delete 1 Rejected…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-move"
+  },
+  {
+   "action": "dump",
+   "name": "05-move"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Loupe",
+   "type": "radioButton"
+  },
+  {
+   "action": "assertExists",
+   "label": "All Photos"
+  },
+  {
+   "action": "menu",
+   "text": "Image>Start Culling Pass"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Loupe",
+   "type": "radioButton"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Loupe",
+   "type": "radioButton"
+  }
+ ]
+}

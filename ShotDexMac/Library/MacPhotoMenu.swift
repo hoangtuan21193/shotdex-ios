@@ -83,7 +83,12 @@ final class MacPhotoMenu: NSObject {
     func showInFinder(_ ids: [String]) {
         Task { showInFinder(await resolved(Facts(), ids: ids)) }
     }
-    func moveToTrash(_ ids: [String]) { trash(ids) }
+    func moveToTrash(_ ids: [String], selection: MixedDeletionPlan.Selection = .photos) {
+        trash(ids, selection: selection)
+    }
+    /// What the last Move to Trash was of: photos, or a culling pass's
+    /// Rejected — the prompt's words follow (`Move 120 rejected photos?`).
+    @ObservationIgnored private(set) var trashSelection: MixedDeletionPlan.Selection = .photos
 
     /// Hide asked for: which commands the photos get is read off the main
     /// actor, then the window asks (`MacPhotoMenuHost`).
@@ -189,7 +194,11 @@ final class MacPhotoMenu: NSObject {
         return true
     }
 
-    private func trash(_ ids: [String]) { trashRequest = ids }
+    /// Set together, so a later plain Move to Trash never keeps a pass's words.
+    private func trash(_ ids: [String], selection: MixedDeletionPlan.Selection = .photos) {
+        trashSelection = selection
+        trashRequest = ids
+    }
     private func newAlbum(_ ids: [String], photosCount: Int) { albumRequest = MacAlbumRequest(ids: ids, photosCount: photosCount) }
 
     struct Album: Sendable, Equatable {

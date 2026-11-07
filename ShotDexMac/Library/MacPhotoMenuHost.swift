@@ -125,7 +125,7 @@ struct MacPhotoMenuHost: ViewModifier {
             .onChange(of: menu.trashRequest) { _, ids in
                 guard let ids else { return }
                 menu.trashRequest = nil
-                delete(ids)
+                delete(ids, selection: menu.trashSelection)
             }
             .task(id: dependencies.photoLibrary.assetChangeToken) { await menu.loadAlbums() }
             .onChange(of: menu.marksGeneration) { selection?.reload() }
@@ -142,7 +142,7 @@ struct MacPhotoMenuHost: ViewModifier {
     /// Folder and server photos have no PHAsset: PhotoKit alone would drop
     /// them and report success (FS-19.04 §2), so their plan is read first —
     /// off the main actor.
-    private func delete(_ ids: [String]) {
+    private func delete(_ ids: [String], selection: MixedDeletionPlan.Selection) {
         // One at a time: a checklist open, confirmed or running blocks a second.
         guard let library, !deletion.isChecking, !isReadingPlan, copiesRequest == nil, confirmedCopies == nil,
               sourceDeletion == nil else { NSSound.beep(); return }
@@ -158,7 +158,7 @@ struct MacPhotoMenuHost: ViewModifier {
                 Result { () -> (DeletionTargetQueries.Request?, [[DeletionTarget]]) in
                     let copies = try queries.allCopies(photoIds: ids)
                     if copies.contains(where: { $0.count > 1 }) { return (nil, copies) }
-                    return (try queries.request(photoIds: ids, selection: .photos), copies)
+                    return (try queries.request(photoIds: ids, selection: selection), copies)
                 }
             }.value
             let request: DeletionTargetQueries.Request?

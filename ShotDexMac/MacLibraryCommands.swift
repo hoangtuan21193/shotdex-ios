@@ -18,6 +18,8 @@ struct MacLibraryTarget {
     var advancedSearch: () -> Void
     var toggleInspector: () -> Void
     var setSort: (SortOption) -> Void
+    /// Image › Start Culling Pass ⌥⌘P (FS-18.02 §7).
+    var startCull: () -> Void
 }
 
 /// Go's way into the front window, whatever it shows (Backup, a server).
@@ -41,6 +43,7 @@ extension FocusedValues {
 struct MacLibraryCommands: Commands {
     @FocusedValue(\.macLibrary) private var library
     @FocusedValue(\.macViewerZoom) private var viewerZoom
+    @FocusedValue(\.macCull) private var cull
 
     var body: some Commands {
         CommandGroup(after: .pasteboard) {
@@ -72,6 +75,13 @@ struct MacLibraryCommands: Commands {
             .disabled(library == nil)
             Divider()
             // The viewer's zoom, as Photos: ⌘0 fits, ⌘9 is one pixel per pixel; off while the grid shows.
+            // The culling pass's key legend: hidden with its Hide, brought back here (FS-18.02 §7).
+            Button(cull?.showsShortcuts.wrappedValue == false ? String(localized: "Show Shortcut Strip", comment: "Mac menu: View › Show Shortcut Strip (culling)")
+                                                               : String(localized: "Hide Shortcut Strip", comment: "Mac menu: View › Hide Shortcut Strip (culling)")) {
+                cull?.showsShortcuts.wrappedValue.toggle()
+            }
+            .disabled(cull == nil)
+            Divider()
             Button(String(localized: "Zoom to Fit", comment: "Mac menu: View › Zoom to Fit (viewer)")) { viewerZoom?.wrappedValue = .fit }
                 .keyboardShortcut("0", modifiers: .command)
                 .disabled(viewerZoom == nil)
@@ -95,6 +105,19 @@ struct MacLibraryCommands: Commands {
 struct MacImageCommands: Commands {
     @FocusedValue(\.macLibrary) private var library
     @FocusedValue(\.macHidden) private var hidden
+    /// A culling pass on screen: the marks and ⌘⌫ act on it (board `MAC_Cull`).
+    @FocusedValue(\.macCull) private var cull
+
+    /// The marks act on the selection, or in a pass on the photo on screen.
+    private var canMark: Bool { cull != nil || library?.hasSelection == true }
+
+    private func mark(_ action: MarkKeyAction) {
+        if let cull { cull.mark(action); return }
+        switch action {
+        case .rate(let stars): library?.rate(stars)
+        case .flag(let flag): library?.flag(flag)
+        }
+    }
 
     var body: some Commands {
         CommandMenu(String(localized: "Image", comment: "Mac menu bar: Image menu")) {
@@ -110,16 +133,20 @@ struct MacImageCommands: Commands {
                 .disabled(library?.hasSelection != true)
             Menu(String(localized: "Rating", comment: "Mac menu: Image › Rating")) {
                 ForEach(0...5, id: \.self) { stars in
-                    Button(PhotoMarkMenuTitles.rating(stars)) { library?.rate(stars) }
+                    Button(PhotoMarkMenuTitles.rating(stars)) { mark(.rate(stars)) }
                 }
             }
-            .disabled(library?.hasSelection != true)
-            Button(MarkCopy.pick) { library?.flag(.pick) }
-                .disabled(library?.hasSelection != true)
-            Button(MarkCopy.reject) { library?.flag(.reject) }
-                .disabled(library?.hasSelection != true)
-            Button(MarkCopy.clearFlag) { library?.flag(nil) }
-                .disabled(library?.hasSelection != true)
+            .disabled(!canMark)
+            Button(MarkCopy.pick) { mark(.flag(.pick)) }
+                .disabled(!canMark)
+            Button(MarkCopy.reject) { mark(.flag(.reject)) }
+                .disabled(!canMark)
+            Button(MarkCopy.clearFlag) { mark(.flag(nil)) }
+                .disabled(!canMark)
+            Divider()
+            Button(String(localized: "Start Culling Pass", comment: "Mac menu: Image › Start Culling Pass")) { library?.startCull() }
+                .keyboardShortcut("p", modifiers: [.option, .command])
+                .disabled(library == nil)
             Divider()
             // ⌘L hides; in Collections › Hidden it unhides (board `MAC_Hidden`).
             if let hidden {
@@ -138,6 +165,9 @@ struct MacImageCommands: Commands {
                 // ⌘⌫ in a text field is its own: delete to the line's start.
                 if let text = NSApp.keyWindow?.firstResponder as? NSTextView {
                     text.deleteToBeginningOfLine(nil)
+                } else if let cull {
+                    // In a pass, ⌘⌫ is Move N Rejected… (board).
+                    cull.moveRejected()
                 } else if library?.hasSelection == true {
                     library?.moveToTrash()
                 } else {

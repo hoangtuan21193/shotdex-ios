@@ -44,6 +44,12 @@ struct MacRootWindow: View {
     @State private var previousRunIds: [String] = []
     /// Back is under way: the page it returns to is not one more to remember.
     @State private var isLeavingRunPage = false
+    /// A culling pass open as the window's page (board `MAC_Cull`, FS-18.02 §7).
+    @State private var cullRequest: MacCullRequest?
+    /// The sidebar as it was before the pass hid it; put back when it closes.
+    @State private var columnsBeforeCull: NavigationSplitViewVisibility?
+    /// The pass being ordered off the main actor: a second ⌥⌘P waits for it.
+    @State private var cullBuild: Task<Void, Never>?
     /// The photo open in the viewer (board `MAC_Viewer`); nil shows the grid.
     @State private var viewerId: String?
     @State private var viewerZoom = MacViewerZoom.fit
@@ -153,8 +159,18 @@ struct MacRootWindow: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
-            // A common-photos run's log: a page over whatever was showing (Back returns).
-            if let commonPhotosRunId {
+            // A culling pass: a page over the place it came from (Back returns to it).
+            if let cullRequest {
+                MacCullPage(request: cullRequest, menu: photoMenu, picture: Self.demoPicture,
+                            asset: { library?.asset(for: $0) },
+                            removal: library?.lastRemoval,
+                            close: { id in
+                                self.cullRequest = nil
+                                // The grid comes back on the photo the pass stopped at.
+                                if let id { photoSelection?.set([id]) }
+                            })
+                    .id(cullRequest.id)
+            } else if let commonPhotosRunId {
                 // Back from an undo run returns to the run it undid; from any other, to where it was opened.
                 MacCommonPhotosRunPage(runId: commonPhotosRunId) {
                     isLeavingRunPage = true
@@ -184,8 +200,13 @@ struct MacRootWindow: View {
         .modifier(MacSupportSheetHost())
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         // The page has the window: a viewer left open under it would keep its toolbar.
+        .onChange(of: cullRequest == nil) { _, closed in
+            guard closed, let before = columnsBeforeCull else { return }
+            columnVisibility = before
+            columnsBeforeCull = nil
+        }
         .onChange(of: commonPhotosRunId) { old, id in
-            if id != nil { viewerId = nil }
+            if id != nil { viewerId = nil; cullRequest = nil }
             // One run replacing another's page: remembered for Back. Left for elsewhere: forgotten.
             if isLeavingRunPage {
                 isLeavingRunPage = false
@@ -207,6 +228,7 @@ struct MacRootWindow: View {
             // and a run's log gives way to it.
             viewerId = nil
             commonPhotosRunId = nil
+            cullRequest = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
         }
@@ -1032,7 +1054,41 @@ struct MacRootWindow: View {
             hide: { photoMenu.requestHide(ids) },
             advancedSearch: { showsAdvancedFilter = true },
             toggleInspector: { showsInspector.toggle() },
-            setSort: { library.sort = $0 })
+            setSort: { library.sort = $0 },
+            startCull: startCull)
+    }
+
+    /// Image › Start Culling Pass ⌥⌘P (FS-18.02 §7): the selected photos when
+    /// there are several, else the place's whole grid; from the viewer, the
+    /// grid from the photo on screen (Cull From Here). Ordered off the main actor.
+    private func startCull() {
+        // One pass at a time: a second ⌥⌘P would drop the open one's undo.
+        guard cullRequest == nil, cullBuild == nil, let library, !library.items.isEmpty else { NSSound.beep(); return }
+        let selected = viewerId == nil ? (photoSelection?.idSet ?? []) : []
+        let rows = library.items
+        // From the viewer, or one photo selected: the whole grid, from that photo (Cull From Here).
+        let startId = viewerId ?? (selected.count == 1 ? selected.first : nil)
+        let title = placeTitle
+        let marks = dependencies.photoMarks
+        let flagged = marks.assetIds(flagged: .pick).union(marks.assetIds(flagged: .reject))
+        let details = tableDetails
+        let place = selection
+        cullBuild = Task {
+            defer { cullBuild = nil }
+            let request = await Task.detached(priority: .userInitiated) {
+                let chosen = selected.count > 1 ? rows.filter { selected.contains($0.assetId) } : rows
+                return MacCullRequest.make(rows: chosen, startId: startId, flagged: flagged, details: details, placeTitle: title)
+            }.value
+            // The window moved on while it was built (another place, another pass): drop it.
+            guard selection == place, cullRequest == nil else { return }
+            // The pass has the window, as the viewer does: no sidebar; the
+            // viewer's own hiding is the pass's to give back.
+            columnsBeforeCull = columnsBeforeCull ?? columnsBeforeViewer ?? columnVisibility
+            columnsBeforeViewer = nil
+            viewerId = nil
+            columnVisibility = .detailOnly
+            cullRequest = request
+        }
     }
 
     private func patchDetails() async {
@@ -1172,6 +1228,14 @@ struct MacRootWindow: View {
             // Typing a search leaves the viewer for the results.
             .onChange(of: searchText) { if viewerId != nil { viewerId = nil } }
             #if DEBUG
+            // `-ShotDexSection cull` (board `MAC_Cull`): a pass over the whole library.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "cull", cullRequest == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    try? await Task.sleep(for: .milliseconds(500))
+                    startCull()
+                }
+            }
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.
             Color.clear.task(id: library.items.count) {
                 if ["viewer", "viewerFullScreen", "viewerCloud"].contains(MacDemoLibrary.section),

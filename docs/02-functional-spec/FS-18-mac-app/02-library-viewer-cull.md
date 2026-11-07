@@ -150,14 +150,34 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
 
 Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-library/12b-culling-pass.md). Mac, tầng D:
 
-- Image › Start Culling Pass ⌥⌘P. Toolbar: View **Loupe · Grid** · nhóm Reject · 1–5 sao · Pick · Show ▾ · Undo ·
-  nút chữ **Move N Rejected…** (tên theo đích, [01b](01b-menus-shortcuts-and-drag.md) §1). Nút này không nổi bật:
-  nút nổi bật không bao giờ là lệnh xoá ([01](01-window-and-navigation.md) §3); 0 Reject thì mờ.
-- Loupe trái, lưới 360 bên phải (ô 108, số khung ≥ 10). Ảnh đang xét: vòng trắng.
-- **Dải phím** ở đáy: P Pick · X Reject · U Clear Flag · Z Zoom · ⌘Z Undo · G Grid · Esc Back, công tắc
-  **Advance After**, nút **Hide**. Ẩn rồi thì lần mở Cull sau vẫn ẩn; View menu bật lại.
+- **Một trang của cửa sổ Library**, không phải cửa sổ riêng (user 2026-11-07: ít cửa sổ). Trang luôn tối, sidebar ẩn
+  như viewer; Back (hoặc Esc) về đúng chỗ đã mở, sidebar trở lại như cũ. Đổi chỗ ở sidebar hay mở một run log thì lượt đóng.
+- **Lối vào:** Image › Start Culling Pass ⌥⌘P. Tập ảnh: các ảnh đang chọn khi chọn từ 2 ảnh; còn lại là cả lưới của chỗ
+  đang xem. Mở từ viewer, hoặc khi chọn đúng 1 ảnh: cả lưới, đứng ở ảnh đó (Cull From Here). Lượt đang mở: ⌥⌘P kêu beep.
+  Back/Esc trả lưới về với ảnh lượt đang đứng được chọn. Không mở viewer thì đứng ở ảnh đầu chưa có cờ
+  theo ngày chụp, cũ trước (FS-01.12b AC-3). Thứ tự và tập ảnh dựng ngoài main thread (lượt có thể 45k ảnh).
+- **Toolbar:** Back · tiêu đề "Culling · ‹chỗ›" + dòng phụ "Photo 37 of 240 · 52 picks · 120 rejected · 68 unflagged" ·
+  View **Loupe · Grid** · nhóm Reject · 1–5 sao · Pick (bấm lại sao/cờ đang có thì bỏ) · **Show ▾** (All · Unflagged · Picks ·
+  Rejected — lưới và ← → chỉ đi qua các ảnh đó) · Undo · nút chữ **Move N Rejected…** (tên theo đích,
+  [01b](01b-menus-shortcuts-and-drag.md) §1). Nút này chữ đỏ trên nền kính, không nổi bật: nút nổi bật không bao giờ là lệnh
+  xoá ([01](01-window-and-navigation.md) §3); 0 Reject thì mờ ("Move 0 Rejected…"). Bấm nó (hoặc ⌘⌫, Image › Move to Trash)
+  chạy đúng luồng xoá của lưới (FS-19.04) với chữ của lượt: "Move 120 rejected photos?".
+- Loupe trái, lưới 360 bên phải: 3 cột ô 108, cách 4, số thứ tự trong lượt góc trên phải, cờ/sao góc dưới trái, ảnh Reject
+  tối đi; ảnh đang xét: vòng trắng 2pt. Đầu lưới "240 photos" (số ảnh Show cho qua) · "Capture Time" (thứ tự cố định, không
+  phải nút); chân lưới "120 rejected in this pass". Bấm một ô: loupe sang ảnh đó; bấm đôi ở chế độ Grid: về Loupe ở ảnh đó.
+  **Grid** (G) cho lưới cả trang, nhiều cột; G hoặc Esc về Loupe.
+- Dưới loupe một dòng: máy · ống · tiêu cự · khẩu · tốc · ISO · ngày · sao · cờ ("Unflagged").
+- **Phím:** ← → ảnh trước/sau (đầu/cuối kêu beep) · 0–5 sao · P Pick · X Reject · U Clear Flag · Z Fit ↔ 100% · G Grid ·
+  Esc Back · ⌘Z Undo. Đặt cờ thì sang ảnh sau khi **Advance After** bật; đặt sao thì đứng lại. Cờ ở ảnh cuối: đứng lại
+  (Mac không có thẻ tóm tắt — số đếm đã ở dòng phụ) và kêu beep. Show lọc mà ảnh vừa đánh dấu không còn qua lọc (Unflagged rồi
+  P): sang ảnh kế tiếp lọt lọc. Không ảnh nào lọt lọc: loupe ghi "No Photos" (Unflagged: "Every Photo Is Flagged" + số đếm) với nút
+  **Show All**. Ảnh chuyển vào Thùng rác rời lượt (đếm, lưới, ← →) và undo của lượt hết. Mỗi lần ghi đi tuần tự sau lần trước, màn không chờ lần ghi.
+- **Undo** (nút, ⌘Z, Edit › Undo) lùi từng dấu trong lượt, về đúng ảnh đã đổi. Đóng trang là hết lượt và hết undo.
+- Image › Rating/Pick/Reject/Clear Flag trong lượt đánh dấu ảnh trên loupe.
+- **Dải phím** ở đáy loupe: các phím trên, công tắc **Advance After** (nhớ giữa các lần mở), nút **Hide**. Ẩn rồi thì lần mở
+  Cull sau vẫn ẩn; View › Show Shortcut Strip bật lại. Cửa sổ hẹp: dải bớt chú thích, giữ công tắc và Hide.
 - Dải phím chỉ có chữ, công tắc và Hide — không lệnh xoá trong 60pt đáy (MAC_STYLE).
-- Dòng đếm "120 rejected in this pass". Xoá tấm Reject: hộp xác nhận nói đích từng phần —
+- Xoá tấm Reject: hộp xác nhận nói đích từng phần —
   "84 go to the Trash, 30 to Recently Deleted. 6 on NAS Home can’t be deleted from ShotDex and will be hidden." (FS-19).
 
 ## 8. Get Info (⌘I)

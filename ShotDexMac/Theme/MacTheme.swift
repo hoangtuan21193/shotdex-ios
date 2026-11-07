@@ -84,6 +84,15 @@ extension MacTheme {
         static let panel = Color(white: 0.055)
         static let hairline = Color.white.opacity(0.09)
         static let secondaryText = Color.white.opacity(0.55)
+        /// `t.label`: text and glyphs at full weight.
+        static let label = Color.white.opacity(0.92)
+        /// `#0F1012`: a bar docked under the picture (Cull's shortcut strip).
+        static let panelSolid = Color(red: 0x0F / 255, green: 0x10 / 255, blue: 0x12 / 255)
+        /// A key drawn in a legend (`⌘Z`): its ground and its edge.
+        static let keycapFill = Color.white.opacity(0.06)
+        static let keycapStroke = Color.white.opacity(0.28)
+        /// Over a Rejected photo's tile: it reads as set aside.
+        static let rejectedShade = Color.black.opacity(0.55)
         /// `#EB9526`.
         static let accent = Color(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255)
     }

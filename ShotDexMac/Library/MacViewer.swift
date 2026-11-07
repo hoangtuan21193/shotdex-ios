@@ -328,28 +328,46 @@ struct MacFilmstripTile: View {
                 }
             }
             .task(id: "\(id)-\(dependencies.cloudDownloads.finished.contains(id))") {
-                #if DEBUG
-                if MacDemoLibrary.cloudFile(for: id) != nil, !dependencies.cloudDownloads.finished.contains(id) { isCloud = true; return }
-                #endif
                 isCloud = false
-                if let picture { image = picture(id); return }
-                guard let found = asset(id) else {
-                    // A folder photo: its file's thumbnail, or the cloud while it is not downloaded.
-                    guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies) else { return }
-                    if file.isPlaceholder { isCloud = true; return }
-                    let url = file.url
-                    image = await Task.detached(priority: .utility) { MacViewerPhoto.read(url, maxPixel: 128) }.value
-                    return
-                }
-                let request = dependencies.photoLibrary.requestThumbnail(for: found, targetSize: CGSize(width: 128, height: 128), allowNetwork: false) { result in
-                    if let cg = result?.cgImage { image = cg }
-                }
-                await withTaskCancellationHandler {
-                    try? await Task.sleep(for: .seconds(30))
-                } onCancel: {
-                    Task { @MainActor in dependencies.photoLibrary.cancelThumbnailRequest(request) }
-                }
+                await MacThumbnail.load(id, side: 64, picture: picture, asset: asset, dependencies: dependencies,
+                                        received: { image = $0 }, inCloud: { isCloud = true })
             }
+    }
+}
+
+/// A small square picture of a photo for a strip or grid tile: Photos'
+/// thumbnail, a folder file's own, or — when the file is only in the cloud —
+/// none (the caller draws a cloud). Holds its request until cancelled.
+enum MacThumbnail {
+    /// Calls `received` with each picture as it comes, `inCloud` when the
+    /// photo's file is only in the cloud.
+    @MainActor
+    static func load(_ id: String, side: CGFloat, picture: ((String) -> CGImage?)?, asset: (String) -> PHAsset?,
+                     dependencies: MacDependencies, received: @escaping (CGImage) -> Void, inCloud: () -> Void) async {
+        #if DEBUG
+        if MacDemoLibrary.cloudFile(for: id) != nil, !dependencies.cloudDownloads.finished.contains(id) { inCloud(); return }
+        #endif
+        if let picture { if let image = picture(id) { received(image) }; return }
+        let pixels = Int(side * 2)
+        guard let found = asset(id) else {
+            // A folder photo: its file's thumbnail, or the cloud while it is not downloaded.
+            guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies) else { return }
+            if file.isPlaceholder { inCloud(); return }
+            let url = file.url
+            if let image = await Task.detached(priority: .utility, operation: { MacViewerPhoto.read(url, maxPixel: pixels) }).value,
+               !Task.isCancelled {
+                received(image)
+            }
+            return
+        }
+        let request = dependencies.photoLibrary.requestThumbnail(for: found, targetSize: CGSize(width: pixels, height: pixels), allowNetwork: false) { result in
+            if let cg = result?.cgImage { received(cg) }
+        }
+        await withTaskCancellationHandler {
+            try? await Task.sleep(for: .seconds(30))
+        } onCancel: {
+            Task { @MainActor in dependencies.photoLibrary.cancelThumbnailRequest(request) }
+        }
     }
 }
 
