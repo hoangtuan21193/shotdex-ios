@@ -36,6 +36,8 @@ struct MacRootWindow: View {
     /// Add Photos Library… came back without access.
     @State private var showsPhotosDenied = false
     @State private var showsInspector = false
+    /// Several photos selected: their summary or the fields they share.
+    @State private var inspectorPane = MacInspectorPane.selection
     /// The photo open in the viewer (board `MAC_Viewer`); nil shows the grid.
     @State private var viewerId: String?
     @State private var viewerZoom = MacViewerZoom.fit
@@ -163,6 +165,10 @@ struct MacRootWindow: View {
             }
         }
         .tint(MacTheme.accent)
+        // Get Info answers on every screen of the window, as the old panel did.
+        .modifier(MacGetInfoCommand(showsInspector: $showsInspector, pane: $inspectorPane,
+                                    selectionCount: photoSelection?.ids.count ?? 0,
+                                    hasPanel: selection.map { isGridPlace($0) || $0 == .hidden } ?? true))
         .onAppear { reloadSources() }
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
         // Back from an album returns where it was opened from (Albums, or the sidebar's last place).
@@ -630,6 +636,11 @@ struct MacRootWindow: View {
     /// An album or a smart album: one run of photos, no day headers.
     private var isCollectionOpen: Bool { isAlbumOpen || isSmartAlbumOpen }
 
+    /// The viewer's inspector keeps the board's 300; the Library's panel is 340.
+    private var inspectorWidth: CGFloat {
+        viewerId != nil ? MacWindowMetrics.inspectorWidth : MacLibraryInspector.width
+    }
+
     /// The "on server" glyph's photos: a smart album's only (board `MAC_SmartAlbum`).
     private var gridOnServer: Set<String> { isSmartAlbumOpen ? onServerPhotoIds : [] }
 
@@ -959,10 +970,10 @@ struct MacRootWindow: View {
                         if let viewerId {
                             MacViewerInspector(photoId: viewerId, marks: tableDetails[viewerId], menu: photoMenu, picture: Self.demoPicture)
                         } else if let photoSelection, let photoMenu {
-                            MacSelectionInspector(selection: photoSelection, menu: photoMenu, picture: Self.demoPicture)
+                            MacLibraryInspector(selection: photoSelection, menu: photoMenu, picture: Self.demoPicture, pane: $inspectorPane)
                         }
                     }
-                    .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
+                    .inspectorColumnWidth(inspectorWidth)
                 }
                 .focusedSceneValue(\.macLibrary, libraryTarget)
     }
@@ -1511,6 +1522,12 @@ struct MacRootWindow: View {
                 }
             }
         }
+        shareAndInspector
+    }
+
+    /// Share and the panel's toggle.
+    @ToolbarContentBuilder
+    private var shareAndInspector: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             // Share the selection's files (Photos versions written out first).
             Menu {

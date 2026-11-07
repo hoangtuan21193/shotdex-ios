@@ -162,7 +162,10 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
 
 ## 8. Get Info (⌘I)
 
-- Panel tiện ích **420×640**, không modal, đi theo ảnh đang chọn; nút thu nhỏ/phóng to tắt.
+- **Panel phải của cửa sổ Library** (inspector), không phải cửa sổ riêng (user 2026-11-07: ít cửa sổ; board
+  `MAC_GetInfoSingle`, `MAC_GetInfo` vẽ lại cùng ngày). Panel rộng **340** cố định (không nhảy khi chọn thêm ảnh; rộng hơn thì mép panel nằm dưới nút Show/Hide Inspector). Một ảnh
+  chọn: panel là Info. Nhiều ảnh: trên đầu panel có **Selection | Info** — Selection là bản tóm tắt (board `MAC_LibrarySelected`),
+  Info là các ô sửa chung; ⌘I mở thẳng Info; màn không có panel (Albums, Backup) ⌘I kêu beep. Panel đi theo ảnh đang chọn; trong viewer, panel là inspector của viewer (§6).
 - Đầu: ảnh nhỏ · tên · "Sony A7 IV · FE 24-70mm F2.8 GM II" · "35 mm · f/2.8 · 1/250 s · ISO 400 · 48.2 MB".
 - Ô sửa: Title · Caption · Keywords (chip) · Rating · Flag (None · Pick · Reject) · Date + Adjust… · Location + Adjust…
   · Creator · Copyright. Lưu khi gõ; ảnh thư mục ghi "Saved as you type to ‹tên›.xmp next to the file."
@@ -174,8 +177,8 @@ Luật đi từng tấm, phím, undo và tóm tắt theo [FS-01.12b](../FS-01-li
 - Ô chữ nhiều ảnh ghi khi gõ xong (Return hoặc rời ô), không giữa chừng; ô "Mixed" xoá trắng bằng nút × "Clear on all N"
   (ô trống của nó nghĩa là giữ nguyên từng ảnh). Title chỉ vào ảnh thư mục. Adjust… tắt (kèm lời) khi lựa chọn có ảnh thư mục.
   Quá 500 ảnh: "Get Info edits up to 500 photos at a time."
-- Panel mở bằng ⌘I (Image › Get Info) hoặc Get Info trên menu chuột phải (chỉ mở, không đóng); không lấy bàn phím tới khi
-  bấm vào một ô (như Info của Photos). Ảnh chỉ có trong Photos: Title tắt (Photos giữ tiêu đề), ghi "Saved as you type to Photos."
+- ⌘I (Image › Get Info) mở panel ở Info, bấm lại thì đóng; Get Info trên menu chuột phải chỉ mở. Nút Show Inspector trên
+  toolbar mở/đóng cùng panel đó. Chỉ cửa sổ đang trước trả lời ⌘I. Bàn phím ở lại với lưới tới khi bấm vào một ô. Ảnh chỉ có trong Photos: Title tắt (Photos giữ tiêu đề), ghi "Saved as you type to Photos."
 - Creator, Copyright: trường của ShotDex cho mọi ảnh (`photo_user_marks`, v62); ảnh file ghi tiếp ra sidecar (`dc:creator`,
   `dc:rights`) và đọc về theo thời điểm như Title/Caption — chỉ từ sidecar: creator/copyright máy ảnh ghi trong file ảnh không vào. Ảnh Photos giữ trong ShotDex (Photos không có trường này).
 - Show All Raw Metadata: bảng Field/Value mọi trường ImageIO đọc được (chỉ đọc đầu file, không giải mã ảnh); ảnh Photos chỉ khi

@@ -129,13 +129,6 @@ struct MacPhotoMenuHost: ViewModifier {
             }
             .task(id: dependencies.photoLibrary.assetChangeToken) { await menu.loadAlbums() }
             .onChange(of: menu.marksGeneration) { selection?.reload() }
-            .onReceive(NotificationCenter.default.publisher(for: .macGetInfo)) { note in
-                // Every library window hears ⌘I: the front one answers.
-                guard let selection, appearsActive else { return }
-                // ⌘I shows and hides; the photo menu's Get Info only shows.
-                MacInfoPanel.toggle(dependencies: dependencies, selection: selection, menu: menu, picture: MacRootWindow.demoPicture,
-                                    onlyShows: note.object as? String == "show")
-            }
             // Nothing on screen (a filter or place with no photos): nothing selected.
             .onChange(of: library?.items.isEmpty == true) { _, isEmpty in if isEmpty { selection?.set([]) } }
     }

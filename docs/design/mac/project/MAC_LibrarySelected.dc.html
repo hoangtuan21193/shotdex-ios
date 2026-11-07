@@ -16,7 +16,7 @@ input{font-family:inherit}
 </helmet>
 <div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
 <!-- CONTENT: photo grid, scrolls under the toolbar -->
-<div style="position:absolute;left:244px;right:300px;top:0;bottom:0;overflow:hidden">
+<div style="position:absolute;left:244px;right:340px;top:0;bottom:0;overflow:hidden">
 <div style="position:absolute;left:16px;right:16px;top:64px;display:flex;flex-direction:column;gap:8px">
 <sc-for list="{{sections}}" as="s" hint-placeholder-count="2">
 <div style="display:flex;flex-direction:column;gap:8px">
@@ -50,9 +50,9 @@ input{font-family:inherit}
 </div>
 </div>
 <!-- Scroll-edge fade under the toolbar -->
-<div style="position:absolute;left:244px;right:300px;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<div style="position:absolute;left:244px;right:340px;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
 <!-- INSPECTOR: multi-selection summary; actions sit in a header row under the summary (nothing actionable in the bottom 60pt) -->
-<aside aria-label="Inspector" style="position:absolute;right:0;top:0;bottom:0;width:300px;background:{{t.content}};border-left:1px solid {{t.sep}};box-sizing:border-box">
+<aside aria-label="Inspector" style="position:absolute;right:0;top:0;bottom:0;width:340px;background:{{t.content}};border-left:1px solid {{t.sep}};box-sizing:border-box">
 <div style="position:absolute;left:16px;right:16px;top:64px;display:flex;flex-direction:column;gap:8px">
 <div style="height:56px;display:flex;align-items:center;gap:12px">
 <div aria-hidden="true" style="position:relative;width:64px;height:52px;flex:none">

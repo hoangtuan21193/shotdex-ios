@@ -101,9 +101,9 @@
   "MAC_GetInfo.dc.html": {
    "x": 4560,
    "y": 1510,
-   "w": 420,
-   "h": 640,
-   "title": "Mac · Get Info nhiều ảnh: 3 Photos, ô khác nhau ghi Mixed, keyword 2/3",
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Get Info nhiều ảnh trong panel phải của Library (360, không cửa sổ riêng): Selection | Info, Info là ô sửa chung — 3 Photos, ô khác nhau ghi Mixed, keyword 2/3",
    "radius": 16
   },
   "MAC_Duplicates.dc.html": {
@@ -469,9 +469,9 @@
   "MAC_GetInfoSingle.dc.html": {
    "x": 15700,
    "y": 1510,
-   "w": 420,
-   "h": 728,
-   "title": "Mac · Get Info một ảnh: tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF + On Server (FS-19.07 §11)",
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Get Info một ảnh trong panel phải của Library (360, không cửa sổ riêng): tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF + On Server (FS-19.07 §11)",
    "radius": 16
   },
   "MAC_SettingsSourcesCache.dc.html": {

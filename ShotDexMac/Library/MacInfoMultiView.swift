@@ -214,8 +214,9 @@ struct MacInfoMultiView: View {
                         .accessibilityLabel(MarkCopy.starsAccessibility(stars))
                     }
                 }
-                if lower != upper { Text(mixed).font(.system(size: 12)).foregroundStyle(.secondary) }
-                Spacer(minLength: 12)
+                // One word on one line: in the 360 inspector the row is tight.
+                if lower != upper { Text(mixed).font(.system(size: 12)).foregroundStyle(.secondary).fixedSize() }
+                Spacer(minLength: 8)
                 MacMixedCheckbox(title: String(localized: "Favorite", comment: "Mac Get Info: favorite"),
                                  count: summary.favorites, total: summary.count) { menu.setFavorite($0, ids: ids) }
                     .fixedSize()

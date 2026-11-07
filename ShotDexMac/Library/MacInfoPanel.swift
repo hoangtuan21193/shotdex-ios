@@ -3,61 +3,78 @@ import AppKit
 import Photos
 import SwiftUI
 
-/// Get Info (board `MAC_GetInfoSingle`, FS-18.02 §8, ⌘I): a 420pt utility
-/// panel, not modal, that follows the photo selected in the library window.
-/// Fields save as they are typed.
-@MainActor
-enum MacInfoPanel {
-    private static var panel: NSPanel?
-    private static var hosting: NSHostingView<AnyView>?
-    private static weak var lastSelection: MacSelectionModel?
+/// What the Library's right panel shows for a selection (FS-18.02 §8, user
+/// 2026-11-07: no Info window). One photo: its Info. Several: the
+/// selection's summary or the fields they share, picked at the top.
+enum MacInspectorPane: Hashable {
+    case selection, info
+}
 
-    /// `selection` and `menu` are the asking window's: the panel follows the
-    /// window it was last called from, and lets go of a closed one.
-    static func toggle(dependencies: MacDependencies, selection: MacSelectionModel, menu: MacPhotoMenu,
-                       picture: ((String) -> CGImage?)?, onlyShows: Bool = false) {
-        if let panel, panel.isVisible, !onlyShows {
-            panel.orderOut(nil)
-            return
-        }
-        let panel = panel ?? make(dependencies: dependencies, selection: selection, menu: menu, picture: picture)
-        let root = AnyView(MacInfoView(selection: selection, menu: menu, picture: picture).environment(dependencies))
-        // The same view while it serves the same window: a field being
-        // edited keeps its text and its pending save.
-        if hosting == nil || lastSelection !== selection {
-            let hosting = NSHostingView(rootView: root)
-            panel.contentView = hosting
-            self.hosting = hosting
-        }
-        lastSelection = selection
-        self.panel = panel
-        // Shown without taking the keyboard: arrows and ⌘A stay with the grid
-        // until a field is clicked (as Photos' Info).
-        panel.orderFront(nil)
-    }
+/// Get Info (⌘I, the photo menu's Get Info): the right panel on Info — no
+/// window of its own. Every library window hears it: the front one
+/// answers. ⌘I hides Info again; the menu's Get Info only shows.
+struct MacGetInfoCommand: ViewModifier {
+    @Binding var showsInspector: Bool
+    @Binding var pane: MacInspectorPane
+    let selectionCount: Int
+    /// The screen has the Library's right panel (not Albums or Backup).
+    let hasPanel: Bool
+    @Environment(\.appearsActive) private var appearsActive
 
-    private static func make(dependencies: MacDependencies, selection: MacSelectionModel, menu: MacPhotoMenu,
-                             picture: ((String) -> CGImage?)?) -> NSPanel {
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 640),
-                            styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
-        panel.title = String(localized: "Info", comment: "Mac Get Info panel title")
-        panel.isFloatingPanel = true
-        panel.becomesKeyOnlyIfNeeded = true
-        panel.hidesOnDeactivate = true
-        panel.isReleasedWhenClosed = false
-        panel.contentMinSize = NSSize(width: 420, height: 360)
-        panel.contentMaxSize = NSSize(width: 420, height: 2000)
-        // No zoom, no minimize: a utility panel (FS-18.02 §8).
-        panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        panel.setFrameAutosaveName("MacInfoPanel")
-        if !panel.setFrameUsingName("MacInfoPanel") { panel.center() }
-        return panel
+    func body(content: Content) -> some View {
+        content.onReceive(NotificationCenter.default.publisher(for: .macGetInfo)) { note in
+            guard appearsActive else { return }
+            // Never silent: a screen without the panel says no.
+            guard hasPanel else { NSSound.beep(); return }
+            let showsInfo = showsInspector && (selectionCount <= 1 || pane == .info)
+            if showsInfo, note.object as? String != "show" {
+                showsInspector = false
+            } else {
+                pane = .info
+                showsInspector = true
+            }
+        }
     }
 }
 
-/// The panel's content: one photo's info and fields, or a word on why there
-/// is none.
+/// The Library's right panel (board `MAC_GetInfoSingle` as the inspector,
+/// `MAC_LibrarySelected`): Get Info ⌘I opens it on Info.
+struct MacLibraryInspector: View {
+    let selection: MacSelectionModel
+    let menu: MacPhotoMenu
+    var picture: ((String) -> CGImage?)?
+    @Binding var pane: MacInspectorPane
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if selection.ids.count > 1 {
+                Picker(String(localized: "Show", comment: "Mac inspector: what the panel shows for several photos"), selection: $pane) {
+                    Text("Selection", comment: "Mac inspector: the selection's summary").tag(MacInspectorPane.selection)
+                    Text("Info", comment: "Mac inspector: the fields the photos share, to change at once").tag(MacInspectorPane.info)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                Divider()
+            }
+            if selection.ids.count == 1 || pane == .info {
+                MacInfoView(selection: selection, menu: menu, picture: picture)
+            } else {
+                MacSelectionInspector(selection: selection, menu: menu, picture: picture)
+            }
+        }
+    }
+
+    /// One width whatever it shows (boards `MAC_GetInfoSingle`,
+    /// `MAC_LibrarySelected`): a panel that changed width as photos are
+    /// ⌘-clicked would move the tile under the pointer. 340, not more: the
+    /// toolbar's Show/Hide Inspector sits at 1058–1099 pt of a 1440 window,
+    /// and a wider panel puts its edge under that button.
+    static let width: CGFloat = 340
+}
+
+/// Info: one photo's facts and fields, or a word on why there is none.
 struct MacInfoView: View {
     let selection: MacSelectionModel
     let menu: MacPhotoMenu
@@ -117,8 +134,8 @@ struct MacInfoView: View {
                 MacInfoMultiView(selection: selection, menu: menu, picture: picture)
             }
         }
-        .frame(minWidth: 420, maxWidth: 420, minHeight: 360)
-        .background(MacTheme.sheet)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MacTheme.content)
         .task(id: "\(photoId ?? "")-\(menu.marksGeneration)") { await load() }
         // Typing in one photo and moving to the next saves the first at once,
         // a keyword not yet returned included.
@@ -126,6 +143,13 @@ struct MacInfoView: View {
             if let old { commitKeyword(for: old) }
             flushSave()
             fileExif = []
+        }
+        // In the inspector, Info is removed — panel hidden, viewer opened,
+        // several photos on Selection — rather than closed: what was typed is
+        // saved then, a keyword not yet returned included.
+        .onDisappear {
+            if let loadedId { commitKeyword(for: loadedId) }
+            flushSave()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in flushSave() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { _ in flushSave() }
@@ -172,7 +196,8 @@ struct MacInfoView: View {
     private func content(_ id: String, _ info: PhotoInfoQueries.Info) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                header(id, info).padding(16)
+                // 12 above and below the header (board `MAC_GetInfoSingle`).
+                header(id, info).padding(.horizontal, 16).padding(.vertical, 12)
                 Divider()
                 fields(id, info).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 12)
                 Divider()
@@ -237,7 +262,8 @@ struct MacInfoView: View {
             MacInfoRow {
                 label(String(localized: "Caption", comment: "Mac Get Info: field"))
                 TextField("", text: $captionText, axis: .vertical)
-                    .lineLimit(2...5)
+                    // Three lines before it scrolls (board: a 60pt box).
+                    .lineLimit(3...5)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: .infinity)
                     .disabled(!canWriteCaption)

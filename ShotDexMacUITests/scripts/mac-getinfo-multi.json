@@ -70,8 +70,7 @@
   },
   {
    "action": "screenshot",
-   "name": "01-multi",
-   "window": "Info"
+   "name": "01-multi"
   },
   {
    "action": "dump",
@@ -89,7 +88,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
   },
   {
    "action": "typeText",
@@ -99,7 +98,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2.5
+   "seconds": 4
   },
   {
    "action": "assertExists",
@@ -113,7 +112,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
   },
   {
    "action": "scroll",
@@ -148,12 +147,11 @@
   },
   {
    "action": "wait",
-   "seconds": 3
+   "seconds": 4
   },
   {
    "action": "screenshot",
-   "name": "02-multi-edited",
-   "window": "Info"
+   "name": "02-multi-edited"
   },
   {
    "action": "click",
@@ -178,8 +176,7 @@
   },
   {
    "action": "screenshot",
-   "name": "03-one-of-them",
-   "window": "Info"
+   "name": "03-one-of-them"
   },
   {
    "action": "key",

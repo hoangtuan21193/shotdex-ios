@@ -49,8 +49,22 @@
    "seconds": 1
   },
   {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No Selection",
+   "seconds": 3
+  },
+  {
    "action": "click",
-   "x": 0.25,
+   "x": 0.3,
    "y": 0.2,
    "window": "All Photos"
   },
@@ -60,7 +74,7 @@
   },
   {
    "action": "rightClick",
-   "x": 0.25,
+   "x": 0.3,
    "y": 0.2,
    "window": "All Photos"
   },
@@ -108,7 +122,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
   },
   {
    "action": "typeText",
@@ -118,7 +132,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2.5
+   "seconds": 4
   },
   {
    "action": "assertExists",
@@ -132,7 +146,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
   },
   {
    "action": "click",
@@ -141,7 +155,45 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "x": 0.3,
+   "y": 0.2,
+   "window": "All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Caption",
+   "type": "textField",
+   "text": ""
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Caption",
+   "type": "textField",
+   "text": "Deer crossing the lawn"
   },
   {
    "action": "screenshot",
@@ -158,7 +210,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2
+   "seconds": 4
   },
   {
    "action": "assertMissing",
@@ -173,7 +225,7 @@
   },
   {
    "action": "wait",
-   "seconds": 1
+   "seconds": 4
   },
   {
    "action": "typeText",
@@ -182,8 +234,37 @@
    "text": "© 2026 Linh Pham"
   },
   {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
    "action": "wait",
    "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Copyright",
+   "type": "textField"
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Copyright",
+   "type": "textField",
+   "text": "© 2026 Linh Pham"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
   },
   {
    "action": "click",
@@ -201,8 +282,7 @@
   },
   {
    "action": "screenshot",
-   "name": "02b-raw",
-   "window": "Info"
+   "name": "02b-raw"
   },
   {
    "action": "click",
@@ -234,8 +314,7 @@
   },
   {
    "action": "screenshot",
-   "name": "04-adjust-date",
-   "window": "Info"
+   "name": "04-adjust-date"
   },
   {
    "action": "click",
@@ -271,8 +350,7 @@
   },
   {
    "action": "screenshot",
-   "name": "05-adjust-location",
-   "window": "Info"
+   "name": "05-adjust-location"
   },
   {
    "action": "assertEnabled",
@@ -286,7 +364,7 @@
   },
   {
    "action": "wait",
-   "seconds": 2.5
+   "seconds": 4
   },
   {
    "action": "assertMissing",
@@ -296,7 +374,7 @@
   },
   {
    "action": "click",
-   "x": 0.33,
+   "x": 0.38,
    "y": 0.2,
    "window": "All Photos"
   },
@@ -306,7 +384,7 @@
   },
   {
    "action": "click",
-   "x": 0.25,
+   "x": 0.3,
    "y": 0.2,
    "window": "All Photos"
   },
@@ -342,8 +420,7 @@
   },
   {
    "action": "screenshot",
-   "name": "03-two",
-   "window": "Info"
+   "name": "03-two"
   },
   {
    "action": "key",
