@@ -38,6 +38,10 @@ struct MacPhotoGrid: NSViewRepresentable {
     var contextMenu: (([String]) -> NSMenu?)? = nil
     /// Favorite, stars and flag keys on the selection (`MacPhotoMenu.markKey`).
     var markKey: ((NSEvent) -> Bool)? = nil
+    /// Bumped when the grid should take the keyboard back (the viewer closed).
+    var focusGeneration = 0
+    /// A double-click on a photo: the viewer (board `MAC_Viewer`).
+    var onOpen: (() -> Void)? = nil
     /// Favorite, stars and flag per photo, drawn bottom-left on the tile
     /// (board `MAC_LibrarySelected`); a new generation redraws the tiles on screen.
     var marks: [String: LibraryTableQueries.Details] = [:]
@@ -97,6 +101,13 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.onSelection = onSelection
         coordinator.contextMenu = contextMenu
         (scroll.documentView as? MacGridCollectionView)?.markKey = markKey
+        (scroll.documentView as? MacGridCollectionView)?.onOpen = onOpen
+        if context.coordinator.focusGeneration != focusGeneration {
+            context.coordinator.focusGeneration = focusGeneration
+            // Back from the viewer: the photo it ended on is selected and in view.
+            context.coordinator.reveal(initialSelection)
+            if let view = scroll.documentView { DispatchQueue.main.async { view.window?.makeFirstResponder(view) } }
+        }
         coordinator.marks(marks, generation: marksGeneration)
         coordinator.isOldestFirst = yearHeaders != nil
         if coordinator.columns != columns {
@@ -123,6 +134,7 @@ struct MacPhotoGrid: NSViewRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, NSCollectionViewDataSource, NSCollectionViewDelegateFlowLayout {
+        var focusGeneration = 0
         weak var collection: NSCollectionView?
         var photoLibrary: PhotoLibraryService?
         var asset: (String) -> PHAsset? = { _ in nil }
@@ -327,6 +339,16 @@ struct MacPhotoGrid: NSViewRepresentable {
 
         var contextMenu: (([String]) -> NSMenu?)?
 
+        /// Selects these photos and scrolls the first into view.
+        func reveal(_ ids: Set<String>) {
+            guard let collection, !ids.isEmpty, ids != selectedSet || collection.selectionIndexPaths.isEmpty else { return }
+            let paths = indexPaths(of: ids)
+            guard !paths.isEmpty else { return }
+            collection.selectionIndexPaths = paths
+            selectedSet = ids
+            if let first = paths.min() { collection.scrollToItems(at: [first], scrollPosition: .nearestHorizontalEdge) }
+        }
+
         private func indexPaths(of ids: Set<String>) -> Set<IndexPath> {
             guard !ids.isEmpty else { return [] }
             var paths = Set<IndexPath>()
@@ -391,8 +413,16 @@ final class MacGridCollectionView: NSCollectionView {
     /// so the same letters typed in search stay letters.
     var markKey: ((NSEvent) -> Bool)?
 
+    var onOpen: (() -> Void)?
+
     override func keyDown(with event: NSEvent) {
         if markKey?(event) != true { super.keyDown(with: event) }
+    }
+
+    /// The second click of a double-click on a tile opens it; the first selected it.
+    override func mouseDown(with event: NSEvent) {
+        super.mouseDown(with: event)
+        if event.clickCount == 2, indexPathForItem(at: convert(event.locationInWindow, from: nil)) != nil { onOpen?() }
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {

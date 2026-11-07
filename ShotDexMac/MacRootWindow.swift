@@ -36,6 +36,29 @@ struct MacRootWindow: View {
     /// Add Photos Library… came back without access.
     @State private var showsPhotosDenied = false
     @State private var showsInspector = false
+    /// The photo open in the viewer (board `MAC_Viewer`); nil shows the grid.
+    @State private var viewerId: String?
+    @State private var viewerZoom = MacViewerZoom.fit
+    /// Bumped as the viewer closes: the grid or list takes the keyboard back.
+    @State private var gridFocusGeneration = 0
+    @State private var viewerOrderCache: [String] = []
+    /// Each id's place in `viewerOrderCache` and its row: built with it, so
+    /// the title, "12 of 226" and ← → never search 55k ids on the main actor.
+    @State private var viewerPositions: [String: Int] = [:]
+    /// The selection the viewer opened on: given back on close if the viewer
+    /// never left that photo (a multi-selection is not lost to one look).
+    @State private var selectionBeforeViewer: Set<String> = []
+    @State private var viewerOpenedOn: String?
+    /// The rows' generation when the viewer opened: the hidden grid ignores
+    /// index-run reloads while it is covered, and catches up on close.
+    @State private var frozenRowsGeneration: Int?
+    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
+    /// The sidebar as it was before the viewer hid it (MAC_STYLE: the viewer
+    /// has the window to itself); put back on close.
+    @State private var columnsBeforeViewer: NavigationSplitViewVisibility?
+    #if DEBUG
+    @State private var hasOpenedDemoViewer = false
+    #endif
     /// On This Day's day (FS-06.07 §4): only its month and day are matched.
     @State private var onThisDayDate = MacOnThisDayDatePicker.day(of: Date())
     @State private var showsDatePicker = false
@@ -109,7 +132,7 @@ struct MacRootWindow: View {
     }
 
     private var root: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
             if selection == .backup {
@@ -136,9 +159,13 @@ struct MacRootWindow: View {
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
         // Back from an album returns where it was opened from (Albums, or the sidebar's last place).
         .onChange(of: selection) { old, new in
+            // Another place: the viewer belongs to the one it was opened in.
+            viewerId = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
         }
+        // A search that leaves nothing: the viewer has no grid to go back over.
+        .onChange(of: library?.items.isEmpty ?? true) { _, isEmpty in if isEmpty { viewerId = nil } }
         // Remove from Album: the open album reads its photos again.
         .onReceive(NotificationCenter.default.publisher(for: .macAlbumChanged)) { _ in
             if isAlbumOpen { library?.place = place(for: selection) }
@@ -538,9 +565,29 @@ struct MacRootWindow: View {
 
     /// The window title: the row's name — a source's own name, not "Source".
     private var placeTitle: String {
+        if let viewerItem { return viewerItem.originalFilename ?? String(localized: "Photo", comment: "Mac viewer: a photo with no file name") }
         if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
         if case .album(let id) = selection { return albumTitle(id) }
         return selection?.title ?? "ShotDex"
+    }
+
+    /// The grid's order: newest on top, oldest first in On This Day. Built
+    /// off the main actor when the rows change, never per frame.
+    private var viewerOrder: [String] { viewerOrderCache }
+
+    private var viewerItem: LibraryGridItem? {
+        guard let library, let position = viewerId.flatMap({ viewerPositions[$0] }) else { return nil }
+        let flat = selection == .onThisDay ? position : library.items.count - 1 - position
+        return library.items.indices.contains(flat) ? library.items[flat] : nil
+    }
+
+    /// Return, ⌘↓ or a double-click on a photo: the viewer, on the first
+    /// selected in the grid's order (the selection itself is a set).
+    private func openViewer() {
+        guard let selected = photoSelection?.idSet, !selected.isEmpty else { return }
+        selectionBeforeViewer = selected
+        viewerId = selected.min { (viewerPositions[$0] ?? .max) < (viewerPositions[$1] ?? .max) }
+        viewerOpenedOn = viewerId
     }
 
     private var isAlbumOpen: Bool {
@@ -841,7 +888,9 @@ struct MacRootWindow: View {
                 .onChange(of: library?.sourceScope == nil) { _, isNil in if isNil { searchScope = .all } }
                 .inspector(isPresented: $showsInspector) {
                     Group {
-                        if let photoSelection, let photoMenu {
+                        if let viewerId {
+                            MacViewerInspector(photoId: viewerId, marks: tableDetails[viewerId], menu: photoMenu)
+                        } else if let photoSelection, let photoMenu {
                             MacSelectionInspector(selection: photoSelection, menu: photoMenu, picture: Self.demoPicture)
                         }
                     }
@@ -894,7 +943,16 @@ struct MacRootWindow: View {
     private var markKey: ((NSEvent) -> Bool)? {
         guard let photoMenu else { return nil }
         let selection = photoSelection
-        return { photoMenu.markKey($0, ids: selection?.ids ?? []) }
+        let open = openViewer
+        return { event in
+            // Return or ⌘↓ opens the selected photo (01b §3).
+            let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            if (event.keyCode == 36 && modifiers.isEmpty) || (event.keyCode == 125 && modifiers == .command) {
+                open()
+                return true
+            }
+            return photoMenu.markKey(event, ids: selection?.ids ?? [])
+        }
     }
 
     private var photoMenuBuilder: (([String]) -> NSMenu?)? {
@@ -912,15 +970,16 @@ struct MacRootWindow: View {
             MacEmptyLibrary(addPhotosLibrary: addPhotosLibrary, addFolder: { addFolderFromSidebar() },
                             connectToServer: { serverForm = MacServerFormRequest() }, addFolders: { addFolders($0) })
         } else if let library, !library.items.isEmpty {
+          ZStack {
             Group {
                 if viewMode == .list, selection != .onThisDay {
-                    MacPhotoTable(items: library.items, generation: library.rowsGeneration, details: tableDetails,
+                    MacPhotoTable(items: library.items, generation: frozenRowsGeneration ?? library.rowsGeneration, details: tableDetails,
                                   detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
                                   assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                                   assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
                                   sort: library.sort, setSort: { library.sort = $0 },
                                   onSelection: { photoSelection?.set($0) }, contextMenu: photoMenuBuilder,
-                                  markKey: markKey,
+                                  markKey: markKey, focusGeneration: gridFocusGeneration, onOpen: openViewer,
                                   initialSelection: photoSelection?.idSet ?? [])
                 } else {
                     // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
@@ -933,12 +992,92 @@ struct MacRootWindow: View {
                                  columns: isAlbumOpen ? MacGridMetrics.albumColumns : MacGridMetrics.columns,
                                  offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
                                  initialSelection: photoSelection?.idSet ?? [],
-                                 contextMenu: photoMenuBuilder, markKey: markKey, marks: tableDetails, marksGeneration: tableDetailsGeneration,
-                                 generation: library.rowsGeneration,
+                                 contextMenu: photoMenuBuilder, markKey: markKey, focusGeneration: gridFocusGeneration, onOpen: openViewer, marks: tableDetails, marksGeneration: tableDetailsGeneration,
+                                 generation: frozenRowsGeneration ?? library.rowsGeneration,
                                  assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                                  assetGeneration: library.contentRefreshGeneration)
                 }
             }
+            // The grid stays under the viewer: closing it lands where the grid was.
+            .opacity(viewerId == nil ? 1 : 0)
+            .allowsHitTesting(viewerId == nil)
+            .accessibilityHidden(viewerId != nil)
+            .onChange(of: viewerId == nil) { _, closed in
+                if closed {
+                    if let opened = viewerOpenedOn, photoSelection?.idSet == [opened], selectionBeforeViewer.contains(opened) {
+                        photoSelection?.set(selectionBeforeViewer)
+                    }
+                    selectionBeforeViewer = []
+                    viewerOpenedOn = nil
+                    frozenRowsGeneration = nil
+                    gridFocusGeneration += 1
+                    if let before = columnsBeforeViewer { columnVisibility = before }
+                    columnsBeforeViewer = nil
+                } else {
+                    columnsBeforeViewer = columnVisibility
+                    columnVisibility = .detailOnly
+                    frozenRowsGeneration = library.rowsGeneration
+                }
+            }
+            // Only while a photo is open, or about to be (the grid has a selection): no 55k
+            // build per index-run bump for a viewer nobody opened.
+            .task(id: "\(library.rowsGeneration)-\(selection == .onThisDay)-\(viewerId != nil || !(photoSelection?.idSet.isEmpty ?? true))") {
+                guard viewerId != nil || !(photoSelection?.idSet.isEmpty ?? true) else {
+                    if viewerId == nil, !viewerOrderCache.isEmpty { (viewerOrderCache, viewerPositions) = ([], [:]) }
+                    return
+                }
+                let items = library.items, oldestFirst = selection == .onThisDay
+                let work = Task.detached(priority: .userInitiated) { () -> ([String], [String: Int])? in
+                    let ids = items.map(\.assetId)
+                    guard !Task.isCancelled else { return nil }
+                    let order = oldestFirst ? ids : Array(ids.reversed())
+                    let positions = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+                    return Task.isCancelled ? nil : (order, positions)
+                }
+                guard let built = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() }),
+                      !Task.isCancelled else { return }
+                let oldPosition = viewerId.flatMap { viewerPositions[$0] }
+                let old = (viewerOrderCache, viewerPositions)
+                (viewerOrderCache, viewerPositions) = built
+                // The old 55k entries go off the main actor.
+                Task.detached(priority: .utility) { _ = old }
+                // The open photo left the place (rejected under a filter, deleted):
+                // the pass goes on with the photo now in its place, as Lightroom does.
+                if let id = viewerId, built.1[id] == nil {
+                    viewerId = built.0.isEmpty ? nil : built.0[min(oldPosition ?? 0, built.0.count - 1)]
+                }
+            }
+            // The photo on screen is the selection: Share, ⌘I and the menus act on it,
+            // and Return after closing opens it again.
+            .onChange(of: viewerId) { _, id in
+                // Still on the photo it opened on: the multi-selection stands.
+                if let id, !(id == viewerOpenedOn && selectionBeforeViewer.contains(id)) { photoSelection?.set([id]) }
+            }
+            // Typing a search leaves the viewer for the results.
+            .onChange(of: searchText) { if viewerId != nil { viewerId = nil } }
+            #if DEBUG
+            // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "viewer", viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    showsInspector = true
+                    // The 12th newest, as the board.
+                    viewerId = library.items.reversed().dropFirst(11).first?.assetId ?? library.items.last?.assetId
+                }
+            }
+            #endif
+            if viewerId != nil {
+                MacViewerView(photoId: $viewerId, ids: viewerOrder, positions: viewerPositions, zoom: viewerZoom, menu: photoMenu,
+                              marks: viewerId.flatMap { tableDetails[$0] },
+                              picture: Self.demoPicture, asset: { library.asset(for: $0) },
+                              // The filmstrip's tiles from the grid's cache, never a fetch per tile.
+                              cachedAsset: { id in
+                                  guard let position = viewerPositions[id] else { return nil }
+                                  let flat = selection == .onThisDay ? position : library.items.count - 1 - position
+                                  return library.asset(atFlatIndex: flat)
+                              })
+            }
+          }
             // Camera, lens, marks, source (list columns and tile marks): one
             // read of the index, off the main actor — again when the set of
             // photos or a mark changes, not on a sort. An index run changes
@@ -1036,6 +1175,13 @@ struct MacRootWindow: View {
     /// "54,027 photos · 1,204 videos", or "212 of 55,231 photos" while a
     /// filter is on (FS-18.02 §5).
     private var subtitle: String {
+        // "Sunday, September 27, 2026 at 5:42 PM · 12 of 112" (board `MAC_Viewer`).
+        if let viewerId, let viewerItem {
+            let position = (viewerPositions[viewerId] ?? 0) + 1
+            let date = viewerItem.creationDateValue.map { $0.formatted(date: .complete, time: .shortened) }
+            return [date, String(localized: "\(position) of \(viewerOrderCache.count)", comment: "Mac viewer: the photo's place in the grid")]
+                .compactMap { $0 }.joined(separator: " · ")
+        }
         if isLibraryEmpty { return String(localized: "No photos yet", comment: "Mac toolbar subtitle: no source added yet") }
         guard let library else { return "" }
         // "6 selected · 214.8 MB" (board `MAC_LibrarySelected`); the size
@@ -1131,6 +1277,70 @@ struct MacRootWindow: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        if viewerId != nil {
+            viewerToolbar
+        } else {
+            libraryToolbar
+        }
+    }
+
+    /// The viewer's toolbar (board `MAC_Viewer`): back to the grid, then
+    /// Fit ▾ · Favorite · Rotate · Share · inspector · Edit.
+    @ToolbarContentBuilder
+    private var viewerToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            Button { viewerId = nil } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
+                .keyboardShortcut("[", modifiers: .command)
+                .help(String(localized: "Back to \(selection?.title ?? "Library") (⌘[ or Esc)", comment: "Mac viewer toolbar: Back tooltip"))
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            // "Fit ▾" hugging its word (board), in the same capsule as the photo's actions.
+            Menu {
+                Picker(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"), selection: $viewerZoom) {
+                    ForEach(MacViewerZoom.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                Text(viewerZoom.title)
+            }
+            .fixedSize()
+            .accessibilityLabel(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"))
+            .help(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"))
+            Button { if let viewerId { photoMenu?.toggleFavorite([viewerId]) } } label: {
+                let isFavorite = viewerId.flatMap { tableDetails[$0]?.isFavorite } ?? false
+                Label(isFavorite ? String(localized: "Unfavorite", comment: "Mac viewer toolbar") : String(localized: "Favorite", comment: "Mac viewer toolbar"),
+                      systemImage: isFavorite ? "heart.fill" : "heart")
+            }
+            .help(String(localized: "Favorite (.)", comment: "Mac viewer toolbar: Favorite tooltip"))
+            // Rotate comes with the Mac editor; a dead icon would weaken the live ones beside it.
+            Menu {
+                ForEach(MacPhotoMenu.shareServices, id: \.title) { service in
+                    Button(service.menuItemTitle) { if let viewerId { photoMenu?.share([viewerId], with: service) } }
+                }
+            } label: {
+                Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up")
+            }
+            .menuIndicator(.hidden)
+            .help(String(localized: "Share", comment: "Mac toolbar"))
+            Button { showsInspector.toggle() } label: {
+                Label(showsInspector ? String(localized: "Hide Inspector", comment: "Mac toolbar")
+                                     : String(localized: "Show Inspector", comment: "Mac toolbar"),
+                      systemImage: "sidebar.right")
+            }
+        }
+        // Edit on its own at the right edge (board): navigation, not a command.
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { } label: {
+                Label(String(localized: "Edit", comment: "Mac viewer toolbar: open the editor"), systemImage: "slider.horizontal.3")
+                    .labelStyle(.titleAndIcon)
+            }
+            .disabled(true)
+            .help(String(localized: "The Mac editor comes in a later version", comment: "Mac viewer toolbar: Edit is not built yet"))
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var libraryToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
             // Back from a place opened in Albums returns to Albums; a full history comes later.
             Button { selection = backTarget ?? .albums } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }

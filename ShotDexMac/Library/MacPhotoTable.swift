@@ -29,6 +29,10 @@ struct MacPhotoTable: NSViewRepresentable {
     var contextMenu: (([String]) -> NSMenu?)? = nil
     /// Favorite, stars and flag keys on the selection (`MacPhotoMenu.markKey`).
     var markKey: ((NSEvent) -> Bool)? = nil
+    /// Bumped when the list should take the keyboard back (the viewer closed).
+    var focusGeneration = 0
+    /// A double-click on a row: the viewer (board `MAC_Viewer`).
+    var onOpen: (() -> Void)? = nil
     /// Selected when the list appears (the grid's selection, after ⌘2).
     var initialSelection: Set<String> = []
 
@@ -96,12 +100,20 @@ struct MacPhotoTable: NSViewRepresentable {
         coordinator.onSelection = onSelection
         coordinator.contextMenu = contextMenu
         (scroll.documentView as? MacLibraryTableView)?.markKey = markKey
+        (scroll.documentView as? MacLibraryTableView)?.onOpen = onOpen
+        if context.coordinator.focusGeneration != focusGeneration {
+            context.coordinator.focusGeneration = focusGeneration
+            // Back from the viewer: the photo it ended on is selected and in view.
+            context.coordinator.reveal(initialSelection)
+            if let view = scroll.documentView { DispatchQueue.main.async { view.window?.makeFirstResponder(view) } }
+        }
         coordinator.update(items, generation: generation, details: details, detailsGeneration: detailsGeneration, sort: sort)
         coordinator.assetsResolved(assetGeneration)
     }
 
     @MainActor
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        var focusGeneration = 0
         weak var table: NSTableView?
         var photoLibrary: PhotoLibraryService?
         var assetAt: (Int) -> PHAsset? = { _ in nil }
@@ -304,6 +316,13 @@ struct MacPhotoTable: NSViewRepresentable {
         private func selectedIds() -> Set<String> {
             guard let table else { return [] }
             return Set(table.selectedRowIndexes.compactMap { $0 < rows.count ? rows[$0].assetId : nil })
+        }
+
+        /// Selects these photos and scrolls the first into view.
+        func reveal(_ ids: Set<String>) {
+            guard let table, !ids.isEmpty, ids != selectedIds() else { return }
+            restoreSelection(ids)
+            if let first = table.selectedRowIndexes.first { table.scrollRowToVisible(first) }
         }
 
         private func restoreSelection(_ ids: Set<String>) {
@@ -713,9 +732,16 @@ final class MacLibraryTableView: NSTableView {
     var contextMenu: ((Int) -> NSMenu?)?
     /// The mark keys, as on the grid (`MacGridCollectionView.markKey`).
     var markKey: ((NSEvent) -> Bool)?
+    var onOpen: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
         if markKey?(event) != true { super.keyDown(with: event) }
+    }
+
+    /// The second click of a double-click on a row opens it.
+    override func mouseDown(with event: NSEvent) {
+        super.mouseDown(with: event)
+        if event.clickCount == 2, row(at: convert(event.locationInWindow, from: nil)) >= 0 { onOpen?() }
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {

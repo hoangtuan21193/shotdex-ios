@@ -1,0 +1,293 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-viewer"
+  },
+  {
+   "action": "dump",
+   "name": "01-viewer"
+  },
+  {
+   "action": "assertExists",
+   "label": "Camera and Lens",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Filmstrip"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "4 stars",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Pick",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-marked"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "None",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "3"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "."
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Unfavorite",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Unfavorite",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Favorite",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Zoom",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Actual Size",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-actual"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Zoom",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Fit",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Rating and Flag",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating and Flag",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Share",
+   "type": "menuButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Photo 14 of 226",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo 14 of 226",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Rating and Flag",
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-grid"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "waitFor",
+   "label": "Camera and Lens",
+   "type": "staticText",
+   "seconds": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Camera and Lens",
+   "type": "staticText"
+  }
+ ]
+}

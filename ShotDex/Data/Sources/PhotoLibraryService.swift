@@ -411,11 +411,15 @@ final class PhotoLibraryService: NSObject {
                 // small local proxy of an Optimize-Storage asset as the "final"
                 // for this width kept that tile soft for the life of the cache,
                 // since a hit skips the request entirely.
-                if let image, isSharp {
+                // Grid-sized only: a viewer's screen- or full-size picture
+                // (PHImageManagerMaximumSize is −1×−1) would flush every
+                // tile out of the 48 MB cache under a key no grid reads.
+                let cost = image.map { Int($0.size.width * $0.size.height * $0.scale * $0.scale * 4) } ?? 0
+                if let image, isSharp, targetSize.width > 0, cost <= 2 * 1_024 * 1_024 {
                     self?.gridThumbnailCache.setObject(
                         image,
                         forKey: Self.gridThumbnailKey(asset.localIdentifier, width: targetSize.width),
-                        cost: Int(image.size.width * image.size.height * image.scale * image.scale * 4)
+                        cost: cost
                     )
                 }
                 completion(image, ThumbnailDelivery(isDegraded: isDegraded, isSharp: isSharp))

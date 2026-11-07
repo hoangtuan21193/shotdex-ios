@@ -1,0 +1,28 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-dark"
+  }
+ ]
+}

@@ -88,6 +88,28 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   thư mục/server vào sidecar (FS-19).
 - Ảnh trên ổ offline: hiện preview đã lưu; Edit, Export, Show in Finder mờ, inspector ghi nguồn đang offline (FS-19).
 - Phím: "." Favorite; video đang dừng thì ← → bước một khung ([01b](01b-menus-shortcuts-and-drag.md) §3).
+- Đã làm (2026-11-07, `MacViewer.swift`): mở bằng nhấp đúp ảnh trong lưới/bảng, Return hoặc ⌘↓ (ảnh chọn đầu tiên);
+  sidebar ẩn khi xem, hiện lại khi đóng; lưới vẫn nằm dưới viewer (không reload khi bị che) nên đóng (‹ Back, ⌘[, Esc)
+  về đúng chỗ, lưới/bảng chọn và cuộn tới ảnh vừa xem rồi lấy lại bàn phím; mở trên nhiều ảnh chọn mà không chuyển ảnh
+  thì đóng giữ nguyên lựa chọn. Gõ vào ô tìm thì rời viewer sang kết quả. Tiêu đề = tên
+  file, dòng phụ = ngày giờ đầy đủ + "12 of 226" theo thứ tự lưới (mới nhất trước; On This Day cũ nhất trước — thứ tự dựng
+  ngoài luồng chính khi hàng đổi, chỉ khi có ảnh chọn/đang xem). Toolbar: Zoom "Fit ▾" (Fit / Actual Size) · Favorite/
+  Unfavorite · Share (ảnh đang xem) · Show/Hide Inspector; **Edit** riêng ở mép phải (tắt, chờ editor Mac). Rotate ẩn tới khi
+  có editor. Ảnh: Fit vừa khung (lề 42/28), Actual Size cuộn
+  hai chiều; PhotoKit theo cỡ vẽ (iCloud được tải), ảnh thư mục đọc file ngoài luồng chính, demo dùng ảnh demo.
+  Filmstrip 88 cao, ô 64 r4, ảnh đang xem viền amber 2, chỉ dựng ±40 ảnh quanh ảnh mở; nhấp mở ảnh đó. Phím khi viewer
+  giữ bàn phím: ← → ảnh trước/sau (đầu/cuối bíp một lần, không bíp khi giữ phím), Esc đóng, "." Favorite, 0–5 sao, P/X/U
+  cờ; sao/cờ/tim hiện ở góc trái dưới vùng ảnh (viên tối) dù inspector đóng. Inspector (cột 300 của
+  cửa sổ): Rating and Flag (5 sao, nhấp lại sao đang có = bỏ; None / Pick / Reject) · Camera and Lens (Camera, Lens, 4 ô
+  ISO / Focal / Aperture / Shutter) · Location (tên nơi + toạ độ) · File (nguồn, đường dẫn, Size, Dimensions "6000 × 4000
+  · 24.0 MP", Format); không có EXIF → "No camera data". Ảnh đang xem là lựa chọn (Share, ⌘I, menu chuột phải dùng nó).
+  Ảnh rời khỏi nơi đang xem (X dưới bộ lọc, xoá) → sang ảnh đứng vào chỗ nó; hết ảnh → về lưới. Ảnh giữ trên màn tới khi
+  ảnh mới tải xong; request cũ bị huỷ, kết quả về muộn bị bỏ; Actual Size không giữ hai bitmap đầy đủ cùng lúc; ảnh lớn
+  của viewer không vào cache thumbnail của lưới (≤ 2 MB mới được cache). Demo `-ShotDexDemoLibrary -ShotDexSection viewer`.
+- Còn (hàng 21b): Histogram, sửa Caption and Keywords tại chỗ, phần Edits (Revert to Original / Copy Edits), bản đồ +
+  Show on Map, dòng "−0.3 EV · Aperture Priority · Multi-segment", huy hiệu định dạng cạnh tên, bỏ ô tìm khỏi toolbar khi
+  xem ảnh, offline (preview đã lưu + nút mờ), Rotate/Edit khi có editor Mac, View › Zoom (Fit / Actual Size) trong menu,
+  nút ảnh trước/sau cho chuột, thứ tự theo cột đang sắp của bảng (nay luôn theo ngày).
 
 ## 7. Cull (D12)
 

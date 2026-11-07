@@ -1,0 +1,131 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoDatabase",
+    "demo55k.sqlite",
+    "-ShotDexDemoScale",
+    "200",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-after-steps"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Rating and Flag",
+   "type": "staticText"
+  }
+ ]
+}

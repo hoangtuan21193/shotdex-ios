@@ -434,6 +434,7 @@ struct MacFittedSegments<Value: Hashable>: View {
                 let isOn = value == selection
                 Button { choose(value) } label: {
                     Text(label).font(.system(size: 12, weight: isOn ? .medium : .regular))
+                        .lineLimit(1).fixedSize()
                         .padding(.horizontal, 7)
                         .frame(minWidth: 21, minHeight: 24)
                         .background {
