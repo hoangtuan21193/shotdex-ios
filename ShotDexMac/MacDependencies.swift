@@ -271,6 +271,18 @@ final class MacDependencies: LibraryServices {
     /// Move / Delete / Hide across sources (FS-19.04), as on iOS: Photos
     /// through PhotoKit's dialog, files to the Trash of their volume, NAS
     /// copies hidden — never deleted on the server.
+    /// Hide, Hide in Photos and Hide in ShotDex Only (FS-19.04 §3). The
+    /// demo's photos are rows: it never asks Photos to hide anything.
+    var hideService: HideService {
+        let photoLibrary = photoLibrary
+        #if DEBUG
+        if MacDemoLibrary.isOn { return HideService(database: database) { _ in } }
+        #endif
+        return HideService(database: database) { ids in
+            try await photoLibrary.setHidden(true, for: PhotoLibraryService.fetchAssets(ids: ids))
+        }
+    }
+
     var sourceDeletion: SourceDeletionContext {
         let database = database
         let photoLibrary = photoLibrary

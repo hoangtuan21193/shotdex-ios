@@ -14,6 +14,8 @@ struct MacSidebar: View {
     /// (FS-22.06 §5.1).
     var backup: (jobs: Int, needsAttention: Bool) = (0, false)
     var smartAlbums: [SmartAlbum] = []
+    /// Photos ShotDex hid: the Hidden row shows while there is one (or it is open).
+    var hiddenCount = 0
     var newSmartAlbum: () -> Void = {}
     /// The Sources header's + (board `Main`): the Add a Source sheet
     /// (`MAC_AddSource`) — Photos, a folder or drive, or a server.
@@ -72,6 +74,9 @@ struct MacSidebar: View {
                     Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
                         .tag(MacSidebarItem.smartAlbum(album.id))
                         .listRowBackground(ground(.smartAlbum(album.id)))
+                }
+                if hiddenCount > 0 || selection == .hidden {
+                    row(.hidden, count: hiddenCount)
                 }
             } header: {
                 HStack {
@@ -223,7 +228,7 @@ struct MacSidebar: View {
 enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
-    case onThisDay, albums
+    case onThisDay, albums, hidden
     case smartAlbum(String)
     case backup, statistics, duplicates, collages, videoProjects, onServer
 
@@ -247,6 +252,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: String(localized: "Source", comment: "Mac sidebar: a photo source")
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
+        case .hidden: String(localized: "Hidden", comment: "Mac sidebar: photos hidden in ShotDex")
         case .smartAlbum: String(localized: "Smart Album", comment: "Mac sidebar: a smart album")
         case .backup: String(localized: "Backup", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
@@ -277,6 +283,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
+        case .hidden: "eye.slash"
         case .smartAlbum: "sparkles.rectangle.stack"
         case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"

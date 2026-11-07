@@ -17,6 +17,15 @@ input{font-family:inherit}
 <div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
 <!-- CONTENT: photo grid, scrolls under the toolbar -->
 <div style="position:absolute;left:244px;right:0px;top:0;bottom:0;overflow:hidden">
+<!-- Empty (tweak `empty`): everything unhidden; the row leaves the sidebar once you go elsewhere -->
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:{{t.label2}}">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{hiddenIcon}}"></path></svg>
+<div style="font-size:17px;font-weight:600;color:{{t.label}}">No Hidden Photos</div>
+<div style="font-size:13px;max-width:420px;text-align:center">Photos you hide in ShotDex appear here until you unhide them. Photos you unhide go back to All Photos.</div>
+</div>
+</sc-if>
+<sc-if value="{{full}}" hint-placeholder-val="{{true}}">
 <div style="position:absolute;left:16px;right:16px;top:64px;display:flex;flex-direction:column;gap:8px">
 <!-- What this place is: ShotDex's own hidden photos, not the Hidden album of Photos (FS-19 04 §3) -->
 <div role="note" style="margin-top:4px;border-radius:12px;background:{{t.fill}};padding:12px 14px;display:flex;gap:10px;align-items:flex-start">
@@ -24,7 +33,7 @@ input{font-family:inherit}
 <div style="display:flex;flex-direction:column;gap:3px;font-size:12px;line-height:16px">
 <span style="font-size:13px;font-weight:600">Photos hidden in ShotDex</span>
 <span style="color:{{t.label2}}">They stay out of All Photos, search, albums, smart albums and Statistics until you unhide them. Their files are not changed: these 6 are still on “NAS Home”, which ShotDex can only hide, never delete from.</span>
-<span style="color:{{t.label2}}">The Hidden album in Photos is separate and does not appear here.</span>
+<span style="color:{{t.label2}}">The Hidden album in Photos is separate and does not appear here; a photo hidden there too stays hidden in Photos after Unhide.</span>
 </div>
 </div>
 <sc-for list="{{sections}}" as="s" hint-placeholder-count="2">
@@ -57,17 +66,18 @@ input{font-family:inherit}
 </div>
 </sc-for>
 </div>
+</sc-if>
 </div>
 <!-- Scroll-edge fade under the toolbar -->
 <div style="position:absolute;left:244px;right:0px;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
 <!-- TOOLBAR: [Back|Forward] title · [Grid|List | Filter and Sort] · [Share|Inspector] · Unhide N Photos (the prominent command of this view) -->
 <div style="position:absolute;left:256px;right:16px;top:8px;height:44px;display:flex;align-items:center;gap:12px">
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Back" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><button aria-label="Forward" disabled style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></div>
-<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">6 Hidden Photos</div><div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">2 selected · 98.6 MB</div></div>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">{{title}}</div><div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">{{subtitle}}</div></div>
 <div style="flex:1"></div>
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Grid" aria-pressed="true" style="width:36px;height:30px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button><span aria-hidden="true" style="width:1px;height:18px;background:{{t.sep}};margin:0 4px;flex:none"></span><button aria-label="Filter and Sort" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M7 12h10 M10 17h4"></path></svg></button></div>
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Share" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button><button aria-label="Show Inspector" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div>
-<button title="Unhide 2 Photos (⌘L)" style="height:36px;border-radius:18px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};box-shadow:{{t.glassShadow}};font-size:13px;font-weight:600;padding:0 18px;white-space:nowrap;flex:none">Unhide 2 Photos</button>
+<button title="{{unhide}} (⌘L)" style="height:36px;border-radius:18px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};box-shadow:{{t.glassShadow}};font-size:13px;font-weight:600;padding:0 18px;white-space:nowrap;flex:none;opacity:{{unhideOpacity}}">{{unhide}}</button>
 </div>
 <!-- SIDEBAR: canonical (Library · Sources · Collections · Utilities), floating glass panel -->
 <nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:228px;border-radius:18px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
@@ -105,7 +115,7 @@ input{font-family:inherit}
 </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"empty":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 // v2 tokens (MAC_STYLE v2 rules): accentFill/onAccentFill for every filled control with text, opaque menu,
 // one sheet grey, scrim drawn above sidebar and toolbar, rowAlt zebra, field = content + 1px sep.
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
@@ -227,8 +237,10 @@ class Component extends DCLogic {
       {title:'Monday, September 28', place:'Kyoto · NAS Home', count:'4 photos', tiles:tiles(4,30,Object.assign({sel:[1,3]},nas))},
       {title:'Sunday, September 27', place:'Nara · NAS Home', count:'2 photos', tiles:tiles(2,41,nas)}
     ];
-    const e=edges(dark);
-    return { t, groups, sections, hiddenIcon:I.hidden, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
+    const e=edges(dark); const empty=!!this.props.empty;
+    const words = empty ? { title:'Hidden', subtitle:'0 photos', unhide:'Unhide', unhideOpacity:'0.4' }
+                        : { title:'6 Hidden Photos', subtitle:'2 selected · 98.6 MB', unhide:'Unhide 2 Photos', unhideOpacity:'1' };
+    return Object.assign({ t, groups, sections: empty ? [] : sections, empty, full: !empty, hiddenIcon:I.hidden, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT }, words);
   }
 }
 </script>

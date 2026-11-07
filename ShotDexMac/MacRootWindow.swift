@@ -42,6 +42,8 @@ struct MacRootWindow: View {
     @State private var onThisDayPlaces: [Int: String] = [:]
     /// How many years the day's photos span, counted off the main actor.
     @State private var onThisDayYears = 0
+    /// Photos ShotDex hid, for the sidebar's Hidden row.
+    @State private var hiddenCount = 0
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
@@ -101,6 +103,8 @@ struct MacRootWindow: View {
         } detail: {
             if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else if selection == .hidden {
+                MacHiddenScreen(sources: sources, photoMenu: photoMenu, showsInspector: $showsInspector)
             } else if let source = serverSource {
                 MacServerBrowserScreen(source: source)
             } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
@@ -163,6 +167,8 @@ struct MacRootWindow: View {
             if places != onThisDayPlaces { onThisDayPlaces = places }
         }
         .task(id: countsKey) { await reloadPlaceCounts() }
+        .task(id: countsKey) { await reloadHiddenCount() }
+        .onReceive(NotificationCenter.default.publisher(for: .macHiddenChanged)) { _ in Task { await reloadHiddenCount() } }
         // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
         // browser goes to the destination.
         .onChange(of: dependencies.commonPhotos.browserRequest?.path) {
@@ -304,7 +310,7 @@ struct MacRootWindow: View {
         // The first run counts nothing (board `MAC_EmptyLibrary`): no row of zeros.
         MacSidebar(selection: $selection, library: library, counts: isLibraryEmpty ? [:] : placeCounts,
                    sources: photosAdded ? sources : sources.filter { $0.kind != "photos" },
-                   backup: backupBadge, smartAlbums: smartAlbums,
+                   backup: backupBadge, smartAlbums: smartAlbums, hiddenCount: hiddenCount,
                    newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
                    addSource: {
                        // A request left by a close that never reached onDismiss is not run later.
@@ -476,6 +482,13 @@ struct MacRootWindow: View {
     private var placeTitle: String {
         if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
         return selection?.title ?? "ShotDex"
+    }
+
+    /// The Hidden row's count, off the main actor.
+    private func reloadHiddenCount() async {
+        let store = HiddenCopyStore(database: dependencies.database)
+        let count = (try? await Task.detached(priority: .utility) { try store.hiddenCount() }.value) ?? 0
+        if count != hiddenCount { hiddenCount = count }
     }
 
     /// All Photos, Favorites, Videos, RAW and each source, counted on GRDB's
@@ -753,6 +766,7 @@ struct MacRootWindow: View {
             rate: { photoMenu.apply(.rate($0), to: ids) },
             flag: { photoMenu.apply(.flag($0), to: ids) },
             moveToTrash: { photoMenu.moveToTrash(ids) },
+            hide: { photoMenu.requestHide(ids) },
             advancedSearch: { showsAdvancedFilter = true },
             toggleInspector: { showsInspector.toggle() },
             setSort: { library.sort = $0 })
@@ -1103,6 +1117,7 @@ struct MacRootWindow: View {
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
+        if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.

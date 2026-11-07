@@ -51,6 +51,27 @@ Support thành cửa sổ riêng.
   vẫn đúng ngày).
 - Chưa có: lời nhắc hằng ngày trên Mac (Settings › On This Day Reminder), mở thẳng ngày từ thông báo, Slideshow.
 
+### 1.2 Hidden (board `MAC_Hidden`, hành vi theo [FS-19.04 §3](../FS-19-photo-sources/04-deleting-and-duplicates.md))
+
+- Sidebar › Collections › **Hidden** (sau smart album), số bên phải; hàng chỉ hiện khi có ≥ 1 ảnh ShotDex đã ẩn (hoặc
+  khi đang mở nó). Không phải album Hidden của Photos.
+- Toolbar: "6 Hidden Photos" + "6 photos · ‹nguồn›" (đang chọn: "2 selected · 48 MB") · Share ▾ (mờ khi chưa chọn,
+  "Select photos to share") · Show Inspector · nút amber **Unhide** / "Unhide 2 Photos" (⌘L, mờ khi chưa chọn).
+  Image › Unhide N Photos ⌘L thay Image › Hide… khi mục này ở trước.
+- Ghi chú dưới toolbar: "Photos hidden in ShotDex" + họ rời All Photos, search, album, smart album, Statistics tới khi
+  unhide; file không bị đổi; mọi ảnh ở một server thì thêm "These N are still on “NAS Home”, which ShotDex can only
+  hide, never delete from."; dòng "The Hidden album in Photos is separate…".
+- Lưới chung, theo ngày; chọn, chuột phải, phím đánh dấu, inspector như Library. Unhide bỏ ẩn **mọi** bản sao, ảnh về
+  lưới; hết ảnh: "No Hidden Photos"; rời mục thì hàng sidebar biến mất.
+- **Hide** trên Mac: Image › **Hide…** ⌘L và chuột phải › **Hide…** trên lựa chọn → hộp "Hide N Photos?" với các lệnh
+  của `HideCommandPlan` (Hide, hoặc Hide in Photos · Hide in ShotDex Only khi có ảnh vừa ở Photos vừa ở nơi khác) +
+  Cancel (Hide in ShotDex Only đứng đầu và là mặc định — không đụng Photos; khi đụng album Hidden của Photos thì hộp
+  nói vậy và nói phải bỏ ẩn trong app Photos); chạy `HideService` ngoài luồng chính, theo thứ tự, rồi lưới, mục Hidden
+  và số đếm đọc lại (cả khi chạy dở). Đọc kế hoạch lỗi thì báo lỗi, không đoán. **Undo/Redo** (⌘Z) cho phần ShotDex
+  ẩn/bỏ ẩn; phần trong Photos thì không. Menu chuột phải trong mục Hidden không có Hide…. Đọc mục lỗi: "Couldn’t Load
+  Hidden Photos" + Try Again, không bao giờ "No Hidden Photos". Thư viện demo không bao giờ gọi Photos.
+- Chưa có: Grid/List và Filter and Sort trên mục này (board vẽ; lưới là đủ cho vài ảnh ẩn); tên nơi chụp ở đầu ngày.
+
 ## 2. Statistics (D18)
 
 - Sidebar › Utilities › Statistics, Go ⌥⌘6. Tầng A. Toolbar: ◀ ▶ · "Statistics" + "54,027 photos · 1,204 videos" ·

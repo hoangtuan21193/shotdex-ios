@@ -51,6 +51,11 @@ enum MacDemoLibrary {
         guard section != "emptyLibrary" else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
         if section == "onThisDay" { seedOnThisDay(dependencies) }
+        // `hidden` (board `MAC_Hidden`): four photos of Sep 28, two of Sep 27.
+        if section == "hidden" {
+            try? HiddenCopyStore(database: dependencies.database)
+                .hide(photoIds: ["demo-0-2", "demo-0-5", "demo-0-8", "demo-0-11", "demo-1-4", "demo-1-9"])
+        }
         // The sidebar foot as on board `Main`: "Up to date · indexed 2 min ago".
         if var state = try? dependencies.metadataStore.indexState() {
             state.lastIndexedAt = Int(Date().timeIntervalSince1970) - 120

@@ -79,6 +79,70 @@ final class MacPhotoMenu: NSObject {
     }
     func moveToTrash(_ ids: [String]) { trash(ids) }
 
+    /// Hide asked for: which commands the photos get is read off the main
+    /// actor, then the window asks (`MacPhotoMenuHost`).
+    var hideRequest: MacHideRequest?
+    /// The read behind the last Hide…: a newer one cancels it, so an older
+    /// selection's dialog never lands over the newer one.
+    @ObservationIgnored private var hideRequestTask: Task<Void, Never>?
+
+    func requestHide(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
+        let service = dependencies.hideService
+        hideRequestTask?.cancel()
+        hideRequestTask = Task {
+            // Unread, nothing is offered: a guess could hide in Photos unasked.
+            let photos: [HideCommandPlan.Photo]
+            do {
+                photos = try await Task.detached(priority: .userInitiated) { try service.photos(ids) }.value
+            } catch {
+                if !Task.isCancelled { failure = error.localizedDescription }
+                return
+            }
+            guard !Task.isCancelled else { return }
+            hideRequest = MacHideRequest(ids: ids, commands: HideCommandPlan.commands(for: photos),
+                                         touchesPhotos: photos.contains(where: \.hasPhotosCopy))
+        }
+    }
+
+    func hide(_ command: HideCommand, ids: [String], touchesPhotos: Bool, undoManager: UndoManager?) {
+        let service = dependencies.hideService
+        serially {
+            // Chunks commit as they go: what landed shows, even after a failure.
+            defer { NotificationCenter.default.post(name: .macHiddenChanged, object: nil) }
+            do {
+                try await Task.detached(priority: .userInitiated) { try await service.run(command, photoIds: ids) }.value
+            } catch {
+                self.failure = error.localizedDescription
+                return
+            }
+            // Undo takes back ShotDex's own hiding only: a Photos copy in
+            // Photos' Hidden album comes back in the Photos app (the dialog says so).
+            if command == .hideInShotDexOnly || !touchesPhotos {
+                Self.registerUndo(undoManager, hidden: true, ids: ids, database: self.dependencies.database)
+            }
+        }
+    }
+
+    /// Edit › Undo Hide / Undo Unhide: the opposite write, and its own redo.
+    static func registerUndo(_ undoManager: UndoManager?, hidden: Bool, ids: [String], database: AppDatabase) {
+        guard let undoManager else { return }
+        undoManager.registerUndo(withTarget: MacHideUndoTarget.shared) { _ in
+            MainActor.assumeIsolated {
+                let store = HiddenCopyStore(database: database)
+                Task {
+                    try? await Task.detached(priority: .userInitiated) {
+                        if hidden { try store.unhide(photoIds: ids) } else { try store.hide(photoIds: ids) }
+                    }.value
+                    NotificationCenter.default.post(name: .macHiddenChanged, object: nil)
+                }
+                registerUndo(undoManager, hidden: !hidden, ids: ids, database: database)
+            }
+        }
+        undoManager.setActionName(hidden ? String(localized: "Hide", comment: "Mac: Edit › Undo Hide")
+                                         : String(localized: "Unhide", comment: "Mac: Edit › Undo Unhide"))
+    }
+
     func apply(_ mark: MarkKeyAction, to ids: [String]) {
         let marks = dependencies.photoMarks
         serially {
@@ -172,7 +236,7 @@ final class MacPhotoMenu: NSObject {
     // MARK: Building
 
     /// The menu for `ids` (the selection, or the one photo right-clicked).
-    func menu(for ids: [String]) -> NSMenu? {
+    func menu(for ids: [String], includesHide: Bool = true) -> NSMenu? {
         guard !ids.isEmpty else { return nil }
         let isLarge = ids.count > Self.readLimit
         let facts = isLarge ? Facts() : Facts.read(ids, database: dependencies.database)
@@ -254,6 +318,11 @@ final class MacPhotoMenu: NSObject {
             menu.addItem(.separator())
         }
 
+        if includesHide {
+            menu.addItem(item(String(localized: "Hide…", comment: "Mac photo menu: hide the photos in ShotDex (asks how)"), id: "hide") { [weak self] in
+                self?.requestHide(ids)
+            })
+        }
         menu.addItem(item(String(localized: "Move to Trash", comment: "Mac photo menu"), id: "trash") { [weak self] in
             self?.trash(ids)
         })

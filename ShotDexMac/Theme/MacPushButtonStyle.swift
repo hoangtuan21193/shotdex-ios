@@ -7,9 +7,12 @@ struct MacPushButtonStyle: ButtonStyle {
     let isDefault: Bool
     /// The default button's weight: 600 on the first run, 500 in sheets (boards).
     var defaultWeight: Font.Weight = .semibold
+    /// A view's one prominent command in the toolbar (board `MAC_Hidden`'s
+    /// Unhide): a 36 capsule, 18 a side, beside the toolbar's glass groups.
+    var isToolbarCommand = false
 
     func makeBody(configuration: Configuration) -> some View {
-        StyledLabel(configuration: configuration, isDefault: isDefault, defaultWeight: defaultWeight)
+        StyledLabel(configuration: configuration, isDefault: isDefault, defaultWeight: defaultWeight, isToolbarCommand: isToolbarCommand)
     }
 
     /// A view, so it can read focus and enabled state: keyboard navigation
@@ -18,12 +21,13 @@ struct MacPushButtonStyle: ButtonStyle {
         let configuration: Configuration
         let isDefault: Bool
         let defaultWeight: Font.Weight
+        let isToolbarCommand: Bool
         @Environment(\.isEnabled) private var isEnabled
         @Environment(\.isFocused) private var isFocused
 
         var body: some View {
             label
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(MacTheme.accent, lineWidth: isFocused ? 2 : 0))
+                .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(MacTheme.accent, lineWidth: isFocused ? 2 : 0))
                 .opacity(isEnabled ? 1 : 0.4)
         }
 
@@ -31,11 +35,14 @@ struct MacPushButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: isDefault ? defaultWeight : .regular))
             .foregroundStyle(isDefault ? MacTheme.onAccentFill : Color.primary)
-            .frame(minHeight: 28)
-            .padding(.horizontal, 12)
-            .background(RoundedRectangle(cornerRadius: 8).fill(isDefault ? MacTheme.accentFill : MacTheme.fill))
+            .frame(minHeight: isToolbarCommand ? 36 : 28)
+            .padding(.horizontal, isToolbarCommand ? 18 : 12)
+            .background(RoundedRectangle(cornerRadius: radius).fill(isDefault ? MacTheme.accentFill : MacTheme.fill))
             .opacity(configuration.isPressed ? 0.75 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: radius))
         }
+
+        /// 8, or a capsule for the toolbar command.
+        private var radius: CGFloat { isToolbarCommand ? 18 : 8 }
     }
 }

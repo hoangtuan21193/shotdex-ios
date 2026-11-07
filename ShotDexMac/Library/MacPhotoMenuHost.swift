@@ -16,8 +16,11 @@ struct MacPhotoMenuHost: ViewModifier {
     @State private var deleteError: String?
     @State private var albumName = ""
     @Environment(\.appearsActive) private var appearsActive
+    @Environment(\.undoManager) private var undoManager
     /// The plan of a Move to Trash is being read: a second one waits for it.
     @State private var isReadingPlan = false
+    /// Hidden or unhidden while this window was behind: reload when it comes forward.
+    @State private var missedHiddenChange = false
 
     func body(content: Content) -> some View {
         @Bindable var menu = menu
@@ -57,6 +60,40 @@ struct MacPhotoMenuHost: ViewModifier {
             } message: {
                 Text(menu.failure ?? "")
             }
+            .confirmationDialog(hideTitle(menu.hideRequest),
+                                isPresented: Binding(get: { menu.hideRequest != nil }, set: { if !$0 { menu.hideRequest = nil } }),
+                                presenting: menu.hideRequest) { request in
+                // The safe choice first and on Return: Hide in ShotDex Only changes nothing in Photos.
+                ForEach(request.commands.sorted { $0 == .hideInShotDexOnly && $1 != .hideInShotDexOnly }, id: \.title) { command in
+                    if command == .hideInShotDexOnly {
+                        Button(command.title) { menu.hide(command, ids: request.ids, touchesPhotos: request.touchesPhotos, undoManager: undoManager) }
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        Button(command.title) { menu.hide(command, ids: request.ids, touchesPhotos: request.touchesPhotos, undoManager: undoManager) }
+                    }
+                }
+                Button(String(localized: "Cancel", comment: "Mac hide: dismiss"), role: .cancel) {}
+            } message: { request in
+                Text(request.commands.count > 1
+                     ? String(localized: "Hidden photos leave All Photos, albums and search; unhide them in Collections › Hidden. Hide in Photos also puts their Photos copies in the Hidden album of the Photos app, on every device; to bring those back, use the Photos app.",
+                              comment: "Mac hide: photos both in Photos and elsewhere")
+                     : request.touchesPhotos
+                     ? String(localized: "Hidden photos leave All Photos, albums and search; unhide them in Collections › Hidden. Photos items also go to the Hidden album of the Photos app, on every device; to bring them back there, use the Photos app.",
+                              comment: "Mac hide: photos only in Photos")
+                     : String(localized: "Hidden photos leave All Photos, albums and search; unhide them in Collections › Hidden. Their files are not changed.",
+                              comment: "Mac hide: photos only in folders or on servers"))
+            }
+            // One model serves every window: the front one reloads it; the
+            // rebuilt grid drops the hidden photos from its own selection.
+            .onReceive(NotificationCenter.default.publisher(for: .macHiddenChanged)) { _ in
+                guard appearsActive else { missedHiddenChange = true; return }
+                library?.reload()
+            }
+            .onChange(of: appearsActive) { _, isActive in
+                guard isActive, missedHiddenChange else { return }
+                missedHiddenChange = false
+                library?.reload()
+            }
             .onChange(of: menu.trashRequest) { _, ids in
                 guard let ids else { return }
                 menu.trashRequest = nil
@@ -73,6 +110,12 @@ struct MacPhotoMenuHost: ViewModifier {
             }
             // Nothing on screen (a filter or place with no photos): nothing selected.
             .onChange(of: library?.items.isEmpty == true) { _, isEmpty in if isEmpty { selection?.set([]) } }
+    }
+
+    private func hideTitle(_ request: MacHideRequest?) -> String {
+        let count = request?.ids.count ?? 0
+        return count == 1 ? String(localized: "Hide 1 Photo?", comment: "Mac hide: confirm, one photo")
+                          : String(localized: "Hide \(count) Photos?", comment: "Mac hide: confirm, several photos")
     }
 
     /// Folder and server photos have no PHAsset: PhotoKit alone would drop

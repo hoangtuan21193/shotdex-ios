@@ -14,6 +14,7 @@ struct MacLibraryTarget {
     var rate: (Int) -> Void
     var flag: (PhotoFlag?) -> Void
     var moveToTrash: () -> Void
+    var hide: () -> Void
     var advancedSearch: () -> Void
     var toggleInspector: () -> Void
     var setSort: (SortOption) -> Void
@@ -82,6 +83,7 @@ struct MacLibraryCommands: Commands {
 /// reach the menu from the grid, and would take letters typed in search.
 struct MacImageCommands: Commands {
     @FocusedValue(\.macLibrary) private var library
+    @FocusedValue(\.macHidden) private var hidden
 
     var body: some Commands {
         CommandMenu(String(localized: "Image", comment: "Mac menu bar: Image menu")) {
@@ -108,6 +110,19 @@ struct MacImageCommands: Commands {
             Button(MarkCopy.clearFlag) { library?.flag(nil) }
                 .disabled(library?.hasSelection != true)
             Divider()
+            // ⌘L hides; in Collections › Hidden it unhides (board `MAC_Hidden`).
+            if let hidden {
+                Button(hidden.count == 0 ? String(localized: "Unhide", comment: "Mac Hidden: the Unhide button with nothing selected")
+                       : hidden.count == 1 ? String(localized: "Unhide 1 Photo", comment: "Mac Hidden: unhide the selected photo")
+                                         : String(localized: "Unhide \(hidden.count) Photos", comment: "Mac Hidden: unhide the selected photos (0 or more than 1)"),
+                       action: hidden.unhide)
+                    .keyboardShortcut("l", modifiers: .command)
+                    .disabled(hidden.count == 0)
+            } else {
+                Button(String(localized: "Hide…", comment: "Mac menu: Image › Hide… (asks how)")) { library?.hide() }
+                    .keyboardShortcut("l", modifiers: .command)
+                    .disabled(library?.hasSelection != true)
+            }
             Button(String(localized: "Move to Trash", comment: "Mac menu: Image › Move to Trash")) {
                 // ⌘⌫ in a text field is its own: delete to the line's start.
                 if let text = NSApp.keyWindow?.firstResponder as? NSTextView {

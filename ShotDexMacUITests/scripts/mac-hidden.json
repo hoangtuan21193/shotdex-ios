@@ -1,0 +1,376 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "hidden"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-hidden"
+  },
+  {
+   "action": "dump",
+   "name": "01-hidden"
+  },
+  {
+   "action": "assertExists",
+   "label": "Photos hidden in ShotDex",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Hidden",
+   "type": "staticText"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Unhide",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Unhide 2 Photos",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Share"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-selected"
+  },
+  {
+   "action": "menu",
+   "text": "Image"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertExists",
+   "label": "Unhide 2 Photos",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-inspector"
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Unhide 2 Photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "4 photos · Photos Library",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "04-unhid-two"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "6 photos · Photos Library",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "4 photos · Photos Library",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "l",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "3 photos · Photos Library",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.25
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "x": 0.23,
+   "y": 0.25
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "photoMenu.hide",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Image>Hide…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-hide-dialog"
+  },
+  {
+   "action": "dump",
+   "name": "05-hide-dialog"
+  },
+  {
+   "action": "assertExists",
+   "label": "Hide 1 Photo?",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "click",
+   "label": "Hidden",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "4 photos · Photos Library",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "l",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No Hidden Photos",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "06-empty"
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Hidden",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "hidden",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "x": 0.23,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "07-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
