@@ -38,6 +38,14 @@ struct MacSidebar: View {
     var busyFooter: AnyView? = nil
 
     var body: some View {
+        list
+            // The On Server foot's counts: again on each batch of the check (off main).
+            .task(id: dependencies.onServerCheck.generation) {
+                await dependencies.onServerStatus.refresh(check: dependencies.onServerCheck, database: dependencies.database)
+            }
+    }
+
+    private var list: some View {
         List(selection: $selection) {
             Section {
                 ForEach(MacSidebarItem.library) { item in
@@ -240,6 +248,11 @@ struct MacSidebar: View {
             busyFooter
         } else if let sourcesModel, sourcesModel.hasReadProgress {
             MacReadFoot(model: sourcesModel, showBanner: showReadBanner)
+        } else if dependencies.onServerStatus.isShown(dependencies.onServerCheck) {
+            // The On Server check matching photos with server files (FS-19.07 §7).
+            MacOnServerFoot(status: dependencies.onServerStatus,
+                            indexLine: library?.isIndexing == true ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running") : nil,
+                            open: { selection = .onServer })
         } else if let library {
             // "Up to date · indexed 2 min ago" (FS-18.01 §2), the age kept
             // current once a minute.

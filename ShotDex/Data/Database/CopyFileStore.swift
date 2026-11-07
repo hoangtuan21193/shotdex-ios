@@ -169,9 +169,13 @@ struct CopyFileStore: Sendable {
     /// a size; such a file is a candidate while any server file is known.
     /// Newest photo first; a file tried since `triedBefore` waits for the
     /// next pass. `everything` (the Mac hashing for every device, §12.1)
-    /// drops the size test: every file is a candidate, and what was indexed
-    /// last goes first (`indexedAt`, rewritten on a re-index — the same
-    /// order as the listing queue); a photo with no metadata row goes last.
+    /// drops the size test: every file is a candidate — but a file with a
+    /// server file of its size goes first, so the photos that can be on a
+    /// server are answered before the rest of a 50,000-photo library is
+    /// downloaded (user 2026-11-08: ten thousand photos on the NAS, a handful
+    /// shown). Within each group what was indexed last goes first
+    /// (`indexedAt`, rewritten on a re-index — the same order as the listing
+    /// queue); a photo with no metadata row goes last.
     func photosCandidates(triedBefore: Date, limit: Int, everything: Bool = false)
         throws -> [(copyId: String, assetId: String, fileKey: String, size: Int64?)] {
         try database.reader.read { db in
@@ -183,10 +187,26 @@ struct CopyFileStore: Sendable {
                   AND (\(everything ? "f.attempts < \(Self.everythingAttempts)" : "0") OR EXISTS (
                     SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
                     WHERE sc.kind = 'server' AND sc.missingSince IS NULL AND (f.size IS NULL OR s.size = f.size)))
-                ORDER BY \(everything ? "COALESCE(m.indexedAt, 0) DESC, " : "")m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
+                ORDER BY \(everything ? Self.photosSameSizeFirst : "")m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
                 """, arguments: [Int(triedBefore.timeIntervalSince1970), limit]).map { ($0[0], $0[1], $0[2], $0[3]) }
         }
     }
+
+    /// The order key that puts a Photos file with a server file of its size
+    /// ahead (`everything` only).
+    private static let photosSameSizeFirst = """
+        CASE WHEN f.size IS NOT NULL AND EXISTS (
+            SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+            WHERE s.size = f.size AND sc.kind = 'server' AND sc.missingSince IS NULL) THEN 0 ELSE 1 END,
+        COALESCE(m.indexedAt, 0) DESC,\u{20}
+        """
+
+    /// The order key that puts a server file with a Photos file of its size
+    /// ahead (`everything` only).
+    private static let serverSameSizeFirst = """
+        CASE WHEN EXISTS (SELECT 1 FROM copy_files p JOIN photo_copies pc ON pc.id = p.copyId AND pc.kind = 'photos'
+                          WHERE p.size = f.size) THEN 0 ELSE 1 END,\u{20}
+        """
 
     // MARK: - Server
 
@@ -283,7 +303,8 @@ struct CopyFileStore: Sendable {
     /// or hashed with no server file of the same bytes here. A file tried
     /// since `triedBefore` waits for the next pass. `everything` (§12.1)
     /// drops the size test: every unhashed file of the source whose size
-    /// the listing gave.
+    /// the listing gave — those with a Photos file of their size first, so
+    /// a match is found before the rest of the share is read.
     func serverCandidates(sourceId: String, triedBefore: Date, limit: Int, everything: Bool = false) throws -> [UnhashedServerFile] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
@@ -297,7 +318,7 @@ struct CopyFileStore: Sendable {
                     WHERE p.size = f.size AND (p.sha256 IS NULL OR NOT EXISTS (
                         SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
                         WHERE s.sha256 = p.sha256 AND sc.sourceId = ?1 AND sc.kind = 'server' AND sc.missingSince IS NULL))))
-                ORDER BY c.relativePathKey, f.fileKey LIMIT ?3
+                ORDER BY \(everything ? Self.serverSameSizeFirst : "")c.relativePathKey, f.fileKey LIMIT ?3
                 """, arguments: [sourceId, Int(triedBefore.timeIntervalSince1970), limit]).compactMap { row in
                 guard let path: String = row["path"] else { return nil }
                 return UnhashedServerFile(copyId: row["copyId"], fileKey: row["fileKey"], relativePath: path, size: row["size"])

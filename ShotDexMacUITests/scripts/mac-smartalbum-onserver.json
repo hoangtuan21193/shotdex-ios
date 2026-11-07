@@ -28,14 +28,14 @@
   },
   {
    "action": "assertExists",
-   "label": "40 photos",
-   "type": "staticText"
+   "label": "Checking On Server, Checking · 40 of 226",
+   "type": "button",
+   "seconds": 10
   },
   {
    "action": "assertExists",
-   "label": "Checking · 40 of 226",
-   "type": "staticText",
-   "seconds": 5
+   "label": "40 photos",
+   "type": "staticText"
   },
   {
    "action": "assertExists",
@@ -270,6 +270,29 @@
    "action": "assertExists",
    "label": "Condition: Also on NAS Home › Shared",
    "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Checking On Server, Checking · 40 of 226",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Where They Are",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "screenshot",
+   "name": "07-onserver-from-foot"
   }
  ]
 }

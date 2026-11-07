@@ -24,6 +24,8 @@ struct MacSmartAlbumHeader: View {
     /// The check pass the grid last read again for: a task restarted for
     /// another reason (names read) does not reload.
     @State private var reloadedGeneration = 0
+    /// The album whose opening already asked the check for a pass.
+    @State private var kickedAlbumId: String?
     /// The album's own size, whatever narrows the grid.
     @State private var total: Int?
 
@@ -99,6 +101,11 @@ struct MacSmartAlbumHeader: View {
                 query: album.query, check: dependencies.onServerCheck, database: dependencies.database,
                 sourceNames: sourceNames, isLimited: dependencies.photoLibrary.authorizationState == .limited)
             // Only an album with a server condition moves with the check, once per pass batch.
+            // An album that asks about a server starts a pass if none runs (user 2026-11-08).
+            if !onServerLines.isEmpty, kickedAlbumId != album.id {
+                kickedAlbumId = album.id
+                dependencies.backupControl.appCameForward()
+            }
             let generation = dependencies.onServerCheck.generation
             if !onServerLines.isEmpty, generation > 0, generation != reloadedGeneration {
                 reloadedGeneration = generation

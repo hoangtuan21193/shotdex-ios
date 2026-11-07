@@ -194,6 +194,15 @@ Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã 
 
 AC: [07b §3](07b-on-server-check-ac.md#3-mac).
 
+### 11.1 Tiến độ luôn thấy và kiểm lại khi cần (2026-11-08)
+
+- **Chân sidebar Mac:** khi còn mục chưa có câu trả lời, khi đang chạy hay đang chờ — `Checking On Server`, dòng §7 của
+  nguồn server đầu tiên (`Checking · 1,240 of 23,904 · 38 GB to download` hoặc lý do chờ) và thanh tiến độ; bấm mở
+  On Server. Đọc ngoài main mỗi lô (`generation`), không mỗi khung hình. Hết việc thì về dòng index.
+- **Chạy lại:** mỗi lần app Mac về trước mặt và khi mở một smart album có điều kiện server (lệnh `checkOnServer` cho
+  helper nếu helper chạy), không chờ lượt 30 phút; một lượt đang chạy thì không mở thêm.
+- Kiểm: `mac-smartalbum-onserver.json` (chân sidebar, bấm → On Server).
+
 ## 12. Băm dùng chung — Mac băm hộ, máy khác chỉ đọc (2026-11-03)
 
 Nguồn: [intent 2026-11-03-mac-hashes-for-on-server-check](../../_intents/2026-11-03-mac-hashes-for-on-server-check.md).
@@ -211,6 +220,12 @@ Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi
 - **Phía NAS:** helper băm **mọi** file ảnh và video (các đuôi FS-19.01 nhận) trong mọi nguồn server, không chỉ ứng
   viên (§5). File có SHA sẵn (sổ Backup, sổ dưới đây, cache theo đường dẫn + cỡ + ngày sửa) thì không đọc lại.
 - **Thứ tự và cổng:** cùng khoá connection §5 (Backup đi trước, một lệnh một lúc), cùng cổng §6/§11.
+- **Cùng cỡ đi trước (người dùng 2026-11-08: "cả chục nghìn ảnh chung mà chỉ hiện vài cái"):** băm hết không có nghĩa
+  là băm theo thứ tự mới nhất bất kể. Phía Photos, file có một file server **cùng cỡ** được tải và băm trước mọi file
+  khác; phía NAS, file có một file Photos cùng cỡ được đọc trước (rồi mới theo đường dẫn). Trong mỗi nhóm giữ thứ tự cũ.
+  *Vì* "không có trên server" đã biết ngay từ cỡ (§3), còn "có" thì phải băm cả hai phía: không ưu tiên thì ảnh chung
+  nằm cuối hàng đợi sau cả thư viện. Code `CopyFileStore.photosCandidates`/`serverCandidates` (`everything`), test
+  `PhotosHashTests.everythingHashesSameSizeFirst`, `everythingReadsSameSizeServerFilesFirst`.
 - **Công tắc:** Mac băm cả thư viện và cả NAS khi công tắc có sẵn *Share Index Across Devices* (BD-03.05) bật
   (người dùng 2026-11-03). Không có màn hay công tắc mới.
 

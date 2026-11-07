@@ -56,6 +56,8 @@ struct ShotDexMacApp: App {
                 // the main thread and does not slow the UI (user 2026-11-04).
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                     dependencies.originalPresenceCheck.appBecameActive()
+                    // The On Server check too (FS-19.07 §5): a pass starts unless one runs.
+                    dependencies.backupControl.appCameForward()
                 }
                 .frame(minWidth: MacWindowMetrics.minimumSize.width, minHeight: MacWindowMetrics.minimumSize.height)
         }

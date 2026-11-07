@@ -50,6 +50,14 @@ final class MacBackupControl {
         }
     }
 
+    /// The app came forward again (user 2026-11-08: the check should not
+    /// wait for the next launch or the helper's half hour): a pass starts
+    /// unless one runs. Nothing before the window has started the runner.
+    func appCameForward() {
+        guard hasStarted else { return }
+        appBecameActive()
+    }
+
     /// A server source was added or removed: the helper may now have work,
     /// or none.
     func sourcesChanged() {

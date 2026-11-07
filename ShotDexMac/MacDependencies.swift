@@ -94,6 +94,8 @@ final class MacDependencies: LibraryServices {
         #endif
         return MacUploads()
     }()
+    /// The On Server check's counts for the sidebar foot (FS-19.07 §7).
+    let onServerStatus = MacOnServerStatus()
     /// Memory cards and their imports (FS-20, board `MAC_Ingest`). Declared
     /// after `uploads`, whose demo run clears the demo's defaults first.
     let cards: MacIngestCards = {

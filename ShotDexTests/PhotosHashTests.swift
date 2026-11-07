@@ -172,6 +172,40 @@ import UniformTypeIdentifiers
         #expect(try (0..<4).allSatisfy { try CopyFileStore(database: database).files(copyId: "photos:P\($0)").first?.origin == .hashed })
     }
 
+    /// FS-19.07 §12.1 (user 2026-11-08): hashing everything, a file with a
+    /// server file of its size goes before newer ones without — the photos
+    /// that can be on the NAS are answered first, not after the whole library.
+    @Test func everythingHashesSameSizeFirst() throws {
+        let (database, _, _) = try Self.library(count: 6)
+        let store = CopyFileStore(database: database)
+        for n in 0..<6 {
+            try store.saveListing(copyId: "photos:P\(n)", stamp: nil,
+                                  files: [PhotosFile(fileKey: "1:IMG_\(n).HEIC", role: .photo, size: Int64(10_000 + n), stamp: "\(n)")])
+        }
+        // P1 and P3 have a server file of their size; P5 is the newest.
+        try Self.addServerFiles(database, sizes: [10_001, 10_003])
+
+        let queue = try store.photosCandidates(triedBefore: .distantFuture, limit: 10, everything: true).map(\.assetId)
+
+        #expect(queue == ["P3", "P1", "P5", "P4", "P2", "P0"])
+    }
+
+    /// The server side of the same order: hashing everything, the share's
+    /// files of a Photos file's size are read before the others, whatever
+    /// their path.
+    @Test func everythingReadsSameSizeServerFilesFirst() throws {
+        let (database, _, _) = try Self.library(count: 1)
+        try CopyFileStore(database: database).saveListing(copyId: "photos:P0", stamp: nil,
+                                                          files: [PhotosFile(fileKey: "1:IMG_0.HEIC", role: .photo, size: 10_002, stamp: "0")])
+        try Self.addServerFiles(database, sizes: [10_000, 10_001, 10_002])
+        let source = try #require(try SourceStore(database: database).sources().first { $0.kind == "server" })
+
+        let queue = try CopyFileStore(database: database)
+            .serverCandidates(sourceId: source.id, triedBefore: .distantFuture, limit: 10, everything: true).map(\.relativePath)
+
+        #expect(queue == ["Shared/s2.HEIC", "Shared/s0.HEIC", "Shared/s1.HEIC"])
+    }
+
     /// FS-19.07 AC-149 (§12.3): on the very first pass, what another device
     /// hashed is taken right after listing — before the pass picks what to
     /// download — so the first round downloads only the rest.
