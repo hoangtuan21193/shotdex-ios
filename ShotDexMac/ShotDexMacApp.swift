@@ -188,7 +188,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = runs?.isAnyRunning == true
                 ? String(localized: "Files already uploaded stay on the server. Common-photos runs pause and resume next time.",
                          comment: "Mac quit with an upload and a common-photos run going: what stays")
-                : String(localized: "Files already uploaded stay on the server.", comment: "Mac quit with an upload going: what stays")
+                : uploads?.entries.contains(where: { $0.model.stage == .uploading && $0.model.assetIds.allSatisfy { $0.hasPrefix("file:") } }) == true
+                ? String(localized: "Files already uploaded stay on the server.", comment: "Mac quit with an upload of Mac files going: what stays")
+                : String(localized: "Files already uploaded stay on the server. The upload stays in Activity, where Upload Again… sends the rest.",
+                         comment: "Mac quit with an upload going: what stays")
             alert.addButton(withTitle: String(localized: "Keep Uploading", comment: "Mac quit: don't quit"))
             alert.addButton(withTitle: String(localized: "Stop and Quit", comment: "Mac quit: stop the upload and quit"))
             guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }

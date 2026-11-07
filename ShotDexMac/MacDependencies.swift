@@ -83,7 +83,17 @@ final class MacDependencies: LibraryServices {
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns
     /// Uploads under way and just finished: the Activity popover lists them (FS-15.02 §9).
-    let uploads = MacUploads()
+    let uploads: MacUploads = {
+        #if DEBUG
+        // The demo keeps its rows apart from the real app's.
+        if MacDemoLibrary.isOn, let demo = UserDefaults(suiteName: "com.hoangtuan.shotdex.demo") {
+            // Each demo run starts with no kept rows, but the one that checks them after a relaunch.
+            if MacDemoLibrary.section != "uploadAgain" { demo.removePersistentDomain(forName: "com.hoangtuan.shotdex.demo") }
+            return MacUploads(defaults: demo, idsFolder: FileManager.default.temporaryDirectory.appending(path: "ShotDexDemoUploadRecords"))
+        }
+        #endif
+        return MacUploads()
+    }()
     /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
     /// the helper does not run jobs.
     let gatherer: MacCommonPhotosGatherer

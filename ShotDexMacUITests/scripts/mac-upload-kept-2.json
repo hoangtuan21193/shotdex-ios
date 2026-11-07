@@ -1,0 +1,96 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "uploadAgain"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "Window>Activity"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Upload Again…",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-kept"
+  },
+  {
+   "action": "dump",
+   "name": "01-kept"
+  },
+  {
+   "action": "click",
+   "label": "Upload Again…",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Upload",
+   "type": "button",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-sheet"
+  },
+  {
+   "action": "click",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Window>Activity"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove from List",
+   "type": "button",
+   "seconds": 40
+  },
+  {
+   "action": "screenshot",
+   "name": "03-done"
+  },
+  {
+   "action": "dump",
+   "name": "03-done"
+  }
+ ]
+}

@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// A finished (or paused) upload as it is kept across launches: enough to
+/// say what happened and to send the same photos again (FS-15.02 §9).
+struct MacUploadRecord: Codable, Identifiable, Equatable {
+    let id: UUID
+    let serverId: String?
+    let serverName: String
+    let startedAt: Date
+    let endedAt: Date
+    /// The row's result line, as it read when it ended.
+    let line: String
+    let isTrouble: Bool
+    let wasPaused: Bool
+    /// How many library photos it sent (none for files picked on the Mac).
+    /// Their ids sit in a file of their own (`MacUploads.photoIds(of:)`):
+    /// a 55k batch must not ride in the preferences read at launch.
+    let photoCount: Int
+    /// Where it went, so Upload Again… sends to the same place.
+    var folder: String? = nil
+    var usesDateFolders = false
+}
+
 /// Uploads under way and just finished (FS-15.02 §9, board `MAC_ServerUpload`):
 /// owned by the app, not by a sheet, so the Library window stays usable and
 /// closing a window does not stop one. The Activity popover lists them.
@@ -15,6 +36,114 @@ final class MacUploads {
 
     /// Newest first.
     private(set) var entries: [Entry] = []
+    /// Rows from earlier launches (and this one's, once ended), newest first, at most 20.
+    private(set) var records: [MacUploadRecord] = []
+    @ObservationIgnored private let defaults: UserDefaults
+    /// One file of photo ids per kept row.
+    @ObservationIgnored private let idsFolder: URL
+    private static let recordsKey = "macUploadRecords"
+    /// Batches the user stopped (Pause, Stop, Quit): kept as "Stopped", not as trouble.
+    @ObservationIgnored private var userStoppedIds: Set<UUID> = []
+    /// Upload Again… asked from Activity: the front Library window opens the sheet when it can.
+    var againRequest: MacUploadRequest?
+
+    init(defaults: UserDefaults = .standard, idsFolder: URL? = nil) {
+        self.defaults = defaults
+        self.idsFolder = idsFolder ?? URL.applicationSupportDirectory.appending(path: "ShotDex/UploadRecords", directoryHint: .isDirectory)
+        // One by one: a row that no longer reads does not take the others with it.
+        if let data = defaults.data(forKey: Self.recordsKey),
+           let array = (try? JSONSerialization.jsonObject(with: data)) as? [Any] {
+            records = array.compactMap { element in
+                guard let one = try? JSONSerialization.data(withJSONObject: element) else { return nil }
+                return try? JSONDecoder().decode(MacUploadRecord.self, from: one)
+            }
+        }
+    }
+
+    /// The photo ids a kept row sent, read off the main actor.
+    func photoIds(of record: MacUploadRecord) async -> [String] {
+        let file = idsFolder.appending(path: "\(record.id.uuidString).json")
+        return await Task.detached(priority: .userInitiated) {
+            (try? JSONDecoder().decode([String].self, from: Data(contentsOf: file))) ?? []
+        }.value
+    }
+
+    /// Stop from the row: the batch ends as the user's choice, not as trouble.
+    func stop(_ id: UUID) {
+        guard let entry = entries.first(where: { $0.id == id }) else { return }
+        userStoppedIds.insert(id)
+        entry.model.cancel()
+    }
+
+    /// The kept rows not shown live: those of earlier launches.
+    var history: [MacUploadRecord] {
+        let live = Set(entries.map(\.id))
+        return records.filter { !live.contains($0.id) }
+    }
+
+    func forget(_ id: UUID) {
+        records.removeAll { $0.id == id }
+        save()
+        let file = idsFolder.appending(path: "\(id.uuidString).json")
+        Task.detached(priority: .utility) { try? FileManager.default.removeItem(at: file) }
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(records) { defaults.set(data, forKey: Self.recordsKey) }
+    }
+
+    /// Writes the row down once its batch ends — again after each Resume.
+    private func keep(_ entry: Entry) {
+        Task { @MainActor [weak self] in
+            while entry.model.stage != .finished { try? await Task.sleep(for: .seconds(1)) }
+            self?.record(entry)
+        }
+    }
+
+    /// The row as it stands, kept: at the start (so a quit or a crash still
+    /// leaves it), at Stop and Quit, and when the batch ends.
+    func record(_ entry: Entry) {
+        guard entries.contains(where: { $0.id == entry.id }) else { return }
+        let model = entry.model
+        let summary = model.summary
+        let isOver = model.stage == .finished
+        let sent = (carried[entry.id]?.sent ?? 0) + model.fileOutcomes.values.filter(\.isOnServer).count
+        // A batch the user stopped (Pause, Stop, Quit) or that is still going at a quit is not an error;
+        // failed files and a server error are.
+        let stopped = !isOver || isPaused(entry) || userStoppedIds.contains(entry.id)
+        let trouble = !stopped && (!summary.failures.isEmpty || summary.stopMessage != nil)
+        var parts: [String] = []
+        if stopped {
+            parts.append(isOver ? String(localized: "Stopped", comment: "Mac Activity kept upload: stopped by the user or a quit")
+                                : String(localized: "Didn’t finish", comment: "Mac Activity kept upload: ShotDex quit while it ran"))
+        }
+        parts.append(String(AttributedString(localized: "^[\(sent) file](inflect: true) sent", comment: "Mac Activity kept upload: what went up").characters))
+        if !summary.failures.isEmpty {
+            parts.append(String(AttributedString(localized: "^[\(summary.failures.count) file](inflect: true) failed", comment: "Mac Activity kept upload: files that didn't go").characters))
+        }
+        if trouble, summary.failures.isEmpty, let reason = summary.stopMessage { parts.append(reason) }
+        let photoIds = model.assetIds.filter { !$0.hasPrefix("file:") }
+        if stopped || trouble, photoIds.isEmpty {
+            parts.append(String(localized: "add the files again to send the rest", comment: "Mac Activity kept upload of Mac files: no Upload Again"))
+        }
+        let record = MacUploadRecord(id: entry.id, serverId: model.selectedServerId, serverName: entry.serverName,
+                                     startedAt: entry.startedAt, endedAt: Date(), line: parts.joined(separator: " · "),
+                                     isTrouble: trouble, wasPaused: stopped,
+                                     photoCount: photoIds.count, folder: model.folder, usesDateFolders: model.usesDateFolders)
+        // The ids once, off the main actor: they do not change for a batch.
+        let folder = idsFolder
+        let file = folder.appending(path: "\(entry.id.uuidString).json")
+        Task.detached(priority: .utility) {
+            guard !photoIds.isEmpty, !FileManager.default.fileExists(atPath: file.path) else { return }
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try? JSONEncoder().encode(photoIds).write(to: file, options: .atomic)
+        }
+        records.removeAll { $0.id == entry.id }
+        records.insert(record, at: 0)
+        if records.count > 20 { records.removeLast(records.count - 20) }
+        save()
+    }
+
     /// Batches the user paused: stopped between files, Resume sends the rest.
     private(set) var pausedIds: Set<UUID> = []
     /// What a batch had before Resume restarted it on the rest: files sent
@@ -28,6 +157,7 @@ final class MacUploads {
         guard let entry = entries.first(where: { $0.id == id }), entry.model.stage == .uploading,
               entry.model.pendingConflict == nil else { return }
         pausedIds.insert(id)
+        userStoppedIds.insert(id)
         entry.model.cancel()
     }
 
@@ -38,6 +168,7 @@ final class MacUploads {
         carried[id] = (before.sent + entry.model.fileOutcomes.values.filter(\.isOnServer).count, before.total)
         pausedIds.remove(id)
         entry.model.uploadRemaining()
+        keep(entry)
     }
 
     var isAnyRunning: Bool { entries.contains { $0.model.stage == .uploading } }
@@ -49,11 +180,13 @@ final class MacUploads {
     /// server; returns once all have finished, or after 10 s.
     func stopAll() async {
         let running = entries.filter { $0.model.stage == .uploading }
-        for entry in running { entry.model.cancel() }
+        for entry in running { userStoppedIds.insert(entry.id); entry.model.cancel() }
         let deadline = Date().addingTimeInterval(10)
         while running.contains(where: { $0.model.stage == .uploading }), Date() < deadline {
             try? await Task.sleep(for: .milliseconds(100))
         }
+        // Written now: the once-a-second keeper may not run again before the app goes.
+        for entry in running { record(entry) }
     }
 
     /// The sheet's Upload: the batch starts here and the sheet can close.
@@ -63,7 +196,10 @@ final class MacUploads {
         guard model.canStart else { return false }
         let name = model.selectedServer?.name ?? ""
         model.start()
-        entries.insert(Entry(model: model, serverName: name), at: 0)
+        let entry = Entry(model: model, serverName: name)
+        entries.insert(entry, at: 0)
+        record(entry)
+        keep(entry)
         // Finished rows beyond the last ten leave the list.
         // A paused batch is kept: it is waiting for Resume, not over.
         let finished = entries.indices.filter { entries[$0].model.stage == .finished && !pausedIds.contains(entries[$0].id) }
@@ -97,6 +233,7 @@ struct MacUploadRow: View {
     var carried: (sent: Int, total: Int)?
     var pause: () -> Void = {}
     var resume: () -> Void = {}
+    var stop: () -> Void = {}
     let remove: () -> Void
     @State private var appliesToAll = false
     @State private var isConfirmingStop = false
@@ -233,8 +370,8 @@ struct MacUploadRow: View {
             if isPaused {
                 let sent = (carried?.sent ?? 0) + model.fileOutcomes.values.filter(\.isOnServer).count
                 let total = carried?.total ?? model.lastItems.count
-                return String(localized: "Paused · \(sent) of \(total) files sent · the file that was going starts over on Resume",
-                              comment: "Mac Activity upload: paused by the user")
+                return String(AttributedString(localized: "Paused · \(sent) of ^[\(total) file](inflect: true) sent · the file that was going starts over on Resume",
+                                               comment: "Mac Activity upload: paused by the user").characters)
             }
             var parts: [String] = []
             if summary.uploadedPhotoCount > 0 {
@@ -309,7 +446,7 @@ struct MacUploadRow: View {
             Text("Stop? Files already uploaded stay on the server.", comment: "Mac Activity upload: confirm Stop")
                 .font(.subheadline)
             Spacer(minLength: 8)
-            Button { model.cancel() } label: {
+            Button { stop() } label: {
                 Text("Stop", comment: "Mac Activity upload: stop").foregroundStyle(MacTheme.redText)
             }
             .buttonStyle(MacPushButtonStyle(isDefault: false))
@@ -437,5 +574,53 @@ struct MacUploadFoot: View {
         .accessibilityLabel(title)
         .accessibilityValue(needsAnswer ? String(localized: "Needs answer", comment: "Mac sidebar foot: an upload waits on an already-there question")
                                         : fraction.formatted(.percent.precision(.fractionLength(0))))
+    }
+}
+
+/// An upload from an earlier launch (FS-15.02 §9): what happened, and
+/// Upload Again… for the same photos — the ones already there are skipped.
+struct MacUploadRecordRow: View {
+    let record: MacUploadRecord
+    let uploadAgain: () -> Void
+    let remove: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: record.isTrouble ? "exclamationmark.triangle.fill" : "arrow.up")
+                .accessibilityHidden(true)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(record.isTrouble ? MacTheme.redText : Color.secondary)
+                .frame(width: 28, height: 28)
+                .background(MacTheme.fill, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Upload to \(record.serverName)", comment: "Mac Activity: an upload to a server").fontWeight(.semibold).lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(record.endedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
+                }
+                Text(record.line).font(.subheadline).monospacedDigit().lineLimit(2)
+                    .foregroundStyle(record.isTrouble ? MacTheme.redText : .secondary)
+                    .help(record.line)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 6) {
+                if record.photoCount > 0, record.isTrouble || record.wasPaused {
+                    Button(String(localized: "Upload Again…", comment: "Mac Activity kept upload: the same photos to the same server, what is there already skipped"),
+                           action: uploadAgain)
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .help(String(localized: "Sends the same photos to the same folder. Files already there are recognised and skipped, so only the rest goes.",
+                                     comment: "Mac Activity kept upload: Upload Again… tooltip"))
+                }
+                Button(String(localized: "Remove from List", comment: "Mac Activity upload: forget a finished row"), action: remove)
+                    .buttonStyle(.bordered).controlSize(.small)
+            }
+            .fixedSize()
+            .frame(minWidth: 140, alignment: .trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 64)
+        .accessibilityElement(children: .contain)
     }
 }

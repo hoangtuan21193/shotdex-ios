@@ -36,11 +36,11 @@ struct MacActivityView: View {
         Group {
             if !hasRead {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty {
+            } else if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty && dependencies.uploads.history.isEmpty {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    if !dependencies.uploads.entries.isEmpty { uploads }
+                    if !dependencies.uploads.entries.isEmpty || !dependencies.uploads.history.isEmpty { uploads }
                     if !watchRows.isEmpty { gathering }
                     if !jobs.isEmpty {
                         list
@@ -163,12 +163,28 @@ struct MacActivityView: View {
                                      carried: dependencies.uploads.carried[entry.id],
                                      pause: { dependencies.uploads.pause(entry.id) },
                                      resume: { dependencies.uploads.resume(entry.id) },
-                                     remove: { dependencies.uploads.remove(entry.id) })
+                                     stop: { dependencies.uploads.stop(entry.id) },
+                                     remove: { dependencies.uploads.remove(entry.id); dependencies.uploads.forget(entry.id) })
+                    }
+                    // Uploads of earlier launches: their result, and the same photos sent again on request.
+                    ForEach(Array(dependencies.uploads.history.enumerated()), id: \.element.id) { index, record in
+                        if index > 0 || !entries.isEmpty { Divider() }
+                        MacUploadRecordRow(record: record, uploadAgain: {
+                            let uploads = dependencies.uploads
+                            close()
+                            Task {
+                                // The front Library window takes it as soon as it is in front again.
+                                let ids = await uploads.photoIds(of: record)
+                                guard !ids.isEmpty else { NSSound.beep(); return }
+                                uploads.againRequest = MacUploadRequest(photoIds: ids, serverId: record.serverId,
+                                                                        folder: record.folder, usesDateFolders: record.usesDateFolders)
+                            }
+                        }, remove: { dependencies.uploads.forget(record.id) })
                     }
                 }
             }
             .frame(maxHeight: 300)
-            .fixedSize(horizontal: false, vertical: dependencies.uploads.entries.count < 3)
+            .fixedSize(horizontal: false, vertical: dependencies.uploads.entries.count + dependencies.uploads.history.count < 3)
             .background(.background)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(nsColor: .separatorColor)))

@@ -438,6 +438,8 @@ struct MacRootWindow: View {
                     NotificationCenter.default.post(name: .macServersChanged, object: nil)
                 }
             }
+            .modifier(MacUploadAgainTaker(uploadRequest: $uploadRequest,
+                                          isBusy: showsAddSource || serverForm != nil || smartAlbumForm != nil))
             .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
                 selection = .backup
                 opensNewBackup = true
@@ -1688,6 +1690,8 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "albums" { selection = .albums }
+        // `-ShotDexSection uploadAgain`: the test connection only, for a kept row's Upload Again….
+        if MacDemoLibrary.section == "uploadAgain" { MacDemoLibrary.seedUploadServer(dependencies) }
         if MacDemoLibrary.section == "uploads" { MacDemoLibrary.seedUploads(dependencies); selection = .onServer }
         if MacDemoLibrary.section == "albumDetail" { selection = .album("demo-album-Iceland 2026") }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
@@ -1955,5 +1959,27 @@ private struct MacViewerChrome: ViewModifier {
                 content.focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
             }
         }
+    }
+}
+
+/// Upload Again… from Activity (FS-15.02 §9): the same photos and server in
+/// the front window's sheet — taken when it arrives, or as soon as this
+/// window comes to the front, never by a window behind.
+private struct MacUploadAgainTaker: ViewModifier {
+    @Binding var uploadRequest: MacUploadRequest?
+    let isBusy: Bool
+    @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.appearsActive) private var appearsActive
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: dependencies.uploads.againRequest?.id) { take() }
+            .onChange(of: appearsActive) { take() }
+    }
+
+    private func take() {
+        guard appearsActive, !isBusy, uploadRequest == nil, let request = dependencies.uploads.againRequest else { return }
+        dependencies.uploads.againRequest = nil
+        uploadRequest = request
     }
 }

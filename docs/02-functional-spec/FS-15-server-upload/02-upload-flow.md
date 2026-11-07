@@ -176,7 +176,15 @@ Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo
   **Files** (mở ra) liệt kê từng file: Waiting · Reading · Uploading · Verifying · Verified · Already there · Skipped · lý do lỗi
   (đỏ) · Not sent; tối đa 500 dòng. Lưới On Server của hàng đang nhận file đặt trước các ảnh chưa lên: **Uploading** (đang đi)
   và **Waiting**.
-- *Còn lại:* giữ kết quả qua lần mở app (hàng 25g); duyệt folder
+- **Qua lần mở app** (hàng 25g): mỗi lô ghi một dòng gọn (server, folder, Date Folders, giờ, kết quả) vào UserDefaults ngay khi
+  bắt đầu, lúc Stop and Quit và khi xong — thoát hay crash vẫn còn ("Didn’t finish"); tối đa 20, đọc từng dòng riêng (một dòng hỏng
+  không xoá các dòng khác). Danh sách ảnh thư viện của lô nằm ở file riêng (Application Support/ShotDex/UploadRecords, ghi ngoài main
+  thread, chỉ đọc khi bấm Upload Again…); không lưu đường dẫn file Mac. Người dùng dừng (Pause, Stop, Quit) → "Stopped", chữ
+  thường; file lỗi hoặc lỗi server → đỏ kèm lý do. Mở lại app: Activity › Uploads còn các
+  hàng đó; hàng tạm dừng hoặc có lỗi có **Upload Again…** — sheet khoá đúng server/folder/Date Folders với cùng ảnh, file đã có
+  sẵn được nhận ra bằng checksum và bỏ qua, nên chỉ phần thiếu được gửi; kết nối đã bị xoá thì sheet ghi đỏ và Upload tắt.
+  **Remove from List** quên hàng đó.
+- *Còn lại:* duyệt folder
   trên server và **Upload…** của màn duyệt server (25d); upload ảnh chỉ có ở thư mục/server.
 
 ## 10. Mac — chỗ On Server (hàng 25b, board `MAC_ServerUpload`, 2026-11-08)

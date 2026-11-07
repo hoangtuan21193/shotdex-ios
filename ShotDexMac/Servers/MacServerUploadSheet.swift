@@ -12,6 +12,8 @@ struct MacUploadRequest: Identifiable, Equatable {
     /// The browser's server and open folder: the sheet is locked to them.
     var serverId: String?
     var folder: String?
+    /// Upload Again…: the Date Folders the first upload used.
+    var usesDateFolders = false
 
     var isLocked: Bool { serverId != nil }
 }
@@ -146,7 +148,7 @@ struct MacServerUploadSheet: View {
             // so the connection keeps its own starting folder and Date Folders.
             if let folder = request.folder {
                 made.folder = folder
-                made.usesDateFolders = false
+                made.usesDateFolders = request.usesDateFolders
                 made.remembersChoice = false
             }
             // Files from this Mac have no edited version and no RAW pairing to pick.
@@ -190,7 +192,12 @@ struct MacServerUploadSheet: View {
             .padding(.horizontal, 20).padding(.bottom, 16)
         } else {
             Form {
-                if request.isLocked {
+                if request.isLocked, model.selectedServerId != request.serverId {
+                    // The connection it was for has been deleted: no silent switch to another.
+                    Text("That connection is no longer in Settings › Servers. Add it again, then upload.",
+                         comment: "Mac upload: a locked upload's connection is gone")
+                        .foregroundStyle(MacTheme.redText)
+                } else if request.isLocked {
                     // From a server browser: that server, the folder it has open.
                     LabeledContent(String(localized: "Connection", comment: "Mac upload: which server"), value: model.selectedServer?.name ?? "")
                     LabeledContent(String(localized: "Folder", comment: "Mac upload: the folder on the server"), value: model.folder.isEmpty ? "/" : model.folder)
@@ -267,7 +274,7 @@ struct MacServerUploadSheet: View {
                 Button(String(localized: "Upload", comment: "Mac upload: start")) { upload(model) }
                     .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canStart)
+                    .disabled(!model.canStart || (request.isLocked && model.selectedServerId != request.serverId))
             }
         }
     }

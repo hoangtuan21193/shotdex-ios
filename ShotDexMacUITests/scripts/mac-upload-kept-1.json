@@ -1,0 +1,50 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "upload",
+    "-ShotDexUploadSlow"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Upload",
+   "type": "button",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Pause Upload to Test SMB",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}
