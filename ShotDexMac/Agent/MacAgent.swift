@@ -35,17 +35,17 @@ final class MacAgent {
         MainActor.assumeIsolated {
             let agent = MacAgent()
             agent.start()
-            // Kept alive by the main run loop below.
-            objc_setAssociatedObject(NSApplication.shared, &MacAgent.key, agent, .OBJC_ASSOCIATION_RETAIN)
+            // Kept alive for the life of the process; the main run loop
+            // below never returns.
+            MacAgent.running = agent
         }
         RunLoop.main.run()
         exit(0)
     }
 
-    private static var key = 0
+    private static var running: MacAgent?
 
     private func start() {
-        NSApplication.shared.setActivationPolicy(.prohibited)
         coordinator.reload()
         guard hasWork else { exit(0) }
         // Keep gathering (FS-19.08 §6c): every 15 minutes, and what it
