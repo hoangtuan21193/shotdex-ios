@@ -1,0 +1,416 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "ingest",
+    "-ShotDexSlowIngest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "23 new photos",
+   "type": "staticText",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-ingest"
+  },
+  {
+   "action": "dump",
+   "name": "01-ingest"
+  },
+  {
+   "action": "assertExists",
+   "label": "EOS_DIGITAL",
+   "type": "staticText"
+  },
+  {
+   "action": "assertValue",
+   "label": "IMG_5880.HIF",
+   "type": "button",
+   "text": "Checked"
+  },
+  {
+   "action": "assertExists",
+   "label": "Import 23 Photos",
+   "type": "button"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Eject",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Uncheck All",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "IMG_5880.HIF",
+   "type": "button",
+   "text": "Not checked"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Import 0 Photos",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-unchecked"
+  },
+  {
+   "action": "click",
+   "label": "Check All",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Import 23 Photos",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Uncheck All",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "IMG_5880.HIF",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "IMG_5881.HIF",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "IMG_5882.HIF",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "assertValue",
+   "label": "IMG_5881.HIF",
+   "type": "button",
+   "text": "Checked"
+  },
+  {
+   "action": "click",
+   "label": "Import 3 Photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-running"
+  },
+  {
+   "action": "dump",
+   "name": "03-running"
+  },
+  {
+   "action": "waitFor",
+   "label": "20 new photos",
+   "type": "staticText",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-imported"
+  },
+  {
+   "action": "dump",
+   "name": "04-imported"
+  },
+  {
+   "action": "assertExists",
+   "label": "3 already imported · skipped",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "x": 0.21,
+   "y": 0.219
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "IMG_5880.HIF",
+   "type": "button",
+   "text": "Imported"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-opened-day"
+  },
+  {
+   "action": "click",
+   "label": "Fold Sunday, September 27",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "IMG_5880.HIF",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "New 20",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Sunday, September 27, 3 already imported",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "06-new"
+  },
+  {
+   "action": "click",
+   "label": "All 23",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Eject EOS_DIGITAL after import",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "Eject EOS_DIGITAL after import",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "Hide Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "07-no-inspector"
+  },
+  {
+   "action": "click",
+   "label": "Show Inspector",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Destination",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "20 new photos",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "EOS_DIGITAL",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "20 new photos",
+   "type": "staticText"
+  },
+  {
+   "action": "menu",
+   "text": "File > Import from Card…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "08-open-panel"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "20 new photos",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Check All",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Import 20 Photos",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Stop Import…"
+  },
+  {
+   "action": "assertExists",
+   "label": "Stop importing?"
+  },
+  {
+   "action": "assertExists",
+   "label": "Keep Importing",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "10-stop-question"
+  },
+  {
+   "action": "click",
+   "x": 0.49,
+   "y": 0.531
+  },
+  {
+   "action": "waitFor",
+   "label": "Import Remaining",
+   "type": "button",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "11-stopped"
+  },
+  {
+   "action": "dump",
+   "name": "11-stopped"
+  },
+  {
+   "action": "click",
+   "label": "Import Remaining",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "0 new photos",
+   "type": "staticText",
+   "seconds": 150
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Import Remaining",
+   "type": "button"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Stop importing?"
+  },
+  {
+   "action": "screenshot",
+   "name": "12-end"
+  },
+  {
+   "action": "dump",
+   "name": "12-end"
+  }
+ ]
+}

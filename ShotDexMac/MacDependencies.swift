@@ -94,6 +94,16 @@ final class MacDependencies: LibraryServices {
         #endif
         return MacUploads()
     }()
+    /// Memory cards and their imports (FS-20, board `MAC_Ingest`). Declared
+    /// after `uploads`, whose demo run clears the demo's defaults first.
+    let cards: MacIngestCards = {
+        #if DEBUG
+        if MacDemoLibrary.isOn, let demo = UserDefaults(suiteName: "com.hoangtuan.shotdex.demo") {
+            return MacIngestCards(defaults: demo)
+        }
+        #endif
+        return MacIngestCards()
+    }()
     /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
     /// the helper does not run jobs.
     let gatherer: MacCommonPhotosGatherer

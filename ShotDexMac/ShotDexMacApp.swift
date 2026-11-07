@@ -102,6 +102,10 @@ struct MacBackupCommands: Commands {
             Button(String(localized: "Add Photos Library…", comment: "Mac menu: File › Add Photos Library…")) {
                 NotificationCenter.default.post(name: .macAddPhotosLibrary, object: nil)
             }
+            Button(String(localized: "Import from Card…", comment: "Mac menu: File › Import from Card… (pick a memory card)")) {
+                NotificationCenter.default.post(name: .macImportFromCard, object: nil)
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
             Button(String(localized: "Connect to Server…", comment: "Mac menu: File › Connect to Server…")) {
                 NotificationCenter.default.post(name: .macAddServer, object: nil)
             }

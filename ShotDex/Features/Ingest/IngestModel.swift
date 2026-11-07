@@ -1,6 +1,24 @@
 import Foundation
 import Observation
 
+/// What an import needs from the app, on iOS and on the Mac (FS-20): the
+/// database, where folder sources live, a read of the destination as photos
+/// land, and a word when it ends.
+@MainActor
+protocol IngestEnvironment: AnyObject {
+    var database: AppDatabase { get }
+    var folderRoots: FolderSourceRoots { get }
+    func readImportedSource(_ sourceId: String) async
+    func announceImport(_ text: String)
+}
+
+#if os(iOS)
+extension AppDependencies: IngestEnvironment {
+    func readImportedSource(_ sourceId: String) async { await sources.read(sourceId: sourceId) }
+    func announceImport(_ text: String) { banner.show(text) }
+}
+#endif
+
 /// One card's Import from Card screen (FS-20 §5–8): its photos, which are
 /// new, what is ticked, where they go, and the run. Kept by `IngestCenter`
 /// while it runs, so leaving the screen never stops an import (AC-17).
@@ -37,7 +55,7 @@ final class IngestModel {
     private(set) var cardSpace: (used: Int64, total: Int64)?
     private(set) var destinations: [SourceStore.Source] = []
 
-    @ObservationIgnored private let dependencies: AppDependencies
+    @ObservationIgnored private let dependencies: any IngestEnvironment
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var runner: IngestRunner?
     @ObservationIgnored private var lastSourceRead = ContinuousClock.now
@@ -48,8 +66,11 @@ final class IngestModel {
     @ObservationIgnored private var hashed: [String: IngestStatus.Hashed] = [:]
     @ObservationIgnored private var hashTask: Task<Void, Never>?
     @ObservationIgnored var onUserStart: (@MainActor (IngestModel) -> Void)?
+    /// A run that ended, wherever the user is: the Mac ejects the card here
+    /// (After Import › Eject), not in a page that may be gone.
+    @ObservationIgnored var onFinish: (@MainActor (IngestModel, IngestSummary) -> Void)?
 
-    init(card: RememberedCard, root: URL, dependencies: AppDependencies) {
+    init(card: RememberedCard, root: URL, dependencies: any IngestEnvironment) {
         self.card = card
         self.root = root
         self.dependencies = dependencies
@@ -105,6 +126,12 @@ final class IngestModel {
                 await sink.model?.hashed(path, result)
             }
         }
+    }
+
+    /// Before an eject: the background hash lets go of the card.
+    func cancelHashPass() {
+        hashTask?.cancel()
+        hashTask = nil
     }
 
     private func hashed(_ path: String, _ result: IngestStatus.Hashed) {
@@ -306,8 +333,8 @@ final class IngestModel {
         guard let sourceId = settings.destinationSourceId else { return }
         guard force || ContinuousClock.now - lastSourceRead > .seconds(10) else { return }
         lastSourceRead = .now
-        let sources = dependencies.sources
-        Task { await sources.read(sourceId: sourceId) }
+        let dependencies = self.dependencies
+        Task { await dependencies.readImportedSource(sourceId) }
     }
 
     private func finish(_ summary: IngestSummary) {
@@ -317,14 +344,15 @@ final class IngestModel {
         isPaused = false
         phase = .finished(summary)
         readSourceIfDue(force: true)
+        onFinish?(self, summary)
         let count = summary.imported.count
         if summary.canEject(backupEnabled: settings.backsUp) {
             // A card in Files can't be ejected from an app on iOS: say it is
             // safe to remove instead (plan Q3).
-            dependencies.banner.show(IngestCopy.finishedBanner(count: count, card: card.name, ejected: false,
+            dependencies.announceImport(IngestCopy.finishedBanner(count: count, card: card.name, ejected: false,
                                                                canRemove: settings.ejectsAfterImport))
         } else if summary.ending == .finished, summary.failed.isEmpty, !summary.backupIncomplete {
-            dependencies.banner.show(IngestCopy.finishedBanner(count: count, card: card.name, ejected: false, canRemove: false))
+            dependencies.announceImport(IngestCopy.finishedBanner(count: count, card: card.name, ejected: false, canRemove: false))
         }
     }
 
@@ -359,7 +387,7 @@ final class IngestCenter {
     /// it carry on after the app leaves (AC-26).
     @ObservationIgnored var onUserStart: (@MainActor (IngestModel) -> Void)?
 
-    func model(for card: RememberedCard, root: URL, dependencies: AppDependencies) -> IngestModel {
+    func model(for card: RememberedCard, root: URL, dependencies: any IngestEnvironment) -> IngestModel {
         if let existing = models[card.id] { return existing }
         let model = IngestModel(card: card, root: root, dependencies: dependencies)
         model.onUserStart = { [weak self] in self?.onUserStart?($0) }

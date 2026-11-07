@@ -374,7 +374,6 @@
 				Features/FileExport/FileExportSheet.swift,
 				Features/FileExport/FileNameScreen.swift,
 				Features/FileExport/FileNameTokenGrid.swift,
-				Features/Ingest/IngestModel.swift,
 				Features/Ingest/IngestOptionScreens.swift,
 				Features/Ingest/IngestPanels.swift,
 				Features/Ingest/IngestScreen.swift,

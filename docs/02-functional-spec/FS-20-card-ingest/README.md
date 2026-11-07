@@ -137,3 +137,29 @@ nguồn thư mục FS-19 có trên mọi máy.
 ## 10. Tiêu chí nghiệm thu
 
 27 AC ở [01-acceptance-criteria.md](01-acceptance-criteria.md).
+
+## 11. Mac (row 26a, 2026-11-08)
+
+Màn `MAC_Ingest` là một trang trong cửa sổ chính (không mở cửa sổ mới), mở từ hàng thẻ trong Sources.
+
+- **Nhận thẻ.** File › Import from Card… (⇧⌘I) mở bảng chọn (không modal) ở `/Volumes`; chọn ổ thẻ hoặc thư mục
+  DCIM. ShotDex nhớ thẻ bằng bookmark security-scoped (bookmark cũ tự làm mới) và liệt kê nó trong Sources mỗi khi
+  ổ được gắn — đọc lại khi có sự kiện mount/unmount/app active, không dò mỗi giây như iPhone. Chọn thư mục khác trên
+  cùng ổ thay thẻ cũ. Rút thẻ khi không chạy: trang về All Photos; rút giữa mẻ: lời kết của §8 hiện bằng toast rồi về
+  All Photos.
+- **Mặc định All** (board vẽ All, ngày đã nhập gập lại) — khác §5 (New) trên iPhone.
+- **Header**: tên thẻ, `Memory card · 41.2 GB of 64 GB used` (dung lượng chỉ khi là ổ riêng; thư mục trên máy không
+  hiện), `N new photos` / `N already imported · skipped`, Eject (tắt khi là thư mục, khi đang chạy, khi đang eject).
+  Đang chạy: dòng tiến độ + **Stop Import…** hỏi lại (“Stop importing?” · Stop Import · Keep Importing; tự đóng nếu mẻ
+  xong trước).
+- **Mẻ không trọn** (§8): dải dưới header với lời kết + **Import Remaining** / **Retry Failed**.
+- **Inspector 300pt**: Destination (popup các nguồn folder/drive, “Joins the X source · N free”, đỏ khi rút),
+  Folders (Year / Date · Date · None + ví dụ), After Import › Eject X after import, thẻ tóm tắt (`N photos · size` +
+  câu kiểm checksum, hoặc lý do không Import được, hoặc “Check the photos you want to import.”).
+- **Eject sau import** chạy ở `MacIngestCards` (cả khi người dùng đã rời trang), chỉ khi mọi bản đã kiểm; dừng hash nền
+  trước; không eject khi bất kỳ mẻ nào đang đọc. Toast “Imported N photos. X ejected.” hoặc lỗi eject.
+- Hàng thẻ trong sidebar: % khi chạy, nút ⏏ khi eject được.
+- Chưa làm (26b): Backup, File Names, Metadata, Grid/List, New Folder… trong Destination. Tiến độ đầy đủ: hàng 27.
+
+Kiểm: `ShotDexMacUITests/scripts/mac-ingest.json` (demo `-ShotDexSection ingest -ShotDexSlowIngest`: thẻ giả 23 ảnh
+HIF trong thư mục tạm, nguồn đích “T7 RAW Archive”).

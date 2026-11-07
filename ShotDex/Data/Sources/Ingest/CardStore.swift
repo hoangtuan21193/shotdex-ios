@@ -55,7 +55,7 @@ final class CardStore {
         let isVolume = values?.volumeIsInternal == false
         let id = isVolume ? (values?.volumeUUIDString ?? url.standardizedFileURL.path) : url.standardizedFileURL.path
         let name = isVolume ? (values?.volumeName ?? url.lastPathComponent) : url.lastPathComponent
-        return RememberedCard(id: id, name: name, bookmark: try url.bookmarkData())
+        return RememberedCard(id: id, name: name, bookmark: try SourceBookmark.make(for: url))
     }
 
     /// Which remembered cards open now.
@@ -63,9 +63,17 @@ final class CardStore {
         var found: [String: URL] = [:]
         var seen: Set<String> = []
         var duplicates: [String] = []
+        var renewed = false
         for card in remembered {
             var isStale = false
-            guard let url = try? URL(resolvingBookmarkData: card.bookmark, bookmarkDataIsStale: &isStale) else { continue }
+            // The Mac keeps a security-scoped bookmark: the card opens again after a relaunch.
+            guard let url = try? SourceBookmark.resolve(card.bookmark, isStale: &isStale) else { continue }
+            // A remounted card can leave the bookmark stale: renew it while it still resolves.
+            if isStale, let index = remembered.firstIndex(where: { $0.id == card.id }),
+               let fresh = try? SourceBookmark.make(for: url) {
+                remembered[index].bookmark = fresh
+                renewed = true
+            }
             let isAccessing = url.startAccessingSecurityScopedResource()
             defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
             guard (try? url.checkResourceIsReachable()) == true else { continue }
@@ -78,8 +86,8 @@ final class CardStore {
         }
         if !duplicates.isEmpty {
             remembered.removeAll { duplicates.contains($0.id) }
-            persist()
         }
+        if !duplicates.isEmpty || renewed { persist() }
         if found != connected { connected = found }
     }
 

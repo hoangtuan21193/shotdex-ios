@@ -180,6 +180,8 @@ struct MacRootWindow: View {
                 }
                     // Another run is another page: the last one's log is let go, its questions not carried over.
                     .id(commonPhotosRunId)
+            } else if case .card(let id) = selection {
+                MacIngestPage(cardId: id)
             } else if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
             } else if selection == .albums {
@@ -203,6 +205,7 @@ struct MacRootWindow: View {
         .modifier(MacActivityToolbar())
         .modifier(MacSupportSheetHost())
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
+        .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
         .onChange(of: cullRequest == nil) { _, closed in
             guard closed, let before = columnsBeforeCull else { return }
@@ -642,10 +645,10 @@ struct MacRootWindow: View {
         }
     }
 
-    /// Recounted when the library, the index or the sources change — not on
-    /// every body. The grid's own count stands in for "a file was indexed".
+    /// Recounted when the library, the index or the sources change (a
+    /// source read: photos imported from a card join it) — not on every body. The grid's own count stands in for "a file was indexed".
     private var countsKey: String {
-        "\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)-\(sources.map(\.id))"
+        "\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)-\(sources.map(\.id))-\(dependencies.sourcesModel.readCount)"
     }
 
     /// What an empty place says (FS-18.01 §2).
@@ -1690,6 +1693,10 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "albums" { selection = .albums }
+        // Board `MAC_Ingest`: a demo card and a folder to import it into.
+        if MacDemoLibrary.section == "ingest" {
+            Task { if let id = await MacDemoCard.seed(dependencies) { selection = .card(id) } }
+        }
         // `-ShotDexSection uploadAgain`: the test connection only, for a kept row's Upload Again….
         if MacDemoLibrary.section == "uploadAgain" { MacDemoLibrary.seedUploadServer(dependencies) }
         if MacDemoLibrary.section == "uploads" { MacDemoLibrary.seedUploads(dependencies); selection = .onServer }

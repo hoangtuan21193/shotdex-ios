@@ -58,6 +58,14 @@ struct MacSidebar: View {
                         .tag(MacSidebarItem.source(source.id))
                         .listRowBackground(ground(.source(source.id)))
                 }
+                // Memory cards ShotDex remembers, while plugged in (FS-20 §4): Import from Card.
+                ForEach(dependencies.cards.connected) { card in
+                    Label {
+                        MacCardRowTitle(card: card)
+                    } icon: { MacSidebar.icon("sdcard") }
+                        .tag(MacSidebarItem.card(card.id))
+                        .listRowBackground(ground(.card(card.id)))
+                }
             } header: {
                 HStack {
                     Text("Sources", comment: "Mac sidebar group")
@@ -309,9 +317,12 @@ enum MacSidebarItem: Hashable, Identifiable {
     case people, pets
     case smartAlbum(String)
     case backup, statistics, duplicates, collages, videoProjects, onServer
+    /// A memory card's Import from Card page (FS-20, board `MAC_Ingest`).
+    case card(String)
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
+        if case .card(let id) = self { return "card-" + id }
         if case .smartAlbum(let id) = self { return "smart-" + id }
         if case .album(let id) = self { return "album-" + id }
         return title
@@ -342,6 +353,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .collages: String(localized: "Collages", comment: "Mac sidebar")
         case .videoProjects: String(localized: "Video Projects", comment: "Mac sidebar")
         case .onServer: String(localized: "On Server", comment: "Mac sidebar")
+        case .card: String(localized: "Memory Card", comment: "Mac sidebar: a memory card to import from")
         }
     }
 
@@ -389,6 +401,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .collages: "square.grid.2x2"
         case .videoProjects: "film"
         case .onServer: "externaldrive.connected.to.line.below"
+        case .card: "sdcard"
         }
     }
 }
@@ -514,5 +527,42 @@ private struct MacReadFoot: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
         }
+    }
+}
+
+/// A card's sidebar row: its name, and the import's percentage while one
+/// runs (FS-20 §7) — read here, so a run's progress redraws only this row.
+private struct MacCardRowTitle: View {
+    let card: RememberedCard
+    @Environment(MacDependencies.self) private var dependencies
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(card.name).lineLimit(1)
+            Spacer(minLength: 4)
+            if let model = dependencies.cards.center.models[card.id], model.isRunning {
+                Text(model.progress.fraction.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            } else if dependencies.cards.canEject(card.id) {
+                // As in Finder (board `MAC_Ingest`): the card goes from its row.
+                Button {
+                    Task {
+                        guard await !dependencies.cards.eject(card.id) else { return }
+                        NotificationCenter.default.post(name: .macToast, object: String(localized: "\(card.name) couldn't be ejected. Close any app using it and try again.",
+                                                                                         comment: "Mac Import from Card: Eject failed"))
+                    }
+                } label: {
+                    Image(systemName: "eject").font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help(String(localized: "Eject \(card.name)", comment: "Mac Import from Card: Eject's tooltip"))
+                .accessibilityLabel(String(localized: "Eject \(card.name)", comment: "Mac Import from Card: Eject's tooltip"))
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityValue(String(localized: "Memory card", comment: "Mac sidebar: what a card row is, for VoiceOver"))
     }
 }
