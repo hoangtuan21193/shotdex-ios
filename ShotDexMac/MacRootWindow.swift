@@ -44,6 +44,8 @@ struct MacRootWindow: View {
     @State private var onThisDayYears = 0
     /// Photos ShotDex hid, for the sidebar's Hidden row.
     @State private var hiddenCount = 0
+    /// Names of Photos' albums opened from Albums, for the window title.
+    @State private var albumTitles: [String: String] = [:]
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
@@ -103,6 +105,11 @@ struct MacRootWindow: View {
         } detail: {
             if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else if selection == .albums {
+                MacAlbumsScreen(photoMenu: photoMenu, smartAlbums: smartAlbums, open: { item, title in
+                    if case .album(let id) = item, let title { albumTitles[id] = title }
+                    selection = item
+                })
             } else if selection == .hidden {
                 MacHiddenScreen(sources: sources, photoMenu: photoMenu, showsInspector: $showsInspector)
             } else if let source = serverSource {
@@ -257,6 +264,11 @@ struct MacRootWindow: View {
                 })
             }
             .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
+            .onReceive(NotificationCenter.default.publisher(for: .macEditSmartAlbum)) { note in
+                if let id = note.object as? String, let album = smartAlbums.first(where: { $0.id == id }) {
+                    smartAlbumForm = MacSmartAlbumFormRequest(editing: album)
+                }
+            }
             .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
             .sheet(isPresented: $showsAddSource, onDismiss: runAddSourceRequest) {
                 MacAddSourceSheet(photosAdded: photosAdded,
@@ -439,7 +451,7 @@ struct MacRootWindow: View {
     /// The row shows the library grid (and so its search field).
     private func isGridPlace(_ item: MacSidebarItem) -> Bool {
         switch item {
-        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded, .onThisDay: true
+        case .allPhotos, .favorites, .videos, .raw, .recentlyAdded, .onThisDay, .album, .people, .pets: true
         case .source: serverSource == nil
         default: false
         }
@@ -452,6 +464,9 @@ struct MacRootWindow: View {
         case .videos: .videos
         case .raw: .raw
         case .recentlyAdded: .recentlyAdded
+        case .album(let id): .album(id)
+        case .people: .people
+        case .pets: .pets
         case .onThisDay:
             .onThisDay(month: Calendar.current.component(.month, from: onThisDayDate),
                        day: Calendar.current.component(.day, from: onThisDayDate))
@@ -482,6 +497,7 @@ struct MacRootWindow: View {
     /// The window title: the row's name — a source's own name, not "Source".
     private var placeTitle: String {
         if case .source(let id) = selection, let source = sources.first(where: { $0.id == id }) { return source.name }
+        if case .album(let id) = selection, let title = albumTitles[id] { return title }
         return selection?.title ?? "ShotDex"
     }
 
@@ -1030,8 +1046,11 @@ struct MacRootWindow: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
-            Button { } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
-                .disabled(true)
+            // Back from a place opened in Albums returns to Albums; a full history comes later.
+            Button { selection = .albums } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
+                .keyboardShortcut("[", modifiers: .command)
+                .disabled(selection?.isOpenedFromAlbums != true)
+                .help(selection?.isOpenedFromAlbums == true ? String(localized: "Back to Albums", comment: "Mac toolbar: Back to Albums") : "")
             Button { } label: { Label(String(localized: "Forward", comment: "Mac toolbar"), systemImage: "chevron.right") }
                 .disabled(true)
         }
@@ -1119,6 +1138,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
+        if MacDemoLibrary.section == "albums" { selection = .albums }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "addSource" { showsAddSource = true }
         // `sourceIndexing` needs `-ShotDexDemoSources`: the read and the offline drive.

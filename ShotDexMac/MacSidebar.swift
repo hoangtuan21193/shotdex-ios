@@ -113,7 +113,7 @@ struct MacSidebar: View {
     /// accent, blue, once the list is clicked.
     @ViewBuilder
     private func ground(_ item: MacSidebarItem) -> some View {
-        if selection == item {
+        if selection == item || (item == .albums && selection?.isOpenedFromAlbums == true) {
             RoundedRectangle(cornerRadius: 8).fill(MacTheme.rowSelection).padding(.horizontal, 8)
         } else {
             Color.clear
@@ -229,12 +229,17 @@ enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
     case onThisDay, albums, hidden
+    /// Places opened from Albums (FS-18.04 §1): one of Photos' albums, and
+    /// People and Pets' two. Not rows of their own.
+    case album(String)
+    case people, pets
     case smartAlbum(String)
     case backup, statistics, duplicates, collages, videoProjects, onServer
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
         if case .smartAlbum(let id) = self { return "smart-" + id }
+        if case .album(let id) = self { return "album-" + id }
         return title
     }
 
@@ -253,6 +258,9 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
         case .hidden: String(localized: "Hidden", comment: "Mac sidebar: photos hidden in ShotDex")
+        case .album: String(localized: "Album", comment: "Mac: one of Photos' albums")
+        case .people: String(localized: "People", comment: "Mac Albums: photos with faces")
+        case .pets: String(localized: "Pets", comment: "Mac Albums: photos with cats or dogs")
         case .smartAlbum: String(localized: "Smart Album", comment: "Mac sidebar: a smart album")
         case .backup: String(localized: "Backup", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
@@ -268,7 +276,15 @@ enum MacSidebarItem: Hashable, Identifiable {
     /// under its name meanwhile.
     var isPendingScreen: Bool {
         switch self {
-        case .albums, .statistics, .duplicates, .collages, .videoProjects, .onServer: true
+        case .statistics, .duplicates, .collages, .videoProjects, .onServer: true
+        default: false
+        }
+    }
+
+    /// An album, People or Pets: opened from Albums, so Albums stays lit.
+    var isOpenedFromAlbums: Bool {
+        switch self {
+        case .album, .people, .pets: true
         default: false
         }
     }
@@ -284,6 +300,9 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
         case .hidden: "eye.slash"
+        case .album: "rectangle.stack"
+        case .people: "person.2"
+        case .pets: "pawprint"
         case .smartAlbum: "sparkles.rectangle.stack"
         case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"

@@ -35,22 +35,23 @@ struct LibraryQueries: Sendable {
     /// Faces, not people: Vision offers no public face-embedding request, so
     /// the app can say a photo has someone in it but never who, and never that
     /// two photos show the same person.
-    func assetIdsWithFaces() async throws -> [String] {
-        try await subjectAssetIds(column: "faceCount")
+    func assetIdsWithFaces(limit: Int? = nil) async throws -> [String] {
+        try await subjectAssetIds(column: "faceCount", limit: limit)
     }
 
     /// Photos the subject scan found a cat or a dog in, newest first.
-    func assetIdsWithAnimals() async throws -> [String] {
-        try await subjectAssetIds(column: "animalCount")
+    func assetIdsWithAnimals(limit: Int? = nil) async throws -> [String] {
+        try await subjectAssetIds(column: "animalCount", limit: limit)
     }
 
-    private func subjectAssetIds(column: String) async throws -> [String] {
+    private func subjectAssetIds(column: String, limit: Int?) async throws -> [String] {
         try await database.reader.read { db in
             try String.fetchAll(db, sql: """
                 SELECT p.assetId FROM photo_metadata p
                 JOIN subject_scan s ON s.assetId = p.assetId
                 WHERE s.\(column) > 0
                 ORDER BY p.creationDate DESC
+                \(limit.map { "LIMIT \($0)" } ?? "")
                 """)
         }
     }

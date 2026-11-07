@@ -31,6 +31,8 @@ final class MacDependencies: LibraryServices {
     /// Stars and flags (FS-01.12): file photos' go to their sidecars, Photos'
     /// into Photos itself (macOS 27 keeps stars there).
     let photoMarks: PhotoMarks
+    /// Recently Viewed and Recently Shared for Albums' strips.
+    let recentActivity = RecentActivityStore()
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor

@@ -1,0 +1,456 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "albums"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-albums"
+  },
+  {
+   "action": "dump",
+   "name": "01-albums"
+  },
+  {
+   "action": "assertExists",
+   "label": "My Albums",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Smart Albums",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "assertExists",
+   "label": "6 albums · 2 smart albums",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Sort By"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Name",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "02-by-name"
+  },
+  {
+   "action": "click",
+   "label": "Sort By"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Custom Order",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "type": "searchField"
+  },
+  {
+   "action": "typeText",
+   "text": "kyo"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Iceland 2026"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-search"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Iceland 2026",
+   "seconds": 3
+  },
+  {
+   "action": "rightClick",
+   "label": "Portfolio"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Pin",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Pinned",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "04-pinned"
+  },
+  {
+   "action": "rightClick",
+   "label": "Portfolio",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Unpin",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Pinned",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "New"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "New Album…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "The album is made in Photos.",
+   "seconds": 3,
+   "type": "staticText"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-new-album"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "New"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "New Smart Album…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-new-smart"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "label": "Dolomites"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Rename Album…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "The album is renamed in Photos.",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "06a-rename"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "The demo library's albums can't be changed.",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.5,
+   "y": 0.545
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "rightClick",
+   "label": "Dolomites"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Delete Album…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "The album goes from Photos on all your devices; its photos stay in the library.",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "06b-delete"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "rightClick",
+   "label": "Night ISO 3200+",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Edit Smart Album…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06c-edit-smart"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Kyoto Autumn"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "07-album"
+  },
+  {
+   "action": "assertExists",
+   "label": "Kyoto Autumn",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "7 photos · 1 video",
+   "type": "staticText",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Night ISO 3200+",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "08-smart"
+  },
+  {
+   "action": "click",
+   "label": "Albums",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Open On This Day"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertExists",
+   "label": "On This Day",
+   "type": "staticText"
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "albums",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "09-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

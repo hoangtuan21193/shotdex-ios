@@ -42,6 +42,8 @@ enum MacDemoLibrary {
         let database = file.flatMap { try? AppDatabase(DatabasePool(path: $0)) }
             ?? (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         if isNewFile, let state = originalCheckState { seedOriginalCheck(database, state: state) }
+        // The demo's albums are slices of its photos (no PhotoKit).
+        LibraryPlace.albumAssetIds = { albumPhotoIds($0) }
         let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService(),
                                            originalCheck: originalCheckState.map { _ in originalCheckEnvironment(database) })
         // A database file kept from an earlier launch is seeded once.
@@ -314,6 +316,23 @@ enum MacDemoLibrary {
                     WHERE upper(m.originalFilename) LIKE '%.ARW' OR upper(m.originalFilename) LIKE '%.RAF' OR upper(m.originalFilename) LIKE '%.CR3'
                     """, arguments: [source, source, kind, now])
             }
+        }
+    }
+
+    /// The demo's albums (the photo menu's Add to Album list): each a slice
+    /// of the demo photos, covers from them.
+    static let albumNames = ["Kyoto Autumn", "Iceland 2026", "Portfolio", "Dolomites", "Street 2025", "Night Walks"]
+
+    static func albumPhotoIds(_ albumId: String) -> [String]? {
+        guard let index = albumNames.firstIndex(where: { "demo-album-\($0)" == albumId }) else { return nil }
+        let ids = rows().map(\.assetId)
+        return Array(ids.dropFirst(index * 11).prefix(8 + index * 3))
+    }
+
+    static func albumSummaries() -> [AlbumSummary] {
+        albumNames.map { name in
+            let ids = albumPhotoIds("demo-album-\(name)") ?? []
+            return AlbumSummary(id: "demo-album-\(name)", title: name, count: ids.count, coverAssetId: ids.first)
         }
     }
 

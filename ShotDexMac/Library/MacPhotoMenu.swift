@@ -61,12 +61,15 @@ final class MacPhotoMenu: NSObject {
 
     func share(_ ids: [String], with service: NSSharingService) {
         Task {
-            let urls = await files(for: ids, facts: await resolved(Facts(), ids: ids))
+            let facts = await resolved(Facts(), ids: ids)
+            let urls = await files(for: ids, facts: facts)
             guard !urls.isEmpty else {
                 failure = String(localized: "These photos couldn't be shared — they may still be downloading from iCloud.", comment: "Mac photo menu: Share found no file")
                 return
             }
             service.perform(withItems: urls)
+            // Albums' Recently Shared: Photos items (their covers come from Photos).
+            dependencies.recentActivity.recordShared(facts.photosAssetIds)
         }
     }
     // MARK: For the menu bar (FS-18.01b §2)
@@ -542,6 +545,8 @@ final class MacPhotoMenu: NSObject {
                 return
             }
             panel.show(urls)
+            // Albums' Recently Viewed: what Quick Look showed from Photos.
+            for id in facts.photosAssetIds.prefix(50).reversed() { dependencies.recentActivity.recordViewed(id) }
         }
     }
 

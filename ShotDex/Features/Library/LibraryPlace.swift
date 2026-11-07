@@ -15,6 +15,18 @@ enum LibraryPlace: Equatable, Sendable {
     case recentlyAdded
     /// Photos taken on this month and day in earlier years (FS-06.07).
     case onThisDay(month: Int, day: Int)
+    /// One of Photos' albums, opened from Collections (Mac FS-18.04 §1).
+    case album(String)
+    /// Photos the subject scan found a face in — People and Pets' People.
+    case people
+    /// Photos with a cat or a dog in them.
+    case pets
+
+    #if DEBUG
+    /// A library that is not Photos (the Mac's demo) answers albums itself.
+    /// Set once at launch, before any place is read.
+    nonisolated(unsafe) static var albumAssetIds: ((String) -> [String]?)?
+    #endif
 
     static let favorites = LibraryPlace.rules(SmartAlbumQuery(rules: [SmartAlbumRule(field: .favorite, boolValue: true)]))
     static let videos = LibraryPlace.rules(SmartAlbumQuery(rules: [
@@ -43,7 +55,7 @@ enum LibraryPlace: Equatable, Sendable {
     func filters() async throws -> [LibraryQueries.IndexFilter] {
         switch self {
         case .rules(let query): [.query(query)]
-        case .recentlyAdded, .onThisDay: []
+        case .recentlyAdded, .onThisDay, .album, .people, .pets: []
         }
     }
 
@@ -54,6 +66,15 @@ enum LibraryPlace: Equatable, Sendable {
             return nil
         case .onThisDay(let month, let day):
             return try await queries.assetIdsOnThisDay(month: month, day: day, now: now)
+        case .album(let id):
+            #if DEBUG
+            if let ids = Self.albumAssetIds?(id) { return ids }
+            #endif
+            return await Task.detached(priority: .userInitiated) { PhotoLibraryService.assetIds(inAlbum: id) }.value
+        case .people:
+            return try await queries.assetIdsWithFaces()
+        case .pets:
+            return try await queries.assetIdsWithAnimals()
         case .recentlyAdded:
             let fromPhotos = await Task.detached(priority: .userInitiated) { Self.photosRecentlyAdded() }.value
             let fromFiles = try await queries.assetIdsOutsidePhotos(indexedSince: now.addingTimeInterval(-Self.recentWindow))

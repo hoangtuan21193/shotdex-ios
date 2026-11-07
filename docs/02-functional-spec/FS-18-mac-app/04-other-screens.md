@@ -24,6 +24,33 @@ Support thành cửa sổ riêng.
 - Collages (`MAC_Creations`): thẻ theo tháng; chuột phải Open in Collage · Show in Library · Export… · Share… ·
   Remove from Collages…. Video Projects: thẻ project, New Video Project, xác nhận xoá bằng alert.
 
+### 1.0 Màn Albums (board `MAC_Collections`) — trạng thái 2026-11-07
+
+- Đã có: toolbar ◀ ▶ · "Albums" + "6 albums · 2 smart albums" · **Custom Order ▾** (Custom Order = thứ tự trong
+  Photos · Name · Most Photos — PhotoKit không có ngày tạo album; nhớ qua lần mở, chỉ áp My Albums) · **Search Albums**
+  (lọc theo tên ở mọi mục, cả People and Pets; số ở đầu mục theo kết quả; không khớp: "No Results") · nút **+** amber
+  48×36 (New Album… → hộp đặt tên, tạo trong Photos — album rỗng vẫn hiện, bìa "No photos"; không đủ quyền: mờ kèm gợi ý
+  System Settings; New Smart Album… → sheet).
+- Thẻ hero **On This Day**: ảnh mới nhất của ngày, "On This Day" · ngày · "26 photos from 3 years"; bấm → On This Day.
+  Không có ảnh: nền xám + "Nothing from earlier years today". Bên phải **Recently Viewed** / **Recently Shared** (4 ảnh
+  nhỏ, từ `RecentActivityStore`; Mac ghi lại mỗi lần Share), chỉ hiện khi có.
+- Mục: **Pinned** (`CollectionPinStore`, chung khoá với iOS; chuột phải › Pin / Unpin; thẻ đã ghim có dấu ghim) và
+  **People and Pets** (ảnh có mặt người / chó mèo theo lượt quét, chỉ hiện khi có) chung một hàng · **Smart Albums N**
+  (dấu bánh răng; smart album không ảnh: "No photos") · **My Albums N** (album thường của Photos, cả album rỗng). Thẻ 135
+  vuông, góc 12, tên 13 medium dưới.
+- Chuột phải thẻ: Open · Pin/Unpin · (album Photos) **Rename Album…** (hộp tên) · **Delete Album…** (hỏi lại: "The album
+  goes from Photos on all your devices; its photos stay in the library.") · (smart album) **Edit Smart Album…**. Thư viện
+  demo không bao giờ gọi Photos: đổi tên / xoá báo "The demo library's albums can't be changed.".
+- Bấm thẻ: album của Photos mở như một chỗ của Library (lưới, chọn, menu như Library; tiêu đề là tên album; hàng Albums ở
+  sidebar vẫn sáng; **Back ⌘[** về Albums), smart album → màn smart album, People/Pets → lưới ảnh có mặt người / chó mèo.
+  Recently Viewed (ảnh đã Quick Look) / Recently Shared (ảnh đã Share) chỉ là ảnh, chưa mở được (chờ Viewer).
+- VoiceOver: mỗi thẻ là một nút "Kyoto Autumn, 8 photos, pinned" / "…, smart album"; Pin/Unpin là action.
+- Hiệu năng: album đọc lại khi album/ảnh đổi (gom 1 s), phần còn lại (On This Day, People/Pets, bìa smart album) đọc riêng;
+  đếm + bìa mỗi album là hai fetch nhẹ (bìa `fetchLimit` 1); bìa ảnh lấy bản trên máy, không chờ mạng; danh sách thẻ dựng
+  một lần mỗi lần vẽ, sắp xếp lưu sẵn.
+- Chưa có: danh sách album con dưới hàng Albums ở sidebar và kéo ảnh vào album (board vẽ), album dùng chung (Shared),
+  thư mục album của Photos, Customize thứ tự mục.
+
 ### 1.1 On This Day (board `MAC_OnThisDay`, hành vi theo [FS-06.07](../FS-06-collections/07-on-this-day.md))
 
 - Sidebar › Collections › On This Day, Go › On This Day. Là một **chỗ của Library** (`LibraryPlace.onThisDay`): ảnh

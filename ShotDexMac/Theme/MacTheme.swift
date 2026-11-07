@@ -44,6 +44,9 @@ enum MacTheme {
     /// `checkboxStroke`: an empty checkbox's edge, on a `content` fill.
     static let checkboxStroke = dynamic(light: NSColor(white: 0, alpha: 0.25), dark: NSColor(white: 1, alpha: 0.30))
 
+    /// `card`: a quiet panel on the content ground (Albums' recents, board `MAC_Collections`).
+    static let card = dynamic(light: NSColor(white: 0, alpha: 0.035), dark: NSColor(white: 1, alpha: 0.055))
+
     /// `fill`: a flat control's ground (DESIGN.md §10b).
     static let fill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.07))
     /// `greenSoft`: the tile behind a done job's check (board `MAC_Activity`).
