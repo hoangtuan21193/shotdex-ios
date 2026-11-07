@@ -154,24 +154,24 @@ lớn hơn B), D video 210 MB (2025-12-24), E `fileSize` NULL (2026-06-10), F `f
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-S1 | (S) | `LibraryQueries.items(sort: .fileSizeLargest)` | thứ tự D, A, B, C, E, F | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeLargest` |
-| AC-S2 | (S) | `.fileSizeSmallest` | thứ tự B, C, A, D, E, F — NULL vẫn cuối, B trước C nhờ `assetId` | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeSmallest` |
-| AC-S3 | (S), bật Videos Only | `.fileSizeLargest` | chỉ D | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeRespectsFilter` |
-| AC-S4 | (S) chạy hai lần | `.fileSizeLargest` | hai mảng id giống hệt | ⚠️ chưa có — `LibraryQueriesSortTests.fileSizeIsStable` |
-| AC-S5 | `SortOption` | đọc `menuOrders` | 6 phần tử, hai phần tử cuối là `.fileSizeLargest`, `.fileSizeSmallest`; cả hai có `photoKitSortKey == nil` | ⚠️ chưa có — `SortOptionTests.menuOffersFileSize` |
-| AC-S6 | `UserDefaults[librarySort] = "fileSizeLargest"` | tạo `LibraryModel` mới | `model.sort == .fileSizeLargest` (không rơi về mặc định) | ⚠️ chưa có — `LibraryModelSortTests.restoresFileSize` |
-| AC-S7 | lưới đọc từ index + 2 placeholder iCloud chưa index | `.fileSizeLargest` | placeholder nằm sau mọi hàng có `fileSize`, kể cả NULL | ⚠️ chưa có — `LibraryModelSortTests.placeholdersLast` |
+| AC-S1 | (S) | `LibraryQueries.gridItems(matching:sort: .fileSizeLargest)` | thứ tự D, A, B, C, E, F | `LibraryQueriesSortTests.fileSizeLargest`, `.equalSizesPreferNewerDate` |
+| AC-S2 | (S) | `.fileSizeSmallest` | thứ tự B, C, A, D, E, F — NULL vẫn cuối, B trước C nhờ `assetId` | `LibraryQueriesSortTests.fileSizeSmallest`, `.equalSizesPreferNewerDate` |
+| AC-S3 | (S), bật Videos Only | `.fileSizeLargest` | chỉ D | `LibraryQueriesSortTests.fileSizeRespectsFilter` |
+| AC-S4 | (S) chạy hai lần | `.fileSizeLargest` | hai mảng id giống hệt | `LibraryQueriesSortTests.fileSizeIsStable` |
+| AC-S5 | `SortOption` | đọc `menuOrders` | 6 phần tử, hai phần tử cuối là `.fileSizeLargest`, `.fileSizeSmallest`; cả hai có `photoKitSortKey == nil` | `LibraryQueriesSortTests.menuOffersFileSize` |
+| AC-S6 | `UserDefaults[librarySort] = "fileSizeLargest"` | tạo `LibraryModel` mới | `model.sort == .fileSizeLargest` (không rơi về mặc định) | `LibraryModelSortTests.restoresFileSize` |
+| AC-S7 | lưới đọc từ index + 2 placeholder iCloud chưa index | `.fileSizeLargest` | placeholder nằm sau mọi hàng có `fileSize`, kể cả NULL | `LibraryModelSortTests.placeholdersLast` |
 | AC-S8 | 55.000 hàng, 10 % `fileSize` rỗng | sắp `.fileSizeLargest` / `.fileSizeSmallest` toàn bảng | ≤ 150 ms mỗi chiều trên Mac M-series; không có migration index | số đo trong plan §6 (82 / 83 ms) |
-| AC-S9 | Mac popover, sort = Date Taken / Newest First | chọn field File Size | `library.sort == .fileSizeLargest`; hàng Order hiện `Largest First` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeField` |
-| AC-S10 | Mac, sort = `.fileSizeSmallest` | `LibrarySortField(sort)` + `isNewestFirst` | `.fileSize`, `false` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeDirection` |
-| AC-S11 | iPhone 17 (26.5), Library | mở Filter and sort ▸ Sort By, chọn File Size (Largest) | menu có 6 dòng, dấu ✓ ở dòng vừa chọn; ô dưới cùng của lưới (chỗ lưới mở ra) là ảnh lớn nhất demo library | ⚠️ chưa có — `ShotDexUITests/scripts/library-sort-filesize.json` + ảnh |
-| AC-S12 | như AC-S11 trên iOS 18.6 (nhánh pre-26) và iPad 13" | cùng thao tác | cùng kết quả; menu không cắt chữ | ⚠️ chưa có — cùng script, 2 máy + ảnh |
-| AC-S16 | iPhone 17, sort = File Size (Largest) | mở Library | tiêu đề giữa thanh trên là `File Size (Largest)`, không phải ngày | ảnh `build/shots/ph-size-largest.png` |
-| AC-S13 | iPhone 17, sort = File Size (Largest), cuộn lưới | đổi Sort By về Date Taken (Newest) | trước: không có scrubber mép phải; sau: scrubber hiện | ⚠️ chưa có — ảnh trước/sau từ AC-S11 |
-| AC-S15 | Mac, Library, sort = File Size (Largest) | mở lưới | không có tiêu đề ngày; đổi về Date Taken thì tiêu đề ngày hiện lại | ⚠️ chưa có — ảnh `mac-shot` trước/sau |
-| AC-S14 | board `IP_MenuBar`, `MAC_MenuBar`, `MAC_FilterPopover` | `Tools/design-board render` | Mac menu: 6 dòng phẳng như `menuOrders`; iPad menu: field Date Taken · Date Modified · File Size; popover có File Size; không còn Name/ISO/Focal Length/Aperture/Shutter Speed | ⚠️ chưa có — PNG render + `design-parity` |
+| AC-S9 | Mac popover, sort = Date Taken / Newest First | chọn field File Size | `library.sort == .fileSizeLargest`; hàng Order hiện `Largest First` | `MacFilterPopoverLogicTests.fileSizeField`, `.fileSizeDirectionTitles` + `ShotDexMacUITests/scripts/mac-sort-filesize.json` ảnh 02 |
+| AC-S10 | Mac, sort = `.fileSizeSmallest` | `LibrarySortField(sort)` + `isNewestFirst` | `.fileSize`, `false` | `MacFilterPopoverLogicTests.fileSizeField`, `.sortPairCoversEveryMenuOrder` |
+| AC-S11 | iPhone 17 (26.5), Library | mở Filter and sort ▸ Sort By, chọn File Size (Largest) | menu có 6 dòng, dấu ✓ ở dòng vừa chọn; ô dưới cùng của lưới (chỗ lưới mở ra) là ảnh lớn nhất demo library | `ShotDexUITests/scripts/library-sort-filesize.json` (iPhone 17 26.5) ảnh 02, 03 |
+| AC-S12 | như AC-S11 trên iOS 18.6 (nhánh pre-26) và iPad 13" | cùng thao tác | cùng kết quả; menu không cắt chữ | cùng script trên iPad Pro 13" 26.5 ảnh 02, 03 · **iOS 18.6: ⚠️ chưa chứng minh** — máy này không có runtime 18.6 |
+| AC-S16 | iPhone 17, sort = File Size (Largest) | mở Library | tiêu đề giữa thanh trên là `File Size (Largest)`, không phải ngày | `library-sort-filesize.json` ảnh 03 iPhone + iPad |
+| AC-S13 | iPhone 17, sort = File Size (Largest), cuộn lưới | đổi Sort By về Date Taken (Newest) | trước: không có scrubber mép phải; sau: scrubber hiện | `LibraryQueriesSortTests.onlyDateOrdersCarryDateChrome` · ảnh: thư viện demo 6 ảnh không cuộn nên scrubber vốn không hiện — ⚠️ chưa có ảnh trên thư viện dài |
+| AC-S15 | Mac, Library, sort = File Size (Largest) | mở lưới | không có tiêu đề ngày; đổi về Date Taken thì tiêu đề ngày hiện lại | `mac-sort-filesize.json` ảnh 02 (không tiêu đề ngày) và 03 (`Monday, September 28`) |
+| AC-S14 | board `IP_MenuBar`, `MAC_MenuBar`, `MAC_FilterPopover` | `Tools/design-board render` | Mac menu: 6 dòng phẳng như `menuOrders`; iPad menu: field Date Taken · Date Modified · File Size; popover có File Size; không còn Name/ISO/Focal Length/Aperture/Shutter Speed | render `Tools/design-board` 3 board, publish canvas iPad v98, Mac v163 |
 
-**Chưa chứng minh được:** AC-S1…AC-S15 — chưa có code.
+**Chưa chứng minh được:** AC-S12 nhánh iOS 18.6 (không có runtime), AC-S13 ảnh trên thư viện đủ dài để cuộn. AC-S8 chứng minh bằng số đo, không bằng test.
 
 ### 7.2 Phần cũ
 

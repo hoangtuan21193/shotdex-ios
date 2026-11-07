@@ -1,0 +1,17 @@
+{
+  "steps": [
+    {"action": "launch"},
+    {"action": "wait", "seconds": 8},
+    {"action": "screenshot", "name": "01-library-date"},
+    {"action": "tap", "label": "Filter and sort"},
+    {"action": "wait", "seconds": 2},
+    {"action": "tap", "label": "Sort By"},
+    {"action": "wait", "seconds": 2},
+    {"action": "screenshot", "name": "02-sort-menu"},
+    {"action": "dump", "name": "02-sort-menu"},
+    {"action": "tap", "label": "File Size (Largest)"},
+    {"action": "wait", "seconds": 4},
+    {"action": "screenshot", "name": "03-library-size-largest"},
+    {"action": "dump", "name": "03-library-size-largest"}
+  ]
+}

@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | `docs/02-functional-spec/FS-01-library/05-filtering-and-sorting.md` §5.1, AC-S1…AC-S14 (commit `35086961`) |
 | Ngày | 2026-11-07 |
-| Trạng thái | chờ duyệt (⚠️ đã quyết hết) |
+| Trạng thái | gần xong (2026-11-07) — 7 task, 15/16 AC có chứng minh; còn AC-S12 nhánh 18.6, ảnh AC-S13 thư viện dài |
 
 ## 1. Hiểu đúng chưa
 
