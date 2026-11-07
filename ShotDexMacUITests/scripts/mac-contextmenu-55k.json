@@ -14,7 +14,7 @@
 {"action":"wait","seconds":2},
 {"action":"rightClick","x":0.5,"y":0.45},
 {"action":"wait","seconds":1.5},
-{"action":"assertExists","label":"Rating","type":"menuItem"},
+{"action":"assertExists","label":"rating","type":"menuItem"},
 {"action":"assertMissing","label":"Quick Look","type":"menuItem"},
 {"action":"key","text":"escape"},
 {"action":"wait","seconds":1},

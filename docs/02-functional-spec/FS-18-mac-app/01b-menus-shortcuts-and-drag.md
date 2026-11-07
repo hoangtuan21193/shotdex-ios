@@ -49,6 +49,21 @@ phần theo ngữ cảnh.
 
 - Không phím: Rescan, Merge N Groups…, Show in Library, Advanced Search…, Go to Date…, New Window.
 
+- **Trạng thái (2026-11-07, AC-118):** đã có — File: Add Source/Folder/Photos Library/Connect to Server, New Smart
+  Album, New Backup, Find Common Photos, Show in Finder ⇧⌘R · Edit: Deselect All ⇧⌘A, Search ⌘F, Advanced Search… ·
+  View: as Grid/List, Sort By ▸, Filter and Sort… ⇧⌘L, Show Filter Bar, Show Inspector ⌥⌘I · Image: Quick Look ⌘Y
+  (Space là phím của lưới), Get Info ⌘I, Favorite ., Rating ▸ 0–5, Pick P, Reject X, Clear Flag U, Move to Trash ⌘⌫ ·
+  Go: All Photos…Statistics ⌥⌘1–6, Backup ⌥⌘B, On This Day, Albums, Duplicates, Collages, Video Projects, On Server ·
+  Window: Activity ⌥⌘0. Lệnh menu tác động lên cửa sổ đang trước (focused scene value), không có lựa chọn thì
+  mờ — không bấm mà im lặng; Go mờ khi không có cửa sổ nào. Phím đơn (. 0–5 P X U) là của lưới/danh sách khi chúng
+  giữ bàn phím (menu không ghi phím: SwiftUI không bắn phím không ⌘ từ menu bar), nên chữ gõ trong ô tìm kiếm vẫn là
+  chữ; ⌘⌫ trong ô chữ là xoá tới đầu dòng, không phải Move to Trash. View › as Grid/List ⌘1/⌘2 và Edit › Search ⌘F
+  còn đi qua notification (mọi cửa sổ thư viện cùng nghe) — chuyển sang focused value khi làm nhiều cửa sổ.
+  **Chưa có:** New Window/Album, Open, Reveal in Photos, Upload, Export ▸, Eject, Remove Source, Print, Copy/Paste
+  Edits, Sync, Revert, Filter ▸, Zoom, Show Info on Thumbnails…, Slideshow, Edit ⌘E, Compare, Rotate, Culling Pass,
+  Keywords…, Adjust Date/Location (có trong Get Info), Create/Combine, Duplicate, Hide, Back/Forward, Go to Date…,
+  Video Studio, Help — mỗi mục đến cùng màn của nó trong `docs/design/mac/MAC_LOOP.md`.
+
 ## 3. Phím theo màn
 
 | Màn | Phím |

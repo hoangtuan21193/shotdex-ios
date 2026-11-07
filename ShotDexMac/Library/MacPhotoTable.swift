@@ -27,6 +27,8 @@ struct MacPhotoTable: NSViewRepresentable {
     var onSelection: ((Set<String>) -> Void)?
     /// The right-click menu for these photos (board `MAC_ContextMenu`).
     var contextMenu: (([String]) -> NSMenu?)? = nil
+    /// Favorite, stars and flag keys on the selection (`MacPhotoMenu.markKey`).
+    var markKey: ((NSEvent) -> Bool)? = nil
     /// Selected when the list appears (the grid's selection, after ⌘2).
     var initialSelection: Set<String> = []
 
@@ -93,6 +95,7 @@ struct MacPhotoTable: NSViewRepresentable {
         coordinator.setSort = setSort
         coordinator.onSelection = onSelection
         coordinator.contextMenu = contextMenu
+        (scroll.documentView as? MacLibraryTableView)?.markKey = markKey
         coordinator.update(items, generation: generation, details: details, detailsGeneration: detailsGeneration, sort: sort)
         coordinator.assetsResolved(assetGeneration)
     }
@@ -708,6 +711,12 @@ final class MacTableCell: NSTableCellView {
 /// The list's table: a right-click asks the coordinator for the photo menu.
 final class MacLibraryTableView: NSTableView {
     var contextMenu: ((Int) -> NSMenu?)?
+    /// The mark keys, as on the grid (`MacGridCollectionView.markKey`).
+    var markKey: ((NSEvent) -> Bool)?
+
+    override func keyDown(with event: NSEvent) {
+        if markKey?(event) != true { super.keyDown(with: event) }
+    }
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let row = self.row(at: convert(event.locationInWindow, from: nil))

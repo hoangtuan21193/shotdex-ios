@@ -101,6 +101,10 @@ struct MacPhotoMenuHost: ViewModifier {
                 sourceDeletion = request
                 return
             }
+            #if DEBUG
+            // The demo's photos are rows, not Photos assets: never ask PhotoKit to delete.
+            if MacDemoLibrary.isOn { NSSound.beep(); return }
+            #endif
             deletion.delete(ids, gate: dependencies.photoDeletionGate, perform: { targets in
                 try await library.deleteAssets(ids: Set(targets), checkingServer: false)
             }, finished: { result in

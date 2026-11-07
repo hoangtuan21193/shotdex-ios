@@ -83,12 +83,12 @@
   },
   {
    "action": "assertMissing",
-   "label": "Show in Finder",
+   "label": "photoMenu.showInFinder",
    "type": "menuItem"
   },
   {
    "action": "hover",
-   "label": "Rating",
+   "label": "rating",
    "type": "menuItem",
    "seconds": 1.5
   },
@@ -154,12 +154,12 @@
   },
   {
    "action": "assertMissing",
-   "label": "Show in Finder",
+   "label": "photoMenu.showInFinder",
    "type": "menuItem"
   },
   {
    "action": "hover",
-   "label": "Rating",
+   "label": "rating",
    "type": "menuItem",
    "seconds": 1.5
   },
@@ -187,7 +187,7 @@
   },
   {
    "action": "hover",
-   "label": "Rating",
+   "label": "rating",
    "type": "menuItem"
   },
   {
@@ -217,7 +217,7 @@
   },
   {
    "action": "hover",
-   "label": "Flag",
+   "label": "flag",
    "type": "menuItem"
   },
   {
@@ -240,7 +240,7 @@
   },
   {
    "action": "hover",
-   "label": "Flag",
+   "label": "flag",
    "type": "menuItem"
   },
   {
@@ -312,7 +312,7 @@
   },
   {
    "action": "hover",
-   "label": "Add to Album",
+   "label": "addToAlbum",
    "type": "menuItem"
   },
   {
@@ -360,7 +360,7 @@
   },
   {
    "action": "hover",
-   "label": "Add to Album",
+   "label": "addToAlbum",
    "type": "menuItem"
   },
   {
@@ -388,7 +388,7 @@
   },
   {
    "action": "hover",
-   "label": "Share",
+   "label": "share",
    "type": "menuItem"
   },
   {

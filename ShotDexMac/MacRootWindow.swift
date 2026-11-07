@@ -84,6 +84,10 @@ struct MacRootWindow: View {
     @State private var photoSelection: MacSelectionModel?
 
     var body: some View {
+        root.focusedSceneValue(\.macGo, MacGoTarget(go: { selection = $0 }))
+    }
+
+    private var root: some View {
         NavigationSplitView {
             sidebar
         } detail: {
@@ -682,6 +686,28 @@ struct MacRootWindow: View {
                     }
                     .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
                 }
+                .focusedSceneValue(\.macLibrary, libraryTarget)
+    }
+
+    /// The menu bar's way into this window's library (FS-18.01b §2).
+    private var libraryTarget: MacLibraryTarget? {
+        guard let library, let photoMenu else { return nil }
+        // Read when the command runs: a key right after a click acts on the new selection.
+        let selection = photoSelection
+        var ids: [String] { selection?.ids ?? [] }
+        return MacLibraryTarget(
+            hasSelection: !(selection?.ids.isEmpty ?? true),
+            showsInspector: showsInspector,
+            sort: library.sort,
+            quickLook: { photoMenu.quickLook(ids) },
+            showInFinder: { photoMenu.showInFinder(ids) },
+            toggleFavorite: { photoMenu.toggleFavorite(ids) },
+            rate: { photoMenu.apply(.rate($0), to: ids) },
+            flag: { photoMenu.apply(.flag($0), to: ids) },
+            moveToTrash: { photoMenu.moveToTrash(ids) },
+            advancedSearch: { showsAdvancedFilter = true },
+            toggleInspector: { showsInspector.toggle() },
+            setSort: { library.sort = $0 })
     }
 
     private func patchDetails() async {
@@ -701,6 +727,14 @@ struct MacRootWindow: View {
     }
 
     /// The photo menu, told which photos are offline as it opens.
+    /// Image's single keys while the grid or list has the keyboard; the
+    /// selection is read when the key comes, not when the view was built.
+    private var markKey: ((NSEvent) -> Bool)? {
+        guard let photoMenu else { return nil }
+        let selection = photoSelection
+        return { photoMenu.markKey($0, ids: selection?.ids ?? []) }
+    }
+
     private var photoMenuBuilder: (([String]) -> NSMenu?)? {
         guard let photoMenu else { return nil }
         let offline = offlinePhotoIds
@@ -724,13 +758,14 @@ struct MacRootWindow: View {
                                   assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
                                   sort: library.sort, setSort: { library.sort = $0 },
                                   onSelection: { photoSelection?.set($0) }, contextMenu: photoMenuBuilder,
+                                  markKey: markKey,
                                   initialSelection: photoSelection?.idSet ?? [])
                 } else {
                     // Newest-first position i is the model's (bottom-anchored) count − 1 − i.
                     MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
                                  picture: Self.demoPicture, offline: offlinePhotoIds, onSelection: { photoSelection?.set($0) },
                                  initialSelection: photoSelection?.idSet ?? [],
-                                 contextMenu: photoMenuBuilder, marks: tableDetails, marksGeneration: tableDetailsGeneration,
+                                 contextMenu: photoMenuBuilder, markKey: markKey, marks: tableDetails, marksGeneration: tableDetailsGeneration,
                                  generation: library.rowsGeneration,
                                  assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
                                  assetGeneration: library.contentRefreshGeneration)

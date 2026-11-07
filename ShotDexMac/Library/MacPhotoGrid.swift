@@ -28,6 +28,8 @@ struct MacPhotoGrid: NSViewRepresentable {
     var initialSelection: Set<String> = []
     /// The right-click menu for these photos (board `MAC_ContextMenu`).
     var contextMenu: (([String]) -> NSMenu?)? = nil
+    /// Favorite, stars and flag keys on the selection (`MacPhotoMenu.markKey`).
+    var markKey: ((NSEvent) -> Bool)? = nil
     /// Favorite, stars and flag per photo, drawn bottom-left on the tile
     /// (board `MAC_LibrarySelected`); a new generation redraws the tiles on screen.
     var marks: [String: LibraryTableQueries.Details] = [:]
@@ -86,6 +88,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.picture = picture
         coordinator.onSelection = onSelection
         coordinator.contextMenu = contextMenu
+        (scroll.documentView as? MacGridCollectionView)?.markKey = markKey
         coordinator.marks(marks, generation: marksGeneration)
         let glyphsChanged = coordinator.onServer != onServer || coordinator.offline != offline
         coordinator.onServer = onServer
@@ -346,6 +349,13 @@ struct MacPhotoGrid: NSViewRepresentable {
 /// layout leaves seven tiles too wide for the row, and it wraps at six.
 final class MacGridCollectionView: NSCollectionView {
     var contextMenu: ((NSEvent) -> NSMenu?)?
+    /// The mark keys (. 0–5 P X U): only while the grid has the keyboard,
+    /// so the same letters typed in search stay letters.
+    var markKey: ((NSEvent) -> Bool)?
+
+    override func keyDown(with event: NSEvent) {
+        if markKey?(event) != true { super.keyDown(with: event) }
+    }
 
     override func menu(for event: NSEvent) -> NSMenu? {
         contextMenu?(event) ?? super.menu(for: event)

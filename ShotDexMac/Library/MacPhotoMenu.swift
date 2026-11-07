@@ -69,6 +69,56 @@ final class MacPhotoMenu: NSObject {
             service.perform(withItems: urls)
         }
     }
+    // MARK: For the menu bar (FS-18.01b §2)
+
+    func quickLook(_ ids: [String]) {
+        Task { showQuickLook(ids, facts: await resolved(Facts(), ids: ids)) }
+    }
+    func showInFinder(_ ids: [String]) {
+        Task { showInFinder(await resolved(Facts(), ids: ids)) }
+    }
+    func moveToTrash(_ ids: [String]) { trash(ids) }
+
+    func apply(_ mark: MarkKeyAction, to ids: [String]) {
+        let marks = dependencies.photoMarks
+        serially {
+            await marks.apply(mark, to: ids)
+            self.changed(ids)
+        }
+    }
+
+    /// Favorite as the menu's own row reads it: all already favorite turns
+    /// them off, anything else turns them on.
+    func toggleFavorite(_ ids: [String]) {
+        // Read in the chain: ". ." reads the first toggle's result.
+        serially {
+            let facts = await self.resolved(Facts(), ids: ids)
+            var allFavorite = !facts.photosIds.isEmpty && facts.photosIds.allSatisfy(facts.favoriteIds.contains)
+            #if DEBUG
+            if MacDemoLibrary.isOn { allFavorite = ids.allSatisfy(facts.favoriteIds.contains) }
+            #endif
+            await self.writeFavorite(!allFavorite, ids: ids, facts: facts)
+        }
+    }
+
+    /// Image's single keys (FS-18.01b §2): . Favorite, 0–5 stars, P X U
+    /// flags. False for any other key, or with a modifier held, so the grid
+    /// and list keep their own (arrows, Space, type-to-select).
+    func markKey(_ event: NSEvent, ids: [String]) -> Bool {
+        let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        guard modifiers.isEmpty, !ids.isEmpty, let key = event.charactersIgnoringModifiers?.first else { return false }
+        // A held key marks once, not thirty times a second.
+        let isMarkKey = key == "." || MarkKeyCommand.action(for: key) != nil
+        if event.isARepeat { return isMarkKey }
+        if key == "." {
+            toggleFavorite(ids)
+            return true
+        }
+        guard let action = MarkKeyCommand.action(for: key) else { return false }
+        apply(action, to: ids)
+        return true
+    }
+
     private func trash(_ ids: [String]) { trashRequest = ids }
     private func newAlbum(_ ids: [String], photosCount: Int) { albumRequest = MacAlbumRequest(ids: ids, photosCount: photosCount) }
 
@@ -298,40 +348,54 @@ final class MacPhotoMenu: NSObject {
     // MARK: Acting
 
     private func setFavorite(_ isFavorite: Bool, ids: [String], facts: Facts) {
+        serially { await self.writeFavorite(isFavorite, ids: ids, facts: facts) }
+    }
+
+    private func writeFavorite(_ isFavorite: Bool, ids: [String], facts: Facts) async {
         let photoLibrary = dependencies.photoLibrary, metadataStore = dependencies.metadataStore
-        Task {
-            let facts = await resolved(facts, ids: ids)
-            var done = Array(facts.photosIds)
-            #if DEBUG
-            // The demo has no assets: its favorites are only rows.
-            if MacDemoLibrary.isOn { done = ids }
-            #endif
-            let assetIds = facts.photosAssetIds, written = done
-            guard !written.isEmpty else {
-                failure = String(localized: "None of these photos are in Photos, so they can't be favorites.", comment: "Mac photo menu: Favorite on photos not in Photos")
-                return
-            }
-            if !assetIds.isEmpty {
-                let assets = await Task.detached(priority: .userInitiated) { PhotoLibraryService.fetchAssets(ids: assetIds) }.value
-                if !assets.isEmpty {
-                    do {
-                        try await photoLibrary.setFavorite(isFavorite, for: assets)
-                    } catch {
-                        failure = error.localizedDescription
-                        return
-                    }
+        let facts = await resolved(facts, ids: ids)
+        var done = Array(facts.photosIds)
+        #if DEBUG
+        // The demo has no assets: its favorites are only rows.
+        if MacDemoLibrary.isOn { done = ids }
+        #endif
+        let assetIds = facts.photosAssetIds, written = done
+        guard !written.isEmpty else {
+            failure = String(localized: "None of these photos are in Photos, so they can't be favorites.", comment: "Mac photo menu: Favorite on photos not in Photos")
+            return
+        }
+        if !assetIds.isEmpty {
+            let assets = await Task.detached(priority: .userInitiated) { PhotoLibraryService.fetchAssets(ids: assetIds) }.value
+            if !assets.isEmpty {
+                do {
+                    try await photoLibrary.setFavorite(isFavorite, for: assets)
+                } catch {
+                    failure = error.localizedDescription
+                    return
                 }
             }
-            await Task.detached(priority: .userInitiated) {
-                try? metadataStore.updateFavorites(assetIds: written, isFavorite: isFavorite)
-            }.value
-            // Favorite is Photos' own: say what stayed as it was.
-            let skipped = ids.count - written.count
-            if skipped > 0 {
-                failure = String(localized: "\(skipped) of these photos aren't in Photos, so they stay as they were.",
-                                 comment: "Mac: favorite on a mix of Photos and folder photos (plural)")
-            }
-            changed(ids)
+        }
+        await Task.detached(priority: .userInitiated) {
+            try? metadataStore.updateFavorites(assetIds: written, isFavorite: isFavorite)
+        }.value
+        // Favorite is Photos' own: say what stayed as it was.
+        let skipped = ids.count - written.count
+        if skipped > 0 {
+            failure = String(localized: "\(skipped) of these photos aren't in Photos, so they stay as they were.",
+                             comment: "Mac: favorite on a mix of Photos and folder photos (plural)")
+        }
+        changed(ids)
+    }
+
+    /// Marks land in the order they were asked for: "3" then "5" quickly
+    /// ends on 5 stars, whichever Photos read or write is slower.
+    @ObservationIgnored private var markChain: Task<Void, Never>?
+
+    private func serially(_ work: @escaping @MainActor () async -> Void) {
+        let previous = markChain
+        markChain = Task {
+            await previous?.value
+            await work()
         }
     }
 

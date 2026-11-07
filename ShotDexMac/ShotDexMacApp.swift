@@ -65,6 +65,9 @@ struct ShotDexMacApp: App {
             MacCommonPhotosCommands()
             MacActivityCommands()
             MacFilterCommands()
+            MacLibraryCommands()
+            MacImageCommands()
+            MacGoCommands()
         }
         // One window per common-photos run (FS-19.08 §7): not modal, and
         // closing it leaves the run going.
@@ -106,7 +109,8 @@ enum MacWindowMetrics {
     static let inspectorWidth: CGFloat = 300
 }
 
-/// File › New Backup… and Go › Backup ⌥⌘B (FS-22.06 §5.1, FS-18.01b).
+/// File › sources and New Backup…, View › as Grid/List, Edit › Search
+/// (FS-22.06 §5.1, FS-18.01b); Image and Go are `MacLibraryCommands.swift`.
 struct MacBackupCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -154,25 +158,6 @@ struct MacBackupCommands: Commands {
                 NotificationCenter.default.post(name: .macFocusSearchRequest, object: nil)
             }
             .keyboardShortcut("f", modifiers: .command)
-        }
-        // Image › Get Info ⌘I (FS-18.01b §1); the rest of Image comes with the menu bar pass.
-        CommandMenu(String(localized: "Image", comment: "Mac menu bar: Image menu")) {
-            Button(String(localized: "Get Info", comment: "Mac menu: Image › Get Info")) {
-                NotificationCenter.default.post(name: .macGetInfo, object: nil)
-            }
-            .keyboardShortcut("i", modifiers: .command)
-        }
-        CommandMenu(String(localized: "Go", comment: "Mac menu bar: Go menu")) {
-            // Go › All Photos ⌥⌘1 … Recently Added ⌥⌘5 (FS-18.01b §2).
-            ForEach(Array(MacSidebarItem.library.enumerated()), id: \.offset) { index, item in
-                Button(item.title) { NotificationCenter.default.post(name: .macGoTo, object: item) }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.option, .command])
-            }
-            Divider()
-            Button(String(localized: "Backup", comment: "Mac menu: Go › Backup")) {
-                NotificationCenter.default.post(name: .macShowBackup, object: nil)
-            }
-            .keyboardShortcut("b", modifiers: [.option, .command])
         }
     }
 }

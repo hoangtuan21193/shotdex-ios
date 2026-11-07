@@ -143,7 +143,11 @@ final class PhotoMarks {
     @discardableResult
     func setRating(_ rating: Int, ids: [String], photosRatings: [String: Int]? = nil) async -> MarkChange {
         let rating = StarRating.clamped(rating)
-        let known = photosRatings ?? (ratingWriter == nil ? [:] : readPhotosRatings(ids))
+        // A PhotoKit fetch of the whole selection: never on the main actor.
+        let read = readPhotosRatings
+        let known = if let photosRatings { photosRatings } else if ratingWriter == nil { [String: Int]() } else {
+            await Task.detached(priority: .userInitiated) { read(ids) }.value
+        }
         var previous: [String: Int] = [:]
         for id in ids { previous[id] = self.rating(for: id, photosRating: known[id]) }
         let change = MarkChange(kind: .rating(previous: previous))

@@ -1,0 +1,551 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "menu",
+   "text": "Image"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "01-image-none"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Favorite",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "View>Show Inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No Selection",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "menu",
+   "text": "Image"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "02-image-selected"
+  },
+  {
+   "action": "dump",
+   "name": "02-image-selected"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Quick Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Move to Trash",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "Image>Rating>★★★★"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "4 stars",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "2"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "2 stars",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "0"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Unrated",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "Image>Pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "03-pick"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-pick"
+  },
+  {
+   "action": "key",
+   "text": "x"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "04-reject-key"
+  },
+  {
+   "action": "key",
+   "text": "u"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "05-clear-key"
+  },
+  {
+   "action": "menu",
+   "text": "Image>Favorite"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Favorite",
+   "type": "checkBox",
+   "text": "1"
+  },
+  {
+   "action": "key",
+   "text": "."
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Favorite",
+   "type": "checkBox",
+   "text": "0"
+  },
+  {
+   "action": "menu",
+   "text": "View"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "06-view-menu"
+  },
+  {
+   "action": "assertExists",
+   "label": "Hide Inspector",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "key",
+   "text": "i",
+   "modifiers": "cmd,option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "menu",
+   "text": "View"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Inspector",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "View>Sort By>Date Taken (Oldest)"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "07-sort-oldest"
+  },
+  {
+   "action": "menu",
+   "text": "View>Sort By>Date Taken (Newest)"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "08-edit-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "Edit>Deselect All"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "menu",
+   "text": "Image"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Favorite",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "type": "searchField"
+  },
+  {
+   "action": "typeText",
+   "text": "px.2u"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "type": "searchField",
+   "text": "px.2u"
+  },
+  {
+   "action": "screenshot",
+   "name": "09-typing"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "menu",
+   "text": "View>Show Inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Favorite",
+   "type": "checkBox",
+   "text": "0"
+  },
+  {
+   "action": "assertExists",
+   "label": "Unrated",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "File"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "10-file-menu"
+  },
+  {
+   "action": "assertExists",
+   "label": "Show in Finder",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "Go"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "11-go-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "menu",
+   "text": "Go>Statistics"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "12-statistics"
+  },
+  {
+   "action": "key",
+   "text": "1",
+   "modifiers": "cmd,option"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "menu",
+   "text": "Edit>Advanced Search…"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "13-advanced"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Image>Quick Look"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "14-quicklook"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.25,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "15-trash-prompt"
+  },
+  {
+   "action": "dump",
+   "name": "15-trash-prompt"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Cancel",
+   "type": "button",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
