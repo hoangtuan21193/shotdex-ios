@@ -153,20 +153,22 @@ Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo
   nhớ theo connection như §2) · Date Folders + câu giải thích · Files (Only RAW · All Originals · Originals + Edited) · tóm tắt
   "3 photos · 3 files · ~1.2 MB"; ảnh không có trong Photos (thư mục, server) ghi "N aren't in Photos and aren't uploaded
   from here yet". Không có connection nào: "No server yet" + **Open Servers Settings…**. Nút **Cancel** (Esc) · **Upload** (Return, mờ khi 0 file).
-- **Đang đẩy:** thanh tiến độ, "2 of 3 files · 19 KB of 502 KB · about 1 minute left", dòng file đang làm (Reading / Uploading /
-  Verifying). Trùng tên (§5) hỏi **ngay trong sheet**: "“DSC04101.JPG” is already on Test SMB", hai cỡ (Mac chưa có hai ảnh nhỏ của §5), ô **Apply to
-  Remaining Conflicts**, Replace (đỏ, bên trái) · Skip · **Keep Both** (Return, bên phải). **Stop…** hỏi trước; file đã lên giữ nguyên.
-- **Kết quả:** "Uploaded 3 photos (1.2 MB) to Test SMB." + "Each file was read back and checked…" / "No photos uploaded." + lý do,
-  danh sách file hỏng, **Upload Remaining** khi còn file chưa lên (**Try Again** khi chưa lên tấm nào), **Done**.
-- *Ngoại lệ ghi rõ:* MAC_STYLE muốn việc chạy lâu nằm ở Activity, không ở sheet; 25a giữ tiến độ trong sheet tới hàng 25c. Mac không hỏi xoá ở đây — giải phóng chỗ là việc
-  của màn On Server (hàng 25b).
-- Trước file đầu: "Connecting to Test SMB…". Kết quả khi dừng/lỗi có tiêu đề **Upload Stopped** và "N files not sent.".
-- Mac giữ máy không ngủ khi đang đẩy (`ProcessInfo` activity). Sheet không đóng bằng Esc/click ngoài khi đang đẩy (chỉ Stop…,
-  hỏi trước, không đỏ: Upload Remaining gửi phần còn lại). Quit khi đang đẩy hỏi "Photos are uploading. Stop and quit?"
-  (Keep Uploading · Stop and Quit). Đóng cửa sổ giữa chừng (sheet đang mở thì nút đóng cửa sổ tắt): dừng, file đã lên giữ nguyên.
+- **Upload** giao lô cho Activity (hàng 25c, 2026-11-08): sheet đóng, popover **Activity** mở với mục **Uploads** đầu
+  danh sách — cửa sổ Library dùng tiếp được trong lúc đẩy (MAC_STYLE: việc lâu không nằm trong sheet). Lô thuộc app
+  (`MacUploads`), không thuộc cửa sổ: đóng cửa sổ không dừng nó. Nút Activity trên toolbar tô amber khi đang đẩy.
+- **Hàng upload:** "Upload to Test SMB" + % · thanh 5pt · "2 of 3 files · 19 KB of 502 KB · about 1 minute left" ("Connecting to
+  Test SMB…" trước file đầu) · nút ■ Stop hỏi ngay trong hàng ("Stop? Files already uploaded stay on the server." Keep Uploading ·
+  Stop). Trùng tên (§5) hỏi trong hàng: "“DSC04101.JPG” is already on Test SMB", hai cỡ, **Apply to Remaining Conflicts**,
+  Replace (chữ đỏ, trái) · Skip · **Keep Both**. Xong: "Uploaded 3 photos (1.2 MB), each file checked · N skipped · N failed ·
+  N not sent · lý do", **Upload Remaining**/**Try Again** khi còn file, **Remove from List**. Giữ 10 hàng đã xong gần nhất.
+- Một câu hỏi trùng tên đang chờ: Activity tự mở trên cửa sổ đang trước (cả khi quay lại app); app ở sau thì Dock nảy một lần.
+  Hàng có câu hỏi lên đầu mục Uploads.
+- Mac giữ máy không ngủ khi đang đẩy (`ProcessInfo` activity). Quit khi đang đẩy hỏi một lần "Photos are uploading. Stop and
+  quit?" (Keep Uploading · Stop and Quit; có lượt Common Photos thì câu phụ nói nó tạm dừng) → dừng mọi lô, chờ tới 10 s để xoá
+  file dở trên server, rồi mới thoát.
 - Demo (`-ShotDexDemoLibrary`) chỉ tới được 127.0.0.1: mọi host khác trỏ vào cổng đóng, nên không bao giờ ghi lên server LAN thật.
-- *Còn lại:* chạy nền trong Activity popover thay cho sheet (board `MAC_ServerUpload`, hàng 25c); duyệt folder trên server
-  và **Upload…** của màn duyệt server (25b); upload ảnh chỉ có ở thư mục/server.
+- *Còn lại:* Pause/Resume, danh sách từng file, trạng thái trong bảng On Server / ô ảnh / chân sidebar (hàng 25e); duyệt folder
+  trên server và **Upload…** của màn duyệt server (25d); upload ảnh chỉ có ở thư mục/server.
 
 ## 10. Mac — chỗ On Server (hàng 25b, board `MAC_ServerUpload`, 2026-11-08)
 

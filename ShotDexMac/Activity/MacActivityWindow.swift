@@ -36,10 +36,11 @@ struct MacActivityView: View {
         Group {
             if !hasRead {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if jobs.isEmpty && watchRows.isEmpty {
+            } else if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 10) {
+                    if !dependencies.uploads.entries.isEmpty { uploads }
                     if !watchRows.isEmpty { gathering }
                     if !jobs.isEmpty {
                         list
@@ -141,6 +142,35 @@ struct MacActivityView: View {
         guard !Task.isCancelled else { return }
         stored = read
         hasRead = true
+    }
+
+    /// Uploads (FS-15.02 §9, board `MAC_ServerUpload`): first — they are
+    /// what the user just started, and a question may be waiting in a row.
+    private var uploads: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Uploads", comment: "Mac Activity: uploads to a server")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 2)
+                .accessibilityAddTraits(.isHeader)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // A row with a question first: it may be below the fold otherwise.
+                    let entries = dependencies.uploads.entries.sorted { ($0.model.pendingConflict != nil) && ($1.model.pendingConflict == nil) }
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { Divider() }
+                        MacUploadRow(entry: entry, remove: { dependencies.uploads.remove(entry.id) })
+                    }
+                }
+            }
+            .frame(maxHeight: 300)
+            .fixedSize(horizontal: false, vertical: dependencies.uploads.entries.count < 3)
+            .background(.background)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(nsColor: .separatorColor)))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(String(localized: "Uploads", comment: "Mac Activity: uploads to a server"))
+        }
     }
 
     /// Board `MAC_Activity`, Gathering (FS-19.08 §6c): first in the window.
@@ -470,7 +500,9 @@ struct MacActivityToolbar: ViewModifier {
     @Environment(\.appearsActive) private var appearsActive
     @Environment(MacDependencies.self) private var dependencies
 
-    private var isRunning: Bool { dependencies.commonPhotos.entries.values.contains { $0.isRunning } }
+    private var isRunning: Bool {
+        dependencies.commonPhotos.entries.values.contains { $0.isRunning } || dependencies.uploads.isAnyRunning
+    }
 
     func body(content: Content) -> some View {
         content
@@ -496,6 +528,13 @@ struct MacActivityToolbar: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .macShowActivity)) { _ in takeRequest() }
             .onAppear { takeRequest() }
             .onChange(of: appearsActive) { takeRequest() }
+            // An upload is waiting on an already-there file: the front window shows the question.
+            .onChange(of: dependencies.uploads.needsAnswer) { _, needs in
+                guard needs else { return }
+                if appearsActive { isPresented = true }
+                // Behind another app: the Dock bounces once; the question opens on coming back.
+                if !NSApp.isActive { NSApp.requestUserAttention(.informationalRequest) }
+            }
             // A question answered "no": back to the list it was asked from.
             .onChange(of: prompts.reopens) { _, reopens in
                 guard reopens else { return }
@@ -549,6 +588,8 @@ struct MacActivityToolbar: ViewModifier {
     }
 
     private func takeRequest() {
+        // A question still waiting is shown as soon as this window is in front again.
+        if appearsActive, dependencies.uploads.needsAnswer { isPresented = true; return }
         guard appearsActive, MacWindowRequest.showsActivity else { return }
         MacWindowRequest.showsActivity = false
         isPresented = true

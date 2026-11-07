@@ -99,49 +99,34 @@ input{font-family:inherit}
 <div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
 </div></sc-if>
 </nav>
-<!-- WINDOW › ACTIVITY (⌥⌘0): a utility panel, not a sheet — the library stays usable while the upload runs -->
-<section role="dialog" aria-label="Activity" style="position:absolute;left:940px;top:316px;width:476px;height:492px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}}">
-<div style="position:relative;height:36px;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
-<div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div></div>
-<div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">Activity</div>
-</div>
-<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-<!-- Upload 1: running -->
-<div style="display:flex;align-items:flex-start;gap:10px">
-<div style="flex:none;width:28px;height:28px;border-radius:8px;background:{{S.accentSoft}};color:{{t.accent}};display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4 M8 8l4-4 4 4 M5 14v6h14v-6"></path></svg></div>
+<!-- ACTIVITY POPOVER (toolbar Activity, ⌥⌘0): uploads run here, not in the sheet — the library stays usable. Already-there files are answered in the row, one at a time or for the rest -->
+<section role="dialog" aria-label="Activity" style="position:absolute;left:900px;top:316px;width:516px;height:400px;border-radius:14px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}}">
+<div style="height:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">Activity</div>
+<div style="padding:0 16px;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:11px;font-weight:600;color:{{t.label2}}">Uploads</div>
+<div style="border-radius:10px;border:1px solid {{t.sep}};background:{{t.content}};overflow:hidden">
+<!-- Upload 1: running, a file already there -->
+<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px">
+<div style="flex:none;width:28px;height:28px;border-radius:8px;background:{{t.accentSoft}};color:{{t.accent}};display:flex;align-items:center;justify-content:center;font-weight:700">↑</div>
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
-<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:600;white-space:nowrap">Uploading to NAS Home</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums;white-space:nowrap">12 of 40</span></div>
-<div role="progressbar" aria-label="Upload to NAS Home" aria-valuenow="42" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:42%;height:5px;border-radius:3px;background:{{t.accent}}"></div></div>
-<div style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Photos/2026/2026-09-28 · 4.1 of 9.8 GB · about 6 min left</div>
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:13px;font-weight:600">Upload to NAS Home</span><span style="flex:1"></span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">42%</span></div>
+<div role="progressbar" aria-label="Upload to NAS Home" style="height:5px;border-radius:3px;background:{{t.fill}}"><div style="width:42%;height:5px;border-radius:3px;background:{{t.accent}}"></div></div>
+<div style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">12 of 40 files · 4.1 of 9.8 GB · about 6 minutes left</div>
+<div style="margin-top:4px;padding:10px;border-radius:8px;background:{{t.fill}};display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px;font-weight:600">“DSC04211.ARW” is already on NAS Home</div>
+<div style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">24.1 MB here · 23.8 MB on the server</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px"><span role="checkbox" aria-checked="false" aria-label="Apply to Remaining Conflicts" style="width:14px;height:14px;border-radius:4px;border:1px solid {{t.checkboxStroke}};background:{{t.content}}"></span>Apply to Remaining Conflicts</div>
+<div style="display:flex;gap:8px"><button style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.redText}};font-size:13px">Replace</button><span style="flex:1"></span><button style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Skip</button><button style="height:28px;padding:0 12px;border-radius:8px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};font-size:13px;font-weight:500">Keep Both</button></div>
 </div>
-<button aria-label="Pause Upload" style="flex:none;width:26px;height:24px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg></button><button aria-label="Stop Upload…" style="flex:none;width:26px;height:24px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg></button>
 </div>
-<!-- Already on the server: decided inline, per file or for all -->
-<div style="display:flex;align-items:center;gap:8px;padding:0 2px">
-<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{S.orangeDot}}"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg>
-<span style="flex:1;font-size:12px;font-weight:600">2 files are already on NAS Home</span>
-<span style="font-size:12px;color:{{t.label2}}">For All:</span>
-<button aria-label="For all files already on the server" style="height:22px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 6px 0 8px;font-size:12px;color:{{t.label}}">Keep Both<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button>
+<button aria-label="Stop Upload to NAS Home…" style="flex:none;width:28px;height:24px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:10px">■</button>
 </div>
-<div role="table" aria-label="Files" style="border-radius:10px;border:1px solid {{t.sep}};background:{{S.box}};overflow:hidden">
-<sc-for list="{{ufiles}}" as="f" hint-placeholder-count="9"><div role="row" style="height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;background:{{f.rowBg}}">
-<div style="flex:none;width:20px;height:20px;border-radius:4px;background:{{f.bg}}"></div>
-<span style="width:118px;flex:none;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{f.name}}</span>
-<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;color:{{f.color}};white-space:nowrap">
-<sc-if value="{{f.icon}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{f.icon}}"></path></svg></sc-if>
-<sc-if value="{{f.bar}}" hint-placeholder-val="{{false}}"><div style="flex:none;width:72px;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{f.bar}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div></sc-if>
-<span style="overflow:hidden;text-overflow:ellipsis">{{f.status}}</span>
+<!-- Upload 2: finished -->
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid {{t.sep}}">
+<div style="flex:none;width:28px;height:28px;border-radius:8px;background:{{t.fill}};color:{{t.label2}};display:flex;align-items:center;justify-content:center;font-weight:700">↑</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="display:flex;gap:8px"><span style="font-size:13px;font-weight:600">Upload to Studio iMac</span><span style="flex:1"></span><span style="font-size:11px;color:{{t.label2}}">9:41 AM</span></div><span style="font-size:11px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Uploaded 226 photos (12.4 GB), each file checked · 3 skipped</span></div>
+<button style="flex:none;height:24px;padding:0 10px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px">Remove from List</button>
 </div>
-<sc-if value="{{f.popup}}" hint-placeholder-val="{{false}}"><button aria-label="{{f.popAria}}" style="flex:none;height:22px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 6px 0 8px;font-size:12px;color:{{t.label}}">{{f.popup}}<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button></sc-if>
-</div></sc-for>
-</div>
-<div style="font-size:11px;line-height:14px;color:{{t.label2}};padding:0 2px">28 more waiting. A choice can change until that file’s turn comes. Each file is checked with SHA-256 after it lands.</div>
-<div style="height:1px;background:{{t.sep}}"></div>
-<!-- Upload 2: paused, server not reachable -->
-<div style="display:flex;align-items:center;gap:10px">
-<div style="flex:none;width:28px;height:28px;border-radius:8px;background:{{t.fill}};color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg></div>
-<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:600;white-space:nowrap">Upload paused</span><span style="font-size:11px;color:{{S.orangeText}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">MacBook Pro is not reachable · 8 files waiting</span></div>
-<button style="flex:none;height:24px;padding:0 10px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px">Resume</button>
 </div>
 </div>
 </section>

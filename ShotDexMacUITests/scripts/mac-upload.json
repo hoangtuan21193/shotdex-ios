@@ -4,7 +4,6 @@
   {"action": "waitFor", "label": "Upload", "type": "button", "seconds": 30},
   {"action": "wait", "seconds": 3},
   {"action": "screenshot", "name": "01-prepare"},
-  {"action": "dump", "name": "01-prepare"},
   {"action": "assertExists", "label": "Cancel", "type": "button"},
   {"action": "click", "label": "Date Folders"},
   {"action": "wait", "seconds": 1},
@@ -12,17 +11,16 @@
   {"action": "click", "label": "Date Folders"},
   {"action": "wait", "seconds": 1},
   {"action": "click", "label": "Upload", "type": "button"},
-  {"action": "wait", "seconds": 1},
-  {"action": "screenshot", "name": "03-uploading"},
-  {"action": "waitFor", "label": "Done", "type": "button", "seconds": 60},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "03-activity"},
+  {"action": "assertExists", "label": "Uploads", "type": "staticText"},
+  {"action": "waitFor", "label": "Remove from List", "type": "button", "seconds": 60},
   {"action": "wait", "seconds": 1},
   {"action": "screenshot", "name": "04-finished"},
   {"action": "dump", "name": "04-finished"},
-  {"action": "click", "label": "Done", "type": "button"},
+  {"action": "click", "label": "Remove from List", "type": "button"},
   {"action": "wait", "seconds": 2},
-  {"action": "assertMissing", "label": "Done", "type": "button"},
-  {"action": "menu", "text": "File>Upload to Server…"},
-  {"action": "wait", "seconds": 2},
-  {"action": "screenshot", "name": "05-menu"}
+  {"action": "assertMissing", "label": "Remove from List", "type": "button"},
+  {"action": "screenshot", "name": "05-removed"}
  ]
 }

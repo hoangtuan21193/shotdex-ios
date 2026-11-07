@@ -89,8 +89,6 @@ struct MacServerUploadSheet: View {
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openSettings) private var openSettings
     @State private var model: ServerUploadModel?
-    @State private var isConfirmingStop = false
-    @State private var appliesToAll = false
 
     var body: some View {
         Group {
@@ -106,47 +104,21 @@ struct MacServerUploadSheet: View {
             model = made
             await made.load()
         }
-        // A window closed mid-upload stops it; what is up stays up.
-        .onDisappear { model?.tearDown() }
+        // Closed before Upload: nothing started, the browse login and the hold go.
+        // After Upload the batch belongs to Activity and keeps going.
+        .onDisappear { if model?.stage == .preparing { model?.tearDown() } }
     }
 
     @ViewBuilder
     private func content(_ model: ServerUploadModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title(model)).font(.headline).padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
-            switch model.stage {
-            case .preparing: prepare(model)
-            case .uploading: uploading(model)
-            case .finished: finished(model)
-            }
+            Text("Upload to Server", comment: "Mac upload sheet title").font(.headline)
+                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
+            prepare(model)
             Divider()
             buttons(model).padding(.horizontal, 20).padding(.vertical, 16)
         }
         .frame(width: 520)
-        // Mid-upload the sheet closes only through Stop…, which asks.
-        .interactiveDismissDisabled(model.stage == .uploading)
-        .confirmationDialog(String(localized: "Stop the upload?", comment: "Mac upload: confirm Stop"),
-                            isPresented: $isConfirmingStop) {
-            // Not destructive: what is up stays up, and Upload Remaining sends the rest.
-            Button(String(localized: "Stop", comment: "Mac upload: stop")) { model.cancel() }
-            Button(String(localized: "Keep Uploading", comment: "Mac upload: don't stop"), role: .cancel) {}
-        } message: {
-            Text("Files already uploaded stay on the server. You can upload the rest afterwards.", comment: "Mac upload: what Stop keeps")
-        }
-        // The batch ended while the question was open: nothing left to stop.
-        .onChange(of: model.stage) { isConfirmingStop = false }
-    }
-
-    private func title(_ model: ServerUploadModel) -> String {
-        switch model.stage {
-        case .preparing: String(localized: "Upload to Server", comment: "Mac upload sheet title")
-        case .uploading:
-            model.selectedServer.map { String(localized: "Uploading to \($0.name)", comment: "Mac upload sheet title while uploading") }
-                ?? String(localized: "Uploading", comment: "Mac upload sheet title while uploading")
-        case .finished:
-            model.summary.stopMessage == nil ? String(localized: "Upload Finished", comment: "Mac upload sheet title at the end")
-                                             : String(localized: "Upload Stopped", comment: "Mac upload sheet title: stopped or failed before the end")
-        }
     }
 
     // MARK: Prepare
@@ -222,156 +194,31 @@ struct MacServerUploadSheet: View {
         }
     }
 
-    // MARK: Uploading
-
-    @ViewBuilder
-    private func uploading(_ model: ServerUploadModel) -> some View {
-        let progress = model.progress
-        VStack(alignment: .leading, spacing: 8) {
-            ProgressView(value: progress.fraction).tint(MacTheme.accent)
-            Text(progressLine(progress)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-            if progress.filename.isEmpty {
-                // Before the first file: the connection is being made, which can take a while.
-                Text("Connecting to \(model.selectedServer?.name ?? "")…", comment: "Mac upload: before the first file")
-                    .font(.callout)
-            } else if model.pendingConflict == nil {
-                Text(phaseLine(progress)).font(.callout).lineLimit(1).truncationMode(.middle)
-            }
-            if let conflict = model.pendingConflict { conflictPanel(model, conflict) }
-        }
-        .padding(.horizontal, 20).padding(.bottom, 16)
-    }
-
-    private func progressLine(_ progress: ServerUploadModel.Progress) -> String {
-        let done = ByteCountFormatter.string(fromByteCount: progress.bytesDone / 2, countStyle: .file)
-        let total = ByteCountFormatter.string(fromByteCount: progress.bytesTotal / 2, countStyle: .file)
-        var line = String(localized: "\(min(progress.fileIndex + 1, progress.fileCount)) of \(progress.fileCount) files · \(done) of \(total)",
-                          comment: "Mac upload progress: files and bytes")
-        if let seconds = progress.secondsLeft, seconds.isFinite {
-            let left = Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, maximumUnitCount: 1))
-            line += " · " + String(localized: "about \(left) left", comment: "Mac upload progress: time left")
-        }
-        return line
-    }
-
-    private func phaseLine(_ progress: ServerUploadModel.Progress) -> String {
-        switch progress.phase {
-        case .preparing: String(localized: "Reading \(progress.filename) from Photos", comment: "Mac upload: exporting the original")
-        case .uploading: String(localized: "Uploading \(progress.filename)", comment: "Mac upload: sending a file")
-        case .verifying: String(localized: "Verifying \(progress.filename)", comment: "Mac upload: reading it back to compare")
-        }
-    }
-
-    /// Already on the server (FS-15.02 §4): decided right here, for this
-    /// file or every one left.
-    private func conflictPanel(_ model: ServerUploadModel, _ conflict: ServerUploadConflict) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("“\(conflict.item.file.filename)” is already on \(model.selectedServer?.name ?? "")",
-                 comment: "Mac upload: a file of that name is on the server")
-                .font(.body.weight(.semibold))
-            Text("\(ByteCountFormatter.string(fromByteCount: conflict.localBytes, countStyle: .file)) here · \(ByteCountFormatter.string(fromByteCount: conflict.remoteBytes, countStyle: .file)) on the server",
-                 comment: "Mac upload: the two sizes")
-                .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-            Toggle(String(localized: "Apply to Remaining Conflicts", comment: "Mac upload: apply the choice to the rest (FS-15.02 §5)"),
-                   isOn: $appliesToAll)
-                .toggleStyle(.checkbox)
-                .tint(MacTheme.accent)
-            // The safe choice on the right and on Return; Replace, which overwrites, away from it.
-            HStack {
-                Button(role: .destructive) { answer(model, .replace) } label: {
-                    Text("Replace", comment: "Mac upload conflict: overwrite the server's file").foregroundStyle(MacTheme.redText)
-                }
-                .buttonStyle(MacPushButtonStyle(isDefault: false))
-                Spacer()
-                Button(String(localized: "Skip", comment: "Mac upload conflict: leave the server's file")) { answer(model, .skip) }
-                    .buttonStyle(MacPushButtonStyle(isDefault: false))
-                Button(String(localized: "Keep Both", comment: "Mac upload conflict: upload under a new name")) { answer(model, .keepBoth) }
-                    .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
-                    .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(12)
-        .background(MacTheme.card, in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private func answer(_ model: ServerUploadModel, _ choice: ServerUploadConflictDecision.Choice) {
-        model.answerConflict(.init(choice: choice, appliesToRemaining: appliesToAll))
-        appliesToAll = false
-    }
-
-    // MARK: Finished
-
-    @ViewBuilder
-    private func finished(_ model: ServerUploadModel) -> some View {
-        let summary = model.summary
-        VStack(alignment: .leading, spacing: 6) {
-            if summary.uploadedPhotoCount > 0 {
-                let bytes = ByteCountFormatter.string(fromByteCount: summary.uploadedBytes, countStyle: .file)
-                Text("Uploaded \(summary.uploadedPhotoCount) photos (\(bytes)) to \(model.selectedServer?.name ?? "").",
-                     comment: "Mac upload result")
-                Text("Each file was read back and checked against the server's copy.", comment: "Mac upload result: verified")
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("No photos uploaded.", comment: "Mac upload result: nothing went up").font(.body.weight(.semibold))
-            }
-            if summary.skippedFileCount > 0 {
-                Text("\(summary.skippedFileCount) files skipped: already on the server.", comment: "Mac upload result: skipped")
-                    .foregroundStyle(.secondary)
-            }
-            if let stop = summary.stopMessage { Text(stop).foregroundStyle(.secondary) }
-            if summary.notAttemptedCount > 0 {
-                Text("\(summary.notAttemptedCount) files not sent.", comment: "Mac upload result: what Upload Remaining would send")
-                    .foregroundStyle(.secondary)
-            }
-            if !summary.failures.isEmpty {
-                Text("\(summary.failures.count) files didn't upload:", comment: "Mac upload result: failures follow")
-                    .foregroundStyle(MacTheme.redText)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(summary.failures) { failure in
-                            Text("\(failure.filename) — \(failure.reason)").font(.callout).lineLimit(2)
-                        }
-                    }
-                }
-                .frame(maxHeight: 120)
-            }
-        }
-        .padding(.horizontal, 20).padding(.bottom, 16)
-    }
-
     // MARK: Buttons
 
     @ViewBuilder
     private func buttons(_ model: ServerUploadModel) -> some View {
         HStack {
             Spacer()
-            switch model.stage {
-            case .preparing:
-                Button(String(localized: "Cancel", comment: "Mac upload: close without uploading"), action: close)
-                    .buttonStyle(MacPushButtonStyle(isDefault: false))
-                    .keyboardShortcut(.cancelAction)
-                if !model.servers.isEmpty {
-                    Button(String(localized: "Upload", comment: "Mac upload: start")) { model.start() }
-                        .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(!model.canStart)
-                }
-            case .uploading:
-                Button(String(localized: "Stop…", comment: "Mac upload: stop, asks first")) { isConfirmingStop = true }
-                    .buttonStyle(MacPushButtonStyle(isDefault: false))
-                    .keyboardShortcut(.cancelAction)
-            case .finished:
-                if model.hasRemaining {
-                    Button(model.summary.uploadedPhotoCount == 0
-                           ? String(localized: "Try Again", comment: "Mac upload: nothing went up, run it again")
-                           : String(localized: "Upload Remaining", comment: "Mac upload: try the files that didn't go")) { model.uploadRemaining() }
-                        .buttonStyle(MacPushButtonStyle(isDefault: false))
-                }
-                Button(String(localized: "Done", comment: "Mac upload: close the result"), action: close)
+            Button(String(localized: "Cancel", comment: "Mac upload: close without uploading"), action: close)
+                .buttonStyle(MacPushButtonStyle(isDefault: false))
+                .keyboardShortcut(.cancelAction)
+            if !model.servers.isEmpty {
+                Button(String(localized: "Upload", comment: "Mac upload: start")) { upload(model) }
                     .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
                     .keyboardShortcut(.defaultAction)
+                    .disabled(!model.canStart)
             }
         }
+    }
+
+    /// Upload: the batch goes to Activity, which opens on it — the window
+    /// stays usable while the files go up (MAC_STYLE: long work never in a sheet).
+    private func upload(_ model: ServerUploadModel) {
+        guard dependencies.uploads.start(model) else { NSSound.beep(); return }
+        close()
+        MacWindowRequest.showsActivity = true
+        NotificationCenter.default.post(name: .macShowActivity, object: nil)
     }
 }
 

@@ -45,6 +45,7 @@ struct ShotDexMacApp: App {
                 .environment(dependencies)
                 .onAppear {
                     appDelegate.runs = dependencies.commonPhotos
+                    appDelegate.uploads = dependencies.uploads
                     dependencies.startGatheringInApp()
                     // Which originals are on this Mac (FS-06.10 §4): a
                     // window on screen is the app in front.
@@ -158,6 +159,8 @@ struct MacCommonPhotosCommands: Commands {
 /// Quitting while a common-photos run goes (FS-19.08 §7): asks, then pauses
 /// every run and quits once each has stopped between steps; Cancel keeps it going.
 final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    /// Uploads to stop on Stop and Quit (FS-15.02 §9).
+    @MainActor weak var uploads: MacUploads?
     @MainActor weak var runs: MacCommonPhotosRuns? {
         didSet { notices.runs = runs }
     }
@@ -182,10 +185,26 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         if MacUploadHold.isAnyRunning {
             let alert = NSAlert()
             alert.messageText = String(localized: "Photos are uploading. Stop and quit?", comment: "Mac quit with an upload going")
-            alert.informativeText = String(localized: "Files already uploaded stay on the server.", comment: "Mac quit with an upload going: what stays")
+            alert.informativeText = runs?.isAnyRunning == true
+                ? String(localized: "Files already uploaded stay on the server. Common-photos runs pause and resume next time.",
+                         comment: "Mac quit with an upload and a common-photos run going: what stays")
+                : String(localized: "Files already uploaded stay on the server.", comment: "Mac quit with an upload going: what stays")
             alert.addButton(withTitle: String(localized: "Keep Uploading", comment: "Mac quit: don't quit"))
             alert.addButton(withTitle: String(localized: "Stop and Quit", comment: "Mac quit: stop the upload and quit"))
             guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+            // One question for everything: each batch removes its half-written file on the
+            // server before the app goes (up to 10 s), runs pause between steps.
+            let uploads = uploads
+            let runs = runs
+            Task { @MainActor in
+                await uploads?.stopAll()
+                if let runs, runs.isAnyRunning {
+                    runs.pauseAll { DispatchQueue.main.async { sender.reply(toApplicationShouldTerminate: true) } }
+                } else {
+                    sender.reply(toApplicationShouldTerminate: true)
+                }
+            }
+            return .terminateLater
         }
         guard let runs, runs.isAnyRunning else { return .terminateNow }
         #if DEBUG

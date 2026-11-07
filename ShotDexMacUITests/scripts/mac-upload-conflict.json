@@ -9,10 +9,8 @@
   {"action": "screenshot", "name": "01-conflict"},
   {"action": "dump", "name": "01-conflict"},
   {"action": "click", "label": "Keep Both", "type": "button"},
-  {"action": "waitFor", "label": "Done", "type": "button", "seconds": 60},
+  {"action": "waitFor", "label": "Remove from List", "type": "button", "seconds": 60},
   {"action": "wait", "seconds": 1},
-  {"action": "screenshot", "name": "02-finished"},
-  {"action": "click", "label": "Done", "type": "button"},
-  {"action": "wait", "seconds": 1}
+  {"action": "screenshot", "name": "02-finished"}
  ]
 }

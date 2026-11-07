@@ -82,6 +82,8 @@ final class MacDependencies: LibraryServices {
     /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns
+    /// Uploads under way and just finished: the Activity popover lists them (FS-15.02 §9).
+    let uploads = MacUploads()
     /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
     /// the helper does not run jobs.
     let gatherer: MacCommonPhotosGatherer
