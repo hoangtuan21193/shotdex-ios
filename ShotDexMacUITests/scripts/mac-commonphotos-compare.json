@@ -1,0 +1,126 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "serverBrowser",
+    "-ShotDexServerSelect",
+    "Tuan,Vo",
+    "-ShotDexServerFindCommon",
+    "-ShotDexCommonPhotosScan",
+    "-ShotDexCommonPhotosCompare",
+    "IMG_0001.JPG"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Next Row",
+   "type": "button",
+   "seconds": 90
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "01-compare"
+  },
+  {
+   "action": "dump",
+   "name": "01-compare"
+  },
+  {
+   "action": "click",
+   "label": "Next Row",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Previous Row",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "100%",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-actual"
+  },
+  {
+   "action": "click",
+   "label": "Fit",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "4 of 8",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "3 of 8",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Next Row",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-back-to-sheet"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  }
+ ]
+}

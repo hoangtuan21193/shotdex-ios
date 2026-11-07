@@ -293,7 +293,8 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 
 ### So sánh hai bản
 
-- Hàng Same → **Space** hay nhấp đúp → cửa sổ **Compare** (không modal, một cửa sổ cho cả sheet). ←/→ hoặc ↑/↓ sang
+- Hàng Same → **Space** hay nhấp đúp → **Compare**, một **sheet 1180×760** trên sheet Find Common Photos (2026-11-07: không còn
+  cửa sổ riêng; thanh trên cùng giữ ↑ ↓, tên + "3 of 8", Fit | 100%, Include in…, **Done** / Esc về sheet). ←/→ hoặc ↑/↓ sang
   hàng kế; Esc đóng.
 - Hai khung cạnh nhau, mỗi khung một bản (folder đầu bên trái). Mỗi khung ghi: folder, tên, cỡ, ngày chụp, SHA-256 8 ký
   tự đầu. Dưới hai khung: "Same bytes — SHA-256 matches", kèm SHA đủ (chọn được để chép).

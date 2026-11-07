@@ -14,12 +14,12 @@ a{color:#EB9526}a:hover{color:#FFB65C}
 button{font-family:inherit}
 </style>
 </helmet>
-<!-- COMPARE WINDOW (FS-19.08 §6d): its own window, not modal, opened from a Same row with Space or a double-click.
+<!-- COMPARE (FS-19.08 §6d): a sheet over Find Common Photos (2026-11-07: fewer windows), opened from a Same row with Space or a double-click.
      Tier D (pixel surface): always dark. Two copies side by side, first folder on the left; ←/→ or ↑/↓ = next row, Esc closes. -->
 <div style="width:1180px;height:760px;border-radius:16px;overflow:hidden;position:relative;background:{{D.bg}};color:{{D.text}};font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;display:flex;flex-direction:column">
-<!-- Title row: traffic lights, title, row navigation, zoom -->
+<!-- Bar: row navigation, title, zoom, Include, Done -->
 <div style="height:44px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;background:{{D.panel}};border-bottom:1px solid {{D.hair}}">
-<div aria-hidden="true" style="display:flex;gap:8px;flex:none"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div>
+<!-- A sheet over Find Common Photos (user 2026-11-07: fewer windows), not a window: no lights; Done (Esc) at the right of the bar -->
 <div style="display:flex;gap:4px;flex:none">
 <button aria-label="Previous Row" style="width:32px;height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
 <button aria-label="Next Row" style="width:32px;height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
@@ -32,6 +32,7 @@ button{font-family:inherit}
 <sc-for list="{{zoom}}" as="z" hint-placeholder-count="2"><button role="radio" aria-checked="{{z.on}}" style="width:52px;height:24px;border-radius:6px;border:none;background:{{z.bg}};color:{{z.fg}};font-size:12px">{{z.label}}</button></sc-for>
 </div>
 <label style="flex:none;display:flex;align-items:center;gap:6px;font-size:12px;position:relative;margin-left:4px"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;background:{{D.accent}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><input type="checkbox" checked aria-label="Include in Copy" style="position:absolute;opacity:0;width:1px;height:1px">Include in Copy</label>
+<button style="flex:none;height:24px;padding:0 10px;border-radius:6px;border:none;background:{{D.control}};color:{{D.accent}};font-size:12px;font-weight:500;margin-left:8px">Done</button>
 
 </div>
 <!-- Two copies -->
@@ -85,7 +86,7 @@ button{font-family:inherit}
 <span style="font-weight:600;color:{{proofColor}}">{{proof}}</span>
 <span style="color:{{D.text2}};font-family:ui-monospace,Menlo,monospace;user-select:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{sha}}</span>
 </div>
-<span style="flex:none;font-size:11px;color:{{D.text2}}">↑↓ next row · Esc close</span>
+<span style="flex:none;font-size:11px;color:{{D.text2}}">↑↓ next row · Esc closes</span>
 </div>
 </div>
 </x-dc>

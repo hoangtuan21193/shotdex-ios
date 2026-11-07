@@ -359,10 +359,10 @@ final class MacCommonPhotosCompareModel {
 }
 
 /// FS-19.08 §6d, board `MAC_CommonPhotosCompare`: two copies of a Same photo
-/// side by side. Tier D: always dark. ↑↓ step through the rows (←→ too when
-/// the picture fits), Esc closes; the bar below says the SHA-256 they share.
+/// side by side, in a sheet over Find Common Photos (user 2026-11-07: fewer
+/// windows). Tier D: always dark. ↑↓ step through the rows (←→ too when the
+/// picture fits), Done or Esc closes; the bar below says the SHA-256 they share.
 struct MacCommonPhotosCompareWindow: View {
-    static let id = "commonPhotosCompare"
     static let size = CGSize(width: 1180, height: 760)
 
     @Environment(MacDependencies.self) private var dependencies
@@ -373,19 +373,28 @@ struct MacCommonPhotosCompareWindow: View {
             if let model = dependencies.commonPhotosCompare, let row = model.row {
                 MacCommonPhotosCompareContent(model: model, row: row, close: { dismiss() })
             } else {
-                ContentUnavailableView(String(localized: "Nothing to Compare", comment: "Common photos compare window: no row"),
-                                       systemImage: "rectangle.split.2x1",
-                                       description: Text("Choose a photo in Find Common Photos and press Space.",
-                                                         comment: "Common photos compare window: how to open it"))
+                ContentUnavailableView {
+                    Label(String(localized: "Nothing to Compare", comment: "Common photos compare window: no row"),
+                          systemImage: "rectangle.split.2x1")
+                } description: {
+                    Text("Choose a photo in Find Common Photos and press Space.",
+                         comment: "Common photos compare window: how to open it")
+                } actions: {
+                    // The rows can empty while it is up (a rescan): never a sheet with no way out.
+                    Button(String(localized: "Done", comment: "Common photos compare: close")) { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                }
+
             }
         }
-        .frame(minWidth: 860, idealWidth: Self.size.width, minHeight: 560, idealHeight: Self.size.height)
+        // A sheet over Find Common Photos: the board's size, smaller on a small window.
+        .frame(minWidth: 860, idealWidth: Self.size.width, maxWidth: Self.size.width,
+               minHeight: 560, idealHeight: Self.size.height, maxHeight: Self.size.height)
         .background(MacTheme.Editor.background)
         .preferredColorScheme(.dark)
         .tint(MacTheme.Editor.accent)
         // Out here, so it runs when the rows empty too.
         .onChange(of: dependencies.commonPhotosCompare?.scan.rows.map(\.id)) { dependencies.commonPhotosCompare?.listChanged() }
-        .onExitCommand { dismiss() }
         // Closing Compare empties its folder (AC-182); it opens fresh next time.
         .onDisappear {
             guard let model = dependencies.commonPhotosCompare else { return }
@@ -399,9 +408,12 @@ private struct MacCommonPhotosCompareContent: View {
     @Bindable var model: MacCommonPhotosCompareModel
     let row: CommonPhotosScanModel.Row
     let close: () -> Void
+    @FocusState private var hasKeys: Bool
 
     var body: some View {
         VStack(spacing: 0) {
+            header
+            Divider().overlay(MacTheme.Editor.hairline)
             HStack(spacing: 1) {
                 ForEach(Array(model.sides.enumerated()), id: \.offset) { index, side in
                     pane(side, isRight: index == 1)
@@ -411,40 +423,11 @@ private struct MacCommonPhotosCompareContent: View {
             if let pair = model.videoPair, !pair.cannotPlay { MacCommonPhotosTransport(pair: pair) }
             proofBar
         }
-        .navigationTitle(String(localized: "Compare — \(row.name)", comment: "Common photos compare window title"))
-        .navigationSubtitle(String(localized: "\(model.compare.position.index.formatted()) of \(model.compare.position.count.formatted())",
-                                   comment: "Common photos compare window subtitle: which row"))
-        .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
-                Button { model.previous() } label: { Image(systemName: "chevron.up") }
-                    .keyboardShortcut(.upArrow, modifiers: [])
-                    .help(String(localized: "Previous Row (↑)", comment: "Common photos compare: toolbar"))
-                    .accessibilityLabel(String(localized: "Previous Row", comment: "Common photos compare: toolbar"))
-                Button { model.next() } label: { Image(systemName: "chevron.down") }
-                    .keyboardShortcut(.downArrow, modifiers: [])
-                    .help(String(localized: "Next Row (↓)", comment: "Common photos compare: toolbar"))
-                    .accessibilityLabel(String(localized: "Next Row", comment: "Common photos compare: toolbar"))
-            }
-            ToolbarItemGroup {
-                Picker(String(localized: "Zoom", comment: "Common photos compare: zoom"), selection: $model.zoom) {
-                    Text("Fit", comment: "Common photos compare: zoom to fit").tag(MacCommonPhotosCompareModel.Zoom.fit)
-                        .help(String(localized: "Fit in each side", comment: "Common photos compare: zoom tooltip"))
-                    Text("100%", comment: "Common photos compare: actual size").tag(MacCommonPhotosCompareModel.Zoom.actual)
-                        .help(String(localized: "Actual size", comment: "Common photos compare: zoom tooltip"))
-                }
-                .pickerStyle(.segmented)
-                Toggle(isOn: Binding(get: { row.isIncluded }, set: { model.setIncluded($0) })) {
-                    Text(model.scan.action == .move
-                         ? String(localized: "Include in Move", comment: "Common photos compare: the row's checkbox, Move")
-                         : String(localized: "Include in Copy", comment: "Common photos compare: the row's checkbox, Copy"))
-                }
-                .toggleStyle(.checkbox)
-                .disabled(!model.canChoose)
-                .help(String(localized: "Unchecked: left out of this set from now on.", comment: "Common photos compare: checkbox tooltip"))
-            }
-        }
         .focusable()
         .focusEffectDisabled()
+        // The keys go to the pictures, not to whichever control comes first.
+        .focused($hasKeys)
+        .onAppear { hasKeys = true }
         // ←→ step too while the picture fits; at 100% they scroll it.
         .onKeyPress(.rightArrow) { guard model.zoom == .fit else { return .ignored }; model.next(); return .handled }
         .onKeyPress(.leftArrow) { guard model.zoom == .fit else { return .ignored }; model.previous(); return .handled }
@@ -455,6 +438,54 @@ private struct MacCommonPhotosCompareContent: View {
             return .handled
         }
         .task(id: model.sidesKey) { await model.loadSides() }
+    }
+
+    /// What a window's toolbar held, as the sheet's own bar (board
+    /// `MAC_CommonPhotosCompare`): ↑ ↓ rows, which photo and where in the
+    /// list, Fit | 100%, the row's checkbox, Done (Esc).
+    private var header: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 2) {
+                Button { model.previous() } label: { Image(systemName: "chevron.up").frame(width: 28, height: 24) }
+                    .keyboardShortcut(.upArrow, modifiers: [])
+                    .help(String(localized: "Previous Row (↑)", comment: "Common photos compare: toolbar"))
+                    .accessibilityLabel(String(localized: "Previous Row", comment: "Common photos compare: toolbar"))
+                Button { model.next() } label: { Image(systemName: "chevron.down").frame(width: 28, height: 24) }
+                    .keyboardShortcut(.downArrow, modifiers: [])
+                    .help(String(localized: "Next Row (↓)", comment: "Common photos compare: toolbar"))
+                    .accessibilityLabel(String(localized: "Next Row", comment: "Common photos compare: toolbar"))
+            }
+            .buttonStyle(.borderless)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(String(localized: "Compare — \(row.name)", comment: "Common photos compare window title"))
+                    .font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.middle)
+                Text(String(localized: "\(model.compare.position.index.formatted()) of \(model.compare.position.count.formatted())",
+                            comment: "Common photos compare window subtitle: which row"))
+                    .font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            }
+            Spacer(minLength: 12)
+            Picker(String(localized: "Zoom", comment: "Common photos compare: zoom"), selection: $model.zoom) {
+                Text("Fit", comment: "Common photos compare: zoom to fit").tag(MacCommonPhotosCompareModel.Zoom.fit)
+                    .help(String(localized: "Fit in each side", comment: "Common photos compare: zoom tooltip"))
+                Text("100%", comment: "Common photos compare: actual size").tag(MacCommonPhotosCompareModel.Zoom.actual)
+                    .help(String(localized: "Actual size", comment: "Common photos compare: zoom tooltip"))
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            Toggle(isOn: Binding(get: { row.isIncluded }, set: { model.setIncluded($0) })) {
+                Text(model.scan.action == .move
+                     ? String(localized: "Include in Move", comment: "Common photos compare: the row's checkbox, Move")
+                     : String(localized: "Include in Copy", comment: "Common photos compare: the row's checkbox, Copy"))
+            }
+            .toggleStyle(.checkbox)
+            .disabled(!model.canChoose)
+            .help(String(localized: "Unchecked: left out of this set from now on.", comment: "Common photos compare: checkbox tooltip"))
+            Button(String(localized: "Done", comment: "Common photos compare: close"), action: close)
+                .keyboardShortcut(.cancelAction)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 52)
     }
 
     private func pane(_ side: CommonPhotosCompare.Copy, isRight: Bool) -> some View {

@@ -69,6 +69,8 @@ private struct MacCommonPhotosSheetContent: View {
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openWindow) private var openWindow
     @State private var picker: FolderChoice?
+    /// §6d: Compare, a sheet over this one (no window of its own).
+    @State private var showsCompare = false
     @State private var isNamingFolder = false
     @State private var newFolderName = ""
     @State private var newFolderError: String?
@@ -119,6 +121,11 @@ private struct MacCommonPhotosSheetContent: View {
     }
 
     var body: some View {
+        content
+            .sheet(isPresented: $showsCompare) { MacCommonPhotosCompareWindow() }
+    }
+
+    private var content: some View {
         Group {
             if showsOrganize {
                 // §6e: Backup's own Organize page, in the sheet.
@@ -683,7 +690,7 @@ private struct MacCommonPhotosSheetContent: View {
         .accessibilityLabel(String(localized: "Sort By, \(rowOrder.title)", comment: "Mac common photos sheet: sort menu, VoiceOver"))
     }
 
-    /// §6d: opens Compare on this row (one window for the app).
+    /// §6d: opens Compare on this row, a sheet over this one.
     private func compare(_ rowId: String) {
         guard model.rows.contains(where: { $0.id == rowId }) else { return }
         if let open = dependencies.commonPhotosCompare, open.scan === model {
@@ -697,7 +704,7 @@ private struct MacCommonPhotosSheetContent: View {
                 client: server.map { dependencies.lockedClient(for: $0, priority: .compare) },
                 serverName: server?.name ?? "", showing: rowId)
         }
-        openWindow(id: MacCommonPhotosCompareWindow.id)
+        showsCompare = true
     }
 
     /// §6d: what the user left out of this set before — never run until
