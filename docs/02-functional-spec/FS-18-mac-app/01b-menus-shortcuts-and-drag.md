@@ -60,8 +60,8 @@ phần theo ngữ cảnh.
   giữ bàn phím (menu không ghi phím: SwiftUI không bắn phím không ⌘ từ menu bar), nên chữ gõ trong ô tìm kiếm vẫn là
   chữ; ⌘⌫ trong ô chữ là xoá tới đầu dòng, không phải Move to Trash. View › as Grid/List ⌘1/⌘2 và Edit › Search ⌘F
   còn đi qua notification (mọi cửa sổ thư viện cùng nghe) — chuyển sang focused value khi làm nhiều cửa sổ.
-  **Chưa có:** New Window/Album, Open, Reveal in Photos, Upload, Export ▸, Eject, Remove Source, Print, Copy/Paste
-  Edits, Sync, Revert, Filter ▸, Zoom, Show Info on Thumbnails…, Slideshow, Edit ⌘E, Compare, Rotate, Culling Pass,
+  **Chưa có:** New Window/Album, Open, Reveal in Photos, Export ▸, Eject, Remove Source, Print, Copy/Paste
+  Edits, Sync, Revert, Filter ▸, Zoom, Show Info on Thumbnails…, Slideshow, Edit ⌘E, Compare, Rotate,
   Keywords…, Adjust Date/Location (có trong Get Info), Create/Combine, Duplicate, Back/Forward, Go to Date…,
   Video Studio, Help — mỗi mục đến cùng màn của nó trong `docs/design/mac/MAC_LOOP.md`.
 

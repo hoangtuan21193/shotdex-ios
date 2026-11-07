@@ -178,6 +178,15 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // An upload under way (FS-15.02 §9): Quit asks, as Stop… does.
+        if MacUploadHold.isAnyRunning {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Photos are uploading. Stop and quit?", comment: "Mac quit with an upload going")
+            alert.informativeText = String(localized: "Files already uploaded stay on the server.", comment: "Mac quit with an upload going: what stays")
+            alert.addButton(withTitle: String(localized: "Keep Uploading", comment: "Mac quit: don't quit"))
+            alert.addButton(withTitle: String(localized: "Stop and Quit", comment: "Mac quit: stop the upload and quit"))
+            guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+        }
         guard let runs, runs.isAnyRunning else { return .terminateNow }
         #if DEBUG
         // `-ShotDexQuitPauses`: answer the question with Pause and Quit, as a test would.

@@ -20,6 +20,8 @@ struct MacLibraryTarget {
     var setSort: (SortOption) -> Void
     /// Image › Start Culling Pass ⌥⌘P (FS-18.02 §7).
     var startCull: () -> Void
+    /// File › Upload to Server… ⇧⌘U (FS-15.02).
+    var upload: () -> Void
 }
 
 /// Go's way into the front window, whatever it shows (Backup, a server).
@@ -93,6 +95,9 @@ struct MacLibraryCommands: Commands {
             Divider()
             Button(String(localized: "Show in Finder", comment: "Mac menu: File › Show in Finder")) { library?.showInFinder() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(library?.hasSelection != true)
+            Button(String(localized: "Upload to Server…", comment: "Mac menu: File › Upload to Server…")) { library?.upload() }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
                 .disabled(library?.hasSelection != true)
         }
     }

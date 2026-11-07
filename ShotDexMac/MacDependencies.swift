@@ -43,6 +43,9 @@ final class MacDependencies: LibraryServices {
     /// progress from; nil until the window has opened.
     var library: LibraryModel?
     let fileServers: FileServerStore
+    /// What went up to which server (FS-15.02) and the set the grid asks.
+    let serverUploads: ServerUploadStore
+    let serverUploadIndex: ServerUploadIndex
     let folderRoots: FolderSourceRoots
     /// One server call at a time per connection for Backup and the On Server
     /// check (FS-19.07 §5).
@@ -116,6 +119,9 @@ final class MacDependencies: LibraryServices {
         sources = SourceStore(database: database)
         let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
         self.fileServers = fileServers
+        let serverUploads = ServerUploadStore(database: database)
+        self.serverUploads = serverUploads
+        serverUploadIndex = ServerUploadIndex(store: serverUploads)
         let folderRoots = FolderSourceRoots(database: database)
         self.folderRoots = folderRoots
         let connectionLock = ConnectionLock()

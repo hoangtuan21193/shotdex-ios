@@ -1,7 +1,9 @@
 import Foundation
 import Observation
 
+#if os(iOS)
 extension ScreenAwakeCoordinator: ScreenHolding {}
+#endif
 
 /// One run of the upload sheet (FS-15.02): prepare → upload → (conflict) →
 /// result, for the assets picked in the grid.
@@ -58,8 +60,15 @@ final class ServerUploadModel {
     var folder = ""
     /// Year/day subfolders by capture date (FS-15.02 §3).
     var usesDateFolders = false
-    var fileKind: ServerUploadFileKind = .allOriginals
-    private(set) var entries: [AssetUploadEntry]?
+    var fileKind: ServerUploadFileKind = .allOriginals {
+        didSet { updatePlanSummary() }
+    }
+    private(set) var entries: [AssetUploadEntry]? {
+        didSet { updatePlanSummary() }
+    }
+    /// What the prepare step reads on every redraw: counted once per change
+    /// of entries or Files, not per keystroke in Folder (a selection can be 55k).
+    private(set) var planSummary: ServerUploadPlan.Summary?
     private(set) var progress = Progress()
     private(set) var summary = Summary()
     private(set) var pendingConflict: ServerUploadConflict?
@@ -67,7 +76,9 @@ final class ServerUploadModel {
     var deleteError: String?
     /// The login the folder picker uses, kept for the rest of the sheet
     /// (FS-15.02 §2a).
+    #if os(iOS)
     private(set) var browseSession: ServerBrowseSession?
+    #endif
 
     private let fileServers: FileServerStore
     private let uploads: ServerUploadStore
@@ -117,6 +128,7 @@ final class ServerUploadModel {
         self.deleteAssets = deleteAssets
     }
 
+    #if os(iOS)
     convenience init(assetIds: [String], initialServerId: String?, dependencies: AppDependencies) {
         let library = dependencies.photoLibrary
         let metadata = dependencies.metadataStore
@@ -139,6 +151,7 @@ final class ServerUploadModel {
             }
         )
     }
+    #endif
 
     private func uploadClient(_ server: FileServer, password: String) -> any RemoteFileClient {
         let client = makeClient(server, password)
@@ -152,8 +165,8 @@ final class ServerUploadModel {
         servers.first { $0.id == selectedServerId }
     }
 
-    var planSummary: ServerUploadPlan.Summary? {
-        entries.map { ServerUploadPlan.summary(of: $0.map(\.files), kind: fileKind) }
+    private func updatePlanSummary() {
+        planSummary = entries.map { ServerUploadPlan.summary(of: $0.map(\.files), kind: fileKind) }
     }
 
     var canStart: Bool {
@@ -284,6 +297,7 @@ final class ServerUploadModel {
 
     // MARK: Folder
 
+    #if os(iOS)
     /// The picker's login for the selected connection, opened on first use
     /// and kept for the rest of the sheet (FS-15.02 §2a).
     func openBrowseSession() -> ServerBrowseSession? {
@@ -300,6 +314,10 @@ final class ServerUploadModel {
         browseSession = nil
         Task { await session.close() }
     }
+    #else
+    /// The Mac picks the folder in its own sheet (no browse session here).
+    private func closeBrowseSession() {}
+    #endif
 
     private func handle(_ event: ServerUploadEvent, items: [ServerUploadItem]) {
         switch event {

@@ -394,6 +394,14 @@
    "title": "Mac · On Server: tải lên chạy trong bảng Activity, xử lý trùng tên ngay trong hàng",
    "radius": 16
   },
+  "MAC_ServerUploadSheet.dc.html": {
+   "x": 16100,
+   "y": 6710,
+   "w": 520,
+   "h": 420,
+   "title": "Mac · File › Upload to Server… ⇧⌘U: sheet chuẩn bị (Connection, Folder, Date Folders, Files, tóm tắt); tiến độ và trùng tên trong sheet tới hàng 25c",
+   "radius": 16
+  },
   "MAC_Support.dc.html": {
    "x": 7040,
    "y": 6710,
@@ -627,6 +635,7 @@
   "MAC_ServerForm.dc.html",
   "MAC_ServerBrowser.dc.html",
   "MAC_ServerUpload.dc.html",
+  "MAC_ServerUploadSheet.dc.html",
   "MAC_Support.dc.html",
   "MAC_Hidden.dc.html",
   "MAC_DeleteCopies.dc.html",

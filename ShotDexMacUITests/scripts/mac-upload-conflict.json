@@ -1,0 +1,18 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-ShotDexSection", "upload"]},
+  {"action": "waitFor", "label": "Upload", "type": "button", "seconds": 30},
+  {"action": "wait", "seconds": 2},
+  {"action": "click", "label": "Upload", "type": "button"},
+  {"action": "waitFor", "label": "Keep Both", "type": "button", "seconds": 60},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "01-conflict"},
+  {"action": "dump", "name": "01-conflict"},
+  {"action": "click", "label": "Keep Both", "type": "button"},
+  {"action": "waitFor", "label": "Done", "type": "button", "seconds": 60},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "02-finished"},
+  {"action": "click", "label": "Done", "type": "button"},
+  {"action": "wait", "seconds": 1}
+ ]
+}

@@ -101,6 +101,8 @@ struct MacRootWindow: View {
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
     @State private var serverForm: MacServerFormRequest?
+    /// File › Upload to Server… on the selection (FS-15.02).
+    @State private var uploadRequest: MacUploadRequest?
     @State private var smartAlbumForm: MacSmartAlbumFormRequest?
     @State private var smartAlbums: [SmartAlbum] = []
     /// Photos with every file on some server folder: the smart album's tile glyph.
@@ -425,6 +427,9 @@ struct MacRootWindow: View {
                                   addPhotosLibrary: { addSourceRequest = .photos },
                                   addFolder: { addSourceRequest = .folder($0, includesSubfolders: $1, pairsRawAndJpeg: $2) },
                                   connectToServer: { addSourceRequest = .server })
+            }
+            .sheet(item: $uploadRequest) { request in
+                MacServerUploadSheet(request: request) { uploadRequest = nil }
             }
             .sheet(item: $serverForm) { request in
                 MacServerFormSheet(editing: request.editing) { _ in
@@ -1055,7 +1060,13 @@ struct MacRootWindow: View {
             advancedSearch: { showsAdvancedFilter = true },
             toggleInspector: { showsInspector.toggle() },
             setSort: { library.sort = $0 },
-            startCull: startCull)
+            startCull: startCull,
+            upload: {
+                // One sheet at a time on this window: another one open, or an upload under way, wins.
+                guard !ids.isEmpty, uploadRequest == nil, !showsAddSource, serverForm == nil, smartAlbumForm == nil
+                else { NSSound.beep(); return }
+                uploadRequest = MacUploadRequest(photoIds: ids)
+            })
     }
 
     /// Image › Start Culling Pass ⌥⌘P (FS-18.02 §7): the selected photos when
@@ -1228,9 +1239,19 @@ struct MacRootWindow: View {
             // Typing a search leaves the viewer for the results.
             .onChange(of: searchText) { if viewerId != nil { viewerId = nil } }
             #if DEBUG
+            // `-ShotDexSection upload`: the sheet on the three newest photos, aimed at the local test SMB.
+            Color.clear.task(id: library.items.count) {
+                // Demo only: never on the real library and its saved servers.
+                if MacDemoLibrary.isOn, MacDemoLibrary.section == "upload", uploadRequest == nil, library.items.count > 3, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    MacDemoLibrary.seedUploadServer(dependencies)
+                    try? await Task.sleep(for: .milliseconds(500))
+                    uploadRequest = MacUploadRequest(photoIds: library.items.suffix(3).map(\.assetId))
+                }
+            }
             // `-ShotDexSection cull` (board `MAC_Cull`): a pass over the whole library.
             Color.clear.task(id: library.items.count) {
-                if MacDemoLibrary.section == "cull", cullRequest == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                if MacDemoLibrary.isOn, MacDemoLibrary.section == "cull", cullRequest == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     try? await Task.sleep(for: .milliseconds(500))
                     startCull()

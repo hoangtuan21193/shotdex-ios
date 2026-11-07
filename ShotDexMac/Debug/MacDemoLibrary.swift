@@ -216,6 +216,18 @@ enum MacDemoLibrary {
         return .source(sourceId)
     }
 
+    /// `-ShotDexSection upload`: a connection to the local test SMB server,
+    /// uploading into `photos/Uploads` — never a real server.
+    @MainActor
+    static func seedUploadServer(_ dependencies: MacDependencies) {
+        guard isOn else { return }
+        let server = FileServer(id: "demo-smb-upload", name: "Test SMB", transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                username: "tester", folder: "photos/Uploads")
+        try? dependencies.fileServers.save(server, password: "secret")
+        // The sheet opens on the last one used: this one, never the demo's NAS rows.
+        try? dependencies.fileServers.markUsed(server.id, folder: "photos/Uploads", usesDateFolders: false)
+    }
+
     /// `-ShotDexServerPath Tuan/2025`: the folder the server browser opens
     /// on, relative to the source's root.
     static var serverPath: String? {

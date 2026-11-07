@@ -435,8 +435,6 @@
 				Features/ServerUpload/FileServerListScreen.swift,
 				Features/ServerUpload/SaveConnectionSheet.swift,
 				Features/ServerUpload/ServerSignIn.swift,
-				Features/ServerUpload/ServerUploadIndex.swift,
-				Features/ServerUpload/ServerUploadModel.swift,
 				Features/ServerUpload/ServerUploadSheet.swift,
 				Features/ServerUpload/UploadedToServerScreen.swift,
 				Features/Settings/AI/AIProviderForm.swift,
