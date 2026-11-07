@@ -15,6 +15,30 @@ final class MacUploads {
 
     /// Newest first.
     private(set) var entries: [Entry] = []
+    /// Batches the user paused: stopped between files, Resume sends the rest.
+    private(set) var pausedIds: Set<UUID> = []
+    /// What a batch had before Resume restarted it on the rest: files sent
+    /// and its whole size, so counts read for the whole job.
+    private(set) var carried: [UUID: (sent: Int, total: Int)] = [:]
+
+    /// Pause: the batch stops now; the file in flight is cleaned off the
+    /// server and starts over on Resume; what is up stays up. Not while an
+    /// already-there question waits — stopping would answer it Skip.
+    func pause(_ id: UUID) {
+        guard let entry = entries.first(where: { $0.id == id }), entry.model.stage == .uploading,
+              entry.model.pendingConflict == nil else { return }
+        pausedIds.insert(id)
+        entry.model.cancel()
+    }
+
+    /// Resume: the files not sent yet, on the same connection and folder.
+    func resume(_ id: UUID) {
+        guard let entry = entries.first(where: { $0.id == id }), entry.model.stage == .finished else { return }
+        let before = carried[id] ?? (0, entry.model.lastItems.count)
+        carried[id] = (before.sent + entry.model.fileOutcomes.values.filter(\.isOnServer).count, before.total)
+        pausedIds.remove(id)
+        entry.model.uploadRemaining()
+    }
 
     var isAnyRunning: Bool { entries.contains { $0.model.stage == .uploading } }
     /// A file already on the server waits for an answer: the batch is stopped
@@ -41,13 +65,22 @@ final class MacUploads {
         model.start()
         entries.insert(Entry(model: model, serverName: name), at: 0)
         // Finished rows beyond the last ten leave the list.
-        let finished = entries.indices.filter { entries[$0].model.stage == .finished }
+        // A paused batch is kept: it is waiting for Resume, not over.
+        let finished = entries.indices.filter { entries[$0].model.stage == .finished && !pausedIds.contains(entries[$0].id) }
         if finished.count > 10 { entries.remove(at: finished.last!) }
         return true
     }
 
+    /// Paused and still something to send: what the row and On Server show
+    /// as "Paused". A pause that landed after the last file is just a finish.
+    func isPaused(_ entry: Entry) -> Bool {
+        pausedIds.contains(entry.id) && entry.model.stage == .finished && entry.model.hasRemaining
+    }
+
     /// Remove from List: only a row that is over.
     func remove(_ id: UUID) {
+        pausedIds.remove(id)
+        carried[id] = nil
         entries.removeAll { $0.id == id && $0.model.stage == .finished }
     }
 
@@ -58,6 +91,12 @@ final class MacUploads {
 /// with Upload Remaining after.
 struct MacUploadRow: View {
     let entry: MacUploads.Entry
+    /// Paused by the user (not stopped by trouble): Resume, not Try Again.
+    var isPaused = false
+    /// Sent before the last Resume, and the job's whole size.
+    var carried: (sent: Int, total: Int)?
+    var pause: () -> Void = {}
+    var resume: () -> Void = {}
     let remove: () -> Void
     @State private var appliesToAll = false
     @State private var isConfirmingStop = false
@@ -66,7 +105,7 @@ struct MacUploadRow: View {
 
     var body: some View {
         // Top while a question can open under the bar; centred once over (board).
-        HStack(alignment: model.stage == .uploading ? .top : .center, spacing: 12) {
+        HStack(alignment: model.stage == .uploading || !model.lastItems.isEmpty ? .top : .center, spacing: 12) {
             // The same tile as the other Activity rows: soft amber while it goes, red after trouble.
             Image(systemName: isTrouble ? "exclamationmark.triangle.fill" : "arrow.up")
                 .accessibilityHidden(true)
@@ -86,6 +125,7 @@ struct MacUploadRow: View {
                     .foregroundStyle(isTrouble ? MacTheme.redText : .secondary)
                     .help(status)
                 if let conflict = model.pendingConflict { conflictPanel(conflict) }
+                if !model.lastItems.isEmpty { files }
                 if isConfirmingStop, model.stage == .uploading { stopQuestion }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -107,13 +147,67 @@ struct MacUploadRow: View {
     private var aside: String {
         switch model.stage {
         case .uploading: model.progress.fraction.formatted(.percent.precision(.fractionLength(0)))
+        case .finished where isPaused: String(localized: "Paused", comment: "Mac Activity upload: aside of a paused upload")
         default: String(localized: "Started \(entry.startedAt.formatted(date: .omitted, time: .shortened))",
                         comment: "Mac Activity upload: when a finished upload began")
         }
     }
 
     private var isTrouble: Bool {
-        model.stage == .finished && (model.summary.stopMessage != nil || !model.summary.failures.isEmpty)
+        !isPaused && model.stage == .finished && (model.summary.stopMessage != nil || !model.summary.failures.isEmpty)
+    }
+
+    /// Board: each file with where it stands — the per-file list under the row.
+    private var files: some View {
+        DisclosureGroup {
+            ScrollView {
+                // Lazy: only the rows in view are made, on every progress tick too.
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(0..<min(model.lastItems.count, 500), id: \.self) { index in
+                        let item = model.lastItems[index]
+                        HStack(spacing: 8) {
+                            Text(item.file.filename).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 8)
+                            Text(fileState(index)).foregroundStyle(fileIsTrouble(index) ? MacTheme.redText : .secondary)
+                        }
+                        .font(.subheadline.monospacedDigit())
+                    }
+                    if model.lastItems.count > 500 {
+                        Text("+ \(model.lastItems.count - 500) more", comment: "Mac Activity upload: files past the list's first 500")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxHeight: 140)
+        } label: {
+            Text("Files", comment: "Mac Activity upload: the list of each file").font(.subheadline)
+        }
+    }
+
+    private func fileState(_ index: Int) -> String {
+        if let outcome = model.fileOutcomes[index] {
+            switch outcome {
+            case .uploaded: return String(localized: "Verified", comment: "Mac Activity upload file: up and checked")
+            case .alreadyThere: return String(localized: "Already there", comment: "Mac Activity upload file: same file on the server")
+            case .skipped: return String(localized: "Skipped", comment: "Mac Activity upload file: left as it was on the server")
+            case .failed(let reason): return reason
+            case .notAttempted: return String(localized: "Not sent", comment: "Mac Activity upload file: stopped before it")
+            }
+        }
+        guard model.stage == .uploading else { return String(localized: "Not sent", comment: "Mac Activity upload file: stopped before it") }
+        if index == model.progress.fileIndex, !model.progress.filename.isEmpty {
+            switch model.progress.phase {
+            case .preparing: return String(localized: "Reading", comment: "Mac Activity upload file: being read out of Photos")
+            case .uploading: return String(localized: "Uploading", comment: "Mac Activity upload file: going up")
+            case .verifying: return String(localized: "Verifying", comment: "Mac Activity upload file: read back to compare")
+            }
+        }
+        return String(localized: "Waiting", comment: "Mac Activity upload file: its turn has not come")
+    }
+
+    private func fileIsTrouble(_ index: Int) -> Bool {
+        if case .failed = model.fileOutcomes[index] { return true }
+        return false
     }
 
     private var status: String {
@@ -136,11 +230,20 @@ struct MacUploadRow: View {
             return line
         case .finished:
             let summary = model.summary
+            if isPaused {
+                let sent = (carried?.sent ?? 0) + model.fileOutcomes.values.filter(\.isOnServer).count
+                let total = carried?.total ?? model.lastItems.count
+                return String(localized: "Paused · \(sent) of \(total) files sent · the file that was going starts over on Resume",
+                              comment: "Mac Activity upload: paused by the user")
+            }
             var parts: [String] = []
             if summary.uploadedPhotoCount > 0 {
                 let bytes = ByteCountFormatter.string(fromByteCount: summary.uploadedBytes, countStyle: .file)
-                parts.append(String(localized: "Uploaded \(summary.uploadedPhotoCount) photos (\(bytes)), each file checked",
-                                    comment: "Mac Activity upload result"))
+                parts.append(String(AttributedString(localized: "Uploaded ^[\(summary.uploadedPhotoCount) photo](inflect: true) (\(bytes)), each file checked",
+                                                     comment: "Mac Activity upload result").characters))
+                if let carried, carried.sent > 0 {
+                    parts.append(String(localized: "\(carried.sent) more before the pause", comment: "Mac Activity upload result: sent before a Resume"))
+                }
             } else {
                 parts.append(String(localized: "No photos uploaded", comment: "Mac Activity upload result: nothing went up"))
             }
@@ -166,12 +269,25 @@ struct MacUploadRow: View {
             case .preparing:
                 EmptyView()
             case .uploading:
+                Button(action: pause) { Image(systemName: "pause.fill").font(.system(size: 11, weight: .bold)) }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    // A waiting question first: pausing would answer it Skip.
+                    .disabled(model.pendingConflict != nil)
+                    .help(String(localized: "Pause \(title)", comment: "Mac Activity: pause an upload"))
+                    .accessibilityLabel(String(localized: "Pause \(title)", comment: "Mac Activity: pause an upload"))
                 Button { isConfirmingStop = true } label: { Image(systemName: "stop.fill").font(.system(size: 11, weight: .bold)) }
                     .buttonStyle(.bordered).controlSize(.small)
                     .help(String(localized: "Stop \(title)…", comment: "Mac Activity: stop an upload"))
                     .accessibilityLabel(String(localized: "Stop \(title)…", comment: "Mac Activity: stop an upload"))
             case .finished:
-                if model.hasRemaining {
+                if isPaused, model.hasRemaining {
+                    Button(String(localized: "Resume", comment: "Mac Activity upload: send the rest of a paused upload"), action: resume)
+                        .buttonStyle(.bordered).controlSize(.small)
+                    Button(String(localized: "Discard Remaining", comment: "Mac Activity upload: forget a paused upload's unsent files"), action: remove)
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .help(String(localized: "The files not sent stay on this Mac only; files already uploaded stay on the server.",
+                                     comment: "Mac Activity upload: Discard Remaining tooltip"))
+                } else if model.hasRemaining {
                     Button(model.summary.uploadedPhotoCount == 0
                            ? String(localized: "Try Again", comment: "Mac Activity upload: nothing went up, run it again")
                            : String(localized: "Upload Remaining", comment: "Mac Activity upload: send the files that didn't go")) {
@@ -179,8 +295,10 @@ struct MacUploadRow: View {
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                 }
-                Button(String(localized: "Remove from List", comment: "Mac Activity upload: forget a finished row"), action: remove)
-                    .buttonStyle(.bordered).controlSize(.small)
+                if !(isPaused && model.hasRemaining) {
+                    Button(String(localized: "Remove from List", comment: "Mac Activity upload: forget a finished row"), action: remove)
+                        .buttonStyle(.bordered).controlSize(.small)
+                }
             }
         }
     }

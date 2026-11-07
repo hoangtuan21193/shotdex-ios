@@ -1,0 +1,126 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "upload",
+    "-ShotDexUploadSlow"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Upload",
+   "type": "button",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Files"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "01-files"
+  },
+  {
+   "action": "dump",
+   "name": "01-files"
+  },
+  {
+   "action": "click",
+   "label": "Pause Upload to Test SMB",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-paused"
+  },
+  {
+   "action": "click",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Go>On Server"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "photos/Uploads",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-tiles"
+  },
+  {
+   "action": "dump",
+   "name": "03-tiles"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  },
+  {
+   "action": "menu",
+   "text": "Window>Activity"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove from List",
+   "type": "button",
+   "seconds": 40
+  },
+  {
+   "action": "screenshot",
+   "name": "04-done"
+  }
+ ]
+}

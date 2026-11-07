@@ -99,7 +99,10 @@ final class ServerUploadModel {
     private var session: ServerUploadSession?
     private var conflictContinuation: CheckedContinuation<ServerUploadConflictDecision, Never>?
     private var isHolding = false
-    private var lastItems: [ServerUploadItem] = []
+    /// The batch going (or last gone): what a per-file list shows.
+    private(set) var lastItems: [ServerUploadItem] = []
+    /// Each file of the batch that has ended, by its place in `lastItems`.
+    private(set) var fileOutcomes: [Int: ServerUploadOutcome] = [:]
     private var lastOutcomes: [ServerUploadOutcome] = []
     private var samples: [(time: Date, bytes: Int64)] = []
     /// The connection picked in the ⋯ menu — it wins over the last used.
@@ -249,6 +252,8 @@ final class ServerUploadModel {
         lastItems = items
         stage = .uploading
         progress = Progress(fileCount: items.count)
+        fileOutcomes = [:]
+        batch += 1
         samples = []
         lastBytesShown = .distantPast
         beginHold()
@@ -268,7 +273,8 @@ final class ServerUploadModel {
                 }
             }
             // `self` stays weak across the batch: a sheet that went away does not keep the model.
-            guard let session = self?.makeSession(server: server, password: password, items: items,
+            guard let batch = self?.batch,
+                  let session = self?.makeSession(server: server, password: password, items: items, batch: batch,
                                                   workDirectory: workDirectory, uploads: uploads) else { return }
             self?.session = session
             let result = await session.run(items)
@@ -283,7 +289,7 @@ final class ServerUploadModel {
         }
     }
 
-    private func makeSession(server: FileServer, password: String, items: [ServerUploadItem],
+    private func makeSession(server: FileServer, password: String, items: [ServerUploadItem], batch: Int,
                              workDirectory: URL, uploads: ServerUploadStore) -> ServerUploadSession {
         ServerUploadSession(
             client: uploadClient(server, password: password),
@@ -295,7 +301,10 @@ final class ServerUploadModel {
                 await self?.ask(conflict) ?? .init(choice: .skip)
             },
             onEvent: { [weak self] event in
-                Task { @MainActor in self?.handle(event, items: items) }
+                Task { @MainActor in
+                    guard self?.batch == batch else { return }
+                    self?.handle(event, items: items)
+                }
             },
             record: { try uploads.record($0) }
         )
@@ -304,6 +313,9 @@ final class ServerUploadModel {
     /// When the bytes line last changed: the bar moves ten times a second,
     /// not once per network chunk.
     @ObservationIgnored private var lastBytesShown = Date.distantPast
+    /// Which batch the session's events belong to: a late event of the
+    /// previous one (before Upload Remaining) moves nothing in this one.
+    @ObservationIgnored private var batch = 0
 
     /// The Cancel button, and leaving the app: stop after cleaning the part
     /// on the server.
@@ -363,8 +375,8 @@ final class ServerUploadModel {
             progress.bytesDone = max(progress.bytesDone, done)
             progress.bytesTotal = total
             recordSample(done)
-        case .fileFinished:
-            break
+        case .fileFinished(let index, let outcome):
+            fileOutcomes[index] = outcome
         }
     }
 
@@ -381,6 +393,8 @@ final class ServerUploadModel {
         // `task` stays set until the result is in: no second batch starts in between.
         session = nil
         lastOutcomes = result.outcomes
+        // Every file's end, from the result itself: events still queued are not waited for.
+        fileOutcomes = Dictionary(uniqueKeysWithValues: result.outcomes.enumerated().map { ($0.offset, $0.element) })
         endHold()
 
         var summary = Summary()

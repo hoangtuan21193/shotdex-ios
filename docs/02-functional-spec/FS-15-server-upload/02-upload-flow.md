@@ -171,7 +171,12 @@ Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo
   (bấm → Activity); bảng On Server: hàng có cùng server và folder (hoặc folder ngày bên trong) của lô đang đẩy ghi "Uploading 2 of 3"
   + thanh 60pt ở cột Last Upload. Model dùng chung đọc Keychain, ghi DB, dọn thư mục tạm và tính kết quả ngoài main thread; tiến
   độ byte cập nhật tối đa 10 lần/giây.
-- *Còn lại:* Pause/Resume, danh sách từng file, ô ảnh Uploading/Waiting, giữ kết quả qua lần mở app (hàng 25f); duyệt folder
+- **Pause/Resume, từng file** (hàng 25f): hàng đang đẩy có ‖ Pause (không hỏi: dừng sau khi dọn file dở, phần đã lên giữ nguyên)
+  và ■ Stop (hỏi). Hàng đã dừng: aside "Paused", "Paused · N of M files sent", **Resume** gửi phần còn lại cùng server/folder.
+  **Files** (mở ra) liệt kê từng file: Waiting · Reading · Uploading · Verifying · Verified · Already there · Skipped · lý do lỗi
+  (đỏ) · Not sent; tối đa 500 dòng. Lưới On Server của hàng đang nhận file đặt trước các ảnh chưa lên: **Uploading** (đang đi)
+  và **Waiting**.
+- *Còn lại:* giữ kết quả qua lần mở app (hàng 25g); duyệt folder
   trên server và **Upload…** của màn duyệt server (25d); upload ảnh chỉ có ở thư mục/server.
 
 ## 10. Mac — chỗ On Server (hàng 25b, board `MAC_ServerUpload`, 2026-11-08)

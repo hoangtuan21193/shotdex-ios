@@ -159,7 +159,11 @@ struct MacActivityView: View {
                     let entries = dependencies.uploads.entries.sorted { ($0.model.pendingConflict != nil) && ($1.model.pendingConflict == nil) }
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                         if index > 0 { Divider() }
-                        MacUploadRow(entry: entry, remove: { dependencies.uploads.remove(entry.id) })
+                        MacUploadRow(entry: entry, isPaused: dependencies.uploads.isPaused(entry),
+                                     carried: dependencies.uploads.carried[entry.id],
+                                     pause: { dependencies.uploads.pause(entry.id) },
+                                     resume: { dependencies.uploads.resume(entry.id) },
+                                     remove: { dependencies.uploads.remove(entry.id) })
                     }
                 }
             }

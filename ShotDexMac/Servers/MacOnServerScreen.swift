@@ -102,7 +102,9 @@ struct MacOnServerScreen: View {
 
     @ViewBuilder
     private func content(_ snapshot: MacOnServerSnapshot) -> some View {
-        let all = photos(in: snapshot)
+        // Photos of an upload going into the picked place come first, with where they stand (board).
+        let pending = pendingStates(snapshot)
+        let all = pending.ids + photos(in: snapshot).filter { pending.states[$0] == nil }
         // A page of the newest: the whole set can be 55k, and the library grid has the rest.
         let ids = Array(all.prefix(Self.gridLimit))
         ScrollView {
@@ -122,7 +124,7 @@ struct MacOnServerScreen: View {
                     // Edge to edge, 2 apart, as the library grid (board).
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: 200), spacing: 2)], spacing: 2) {
                         ForEach(ids, id: \.self) { id in
-                            MacOnServerTile(id: id, format: snapshot.formats[id], picture: picture)
+                            MacOnServerTile(id: id, format: snapshot.formats[id], state: pending.states[id] ?? .onServer, picture: picture)
                         }
                     }
 
@@ -203,7 +205,9 @@ struct MacOnServerScreen: View {
                 .width(min: 60, ideal: 80)
                 TableColumn(String(localized: "Last Upload", comment: "Mac On Server column")) { row in
                     // An upload going into this place right now (board): its count and a small bar.
-                    if let running = running(into: row) {
+                    if let running = running(into: row), running.stage == .finished {
+                        Text("Paused", comment: "Mac On Server: an upload into this place is paused").foregroundStyle(MacTheme.accent)
+                    } else if let running = running(into: row) {
                         HStack(spacing: 6) {
                             // Date Folders spread one batch over several rows: no batch count on each.
                             Text(running.usesDateFolders
@@ -231,7 +235,9 @@ struct MacOnServerScreen: View {
         guard row.id != Self.everyPhotoRow else { return nil }
         return dependencies.uploads.entries.first { entry in
             let model = entry.model
-            guard model.stage == .uploading, entry.serverName == row.server else { return false }
+            // Paused counts too: its unsent photos stay in the grid as Waiting.
+            let isPaused = dependencies.uploads.isPaused(entry)
+            guard model.stage == .uploading || isPaused, entry.serverName == row.server else { return false }
             // Rows show the top as "/"; the upload's folder is "" there.
             let folder = ServerUploadPath.normalizedFolder(model.folder)
             let rowFolder = row.folder == "/" ? "" : ServerUploadPath.normalizedFolder(row.folder)
@@ -239,6 +245,19 @@ struct MacOnServerScreen: View {
             // Only Date Folders put files below the folder picked.
             return model.usesDateFolders && (folder.isEmpty || rowFolder.hasPrefix(folder + "/"))
         }?.model
+    }
+
+    /// The picked place's photos still on their way: the upload's own order,
+    /// the one in flight Uploading, the rest Waiting.
+    private func pendingStates(_ snapshot: MacOnServerSnapshot) -> (ids: [String], states: [String: MacOnServerTile.State]) {
+        guard let picked, let row = rows(snapshot).first(where: { $0.id == picked }), let model = running(into: row) else { return ([], [:]) }
+        var ids: [String] = []
+        var states: [String: MacOnServerTile.State] = [:]
+        for (index, item) in model.lastItems.enumerated() where !(model.fileOutcomes[index]?.isOnServer ?? false) && states[item.assetId] == nil {
+            states[item.assetId] = model.stage == .uploading && index == model.progress.fileIndex ? .uploading : .waiting
+            ids.append(item.assetId)
+        }
+        return (ids, states)
     }
 
     private struct Row: Identifiable, Hashable {
@@ -375,6 +394,9 @@ struct MacOnServerScreen: View {
 struct MacOnServerTile: View {
     let id: String
     let format: String?
+    var state: State = .onServer
+
+    enum State { case onServer, uploading, waiting }
     var picture: ((String) -> CGImage?)?
     @Environment(MacDependencies.self) private var dependencies
     @State private var image: CGImage?
@@ -397,7 +419,7 @@ struct MacOnServerTile: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                Label(String(localized: "On Server", comment: "Mac On Server tile: the photo's state"), systemImage: "checkmark.circle.fill")
+                Label(stateTitle, systemImage: stateSymbol)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6).frame(height: 18)
@@ -415,7 +437,23 @@ struct MacOnServerTile: View {
                                         received: { image = $0 }, inCloud: { isCloud = true })
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(String(localized: "Photo, On Server", comment: "Mac On Server tile"))
+            .accessibilityLabel(String(localized: "Photo, \(stateTitle)", comment: "Mac On Server tile: a photo and its state"))
+    }
+
+    private var stateTitle: String {
+        switch state {
+        case .onServer: String(localized: "On Server", comment: "Mac On Server tile: the photo's state")
+        case .uploading: String(localized: "Uploading", comment: "Mac On Server tile: the photo is going up now")
+        case .waiting: String(localized: "Waiting", comment: "Mac On Server tile: the photo's turn has not come")
+        }
+    }
+
+    private var stateSymbol: String {
+        switch state {
+        case .onServer: "checkmark.circle.fill"
+        case .uploading: "arrow.up.circle.fill"
+        case .waiting: "clock"
+        }
     }
 
     /// `RAW`, `HEIC`, `JPG`, `MOV` from the file name, as the library grid labels it.
