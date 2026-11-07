@@ -107,11 +107,18 @@ struct MacViewerPhoto: View {
     @State private var lastSize: CGSize = .zero
     /// The photo the running request is for: a late answer for another is dropped.
     @State private var loadingFor: String?
+    /// The photo's file is only in the cloud: the download panel stands in for it.
+    @State private var cloud: (id: String, file: MacPhotoFile)?
 
     var body: some View {
         GeometryReader { proxy in
             Group {
-                if let image {
+                if let cloud, cloud.id == id, !dependencies.cloudDownloads.finished.contains(id) {
+                    MacCloudDownloadView(name: cloud.file.url.lastPathComponent, file: cloud.file,
+                                         phase: dependencies.cloudDownloads.phases[id],
+                                         cancel: { dependencies.cloudDownloads.cancel(id) },
+                                         download: { dependencies.cloudDownloads.start(id, file: cloud.file, force: true) })
+                } else if let image {
                     switch zoom {
                     case .fit:
                         Image(decorative: image, scale: displayScale)
@@ -146,7 +153,8 @@ struct MacViewerPhoto: View {
                     ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .task(id: "\(id)-\(zoom.rawValue)-\(Int(proxy.size.width))x\(Int(proxy.size.height))") {
+            // Again once its file has come down from the cloud.
+            .task(id: "\(id)-\(zoom.rawValue)-\(Int(proxy.size.width))x\(Int(proxy.size.height))-\(dependencies.cloudDownloads.finished.contains(id))") {
                 await withTaskCancellationHandler {
                     await load(fitting: proxy.size)
                 } onCancel: {
@@ -156,9 +164,10 @@ struct MacViewerPhoto: View {
             // A photo left behind stops loading: no full decode or iCloud download for nothing.
             .onDisappear { cancelRequest() }
         }
-        .accessibilityElement(children: .ignore)
+        // The download panel's text and buttons stay reachable; a picture is one image.
+        .accessibilityElement(children: cloud?.id == id ? .contain : .ignore)
         .accessibilityLabel(String(localized: "Photo", comment: "Mac viewer: VoiceOver name of the picture"))
-        .accessibilityAddTraits(.isImage)
+        .accessibilityAddTraits(cloud?.id == id ? [] : .isImage)
     }
 
     private func load(fitting size: CGSize) async {
@@ -175,6 +184,14 @@ struct MacViewerPhoto: View {
             guard !Task.isCancelled else { return }
         }
         if let picture {
+            #if DEBUG
+            // The demo's iCloud photo (`-ShotDexSection viewerCloud`).
+            if let file = MacDemoLibrary.cloudFile(for: id), !dependencies.cloudDownloads.finished.contains(id) {
+                await showCloud(file)
+                return
+            }
+            #endif
+            cloud = nil
             image = picture(id)
             return
         }
@@ -194,13 +211,27 @@ struct MacViewerPhoto: View {
             }
             return
         }
-        // A folder or server photo: its file, read and scaled off the main actor.
-        let info = try? await PhotoInfoQueries(database: dependencies.database).info(photoId: wanted)
-        guard let url = info?.filePath.map({ URL(fileURLWithPath: $0) }) else { failed = image == nil; return }
+        // A folder photo: its file in its source's folder, read and scaled off the main actor.
+        guard let file = await MacPhotoFiles.resolve(wanted, dependencies: dependencies) else { failed = image == nil; return }
+        guard !Task.isCancelled else { return }
+        // Only in the cloud: never read blind (that downloads with no bar) — the panel asks.
+        if file.isPlaceholder { await showCloud(file); return }
+        cloud = nil
+        let url = file.url
         let maxPixel = zoom == .actual ? 0 : Int(max(pixels.width, pixels.height))
         let read = await Task.detached(priority: .userInitiated) { MacViewerPhoto.read(url, maxPixel: maxPixel) }.value
         guard !Task.isCancelled else { return }
         if let read { image = read } else { failed = image == nil }
+    }
+
+    /// The panel at once; the download a beat later, so arrowing past
+    /// cloud photos does not ask macOS for every one of them.
+    private func showCloud(_ file: MacPhotoFile) async {
+        image = nil
+        cloud = (id, file)
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        dependencies.cloudDownloads.start(id, file: file)
     }
 
     private func cancelRequest() {
@@ -272,11 +303,19 @@ struct MacFilmstripTile: View {
     let isCurrent: Bool
     @Environment(MacDependencies.self) private var dependencies
     @State private var image: CGImage?
+    /// Its file is only in the cloud: a cloud stands in for the picture (board).
+    @State private var isCloud = false
 
     var body: some View {
         // 64 at a 68 pitch; the open one ringed inside its edge, 2pt amber then 2pt ground (board).
         RoundedRectangle(cornerRadius: 4, style: .continuous).fill(MacTheme.fill2)
-            .overlay { if let image { Image(decorative: image, scale: 2).resizable().scaledToFill() } }
+            .overlay {
+                if isCloud {
+                    Image(systemName: "icloud.and.arrow.down").font(.system(size: 13)).foregroundStyle(.secondary)
+                } else if let image {
+                    Image(decorative: image, scale: 2).resizable().scaledToFill()
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .frame(width: 64, height: 64)
             .overlay {
@@ -288,9 +327,20 @@ struct MacFilmstripTile: View {
                     .allowsHitTesting(false)
                 }
             }
-            .task(id: id) {
+            .task(id: "\(id)-\(dependencies.cloudDownloads.finished.contains(id))") {
+                #if DEBUG
+                if MacDemoLibrary.cloudFile(for: id) != nil, !dependencies.cloudDownloads.finished.contains(id) { isCloud = true; return }
+                #endif
+                isCloud = false
                 if let picture { image = picture(id); return }
-                guard let found = asset(id) else { return }
+                guard let found = asset(id) else {
+                    // A folder photo: its file's thumbnail, or the cloud while it is not downloaded.
+                    guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies) else { return }
+                    if file.isPlaceholder { isCloud = true; return }
+                    let url = file.url
+                    image = await Task.detached(priority: .utility) { MacViewerPhoto.read(url, maxPixel: 128) }.value
+                    return
+                }
                 let request = dependencies.photoLibrary.requestThumbnail(for: found, targetSize: CGSize(width: 128, height: 128), allowNetwork: false) { result in
                     if let cg = result?.cgImage { image = cg }
                 }
@@ -315,6 +365,11 @@ struct MacViewerInspector: View {
     @State private var loadedId: String?
     /// Bumped after a caption or keyword write: the facts are read again.
     @State private var reloads = 0
+    /// A folder photo's file, for its path and whether it is downloaded.
+    @State private var file: MacPhotoFile?
+
+    /// Only in the cloud: the facts the file holds are not read yet (board `MAC_ViewerCloudDownload`).
+    private var isInCloud: Bool { file?.isPlaceholder == true && loadedId == photoId }
 
     var body: some View {
         ScrollView {
@@ -333,7 +388,11 @@ struct MacViewerInspector: View {
                     }
                     section(String(localized: "Camera and Lens", comment: "Mac viewer inspector section")) { camera(info) }
                     MacViewerEdits(photoId: photoId, reloads: reloads + (menu?.marksGeneration ?? 0), hasFileCopy: loadedId == photoId && info.hasFileCopy)
-                    if let place = MacInfoText.place(info) {
+                    if isInCloud {
+                        section(String(localized: "Location", comment: "Mac viewer inspector section")) {
+                            Text(verbatim: "—").font(.system(size: 13)).foregroundStyle(.tertiary)
+                        }
+                    } else if let place = MacInfoText.place(info) {
                         section(String(localized: "Location", comment: "Mac viewer inspector section"), accessory: {
                             if let coordinate = MacInfoText.coordinate(info) {
                                 Button { MacViewerLocation.showOnMap(coordinate, name: place.name) } label: {
@@ -367,15 +426,23 @@ struct MacViewerInspector: View {
         }
         .background(MacTheme.content)
         // Again when a caption or keyword changes here or in Get Info.
-        .task(id: "\(photoId)-\(reloads)-\(menu?.marksGeneration ?? 0)") {
+        // Again once the file has come down from the cloud: its facts are read then.
+        .task(id: "\(photoId)-\(reloads)-\(menu?.marksGeneration ?? 0)-\(dependencies.cloudDownloads.finished.contains(photoId))") {
             // Off the main actor; the last photo's facts stay until the new ones come.
             guard let read = try? await PhotoInfoQueries(database: dependencies.database).info(photoId: photoId) else {
                 // A failed read shows nothing rather than the last photo's facts.
-                if !Task.isCancelled { info = nil }
+                if !Task.isCancelled { info = nil; file = nil }
                 return
             }
+            var found: MacPhotoFile?
+            #if DEBUG
+            found = MacDemoLibrary.cloudFile(for: photoId)
+            if dependencies.cloudDownloads.finished.contains(photoId) { found = nil }
+            #endif
+            if found == nil, read.hasFileCopy { found = await MacPhotoFiles.resolve(photoId, dependencies: dependencies) }
             guard !Task.isCancelled else { return }
             info = read
+            file = found
             loadedId = photoId
         }
     }
@@ -433,11 +500,21 @@ struct MacViewerInspector: View {
     }
 
     private func camera(_ info: PhotoInfoQueries.Info) -> some View {
-        let metadata = info.metadata
+        // Not downloaded: dashes, and when they will fill in (board).
+        let metadata = isInCloud ? nil : info.metadata
         return VStack(alignment: .leading, spacing: 8) {
-            row(String(localized: "Camera", comment: "Mac viewer inspector row"), metadata?.normalizedCameraModel ?? metadata?.cameraModel)
-            row(String(localized: "Lens", comment: "Mac viewer inspector row"), metadata?.normalizedLensModel ?? metadata?.lensModel)
-            if metadata?.iso == nil, metadata?.focalLength == nil, metadata?.aperture == nil, metadata?.shutterSpeedDisplay == nil {
+            row(String(localized: "Camera", comment: "Mac viewer inspector row"), metadata?.normalizedCameraModel ?? metadata?.cameraModel, dash: isInCloud)
+            row(String(localized: "Lens", comment: "Mac viewer inspector row"), metadata?.normalizedLensModel ?? metadata?.lensModel, dash: isInCloud)
+            if isInCloud {
+                HStack(spacing: 4) {
+                    tile(nil, String(localized: "ISO", comment: "Mac viewer exposure tile"))
+                    tile(nil, String(localized: "Focal", comment: "Mac viewer exposure tile"))
+                    tile(nil, String(localized: "Aperture", comment: "Mac viewer exposure tile"))
+                    tile(nil, String(localized: "Shutter", comment: "Mac viewer exposure tile"))
+                }
+                Text("Read once the file is downloaded", comment: "Mac viewer inspector: camera facts wait for the iCloud download")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } else if metadata?.iso == nil, metadata?.focalLength == nil, metadata?.aperture == nil, metadata?.shutterSpeedDisplay == nil {
                 Text("No camera data", comment: "Mac viewer inspector: the photo has no exposure facts")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             } else {
@@ -466,17 +543,24 @@ struct MacViewerInspector: View {
     private func file(_ info: PhotoInfoQueries.Info) -> some View {
         let metadata = info.metadata
         VStack(alignment: .leading, spacing: 6) {
-            row(String(localized: "Source", comment: "Mac viewer inspector row"), marks?.sourceName)
-            if let path = info.filePath {
+            row(String(localized: "Source", comment: "Mac viewer inspector row"), file?.sourceName ?? marks?.sourceName,
+                symbol: file?.sourceName == nil ? nil : "folder")
+            // Where the file is, the way Finder names it — not the path inside the source.
+            if let path = file?.displayPath ?? info.filePath {
                 Text(path).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2).truncationMode(.middle)
                     .textSelection(.enabled)
             }
-            row(String(localized: "Size", comment: "Mac viewer inspector row"),
-                metadata?.fileSize.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file) })
-            row(String(localized: "Dimensions", comment: "Mac viewer inspector row"), dimensions(metadata))
+            row(String(localized: "Size", comment: "Mac viewer inspector row"), size(metadata))
+            row(String(localized: "Dimensions", comment: "Mac viewer inspector row"), isInCloud ? nil : dimensions(metadata), dash: isInCloud)
             row(String(localized: "Format", comment: "Mac viewer inspector row"),
                 (info.fileName ?? metadata?.originalFilename).map { ($0 as NSString).pathExtension.uppercased() }.flatMap { $0.isEmpty ? nil : $0 })
         }
+    }
+
+    private func size(_ metadata: PhotoMetadata?) -> String? {
+        let bytes = (isInCloud ? file?.size : nil) ?? metadata?.fileSize.map(Int64.init)
+        guard let text = bytes.map({ ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }) else { return nil }
+        return isInCloud ? String(localized: "\(text) · not downloaded", comment: "Mac viewer inspector: the file size of a photo only in iCloud") : text
     }
 
     private func dimensions(_ metadata: PhotoMetadata?) -> String? {
@@ -485,14 +569,24 @@ struct MacViewerInspector: View {
         return "\(width) × \(height) · \(megapixels) MP"
     }
 
+    /// A fact and its name; hidden when there is none, or "—" when it is
+    /// still to come (`dash`). A folder source's name gets its folder.
     @ViewBuilder
-    private func row(_ name: String, _ value: String?) -> some View {
-        if let value, !value.isEmpty {
+    private func row(_ name: String, _ value: String?, dash: Bool = false, symbol: String? = nil) -> some View {
+        if let text = (value?.isEmpty == false ? value : nil) ?? (dash ? "—" : nil) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(name).font(.system(size: 13)).foregroundStyle(.secondary).frame(width: 76, alignment: .leading)
-                Text(value).font(.system(size: 13)).lineLimit(2).textSelection(.enabled)
+                HStack(spacing: 5) {
+                    if let symbol { Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(MacTheme.accent) }
+                    Text(text).font(.system(size: 13)).lineLimit(2).textSelection(.enabled)
+                }
             }
-            .accessibilityElement(children: .combine)
+            // One line for VoiceOver, its name then its value.
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isStaticText)
+            .accessibilityLabel(name)
+            .accessibilityValue(value?.isEmpty == false ? text
+                                : String(localized: "Not read yet", comment: "Mac viewer inspector: VoiceOver for a fact still to come"))
         }
     }
 }

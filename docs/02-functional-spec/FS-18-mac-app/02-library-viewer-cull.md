@@ -126,6 +126,21 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   khung trắng + "Zoom 200%") chỉ hiện khi ảnh lớn hơn màn hình.
   Phím: ← → ảnh trước/sau, **Z** Fit ↔ 100 %, "." Favorite, 0–5 P X U, **Esc** ra khỏi toàn màn (viewer vẫn mở trong cửa
   sổ). Z cũng là Fit ↔ Actual Size trong viewer cửa sổ (01b §3). Demo `-ShotDexSection viewerFullScreen`.
+- **Ảnh chỉ có trên iCloud Drive** (2026-11-07, board `MAC_ViewerCloudDownload`, `MacCloudFile.swift`): ảnh của nguồn
+  thư mục mà file còn là placeholder (iCloud Drive hay nhà cung cấp khác sau Finder) **không bao giờ được đọc mù** (đọc là
+  tải không có thanh). Mở ảnh đó trong viewer → tải **chỉ file đó** (FS-19.01b §4): mây, tên file, "Downloading from
+  iCloud Drive…", thanh (phần trăm theo dung lượng đã cấp trên đĩa; không biết thì thanh chạy vô định), "1.2 MB of 3.0 MB",
+  **Cancel**. Cancel = thôi chờ, không evict gì (file macOS vẫn tải xong thì cứ đến); ảnh ghi "In iCloud Drive · 3 MB" +
+  **Download** (lỗi: "Couldn't download…" + **Try Again**). Tải bắt đầu sau 0,4 s đứng ở ảnh (bấm → lướt qua nhiều ảnh không xin
+  macOS tải từng ảnh). Đi sang ảnh khác thì tải của ảnh cũ dừng, quay lại thì tải tiếp (lỗi / thiếu chỗ thì thử lại); ảnh đã
+  Cancel thì không tự tải lại. Thiếu chỗ (file + 1 GB): "Not enough space… Free up N". Tải xong, nguồn được đọc lại (EXIF,
+  kích thước) qua `FolderSourceRunner.download`; file bị macOS evict sau đó lại thành placeholder. Ảnh là placeholder theo
+  index (`isCloudPlaceholder`) hoặc theo file lúc này (iCloud `notDownloaded`, nhà cung cấp khác `SF_DATALESS`); bản có trên
+  máy luôn được chọn trước. Get Info, Raw Metadata, Quick Look, Share không đọc placeholder (báo "only in the cloud…"). Inspector khi chưa tải: Camera/Lens và 4 ô phơi sáng "—" + "Read once the file is
+  downloaded", Location "—", Size "3 MB · not downloaded", Dimensions "—", Histogram trống. Tải xong: ảnh, histogram,
+  thông số đọc lại. File: Source = tên thư mục nguồn (biểu tượng thư mục), dòng dưới là chỗ file theo cách Finder gọi
+  ("iCloud Drive/2026 Japan/IMG_4120.JPG"). Filmstrip: ô ảnh chưa tải là mây; ảnh thư mục đã có file thì thumbnail từ file.
+  File luôn được tìm từ thư mục gốc của nguồn (bookmark), không phải đường dẫn tương đối. Demo `-ShotDexSection viewerCloud`.
 - Còn: dòng "−0.3 EV · Aperture Priority · Multi-segment" (đọc từ file), huy hiệu định dạng cạnh tên, bỏ ô tìm khi xem ảnh
   (`toolbar(removing: .search)` không có tác dụng trên cửa sổ này), offline (preview đã lưu + nút mờ), viewer chưa vẽ ảnh
   theo recipe (ảnh gốc), Rotate/Edit khi có editor Mac, nút ảnh trước/sau cho chuột, thứ tự theo cột đang sắp của bảng.

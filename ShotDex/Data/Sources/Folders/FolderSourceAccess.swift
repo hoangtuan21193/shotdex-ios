@@ -83,6 +83,10 @@ final class FolderSourceRoots: @unchecked Sendable {
     private let database: AppDatabase
     private let lock = NSLock()
     private var roots: [String: URL] = [:]
+    /// When a source last failed to open: asked again within 5 s, it is not
+    /// tried (a bookmark resolve and a status write) — a strip of tiles from
+    /// an unplugged drive asks once, not once a tile.
+    private var failures: [String: ContinuousClock.Instant] = [:]
 
     init(database: AppDatabase) {
         self.database = database
@@ -96,15 +100,23 @@ final class FolderSourceRoots: @unchecked Sendable {
             lock.withLock { roots[sourceId] = nil }
             known.stopAccessingSecurityScopedResource()
         }
-        guard case .available(let url) = try? FolderSourceAccess(database: database).open(sourceId: sourceId) else { return nil }
+        if let failed = lock.withLock({ failures[sourceId] }), failed.duration(to: .now) < .seconds(5) { return nil }
+        guard case .available(let url) = try? FolderSourceAccess(database: database).open(sourceId: sourceId) else {
+            lock.withLock { failures[sourceId] = .now }
+            return nil
+        }
         _ = url.startAccessingSecurityScopedResource()
-        lock.withLock { roots[sourceId] = url }
+        lock.withLock {
+            roots[sourceId] = url
+            failures[sourceId] = nil
+        }
         return url
     }
 
     /// A source removed or pointed at another folder: its old folder's
     /// scope closes and the next `root` opens what the bookmark says now.
     func forget(_ sourceId: String) {
+        lock.withLock { failures[sourceId] = nil }
         guard let known = lock.withLock({ roots.removeValue(forKey: sourceId) }) else { return }
         known.stopAccessingSecurityScopedResource()
     }

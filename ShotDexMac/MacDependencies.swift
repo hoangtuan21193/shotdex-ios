@@ -74,6 +74,8 @@ final class MacDependencies: LibraryServices {
     let support: SupportModel
     /// Copy Edits in the viewer (the look, never the crop): shared with iOS's.
     let editClipboard = EditClipboard()
+    /// iCloud Drive files the viewer is bringing down (board `MAC_ViewerCloudDownload`).
+    let cloudDownloads: MacCloudDownloads
     /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns
@@ -125,6 +127,7 @@ final class MacDependencies: LibraryServices {
         ))
         let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
         self.folderSources = folderSources
+        cloudDownloads = MacCloudDownloads(runner: folderSources)
         let serverSources = ServerSourceRefresh(database: database, servers: fileServers,
                                                 composer: MetadataComposer(sensorLookup: SensorLookup(
                                                     records: (try? SensorDatabaseLoader().loadRecords()) ?? [],

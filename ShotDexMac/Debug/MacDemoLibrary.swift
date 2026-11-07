@@ -472,6 +472,18 @@ enum MacDemoLibrary {
         return context.makeImage()
     }
 
+    /// `-ShotDexSection viewerCloud` (board `MAC_ViewerCloudDownload`): the
+    /// photo whose file stands in for one only in iCloud Drive.
+    static var cloudIds: Set<String> = []
+
+    static func cloudFile(for assetId: String) -> MacPhotoFile? {
+        guard cloudIds.contains(assetId) else { return nil }
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/2026 Japan/IMG_4120.JPG")
+        return MacPhotoFile(url: url, isPlaceholder: true, size: 3_000_000, sourceName: "2026 Japan",
+                            displayPath: MacPhotoFiles.displayPath(url), provider: MacPhotoFiles.provider(url))
+    }
+
     static func picture(for assetId: String) -> CGImage? {
         guard !pictures.isEmpty else { return nil }
         let index = abs(assetId.hashValue == 0 ? 0 : Int(assetId.split(separator: "-").last.flatMap { Int($0) } ?? 0))

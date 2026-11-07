@@ -155,7 +155,7 @@ struct MacInfoView: View {
             rawEntries = nil
             keywordText = ""
             saveState = .idle
-            if let url = fileURL(read) {
+            if let url = await fileURL(read).url {
                 let properties = await MacRawMetadata.properties(of: url)
                 guard !Task.isCancelled, loadedId == photoId, let properties else { return }
                 fileExif = [(String(localized: "Metering", comment: "Mac Get Info: EXIF"), MacRawMetadata.metering(properties)),
@@ -448,9 +448,16 @@ struct MacInfoView: View {
         }
     }
 
-    private func fileURL(_ info: PhotoInfoQueries.Info) -> URL? {
-        guard let source = info.fileSourceId, let path = info.filePath else { return nil }
-        return dependencies.folderRoots.fileURL(sourceId: source, relativePath: path)
+    /// The file to read, and whether its source is there at all; off the main
+    /// actor (a bookmark, a stat). A file only in iCloud Drive (or another
+    /// provider) gives no URL: reading it would download it, with no bar.
+    private func fileURL(_ info: PhotoInfoQueries.Info) async -> (url: URL?, isSourceOpen: Bool) {
+        guard let source = info.fileSourceId, let path = info.filePath else { return (nil, false) }
+        let roots = dependencies.folderRoots
+        return await Task.detached(priority: .userInitiated) {
+            guard let url = roots.fileURL(sourceId: source, relativePath: path) else { return (nil, false) }
+            return (MacPhotoFiles.isDataless(url) ? nil : url, true)
+        }.value
     }
 
     /// Every field the file carries, read when asked (a Photos original is
@@ -459,16 +466,20 @@ struct MacInfoView: View {
         guard let id = loadedId else { return }
         rawEntries = nil
         showsRaw = true
-        let url = fileURL(info)
-        // A folder photo whose drive is not connected: no file to read, and
-        // it is not in Photos either.
-        if url == nil, info.fileSourceId != nil, !info.isInPhotos {
-            rawUnavailable = String(localized: "The drive this photo is on isn’t connected.", comment: "Mac raw metadata: source offline")
-            rawEntries = []
-            return
-        }
         rawUnavailable = nil
         Task {
+            let (url, isSourceOpen) = await fileURL(info)
+            guard loadedId == id else { return }
+            // A folder photo not on this Mac: its drive is away, or it is only
+            // in the cloud — no file to read, and it is not in Photos either.
+            if url == nil, info.fileSourceId != nil, !info.isInPhotos {
+                rawUnavailable = isSourceOpen
+                    ? String(localized: "This photo is only in the cloud. Open it in the viewer to download it.",
+                             comment: "Mac raw metadata: the file is an iCloud Drive placeholder")
+                    : String(localized: "The drive this photo is on isn’t connected.", comment: "Mac raw metadata: source offline")
+                rawEntries = []
+                return
+            }
             var properties: [String: Any]?
             if let url {
                 properties = await MacRawMetadata.properties(of: url)

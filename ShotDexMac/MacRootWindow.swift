@@ -847,6 +847,9 @@ struct MacRootWindow: View {
                 // The photo has the screen: the inspector waits for the HUD's button,
                 // and comes back as it was when the full-screen viewer goes —
                 // whichever of the two (full screen, the viewer) went first.
+                // The viewer moved on or closed: a download for the photo it left stops (it
+                // restarts on the way back). Here, not in the photo view, which full screen swaps.
+                .onChange(of: viewerId) { old, _ in if let old { dependencies.cloudDownloads.leave(old) } }
                 .onChange(of: viewerId != nil && isFullScreen) { _, isFullScreenViewer in
                     if isFullScreenViewer {
                         inspectorBeforeFullScreen = showsInspector
@@ -1080,13 +1083,16 @@ struct MacRootWindow: View {
             #if DEBUG
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.
             Color.clear.task(id: library.items.count) {
-                if MacDemoLibrary.section == "viewer" || MacDemoLibrary.section == "viewerFullScreen",
+                if ["viewer", "viewerFullScreen", "viewerCloud"].contains(MacDemoLibrary.section),
                    viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     showsInspector = true
                     // The 12th newest, as the board, edited in ShotDex as the board's is.
                     let id = library.items.reversed().dropFirst(11).first?.assetId ?? library.items.last?.assetId
-                    if let id {
+                    // `viewerCloud` (board `MAC_ViewerCloudDownload`): its file is only in iCloud Drive, no edits.
+                    if MacDemoLibrary.section == "viewerCloud", let id {
+                        MacDemoLibrary.cloudIds = [id]
+                    } else if let id {
                         let store = PhotoRecipeStore(database: dependencies.database)
                         await Task.detached { try? store.save(MacDemoLibrary.viewerRecipe, photoId: id) }.value
                     }

@@ -67,7 +67,7 @@ final class MacPhotoMenu: NSObject {
             let facts = await resolved(Facts(), ids: ids)
             let urls = await files(for: ids, facts: facts)
             guard !urls.isEmpty else {
-                failure = String(localized: "These photos couldn't be shared — they may still be downloading from iCloud.", comment: "Mac photo menu: Share found no file")
+                failure = String(localized: "These photos couldn't be shared — their files are only in the cloud. Open one in the viewer to download it.", comment: "Mac photo menu: Share found no file")
                 return
             }
             service.perform(withItems: urls)
@@ -385,7 +385,7 @@ final class MacPhotoMenu: NSObject {
                 Task {
                     let urls = await self.files(for: ids, facts: facts)
                     guard !urls.isEmpty else {
-                        self.failure = String(localized: "These photos couldn't be shared — they may still be downloading from iCloud.", comment: "Mac photo menu: Share found no file")
+                        self.failure = String(localized: "These photos couldn't be shared — their files are only in the cloud. Open one in the viewer to download it.", comment: "Mac photo menu: Share found no file")
                         return
                     }
                     service.perform(withItems: urls)
@@ -575,7 +575,7 @@ final class MacPhotoMenu: NSObject {
             let urls = await files(for: ids, facts: facts)
             guard !Task.isCancelled else { return }
             guard !urls.isEmpty else {
-                failure = String(localized: "These photos couldn't be opened — they may still be downloading from iCloud.", comment: "Mac photo menu: Quick Look found no file")
+                failure = String(localized: "These photos couldn't be opened — their files are only in the cloud. Open one in the viewer to download it.", comment: "Mac photo menu: Quick Look found no file")
                 return
             }
             panel.show(urls)
@@ -584,11 +584,14 @@ final class MacPhotoMenu: NSObject {
         }
     }
 
-    /// The copies whose file is there now (a drive may have gone).
-    nonisolated private static func existingFiles(_ copies: [Facts.FileCopy], roots: FolderSourceRoots) -> [(photoId: String, url: URL)] {
+    /// The copies whose file is there now (a drive may have gone); `local`:
+    /// on this Mac too, not only in the cloud — Quick Look and Share would
+    /// otherwise download it with no bar.
+    nonisolated private static func existingFiles(_ copies: [Facts.FileCopy], roots: FolderSourceRoots,
+                                                  local: Bool = false) -> [(photoId: String, url: URL)] {
         copies.compactMap { copy in
             roots.fileURL(sourceId: copy.sourceId, relativePath: copy.relativePath)
-                .flatMap { FileManager.default.fileExists(atPath: $0.path) ? (copy.photoId, $0) : nil }
+                .flatMap { FileManager.default.fileExists(atPath: $0.path) && !(local && MacPhotoFiles.isDataless($0)) ? (copy.photoId, $0) : nil }
         }
     }
 
@@ -597,7 +600,7 @@ final class MacPhotoMenu: NSObject {
     /// FS-18.01b §5) written to a temporary file. Off the main actor.
     func files(for ids: [String], facts: Facts) async -> [URL] {
         let roots = dependencies.folderRoots, copies = facts.fileCopies
-        let found = await Task.detached(priority: .userInitiated) { Self.existingFiles(copies, roots: roots) }.value
+        let found = await Task.detached(priority: .userInitiated) { Self.existingFiles(copies, roots: roots, local: true) }.value
         var urls = found.map(\.url)
         // A photo whose file is not there falls back to its Photos copy.
         let covered = Set(found.map(\.photoId))

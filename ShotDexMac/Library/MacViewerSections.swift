@@ -30,7 +30,8 @@ struct MacViewerHistogram: View {
         .accessibilityElement()
         .accessibilityLabel(String(localized: "Histogram", comment: "Mac viewer inspector section"))
         .accessibilityValue(bins.map(MacHistogramBins.spoken) ?? "")
-        .task(id: photoId) { await load() }
+        // Again once the file has come down from the cloud (empty until then, board).
+        .task(id: "\(photoId)-\(dependencies.cloudDownloads.finished.contains(photoId))") { await load() }
     }
 
     private static func area(_ values: [Float], peak: Float, in size: CGSize) -> Path {
@@ -51,6 +52,9 @@ struct MacViewerHistogram: View {
         bins = nil
         let image: CGImage?
         if let picture {
+            #if DEBUG
+            if MacDemoLibrary.cloudFile(for: photoId) != nil, !dependencies.cloudDownloads.finished.contains(photoId) { return }
+            #endif
             image = picture(photoId)
         } else {
             image = await MacViewerThumbnail.load(photoId, side: 256, dependencies: dependencies)
@@ -153,8 +157,10 @@ enum MacViewerThumbnail {
                 }
             }
         }
-        guard let path = try? await PhotoInfoQueries(database: dependencies.database).info(photoId: id).filePath else { return nil }
-        let url = URL(fileURLWithPath: path)
+        // A folder photo's file — not one only in the cloud: reading that would download it.
+        guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies), !file.isPlaceholder,
+              !Task.isCancelled else { return nil }
+        let url = file.url
         return await Task.detached(priority: .utility) { MacViewerPhoto.read(url, maxPixel: Int(side)) }.value
     }
 }

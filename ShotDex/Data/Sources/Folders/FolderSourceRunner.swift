@@ -119,7 +119,8 @@ actor FolderSourceRunner {
         try await downloader.download(root.appendingPathComponent(file.relativePath), progress: progress)
         // A read already running would skip this one and leave the glyph.
         while reading != nil { try await Task.sleep(for: .milliseconds(200)) }
-        _ = try read(sourceId: file.sourceId)
+        // Cancel during the read after it stops the read too.
+        _ = try read(sourceId: file.sourceId, shouldContinue: { !Task.isCancelled })
         return .downloaded
     }
 

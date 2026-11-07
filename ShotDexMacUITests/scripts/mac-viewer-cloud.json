@@ -1,0 +1,157 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewerCloud"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Cancel",
+   "type": "button",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "01-downloading"
+  },
+  {
+   "action": "dump",
+   "name": "01-downloading"
+  },
+  {
+   "action": "assertExists",
+   "label": "IMG_4120.JPG",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Downloading from iCloud Drive…",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Read once the file is downloaded",
+   "type": "staticText"
+  },
+  {
+   "action": "assertValue",
+   "label": "Size",
+   "text": "3 MB · not downloaded"
+  },
+  {
+   "action": "assertValue",
+   "label": "Source",
+   "text": "2026 Japan"
+  },
+  {
+   "action": "assertValue",
+   "label": "Camera",
+   "text": "Not read yet"
+  },
+  {
+   "action": "assertExists",
+   "label": "iCloud Drive/2026 Japan/IMG_4120.JPG",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "In iCloud Drive · 3 MB",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-stopped"
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Download",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Download Progress"
+  },
+  {
+   "action": "wait",
+   "seconds": 34
+  },
+  {
+   "action": "assertMissing",
+   "label": "Download Progress"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Read once the file is downloaded"
+  },
+  {
+   "action": "assertValue",
+   "label": "Camera",
+   "text": "ILCE-7M4"
+  },
+  {
+   "action": "assertExists",
+   "label": "Photo"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-downloaded"
+  },
+  {
+   "action": "dump",
+   "name": "03-downloaded"
+  }
+ ]
+}
