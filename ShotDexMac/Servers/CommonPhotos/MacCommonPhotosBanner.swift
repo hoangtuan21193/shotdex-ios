@@ -55,7 +55,7 @@ struct MacCommonPhotosResumeBanner: View {
 
     private func resume(_ run: CommonPhotosRun) {
         dependencies.commonPhotos.resume(runId: run.id)
-        openWindow(id: MacCommonPhotosRunWindow.id, value: run.id)
+        MacCommonPhotosRunRoute.open(run.id, openWindow)
         runs = dependencies.commonPhotos.leftOver(connectionId: connectionId)
     }
 
@@ -91,7 +91,7 @@ struct MacCommonPhotosFoot: View {
 
     var body: some View {
         if let entry = dependencies.commonPhotos.entries[runId] {
-            Button { openWindow(id: MacCommonPhotosRunWindow.id, value: runId) } label: {
+            Button { MacCommonPhotosRunRoute.open(runId, openWindow) } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(label(entry)).foregroundStyle(.primary).lineLimit(1)

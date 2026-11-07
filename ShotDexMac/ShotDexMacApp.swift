@@ -70,16 +70,6 @@ struct ShotDexMacApp: App {
             MacImageCommands()
             MacGoCommands()
         }
-        // One window per common-photos run (FS-19.08 §7): not modal, and
-        // closing it leaves the run going.
-        WindowGroup(String(localized: "Common Photos", comment: "Mac window: a common-photos run"),
-                    id: MacCommonPhotosRunWindow.id, for: String.self) { $runId in
-            MacCommonPhotosRunWindow(runId: runId)
-                .environment(dependencies)
-                .onAppear { appDelegate.runs = dependencies.commonPhotos }
-        }
-        .defaultSize(width: MacCommonPhotosRunWindow.size.width, height: MacCommonPhotosRunWindow.size.height)
-        .windowToolbarStyle(.unified)
         // Compare two copies of a Same photo (FS-19.08 §6d): one window, not
         // modal, tier D.
         Window(String(localized: "Compare", comment: "Mac window: two copies of a common photo"), id: MacCommonPhotosCompareWindow.id) {

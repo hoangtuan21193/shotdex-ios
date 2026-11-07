@@ -210,7 +210,8 @@ private struct MacCommonPhotosSheetContent: View {
                    made.run, items: made.items, watchId: watch.id, day: CommonPhotosStore.day(of: Date()), ready: true) {
                 close()
                 if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosAskMove") { dependencies.commonPhotos.moveAsked = gathered.runId }
-                openWindow(id: MacCommonPhotosRunWindow.id, value: gathered.runId)
+                // After the sheet has gone: the page replaces the browser that hosts it.
+                DispatchQueue.main.async { MacCommonPhotosRunRoute.open(gathered.runId, openWindow) }
                 if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { MacWindowRequest.showsActivity = true; NotificationCenter.default.post(name: .macShowActivity, object: nil) }
             }
         }
@@ -1096,7 +1097,8 @@ private struct MacCommonPhotosSheetContent: View {
             guard saveKeepGathering() else { return }
             close()
             // The run's window opens as it starts (FS-19.08 §7).
-            openWindow(id: MacCommonPhotosRunWindow.id, value: made.run.id)
+            // After the sheet has gone: the page replaces the browser that hosts it.
+            DispatchQueue.main.async { MacCommonPhotosRunRoute.open(made.run.id, openWindow) }
         } catch {
             startError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }

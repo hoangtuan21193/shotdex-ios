@@ -235,7 +235,7 @@ struct MacActivityView: View {
             prompts.stopping = job
         case .showLog:
             close()
-            openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
+            MacCommonPhotosRunRoute.open(job.id, openWindow)
         case .runAgain:
             runs.runAgain(runId: job.id)
             close()
@@ -248,7 +248,7 @@ struct MacActivityView: View {
             // The run's window asks before anything moves (FS-19.08 §6c).
             runs.moveAsked = job.id
             close()
-            openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
+            MacCommonPhotosRunRoute.open(job.id, openWindow)
         }
     }
 

@@ -15,65 +15,66 @@ input{font-family:inherit}
 </style>
 </helmet>
 <div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
-<!-- Column browser: the folders above the open one -->
-<div role="tree" aria-label="Folders on NAS Home" style="position:absolute;left:252px;top:60px;bottom:44px;width:372px;border-radius:12px;border:1px solid {{t.sep}};background:{{t.content}};display:flex;overflow:hidden">
-<sc-for list="{{columns}}" as="c" hint-placeholder-count="2"><div style="width:186px;flex:none;border-right:{{c.edge}};display:flex;flex-direction:column;box-sizing:border-box">
-<div style="height:30px;display:flex;align-items:center;padding:0 12px;font-size:11px;font-weight:600;color:{{t.label2}};border-bottom:1px solid {{t.sep}}">{{c.title}}</div>
-<div style="padding:4px;display:flex;flex-direction:column">
-<sc-for list="{{c.items}}" as="f" hint-placeholder-count="6"><div role="treeitem" aria-selected="{{f.sel}}" style="height:26px;border-radius:6px;background:{{f.bg}};display:flex;align-items:center;gap:7px;padding:0 6px 0 8px">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="{{f.d}}"></path></svg>
-<span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:{{f.w}}">{{f.name}}</span>
-<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{f.count}}</span>
-<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M9 6l6 6-6 6"></path></svg>
+<!-- RUN PAGE (FS-19.08 §7): a page of the Library window, not a window of its own — the detail area shows the run (no grid, no inspector).
+     Back in the toolbar and Done at the bottom-right return to where it was opened from; leaving does not stop the run (Activity › Show Log opens it again).
+     Tweak "state": running (default) · finished (Undo Copy… in the footer, §6b) · undoing · undone (an undo is a run of its own,
+     same page) · readyToMove (§6c: Keep gathering found photos for a Move set and moved nothing; Move N… asks first,
+     tweak "confirm" draws that question). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
+     the confirmation over a finished run; Cancel is the default button. -->
+<section aria-label="{{winTitle}}" style="position:absolute;left:244px;right:0;top:52px;bottom:0;display:flex;flex-direction:column;color:{{t.label}}">
+<!-- Progress header -->
+<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;flex:none">
+<div style="display:flex;align-items:center;gap:8px;height:28px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+<span style="font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">{{head}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{detail}}</span>
+</div>
+<sc-if value="{{going}}" hint-placeholder-val="{{true}}"><button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg>Pause</button>
+<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg>Stop</button></sc-if>
+</div>
+<sc-if value="{{hasBar}}" hint-placeholder-val="{{true}}"><div role="progressbar" aria-label="{{head}}" aria-valuenow="{{pctNum}}" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:{{pct}};height:5px;border-radius:3px;background:{{barFg}}"></div></div></sc-if>
+</div>
+<!-- Status filter -->
+<div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none">
+<div role="radiogroup" aria-label="Status" style="height:28px;border-radius:8px;background:{{t.fill}};display:flex;align-items:center;padding:2px;box-sizing:border-box">
+<sc-for list="{{filter}}" as="s" hint-placeholder-count="4"><button role="radio" aria-checked="{{s.pressed}}" style="height:24px;padding:0 14px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
+</div>
+</div>
+<!-- Log table -->
+<div role="table" aria-label="Files" style="flex:1;min-height:0;margin:0 16px;border-radius:10px;border:1px solid {{t.sep}};background:{{S.box}};overflow:hidden;position:relative">
+<div role="row" style="height:28px;display:flex;align-items:center;background:{{S.tableHead}};border-bottom:1px solid {{t.sep}};font-size:12px;font-weight:600;color:{{t.label2}}">
+<sc-for list="{{cols}}" as="c" hint-placeholder-count="6"><button role="columnheader" aria-label="{{c.aria}}" aria-sort="{{c.sort}}" style="width:{{c.w}};flex:{{c.flex}};height:28px;border:none;border-right:{{c.edge}};background:none;display:flex;align-items:center;gap:4px;padding:0 10px;box-sizing:border-box;font-size:12px;font-weight:600;color:{{t.label2}};text-align:left;white-space:nowrap">{{c.label}}<sc-if value="{{c.sorted}}" hint-placeholder-val="{{false}}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg></sc-if></button></sc-for>
+</div>
+<sc-for list="{{log}}" as="r" hint-placeholder-count="11"><div role="row" style="height:28px;display:flex;align-items:center;background:{{r.rowBg}};font-size:12px">
+<span role="cell" style="width:172px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;color:{{r.color}};white-space:nowrap">
+<sc-if value="{{r.hasBox}}" hint-placeholder-val="{{false}}"><label style="position:relative;flex:none;width:14px;height:14px;display:flex"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{r.boxBorder}};background:{{r.boxBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{r.checkVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><sc-if value="{{r.on}}" hint-placeholder-val="{{false}}"><input type="checkbox" checked aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if><sc-if value="{{r.off}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if></label></sc-if>
+<sc-if value="{{r.icon}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{r.icon}}"></path></svg></sc-if>
+<sc-if value="{{r.busy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
+<span style="overflow:hidden;text-overflow:ellipsis">{{r.status}}</span></span>
+<span role="cell" style="width:116px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.name}}</span>
+<span role="cell" title="{{r.from}}" style="width:210px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.from}}</span>
+<span role="cell" title="{{r.to}}" style="width:230px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.to}}</span>
+<span role="cell" style="width:64px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}}">{{r.check}}</span>
+<span role="cell" style="width:110px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.infoColor}}">{{r.info}}</span>
+<span role="cell" style="width:76px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.sha}}</span>
+<span role="cell" title="{{r.reason}}" style="flex:1;min-width:0;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.reasonColor}}">{{r.reason}}</span>
 </div></sc-for>
+<div aria-hidden="true" style="position:absolute;right:3px;top:32px;width:5px;height:64px;border-radius:3px;background:{{S.scroller}}"></div>
 </div>
-<div style="flex:1"></div>
-<div style="height:28px;display:flex;align-items:center;padding:0 12px;font-size:11px;color:{{t.label2}};border-top:1px solid {{t.sep}};font-variant-numeric:tabular-nums">{{c.foot}}</div>
-</div></sc-for>
-</div><!-- Files in the open folder -->
-<!-- Files in Shared: filling while the run copies (last tiles still arriving) -->
-<div style="position:absolute;left:636px;right:16px;top:60px;bottom:32px;overflow:hidden">
-<div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px 8px;box-sizing:border-box">
-<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">Shared</span><span style="font-size:13px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{browserCount}}</span></div>
-<button aria-label="Sort By Name" style="border:none;background:none;display:flex;align-items:center;gap:4px;font-size:12px;color:{{t.label2}}">Name<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg></button>
+<!-- Footer -->
+<div style="height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px">
+<span role="status" title="{{summaryHelp}}" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
+<sc-if value="{{failNote}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:12px;color:{{S.redText}};font-variant-numeric:tabular-nums">{{failNote}}</span></sc-if>
+<sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" title="{{b.help}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
 </div>
-<div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:2px">
-<sc-for list="{{files}}" as="p" hint-placeholder-count="20"><div aria-label="{{p.label}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
-<sc-if value="{{p.isFolder}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:{{t.accent}}"><svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="font-size:12px;color:{{t.label}}">{{p.name}}</span><span style="font-size:11px;color:{{t.label2}};margin-top:-6px">{{p.meta}}</span></div></sc-if>
-<sc-if value="{{p.pending}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:{{t.label2}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01"></path></svg><span style="font-size:11px;font-variant-numeric:tabular-nums">{{p.name}}</span></div></sc-if>
-<sc-if value="{{p.isPhoto}}" hint-placeholder-val="{{true}}"><div style="position:absolute;inset:0;background:{{p.bg}}"></div>
-<div style="position:absolute;left:6px;top:6px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:10px;font-weight:700;line-height:16px">{{p.ft}}</div>
-<div style="position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.6) 100%)"></div>
-<div style="position:absolute;left:6px;right:8px;bottom:6px;display:flex;align-items:center;gap:5px;color:#FFFFFF">
-<sc-if value="{{p.pick}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Picked" width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" style="flex:none"><path d="M6 3v18 M6 4h12l-3 4.5 3 4.5H6z"></path></svg></sc-if><sc-if value="{{p.rated}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:1px;flex:none;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF" style="flex:none"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"></path></svg>{{p.stars}}</span></sc-if>
-<span style="font-size:11px;font-weight:500;line-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.name}}</span>
-</div>
-<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div></sc-if>
-</sc-if>
-</div></sc-for>
-</div>
-</div>
-<!-- Path bar -->
-<div style="position:absolute;left:244px;right:0;bottom:0;height:32px;border-top:1px solid {{t.sep}};background:{{t.content}};display:flex;align-items:center;gap:6px;padding:0 16px;font-size:12px;color:{{t.label}}">
-<nav aria-label="Path" style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-<sc-for list="{{crumbs}}" as="b" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:5px;white-space:nowrap"><sc-if value="{{b.sep}}" hint-placeholder-val="{{false}}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.label2}}"><path d="M9 6l6 6-6 6"></path></svg></sc-if><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="color:{{t.accent}}"><path d="{{b.d}}"></path></svg><span style="color:{{t.label}};font-weight:{{b.w}}">{{b.name}}</span></span></sc-for>
-</nav>
-<span style="font-size:11px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{pathStatus}}</span>
-</div>
+</section>
 <!-- Scroll-edge fade under the toolbar -->
 <div style="position:absolute;left:244px;right:0;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
-<!-- TOOLBAR (unified, no title bar) -->
+<!-- TOOLBAR: [Activity | Back] title — a page has no view, sort or search controls -->
 <div style="position:absolute;left:256px;right:16px;top:8px;height:44px;display:flex;align-items:center;gap:12px">
-<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px">
-<button aria-label="Back" style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
-<button aria-label="Forward" disabled style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
-</div>
-<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
-<div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">{{title}}</div>
-<div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">{{subtitle}}</div>
-</div>
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Activity" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 1-8.5 6 M3.5 4v5h5 M12 7.5V12l3 2"></path></svg></button><button aria-label="Back" style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></div>
+<div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis">{{winTitle}}</div>
 <div style="flex:1"></div>
-<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Icons" aria-pressed="true" style="width:36px;height:32px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="false" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button></div><div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="New Folder" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M12 10.5v5 M9.5 13h5"></path></svg></button><button aria-label="Rescan" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6 M20 4v5h-5"></path></svg></button><button aria-label="Show Inspector" aria-pressed="false" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div><label style="width:200px;height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5"></path></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search</span><input placeholder="Search NAS Home" style="flex:1;min-width:0;border:none;background:none;outline:none;font-size:13px;color:{{t.label}}"></label><button aria-label="Upload to Server…" style="height:36px;border-radius:18px;background:{{t.accentFill}};border:1px solid {{t.accentFill}};box-shadow:{{t.glassShadow}};display:flex;align-items:center;gap:6px;padding:0 14px;color:{{t.onAccentFill}};font-size:13px;font-weight:600;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9 M7 14l5-5 5 5 M5 4h14"></path></svg>Upload…</button>
 </div>
 <!-- SIDEBAR: canonical (Library · Sources · Collections · Utilities), floating glass panel -->
 <nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:228px;border-radius:18px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
@@ -109,65 +110,10 @@ input{font-family:inherit}
 <div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
 </div></sc-if>
 </nav>
-<!-- LOG WINDOW (FS-19.08 §7): its own window, not modal — the browser stays usable; closing it does not stop the run (Activity › Show Log reopens it).
-     Tweak "state": running (default) · finished (Undo Copy… in the footer, §6b) · undoing · undone (an undo is a run of its own,
-     same window) · readyToMove (§6c: Keep gathering found photos for a Move set and moved nothing; Move N… asks first,
-     tweak "confirm" draws that question). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
-     the confirmation over a finished run; Cancel is the default button. -->
-<section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:200px;top:196px;width:1040px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
-<div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
-<div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
-<div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">{{winTitle}}</div>
-</div>
-<!-- Progress header -->
-<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;flex:none">
-<div style="display:flex;align-items:center;gap:8px;height:28px">
-<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
-<span style="font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">{{head}}</span>
-<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{detail}}</span>
-</div>
-<sc-if value="{{going}}" hint-placeholder-val="{{true}}"><button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg>Pause</button>
-<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg>Stop</button></sc-if>
-</div>
-<sc-if value="{{hasBar}}" hint-placeholder-val="{{true}}"><div role="progressbar" aria-label="{{head}}" aria-valuenow="{{pctNum}}" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:{{pct}};height:5px;border-radius:3px;background:{{barFg}}"></div></div></sc-if>
-</div>
-<!-- Status filter -->
-<div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none">
-<div role="radiogroup" aria-label="Status" style="height:28px;border-radius:8px;background:{{t.fill}};display:flex;align-items:center;padding:2px;box-sizing:border-box">
-<sc-for list="{{filter}}" as="s" hint-placeholder-count="4"><button role="radio" aria-checked="{{s.pressed}}" style="height:24px;padding:0 14px;border-radius:6px;border:none;background:{{s.bg}};box-shadow:{{s.shadow}};color:{{s.fg}};font-size:13px">{{s.label}}</button></sc-for>
-</div>
-</div>
-<!-- Log table -->
-<div role="table" aria-label="Files" style="flex:1;min-height:0;margin:0 16px;border-radius:10px;border:1px solid {{t.sep}};background:{{S.box}};overflow:hidden;position:relative">
-<div role="row" style="height:28px;display:flex;align-items:center;background:{{S.tableHead}};border-bottom:1px solid {{t.sep}};font-size:12px;font-weight:600;color:{{t.label2}}">
-<sc-for list="{{cols}}" as="c" hint-placeholder-count="6"><button role="columnheader" aria-label="{{c.aria}}" aria-sort="{{c.sort}}" style="width:{{c.w}};flex:{{c.flex}};height:28px;border:none;border-right:{{c.edge}};background:none;display:flex;align-items:center;gap:4px;padding:0 10px;box-sizing:border-box;font-size:12px;font-weight:600;color:{{t.label2}};text-align:left;white-space:nowrap">{{c.label}}<sc-if value="{{c.sorted}}" hint-placeholder-val="{{false}}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg></sc-if></button></sc-for>
-</div>
-<sc-for list="{{log}}" as="r" hint-placeholder-count="11"><div role="row" style="height:28px;display:flex;align-items:center;background:{{r.rowBg}};font-size:12px">
-<span role="cell" style="width:172px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;color:{{r.color}};white-space:nowrap">
-<sc-if value="{{r.hasBox}}" hint-placeholder-val="{{false}}"><label style="position:relative;flex:none;width:14px;height:14px;display:flex"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{r.boxBorder}};background:{{r.boxBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{r.checkVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><sc-if value="{{r.on}}" hint-placeholder-val="{{false}}"><input type="checkbox" checked aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if><sc-if value="{{r.off}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if></label></sc-if>
-<sc-if value="{{r.icon}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{r.icon}}"></path></svg></sc-if>
-<sc-if value="{{r.busy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
-<span style="overflow:hidden;text-overflow:ellipsis">{{r.status}}</span></span>
-<span role="cell" style="width:116px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.name}}</span>
-<span role="cell" title="{{r.from}}" style="width:120px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.from}}</span>
-<span role="cell" title="{{r.to}}" style="width:200px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{t.label2}}">{{r.to}}</span>
-<span role="cell" style="width:64px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}}">{{r.check}}</span>
-<span role="cell" style="width:110px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.infoColor}}">{{r.info}}</span>
-<span role="cell" style="width:76px;flex:none;padding:0 10px;box-sizing:border-box;white-space:nowrap;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.sha}}</span>
-<span role="cell" title="{{r.reason}}" style="flex:1;min-width:0;padding:0 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{r.reasonColor}}">{{r.reason}}</span>
-</div></sc-for>
-<div aria-hidden="true" style="position:absolute;right:3px;top:32px;width:5px;height:64px;border-radius:3px;background:{{S.scroller}}"></div>
-</div>
-<!-- Footer -->
-<div style="height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px">
-<span role="status" title="{{summaryHelp}}" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
-<sc-if value="{{failNote}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:12px;color:{{S.redText}};font-variant-numeric:tabular-nums">{{failNote}}</span></sc-if>
-<sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" title="{{b.help}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
-</div>
 <!-- Undo confirmation (§6b), and Move N… on a ready run (§6c): the system alert as macOS draws it — no icon, text leading, Cancel the default (blue, leading;
      Return takes nothing back) -->
-<sc-if value="{{confirm}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;top:36px;background:{{t.scrim}}"></div>
-<div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:320px;top:180px;width:260px;border-radius:14px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;text-align:left">
+<sc-if value="{{confirm}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;z-index:40;background:{{t.scrim}}"></div>
+<div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:590px;top:330px;z-index:41;width:260px;border-radius:14px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;text-align:left">
 <div style="font-size:13px;font-weight:700">{{confirmTitle}}</div>
 <div style="font-size:13px;line-height:18px">{{confirmText}}</div>
 <div style="display:flex;gap:8px;width:100%;margin-top:8px">
@@ -175,7 +121,6 @@ input{font-family:inherit}
 <button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">{{confirmAction}}</button>
 </div>
 </div></sc-if>
-</section>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","restoring","restored","undoing","undone","undoneMove","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
@@ -391,31 +336,13 @@ class Component extends DCLogic {
     // A running task: the sidebar foot shows it (MAC_STYLE v2)
     const foot = state === 'running' ? { idle:false, busy:true, label:'Common photos · 120 of 280', pct:'43%' }
       : state === 'undoing' ? { idle:false, busy:true, label:'Undo · 120 of 278', pct:'43%' } : IDLE_FOOT;
-    const sharedCount = { running:'121', finished:'280', undoing:'158', undone:'2', readyToMove:'280' }[state];
-    const fi = (name, count, d, sel, cur) => ({ name, count, d: d || I.folder, sel: sel ? 'true' : 'false', bg: sel ? (cur ? S.accentSoft : t.rowSel) : 'transparent', w: cur ? '600' : '400' });
-    const columns = [
-      { title:'NAS Home', edge:'1px solid ' + t.sep, foot:'3 folders', items:[ fi('Family', '', null, true), fi('Photos'), fi('Scans') ] },
-      { title:'Family', edge:'none', foot:'4 folders', items:[ fi('Tuấn', '18,240'), fi('Vợ', '15,902'), fi('Shared', sharedCount, null, true, true), fi('Phone Backup', '4,311') ] }
-    ];
-    // Shared filling: copied photos in name order, the newest still arriving
-    const NAMES = ['DSC04388.ARW','DSC04392.ARW','DSC04395.ARW','DSC04398.ARW','IMG_0007 (2).JPG','IMG_0012.JPG','IMG_4021.HEIC','IMG_4022.HEIC','IMG_4035.HEIC',
-      'IMG_4041.HEIC','IMG_4056.HEIC','IMG_4063.HEIC','IMG_4071.HEIC','IMG_4078.HEIC','IMG_4090.HEIC','IMG_4102.HEIC','IMG_4107.MOV','IMG_4110.HEIC','IMG_4121.HEIC',
-      'IMG_4133.HEIC','IMG_4150.HEIC','IMG_4166.HEIC','IMG_4188.HEIC','IMG_4190.HEIC'];
-    const files = NAMES.map((n, i) => { const pending = state === 'running' && i >= 22; const ext = n.split('.').pop();
-      const ftl = ext === 'ARW' ? 'RAW' : ext;
-      return { isFolder:false, isPhoto:!pending, pending, name:n, ft:ftl, bg: tile(i*5+4), sel:false, pick:false, rated:false, stars:'0',
-        label: n + ', ' + ftl + (pending ? ', copying' : '') }; });
-    // Undone: only the Skipped photo and the one edited in Shared are left.
-    if (state === 'undone') files.splice(2);
-    const crumbs = [ { name:'NAS Home', d:I.server, sep:false, w:'400' }, { name:'Family', d:I.folder, sep:true, w:'400' }, { name:'Shared', d:I.folder, sep:true, w:'600' } ];
-
     const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', state === 'readyToMove' ? 'Moved' : 'Copied', 'Skipped', 'Failed'], 0);
-    const C = [['Status',172],['Name',116],['From',120],['To',200],['Check',64],['File info',110],['SHA-256',76],['Reason',0]];
+    const C = [['Status',172],['Name',116],['From',210],['To',230],['Check',64],['File info',110],['SHA-256',76],['Reason',0]];
     const cols = C.map((c, i) => ({ label:c[0], aria:'Sort by ' + c[0], w: c[1] ? c[1] + 'px' : 'auto', flex: c[1] ? 'none' : '1',
       edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', // No column sorts (the app's run table is in run order).
       sorted: false, sort: 'none' }));
     const OK = 'M5 12.5l4.5 4.5L19 7.5', SKIP = 'M12 3a9 9 0 1 0 0.01 0z M8 12h8', FAIL = 'M12 4l9 16H3z M12 10v4 M12 17h.01';
-    // §6e: To is the full path under Shared (Organize: Same as Source; the window title names Shared, the cell drops it); Check = quick (three samples, same path in
+    // §6e: To is the full path under Shared (Organize: Same as Source; the page title names Shared, the cell drops it); Check = quick (three samples, same path in
     // both, Copy only) or full; File info = what the run could set from the first folder's copy.
     const L = [
       ['ok', 'DSC04388.ARW', 'Tuấn/2025/10/12 · Vợ/Da Lat', 'Shared/2025/10/12/DSC04388.ARW', '3f9a…c21e', '', 'full', 'kept'],
@@ -504,16 +431,14 @@ class Component extends DCLogic {
     const confirm = !!this.props.confirmUndo && (state === 'finished' || ready);
 
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
-      groups, foot, columns, files, crumbs, filter, cols, log,
+      groups, foot, filter, cols, log,
       winTitle:V.winTitle, head:V.head, detail:V.detail, pct:V.pct, pctNum:V.pct.replace('%', ''), going,
       barFg: going ? t.accent : S.greenText, hasBar: !ready, summary:V.summary, summaryHelp: isUndo ? 'ShotDex Common Photos 2026-11-03 0958 Undo.csv' : 'ShotDex Common Photos 2026-11-03 0942.csv', footBtns:V.footBtns, failNote:V.failNote || null, confirm,
       sysBlue: dark ? '#0A84FF' : '#007AFF',
       confirmAction: ready ? 'Move' : 'Undo Copy',
       confirmTitle: ready ? 'Move 3 photos to “Shared”?' : 'Undo copying 278 photos?',
       confirmText: ready ? 'Each photo is copied to “Shared” and verified, then removed from Tuấn and Vợ. The server has no Trash; you can undo the run from Activity.'
-        : 'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
-      title:'Shared', subtitle: state === 'running' ? 'NAS Home · SMB · copying 120 of 280' : state === 'undoing' ? 'NAS Home · SMB · undoing 120 of 278' : 'NAS Home · SMB',
-      browserCount: state === 'running' ? '121 photos · copying' : state === 'undoing' ? '158 photos · undoing' : state === 'undone' ? '2 photos' : '280 photos', pathStatus:'121 items · 13.41 GB free of 152.09 GB' };
+        : 'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.' };
   }
 }
 </script>

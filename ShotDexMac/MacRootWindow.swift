@@ -38,6 +38,12 @@ struct MacRootWindow: View {
     @State private var showsInspector = false
     /// Several photos selected: their summary or the fields they share.
     @State private var inspectorPane = MacInspectorPane.selection
+    /// A common-photos run's log open as the window's page (FS-19.08 §7).
+    @State private var commonPhotosRunId: String?
+    /// The runs whose page a later one replaced (Undo over its run): Back returns to them.
+    @State private var previousRunIds: [String] = []
+    /// Back is under way: the page it returns to is not one more to remember.
+    @State private var isLeavingRunPage = false
     /// The photo open in the viewer (board `MAC_Viewer`); nil shows the grid.
     @State private var viewerId: String?
     @State private var viewerZoom = MacViewerZoom.fit
@@ -147,7 +153,16 @@ struct MacRootWindow: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
-            if selection == .backup {
+            // A common-photos run's log: a page over whatever was showing (Back returns).
+            if let commonPhotosRunId {
+                // Back from an undo run returns to the run it undid; from any other, to where it was opened.
+                MacCommonPhotosRunPage(runId: commonPhotosRunId) {
+                    isLeavingRunPage = true
+                    self.commonPhotosRunId = previousRunIds.popLast()
+                }
+                    // Another run is another page: the last one's log is let go, its questions not carried over.
+                    .id(commonPhotosRunId)
+            } else if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
             } else if selection == .albums {
                 MacAlbumsScreen(photoMenu: photoMenu, smartAlbums: smartAlbums, open: { item, title in
@@ -167,6 +182,19 @@ struct MacRootWindow: View {
         .tint(MacTheme.accent)
         .modifier(MacActivityToolbar())
         .modifier(MacSupportSheetHost())
+        .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
+        // The page has the window: a viewer left open under it would keep its toolbar.
+        .onChange(of: commonPhotosRunId) { old, id in
+            if id != nil { viewerId = nil }
+            // One run replacing another's page: remembered for Back. Left for elsewhere: forgotten.
+            if isLeavingRunPage {
+                isLeavingRunPage = false
+            } else if let old, let id, old != id {
+                previousRunIds.append(old)
+                if previousRunIds.count > 8 { previousRunIds.removeFirst() }
+            }
+            if id == nil { previousRunIds = [] }
+        }
         // Get Info answers on every screen of the window, as the old panel did.
         .modifier(MacGetInfoCommand(showsInspector: $showsInspector, pane: $inspectorPane,
                                     selectionCount: photoSelection?.ids.count ?? 0,
@@ -175,8 +203,10 @@ struct MacRootWindow: View {
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
         // Back from an album returns where it was opened from (Albums, or the sidebar's last place).
         .onChange(of: selection) { old, new in
-            // Another place: the viewer belongs to the one it was opened in.
+            // Another place: the viewer belongs to the one it was opened in,
+            // and a run's log gives way to it.
             viewerId = nil
+            commonPhotosRunId = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
         }
@@ -289,7 +319,7 @@ struct MacRootWindow: View {
             guard let request = dependencies.commonPhotos.logRequest else { return }
             dependencies.commonPhotos.logRequest = nil
             guard Date().timeIntervalSince(request.at) < 60 else { return }
-            openWindow(id: MacCommonPhotosRunWindow.id, value: request.runId)
+            MacCommonPhotosRunRoute.open(request.runId, openWindow)
         }
         // Run Again (FS-19.08 §6c): the run's source opens; its browser
         // opens the sheet on the run's set.
@@ -301,6 +331,9 @@ struct MacRootWindow: View {
                 dependencies.commonPhotos.runAgainRequest = nil
                 return
             }
+            // The browser that opens the sheet is under the log's page: the page goes first
+            // (already on that source, `selection` alone would change nothing).
+            commonPhotosRunId = nil
             selection = .source(sourceId)
         }
         .modifier(MacRootRequests(root: self))

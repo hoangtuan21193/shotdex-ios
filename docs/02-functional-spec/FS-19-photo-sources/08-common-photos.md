@@ -1,8 +1,13 @@
 # FS-19.08 — Gom ảnh chung của nhiều folder server (Mac)
 
-`FS-19.08` · tier A (sheet) + B (cửa sổ tiến độ) · chỉ **Mac** · board `MAC_CommonPhotos` · `MAC_CommonPhotosRun`
+`FS-19.08` · tier A (sheet) + B (trang tiến độ trong cửa sổ Library) · chỉ **Mac** · board `MAC_CommonPhotos` · `MAC_CommonPhotosRun`
 · đề xuất `ShotDexMac/Servers/CommonPhotos/`, `ShotDex/Domain/CommonPhotos/` · AC ở [08b](08b-common-photos-ac.md)
 · cập nhật 2026-11-03 (thêm hoàn tác, §6b; chạy lại chỉ ảnh mới + tự gom, §6c) · 2026-11-04 (xem kết quả Scan rồi mới quyết, chạy nhanh hơn, §6d) · 2026-11-05 (kiểm nhanh, chạy lại không liệt kê lại, Organize, giữ thông tin file, §6e)
+
+> **2026-11-07 (user: ít cửa sổ):** "cửa sổ log" của một lượt nay là **một trang của cửa sổ Library** (sidebar còn, toolbar có
+> **Back**; **Done** / **Not Now** cũng quay về chỗ đã mở). Mọi lối mở — bắt đầu Copy/Move, Show Log ở Activity, banner,
+> chân sidebar, thông báo, Undo — đi qua một đường: đưa cửa sổ Library lên trước (mở một cái nếu đã đóng) rồi mở trang.
+> Chọn chỗ khác ở sidebar thì trang nhường chỗ; lượt vẫn chạy. Chữ "cửa sổ log" bên dưới đọc là "trang log".
 
 **Một câu:** trong màn duyệt server trên Mac, chọn từ 2 folder trở lên → ShotDex tìm ảnh có **cùng nội dung** ở mọi
 folder đó và chép (mặc định) hay dời chúng vào một folder chung, có tiến độ, log từng file, và kiểm SHA-256 trước khi

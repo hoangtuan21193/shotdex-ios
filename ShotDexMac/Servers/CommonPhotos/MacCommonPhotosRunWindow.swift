@@ -2,14 +2,14 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// The window of one common-photos run (board `MAC_CommonPhotosRun`,
-/// FS-19.08 §7): where it is, Pause · Stop, and a log of every photo. Its
-/// own window, not modal; closing it never stops the run. Opened when Copy
-/// or Move starts, from the sidebar foot and the browser's banner, and by
-/// Activity's Show Log (`openWindow(id: MacCommonPhotosRunWindow.id, value: runId)`).
+/// One common-photos run (board `MAC_CommonPhotosRun`, FS-19.08 §7): where
+/// it is, Pause · Stop, and a log of every photo. A page of the Library
+/// window, not a window of its own (user 2026-11-07: fewer windows); leaving
+/// it never stops the run. Opened when Copy or Move starts, from the sidebar
+/// foot and the browser's banner, and by Activity's Show Log, all through
+/// `MacCommonPhotosRunRoute.open`.
 struct MacCommonPhotosRunWindow: View {
-    static let id = "commonPhotosRun"
-    /// Board `MAC_CommonPhotosRun`: the window at 900×560.
+    /// Board `MAC_CommonPhotosRun`: the page's minimum width.
     static let size = CGSize(width: 1040, height: 560)
 
     /// Nil for a window macOS restored with no run to show.
@@ -31,7 +31,8 @@ struct MacCommonPhotosRunWindow: View {
         // The board's width (FS-19.08 §6e added File info): below it Reason,
         // the column that explains a failure, is cut. A window saved
         // narrower opens at it.
-        .frame(minWidth: Self.size.width, idealWidth: Self.size.width, minHeight: 420, idealHeight: Self.size.height)
+        // The detail's width at the window's smallest (1024 − the sidebar): Reason gives way first.
+        .frame(minWidth: 780, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
         .tint(MacTheme.accent)
         .task(id: runId) {
             guard let runId, dependencies.commonPhotos.entry(for: runId) != nil else { return }
@@ -304,7 +305,8 @@ private struct MacCommonPhotosRunContent: View {
     let entry: MacCommonPhotosRuns.Entry
     @Bindable var log: MacCommonPhotosLogModel
     @Environment(MacDependencies.self) private var dependencies
-    @Environment(\.dismiss) private var dismiss
+    /// Done / Not Now: back from the run's page to where it was opened from.
+    @Environment(\.macCloseRunPage) private var dismiss
     @Environment(\.openWindow) private var openWindow
     @State private var confirmsStop = false
     /// Move N… on a ready run (FS-19.08 §6c): asked before anything moves.
@@ -527,7 +529,7 @@ private struct MacCommonPhotosRunContent: View {
     private func startUndo(_ chosen: Set<Int>?) {
         do {
             let undoId = try runs.startUndo(of: undoTarget, positions: chosen)
-            openWindow(id: MacCommonPhotosRunWindow.id, value: undoId)
+            MacCommonPhotosRunRoute.open(undoId, openWindow)
         } catch let refusal as CommonPhotosStore.UndoRefusal {
             undoProblem = switch refusal {
             case .notOver: String(localized: "Only a run that has finished or was stopped can be undone.", comment: "Common photos: undo refused")
@@ -1020,7 +1022,10 @@ enum MacMainWindow {
     /// Brings the Library window forward, opening one when it was closed —
     /// so a request it routes (Run Again) is not left waiting.
     @MainActor static func bringForward(_ openWindow: OpenWindowAction) {
-        if let window { window.makeKeyAndOrderFront(nil) } else { openWindow(id: id) }
+        guard let window else { openWindow(id: id); return }
+        // In the Dock: out first, or it never becomes the window that takes the request.
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
     }
 }
 
@@ -1035,4 +1040,68 @@ struct MacMainWindowMarker: NSViewRepresentable {
             if let window { MacMainWindow.window = window }
         }
     }
+}
+
+/// Opens a run's log as a page of the Library window: the request waits
+/// as a flag until a Library window is in front (one is opened when none
+/// is left), and that window takes it.
+@MainActor
+enum MacCommonPhotosRunRoute {
+    static var pendingRunId: String?
+
+    static func open(_ runId: String, _ openWindow: OpenWindowAction) {
+        pendingRunId = runId
+        MacMainWindow.bringForward(openWindow)
+        NotificationCenter.default.post(name: .macShowCommonPhotosRun, object: nil)
+    }
+}
+
+extension Notification.Name {
+    static let macShowCommonPhotosRun = Notification.Name("ShotDexMacShowCommonPhotosRun")
+}
+
+/// The Library window's side of the route: takes a waiting run, whenever
+/// the window is in front.
+struct MacCommonPhotosRunHost: ViewModifier {
+    @Binding var runId: String?
+    @Environment(\.appearsActive) private var appearsActive
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .macShowCommonPhotosRun)) { _ in take() }
+            .onAppear { take() }
+            .onChange(of: appearsActive) { take() }
+    }
+
+    private func take() {
+        guard appearsActive, let pending = MacCommonPhotosRunRoute.pendingRunId else { return }
+        MacCommonPhotosRunRoute.pendingRunId = nil
+        runId = pending
+    }
+}
+
+/// The run's log as the Library window's page: Back returns to where it
+/// was opened from; the sidebar stays.
+struct MacCommonPhotosRunPage: View {
+    let runId: String
+    let close: () -> Void
+
+    var body: some View {
+        MacCommonPhotosRunWindow(runId: runId)
+            .environment(\.macCloseRunPage, close)
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Button(action: close) {
+                        Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left")
+                    }
+                    .keyboardShortcut("[", modifiers: .command)
+                    .help(String(localized: "Back", comment: "Mac toolbar"))
+                }
+            }
+    }
+}
+
+extension EnvironmentValues {
+    /// Leaves a run's page (Done, Not Now): set by `MacCommonPhotosRunPage`.
+    @Entry var macCloseRunPage: () -> Void = {}
 }

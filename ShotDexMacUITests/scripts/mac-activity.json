@@ -228,9 +228,68 @@
    "type": "button"
   },
   {
-   "action": "key",
-   "text": "w",
-   "modifiers": "cmd"
+   "action": "screenshot",
+   "name": "05a-run-page"
+  },
+  {
+   "action": "dump",
+   "name": "05a-run-page"
+  },
+  {
+   "action": "assertMissing",
+   "label": "No Run to Show"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Show Log",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "All Photos",
+   "type": "staticText"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Run Again…",
+   "type": "button"
   },
   {
    "action": "wait",
