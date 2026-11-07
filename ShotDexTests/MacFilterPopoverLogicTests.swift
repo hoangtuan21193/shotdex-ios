@@ -84,6 +84,14 @@ struct MacFilterPopoverLogicTests {
             == .fileSizeSmallest)
     }
 
+    /// AC-S9: the Order pop-up says Largest / Smallest First for File Size.
+    @Test func fileSizeDirectionTitles() {
+        #expect(LibrarySortField.fileSize.directionTitles.first == "Largest First")
+        #expect(LibrarySortField.fileSize.directionTitles.last == "Smallest First")
+        #expect(LibrarySortField.dateModified.directionTitles.first == "Newest First")
+        #expect(LibrarySortField(.fileSizeSmallest).directionTitles.last == "Smallest First")
+    }
+
     /// A metric order (not in the menu) reads as Date Taken, Newest First.
     @Test func metricOrderReadsAsDateTaken() {
         #expect(LibrarySortField(.isoDescending) == .dateTaken)

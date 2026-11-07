@@ -135,7 +135,7 @@ struct MacPhotoTable: NSViewRepresentable {
         /// The library's order last seen: a change from elsewhere (Filter and
         /// Sort) ends a local sort, so the table and the grid agree.
         private var librarySort: SortOption?
-        /// A local sort on Name, Camera, Lens, Rating, Source or Size — kept
+        /// A local sort on Name, Camera, Lens, Rating or Source — kept
         /// in the defaults, so a trip to the grid and back finds it again.
         private var localSort: NSSortDescriptor? = Coordinator.savedLocalSort() {
             didSet {
@@ -423,6 +423,7 @@ enum MacTableColumn: String, CaseIterable {
         case .aperture: ascending ? .apertureAscending : .apertureDescending
         case .shutter: ascending ? .shutterSpeedFastest : .shutterSpeedSlowest
         case .iso: ascending ? .isoAscending : .isoDescending
+        case .size: ascending ? .fileSizeSmallest : .fileSizeLargest
         default: nil
         }
     }
@@ -488,7 +489,7 @@ enum MacTableColumn: String, CaseIterable {
         }
     }
 
-    /// Name, Camera, Lens, Rating, Source and Size are sorted here; the rest
+    /// Name, Camera, Lens, Rating and Source are sorted here; the rest
     /// come sorted from the library. Returns positions in `rows`, keys built
     /// once (not per comparison) so 55k rows sort in milliseconds.
     nonisolated static func sortedOrder(_ rows: [LibraryGridItem], by descriptor: NSSortDescriptor,
@@ -511,7 +512,6 @@ enum MacTableColumn: String, CaseIterable {
         case .lens: return order(rows.map { details[$0.assetId]?.lens?.localizedLowercase })
         case .rating: return order(rows.map { details[$0.assetId]?.rating })
         case .source: return order(rows.map { details[$0.assetId]?.sourceName?.localizedLowercase })
-        case .size: return order(rows.map { $0.fileSize })
         default: return Array(rows.indices)
         }
     }

@@ -55,10 +55,10 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
-        case .dateTakenNewest: "Date Taken (Newest)"
-        case .dateTakenOldest: "Date Taken (Oldest)"
-        case .dateModifiedNewest: "Date Modified (Newest)"
-        case .dateModifiedOldest: "Date Modified (Oldest)"
+        case .dateTakenNewest: String(localized: "Date Taken (Newest)", comment: "Sort By menu row; also the Library title under a non-date order")
+        case .dateTakenOldest: String(localized: "Date Taken (Oldest)", comment: "Sort By menu row; also the Library title under a non-date order")
+        case .dateModifiedNewest: String(localized: "Date Modified (Newest)", comment: "Sort By menu row; also the Library title under a non-date order")
+        case .dateModifiedOldest: String(localized: "Date Modified (Oldest)", comment: "Sort By menu row; also the Library title under a non-date order")
         case .isoDescending: "ISO (High to Low)"
         case .isoAscending: "ISO (Low to High)"
         case .focalLengthDescending: "Focal Length (Long to Short)"
@@ -69,8 +69,8 @@ enum SortOption: String, CaseIterable, Identifiable, Codable, Sendable {
         case .apertureDescending: "Aperture (Narrow to Wide)"
         case .shutterSpeedFastest: "Shutter Speed (Fastest)"
         case .shutterSpeedSlowest: "Shutter Speed (Slowest)"
-        case .fileSizeLargest: "File Size (Largest)"
-        case .fileSizeSmallest: "File Size (Smallest)"
+        case .fileSizeLargest: String(localized: "File Size (Largest)", comment: "Sort By menu row; also the Library title under a non-date order")
+        case .fileSizeSmallest: String(localized: "File Size (Smallest)", comment: "Sort By menu row; also the Library title under a non-date order")
         }
     }
 

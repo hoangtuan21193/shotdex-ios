@@ -3624,6 +3624,12 @@
     "Date Modified" : {
       "comment" : "Mac Filter and Sort: sort by modification date\nServer photo browser sort: file write date"
     },
+    "Date Modified (Newest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
+    },
+    "Date Modified (Oldest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
+    },
     "Date Only" : {
       "comment" : "Organize levels"
     },
@@ -3632,6 +3638,12 @@
     },
     "Date Taken" : {
       "comment" : "Mac Filter and Sort: sort by capture date\nServer photo browser sort: EXIF capture date"
+    },
+    "Date Taken (Newest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
+    },
+    "Date Taken (Oldest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
     },
     "Dates not kept" : {
       "comment" : "Common photos log, File info column: the server gave the copy today's date"
@@ -4474,6 +4486,12 @@
     },
     "File Size" : {
       "comment" : "Info panel row label\nSettings › Info on Thumbnails field"
+    },
+    "File Size (Largest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
+    },
+    "File Size (Smallest)" : {
+      "comment" : "Sort By menu row; also the Library title under a non-date order"
     },
     "file type" : {
       "comment" : "Settings root, Display value: list item, lowercase mid-sentence"
@@ -5565,6 +5583,9 @@
     "Larger" : {
       "comment" : "Watermark Size stepper: plus"
     },
+    "Largest First" : {
+      "comment" : "Mac Filter and Sort: sort direction for file size"
+    },
     "Last Checked" : {
       "comment" : "Backup detail row"
     },
@@ -6274,6 +6295,9 @@
     "Newest first" : {
       "comment" : "Duplicates sort order"
     },
+    "Newest First" : {
+      "comment" : "Mac Filter and Sort: sort direction"
+    },
     "Next" : {
 
     },
@@ -6692,6 +6716,9 @@
     },
     "Oldest first" : {
       "comment" : "Duplicates sort order"
+    },
+    "Oldest First" : {
+      "comment" : "Mac Filter and Sort: sort direction"
     },
     "Ollama listens on port 11434, LM Studio on 1234. A key is only needed if you set one up." : {
       "comment" : "AI provider form: home server help"
@@ -8878,6 +8905,9 @@
     "Smaller copy" : {
       "comment" : "Duplicates: caption — this copy has fewer pixels than the kept photo"
     },
+    "Smallest First" : {
+      "comment" : "Mac Filter and Sort: sort direction for file size"
+    },
     "Smart album in ShotDex" : {
 
     },
@@ -8946,6 +8976,9 @@
     },
     "Sort groups" : {
       "comment" : "VoiceOver: the Duplicates sort menu"
+    },
+    "Sorted by %@" : {
+      "comment" : "Library title, VoiceOver: the grid's order under a non-date sort"
     },
     "Sound in %lld clips · %@" : {
       "comment" : "Video Studio ducking, Any Clip Sound: how many clips lower the music, and for how long in all — Sound in 3 clips · 9.4s (plural)",

@@ -54,6 +54,19 @@ enum LibrarySortField: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// The direction pop-up's two labels, the "first" end (newest, largest)
+    /// first: a size has no Newest.
+    var directionTitles: (first: String, last: String) {
+        switch self {
+        case .dateTaken, .dateModified:
+            (String(localized: "Newest First", comment: "Mac Filter and Sort: sort direction"),
+             String(localized: "Oldest First", comment: "Mac Filter and Sort: sort direction"))
+        case .fileSize:
+            (String(localized: "Largest First", comment: "Mac Filter and Sort: sort direction for file size"),
+             String(localized: "Smallest First", comment: "Mac Filter and Sort: sort direction for file size"))
+        }
+    }
+
     /// The field of `sort`; a metric order (not in the menu) reads as Date Taken.
     init(_ sort: SortOption) {
         switch sort {

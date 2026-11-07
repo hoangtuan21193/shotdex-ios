@@ -1,0 +1,16 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-grid.sort", "fileSizeLargest"]},
+  {"action": "waitFor", "label": "Filter and Sort", "type": "button", "seconds": 25},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "01-grid-size-largest"},
+  {"action": "click", "label": "Filter and Sort", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "02-popover-size"},
+  {"action": "dump", "name": "02-popover-size"},
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-grid.sort", "dateTakenNewest"]},
+  {"action": "waitFor", "label": "Filter and Sort", "type": "button", "seconds": 25},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "03-grid-date-newest"}
+ ]
+}

@@ -216,8 +216,9 @@ struct MacFilterPopover: View {
                 get: { LibrarySortField.isNewestFirst(library.sort) },
                 set: { library.sort = LibrarySortField(library.sort).sort(newestFirst: $0) }
             )) {
-                Text("Newest First", comment: "Mac Filter and Sort: sort direction").tag(true)
-                Text("Oldest First", comment: "Mac Filter and Sort: sort direction").tag(false)
+                let titles = LibrarySortField(library.sort).directionTitles
+                Text(titles.first).tag(true)
+                Text(titles.last).tag(false)
             }
             .labelsHidden()
             .frame(width: (Self.controlWidth - 8) / 2)
