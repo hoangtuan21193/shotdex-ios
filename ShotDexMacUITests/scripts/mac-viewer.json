@@ -33,6 +33,132 @@
   },
   {
    "action": "assertExists",
+   "label": "Histogram",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Edits",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Caption",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "text": "Last light over the coast"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertValue",
+   "label": "Caption",
+   "type": "textField",
+   "text": "Last light over the coast"
+  },
+  {
+   "action": "click",
+   "label": "Add Keyword",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "dusk"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove keyword dusk",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Remove keyword dusk",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove keyword dusk",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Copy Edits",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Copied",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Revert to Original",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Edits",
+   "type": "staticText"
+  },
+  {
+   "action": "menu",
+   "text": "View>Actual Size"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "View>Zoom to Fit"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01b-sections"
+  },
+  {
+   "action": "assertExists",
    "label": "Filmstrip"
   },
   {
@@ -69,6 +195,15 @@
    "action": "click",
    "label": "None",
    "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.4,
+   "y": 0.5
   },
   {
    "action": "wait",

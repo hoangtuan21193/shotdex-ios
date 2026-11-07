@@ -40,6 +40,8 @@ struct MacViewerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     // A mark key shows where the eyes are, inspector open or not.
                     .overlay(alignment: .bottomLeading) { MacViewerMarks(marks: marks).padding(12) }
+                    // A click on the photo takes the keys back from a field in the inspector.
+                    .simultaneousGesture(TapGesture().onEnded { isFocused = true })
             }
             Divider()
             MacFilmstrip(ids: ids, index: photoId.flatMap { positions[$0] }, current: $photoId, picture: picture, asset: cachedAsset)
@@ -53,6 +55,7 @@ struct MacViewerView: View {
         .onAppear { isFocused = true }
         // A filmstrip click must not leave the keys with nobody.
         .onChange(of: photoId) { isFocused = true }
+        .onReceive(NotificationCenter.default.publisher(for: .macViewerTakeKeys)) { _ in isFocused = true }
         .onKeyPress(keys: [.leftArrow, .rightArrow], phases: [.down, .repeat]) { press in
             step(press.key == .leftArrow ? -1 : 1, beeps: press.phase == .down)
             return .handled
@@ -280,30 +283,56 @@ struct MacFilmstripTile: View {
     }
 }
 
-/// The viewer's inspector (board `MAC_Viewer`): Rating and Flag, Camera and
-/// Lens, Location and File. Caption and Keywords, Histogram and Edits are
-/// row 21b; Get Info (⌘I) edits them meanwhile.
+/// The viewer's inspector (board `MAC_Viewer`): Rating and Flag, Histogram,
+/// Caption and Keywords, Camera and Lens, Edits, Location and File.
 struct MacViewerInspector: View {
     let photoId: String
     let marks: LibraryTableQueries.Details?
     let menu: MacPhotoMenu?
+    var picture: ((String) -> CGImage?)? = nil
     @Environment(MacDependencies.self) private var dependencies
     @State private var info: PhotoInfoQueries.Info?
     @State private var loadedId: String?
+    /// Bumped after a caption or keyword write: the facts are read again.
+    @State private var reloads = 0
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 section(String(localized: "Rating and Flag", comment: "Mac viewer inspector section")) { ratingAndFlag }
+                section(String(localized: "Histogram", comment: "Mac viewer inspector section")) {
+                    MacViewerHistogram(photoId: photoId, picture: picture)
+                }
                 // The last photo's facts stay until the new ones come (no spinner per step).
                 if let info {
+                    section(String(localized: "Caption and Keywords", comment: "Mac viewer inspector section")) {
+                        MacViewerCaptionKeywords(photoId: photoId, info: info, isCurrent: loadedId == photoId) {
+                            reloads += 1
+                            menu?.marksChanged([photoId])
+                        }
+                    }
                     section(String(localized: "Camera and Lens", comment: "Mac viewer inspector section")) { camera(info) }
+                    MacViewerEdits(photoId: photoId, reloads: reloads + (menu?.marksGeneration ?? 0), hasFileCopy: loadedId == photoId && info.hasFileCopy)
                     if let place = MacInfoText.place(info) {
-                        section(String(localized: "Location", comment: "Mac viewer inspector section")) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                if let name = place.name { Text(name).font(.system(size: 13)) }
-                                if let coordinates = place.coordinates {
-                                    Text(coordinates).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+                        section(String(localized: "Location", comment: "Mac viewer inspector section"), accessory: {
+                            if let coordinate = MacInfoText.coordinate(info) {
+                                Button { MacViewerLocation.showOnMap(coordinate, name: place.name) } label: {
+                                    Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(MacTheme.accent)
+                                        .frame(width: 22, height: 22)
+                                        .background(MacTheme.fill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(String(localized: "Show on Map", comment: "Mac viewer: open Maps at the photo's place"))
+                                .help(String(localized: "Show on Map", comment: "Mac viewer: open Maps at the photo's place"))
+                            }
+                        }) {
+                            if let coordinate = MacInfoText.coordinate(info) {
+                                MacViewerLocation(coordinate: coordinate, place: place)
+                            } else {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    if let name = place.name { Text(name).font(.system(size: 13)) }
                                 }
                             }
                         }
@@ -317,19 +346,33 @@ struct MacViewerInspector: View {
             .padding(.bottom, 16)
         }
         .background(MacTheme.content)
-        .task(id: photoId) {
+        // Again when a caption or keyword changes here or in Get Info.
+        .task(id: "\(photoId)-\(reloads)-\(menu?.marksGeneration ?? 0)") {
             // Off the main actor; the last photo's facts stay until the new ones come.
-            guard let read = try? await PhotoInfoQueries(database: dependencies.database).info(photoId: photoId),
-                  !Task.isCancelled else { return }
+            guard let read = try? await PhotoInfoQueries(database: dependencies.database).info(photoId: photoId) else {
+                // A failed read shows nothing rather than the last photo's facts.
+                if !Task.isCancelled { info = nil }
+                return
+            }
+            guard !Task.isCancelled else { return }
             info = read
             loadedId = photoId
         }
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        section(title, accessory: { EmptyView() }, content: content)
+    }
+
+    private func section<Accessory: View, Content: View>(_ title: String, @ViewBuilder accessory: () -> Accessory,
+                                                        @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-                .accessibilityAddTraits(.isHeader)
+            HStack {
+                Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                accessory()
+            }
             content()
         }
         .padding(.vertical, 12)

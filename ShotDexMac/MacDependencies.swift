@@ -72,6 +72,8 @@ final class MacDependencies: LibraryServices {
     /// Help › ShotDex Support… (FS-13, FS-18.04 §6): this install's threads
     /// and the public roadmap.
     let support: SupportModel
+    /// Copy Edits in the viewer (the look, never the crop): shared with iOS's.
+    let editClipboard = EditClipboard()
     /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns

@@ -106,10 +106,21 @@ Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-
   Ảnh rời khỏi nơi đang xem (X dưới bộ lọc, xoá) → sang ảnh đứng vào chỗ nó; hết ảnh → về lưới. Ảnh giữ trên màn tới khi
   ảnh mới tải xong; request cũ bị huỷ, kết quả về muộn bị bỏ; Actual Size không giữ hai bitmap đầy đủ cùng lúc; ảnh lớn
   của viewer không vào cache thumbnail của lưới (≤ 2 MB mới được cache). Demo `-ShotDexDemoLibrary -ShotDexSection viewer`.
-- Còn (hàng 21b): Histogram, sửa Caption and Keywords tại chỗ, phần Edits (Revert to Original / Copy Edits), bản đồ +
-  Show on Map, dòng "−0.3 EV · Aperture Priority · Multi-segment", huy hiệu định dạng cạnh tên, bỏ ô tìm khỏi toolbar khi
-  xem ảnh, offline (preview đã lưu + nút mờ), Rotate/Edit khi có editor Mac, View › Zoom (Fit / Actual Size) trong menu,
-  nút ảnh trước/sau cho chuột, thứ tự theo cột đang sắp của bảng (nay luôn theo ngày).
+- Đã làm (hàng 21b, `MacViewerSections.swift`): **Histogram** (đỏ/xanh lá/xanh dương hệ thống 0,40 + đường độ sáng, từ bản
+  256 px đọc ngoài luồng chính; đổi ảnh thì xoá ngay, request bị huỷ, chỉ dùng bản không mờ) · **Caption and Keywords**
+  (caption lưu 600 ms sau phím cuối, khi đổi ảnh, khi thoát/đóng cửa sổ; các lần ghi nối tiếp; "Saved" thoáng hiện; Esc
+  trong ô trả ← → về viewer; chip keyword ×, "+ Add Keyword" 22 cao thành ô gõ, Return thêm, Esc huỷ, chữ đang gõ được thêm
+  khi đổi ảnh; ảnh chỉ trong Photos dưới macOS 27: ô tắt + câu giải thích) · **Edits** (ảnh có bản file: "Edited in
+  ShotDex · N adjustments" — đếm thanh trượt khác 0, +1 cho crop/mask/lớp, không tính nguồn gốc —, "Saved automatically ·
+  image file never edited", **Revert to Original** hỏi trước "N adjustments will be removed. This can't be undone." rồi
+  xoá recipe + ghi lại sidecar, "Reverted to original"; **Copy Edits** → "Copied" 2 s; ảnh chưa sửa khi đã copy: **Paste
+  Edits** đặt look lên recipe của ảnh) · **Location** (bản đồ 56, ghim amber, ↗ và nhấp bản đồ mở Apple Maps). Menu View ›
+  **Zoom to Fit ⌘0** / **Actual Size ⌘9** (như Photos), chỉ bật khi đang xem. Nhấp vào ảnh lấy lại phím từ ô trong
+  inspector.
+- Còn: dòng "−0.3 EV · Aperture Priority · Multi-segment" (đọc từ file), huy hiệu định dạng cạnh tên, bỏ ô tìm khi xem ảnh
+  (`toolbar(removing: .search)` không có tác dụng trên cửa sổ này), offline (preview đã lưu + nút mờ), viewer chưa vẽ ảnh
+  theo recipe (ảnh gốc), Rotate/Edit khi có editor Mac, nút ảnh trước/sau cho chuột, thứ tự theo cột đang sắp của bảng.
+  Rủi ro đã biết: caption gõ < 600 ms trước ⌘Q có thể mất; một lần ghi treo chặn các lần sau trong inspector đó.
 
 ## 7. Cull (D12)
 

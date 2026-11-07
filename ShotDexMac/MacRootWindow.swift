@@ -834,6 +834,7 @@ struct MacRootWindow: View {
                                                    : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
                 // The album's header carries its name (board): no title in the toolbar.
                 .toolbar(removing: isAlbumOpen ? .title : nil)
+                .modifier(MacViewerChrome(isViewing: viewerId != nil, zoom: $viewerZoom))
                 .searchFocused($isSearchFocused)
                 .searchSuggestions { searchSuggestions }
                 // The suggestions, a beat after typing stops: the parser's
@@ -889,7 +890,7 @@ struct MacRootWindow: View {
                 .inspector(isPresented: $showsInspector) {
                     Group {
                         if let viewerId {
-                            MacViewerInspector(photoId: viewerId, marks: tableDetails[viewerId], menu: photoMenu)
+                            MacViewerInspector(photoId: viewerId, marks: tableDetails[viewerId], menu: photoMenu, picture: Self.demoPicture)
                         } else if let photoSelection, let photoMenu {
                             MacSelectionInspector(selection: photoSelection, menu: photoMenu, picture: Self.demoPicture)
                         }
@@ -1061,8 +1062,13 @@ struct MacRootWindow: View {
                 if MacDemoLibrary.section == "viewer", viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     showsInspector = true
-                    // The 12th newest, as the board.
-                    viewerId = library.items.reversed().dropFirst(11).first?.assetId ?? library.items.last?.assetId
+                    // The 12th newest, as the board, edited in ShotDex as the board's is.
+                    let id = library.items.reversed().dropFirst(11).first?.assetId ?? library.items.last?.assetId
+                    if let id {
+                        let store = PhotoRecipeStore(database: dependencies.database)
+                        await Task.detached { try? store.save(MacDemoLibrary.viewerRecipe, photoId: id) }.value
+                    }
+                    viewerId = id
                 }
             }
             #endif
@@ -1672,5 +1678,23 @@ struct MacOnThisDayDatePicker: View {
         }
         .padding(12)
         .fixedSize()
+    }
+}
+
+/// While a photo is open: no search over a single photo (board
+/// `MAC_Viewer`), and View › Zoom acts on it. Split out of the window's
+/// chain, which the type checker cannot take longer.
+private struct MacViewerChrome: ViewModifier {
+    let isViewing: Bool
+    @Binding var zoom: MacViewerZoom
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .toolbar(removing: isViewing ? .search : nil)
+                .focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
+        } else {
+            content.focusedSceneValue(\.macViewerZoom, isViewing ? $zoom : nil)
+        }
     }
 }

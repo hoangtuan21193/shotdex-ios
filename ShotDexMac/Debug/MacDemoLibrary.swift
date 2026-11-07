@@ -1,4 +1,5 @@
 #if DEBUG
+import ShotDexKit
 import CoreGraphics
 import Photos
 import Foundation
@@ -56,6 +57,15 @@ enum MacDemoLibrary {
         // `deleteCopies` (board `MAC_DeleteCopies`): RAW photos also on a
         // drive (the copy they open from) and on the NAS — three copies each.
         if section == "deleteCopies" { seedDeleteCopies(dependencies) }
+        // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
+        if section == "viewer" {
+            var recipe = PhotoEditRecipe.identity
+            recipe.adjustments.exposure = 0.3
+            recipe.adjustments.highlights = -0.4
+            recipe.adjustments.contrast = 0.15
+            let store = PhotoRecipeStore(database: dependencies.database)
+            for row in rows().enumerated() where row.offset % 4 == 0 { try? store.save(recipe, photoId: row.element.assetId) }
+        }
         // `hidden` (board `MAC_Hidden`): four photos of Sep 28, two of Sep 27.
         if section == "hidden" {
             try? HiddenCopyStore(database: dependencies.database)
@@ -85,6 +95,15 @@ enum MacDemoLibrary {
                 createdAt: 3))
         }
         return dependencies
+    }
+
+    /// The board's edit (`MAC_Viewer` Edits): three sliders moved.
+    static var viewerRecipe: PhotoEditRecipe {
+        var recipe = PhotoEditRecipe.identity
+        recipe.adjustments.exposure = 0.3
+        recipe.adjustments.highlights = -0.4
+        recipe.adjustments.contrast = 0.15
+        return recipe
     }
 
     static let originalAlbumId = "demo-original"

@@ -30,6 +30,8 @@ struct MacGoTarget {
 extension FocusedValues {
     @Entry var macLibrary: MacLibraryTarget?
     @Entry var macGo: MacGoTarget?
+    /// The viewer's zoom while a photo is open (View › Zoom to Fit / Actual Size).
+    @Entry var macViewerZoom: Binding<MacViewerZoom>?
 }
 
 /// The menu bar's library commands: Image (marks, Quick Look, Show in
@@ -38,6 +40,7 @@ extension FocusedValues {
 /// Go's places. A command with nothing to act on is off, never silent.
 struct MacLibraryCommands: Commands {
     @FocusedValue(\.macLibrary) private var library
+    @FocusedValue(\.macViewerZoom) private var viewerZoom
 
     var body: some Commands {
         CommandGroup(after: .pasteboard) {
@@ -67,6 +70,14 @@ struct MacLibraryCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
             .disabled(library == nil)
+            Divider()
+            // The viewer's zoom, as Photos: ⌘0 fits, ⌘9 is one pixel per pixel; off while the grid shows.
+            Button(String(localized: "Zoom to Fit", comment: "Mac menu: View › Zoom to Fit (viewer)")) { viewerZoom?.wrappedValue = .fit }
+                .keyboardShortcut("0", modifiers: .command)
+                .disabled(viewerZoom == nil)
+            Button(String(localized: "Actual Size", comment: "Mac menu: View › Actual Size (viewer)")) { viewerZoom?.wrappedValue = .actual }
+                .keyboardShortcut("9", modifiers: .command)
+                .disabled(viewerZoom == nil)
         }
         CommandGroup(after: .newItem) {
             Divider()
