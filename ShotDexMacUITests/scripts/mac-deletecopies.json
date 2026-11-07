@@ -1,0 +1,404 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "deleteCopies"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.34,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "01-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "01-sheet"
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove 1 copy?",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "1 goes to Recently Deleted. 2 copies stay. Photos asks to confirm its part.",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "T7 RAW Archive › RAW/2026-09-27"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove 2 copies?",
+   "type": "staticText",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Move",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-two-picked"
+  },
+  {
+   "action": "click",
+   "label": "Photos Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "T7 RAW Archive › RAW/2026-09-27"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertExists",
+   "label": "Choose Copies to Remove",
+   "type": "staticText",
+   "seconds": 2
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Remove",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "NAS Home (hide)"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove 1 copy?",
+   "type": "staticText",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Hide",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-hide-only"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove 1 copy?",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "x": 0.34,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Photos Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "T7 RAW Archive › RAW/2026-09-27"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Move",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "04a-toast"
+  },
+  {
+   "action": "dump",
+   "name": "04a-toast"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "x": 0.34,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove 1 copy?",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "T7 RAW Archive › RAW/2026-09-27",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-after-move"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.34,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "left",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-two-photos"
+  },
+  {
+   "action": "dump",
+   "name": "05-two-photos"
+  },
+  {
+   "action": "assertExists",
+   "label": "Photos Library"
+  },
+  {
+   "action": "assertExists",
+   "label": "NAS Home (hide)"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.46,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Choose Copies to Remove",
+   "type": "staticText"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "deleteCopies",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "Grid View",
+   "type": "radioButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.34,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "T7 RAW Archive › RAW/2026-09-27"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "06-dark"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

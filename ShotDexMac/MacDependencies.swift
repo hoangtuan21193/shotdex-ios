@@ -283,10 +283,33 @@ final class MacDependencies: LibraryServices {
         }
     }
 
+    /// "Moved 1 file to the Trash. Hid 1 photo on NAS Home." — the front
+    /// window shows it for a few seconds (`MacToast`).
+    static let showToast: (String) -> Void = { text in
+        NotificationCenter.default.post(name: .macToast, object: text)
+    }
+
     var sourceDeletion: SourceDeletionContext {
         let database = database
         let photoLibrary = photoLibrary
         let roots = folderRoots
+        #if DEBUG
+        // The demo's copies are rows: nothing is trashed, removed or deleted
+        // in Photos — the run only writes what it would have done.
+        if MacDemoLibrary.isOn {
+            return SourceDeletionContext(
+                makeService: {
+                    var service = DeletionService(database: database, deletePhotosAssets: { _ in },
+                                                  root: { _ in FileManager.default.temporaryDirectory })
+                    service.trash = { _ in }
+                    service.remove = { _ in }
+                    return service
+                },
+                makeQueries: { DeletionTargetQueries(database: database, hasTrash: { _ in true }) },
+                showBanner: Self.showToast
+            )
+        }
+        #endif
         return SourceDeletionContext(
             makeService: {
                 DeletionService(
@@ -296,7 +319,7 @@ final class MacDependencies: LibraryServices {
                 )
             },
             makeQueries: { DeletionTargetQueries(database: database, hasTrash: { roots.hasTrash($0) }) },
-            showBanner: nil
+            showBanner: Self.showToast
         )
     }
 

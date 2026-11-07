@@ -51,6 +51,9 @@ enum MacDemoLibrary {
         guard section != "emptyLibrary" else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
         if section == "onThisDay" { seedOnThisDay(dependencies) }
+        // `deleteCopies` (board `MAC_DeleteCopies`): RAW photos also on a
+        // drive (the copy they open from) and on the NAS — three copies each.
+        if section == "deleteCopies" { seedDeleteCopies(dependencies) }
         // `hidden` (board `MAC_Hidden`): four photos of Sep 28, two of Sep 27.
         if section == "hidden" {
             try? HiddenCopyStore(database: dependencies.database)
@@ -291,6 +294,25 @@ enum MacDemoLibrary {
             for (id, town, country) in places {
                 try db.execute(sql: "UPDATE photo_metadata SET placeLocality = ?, placeCountry = ? WHERE assetId = ?",
                                arguments: [town, country, id])
+            }
+        }
+    }
+
+    private static func seedDeleteCopies(_ dependencies: MacDependencies) {
+        let now = Int(Date().timeIntervalSince1970)
+        try? dependencies.database.writer.write { db in
+            try db.execute(sql: "INSERT OR REPLACE INTO sources (id, kind, name, pairsRawAndJpeg, createdAt) VALUES ('demo-t7', 'drive', 'T7 RAW Archive', 1, ?)",
+                           arguments: [now])
+            try db.execute(sql: "INSERT OR REPLACE INTO sources (id, kind, name, pairsRawAndJpeg, createdAt) VALUES ('demo-nas', 'server', 'NAS Home', 1, ?)",
+                           arguments: [now])
+            for (source, kind) in [("demo-t7", "file"), ("demo-nas", "server")] {
+                try db.execute(sql: """
+                    INSERT OR IGNORE INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, isOnline, lastSeenAt)
+                    SELECT ? || ':' || m.assetId, m.assetId, ?, ?, 'RAW/2026-09-27/' || m.originalFilename,
+                           lower('RAW/2026-09-27/' || m.originalFilename) || m.assetId, 1, ?
+                    FROM photo_metadata m
+                    WHERE upper(m.originalFilename) LIKE '%.ARW' OR upper(m.originalFilename) LIKE '%.RAF' OR upper(m.originalFilename) LIKE '%.CR3'
+                    """, arguments: [source, source, kind, now])
             }
         }
     }

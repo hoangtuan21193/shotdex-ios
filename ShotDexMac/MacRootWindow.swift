@@ -209,6 +209,7 @@ struct MacRootWindow: View {
     fileprivate func requests(_ content: some View) -> some View {
         alerts(content)
             .modifier(MacPhotoMenuHostIfReady(menu: photoMenu, library: library, selection: photoSelection))
+            .modifier(MacToast())
             .background(MacMainWindowMarker())
             .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
             .task { await start() }

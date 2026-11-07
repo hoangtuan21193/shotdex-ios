@@ -71,13 +71,24 @@ struct DeletionService: Sendable {
 
         let assets = copies.filter { $0.kind == "photos" }.compactMap(\.photoKitId) + alsoPhotos
         if !assets.isEmpty {
+            var deleted = assets
             do {
                 try await deletePhotosAssets(assets)
-                try MetadataStore(database: database).deleteAssets(ids: assets)
-                try PhotoOrphanStore(database: database).markGoneFromLibrary(ids: assets, at: now)
-                summary.recentlyDeleted = assets.count
             } catch let error as PHPhotosError where error.code == .userCancelled {
                 summary.photosCancelled = true
+                deleted = []
+            } catch let kept as PhotoDeletionGate.Kept {
+                // The gate deleted what it could check and kept the rest
+                // (server unreachable, or the copy not there): the files
+                // already moved stay moved, and the run still reports.
+                let stayed = Set(kept.outcome.unreachable.values.joined()).union(kept.outcome.notOnServer.values.joined())
+                deleted = assets.filter { !stayed.contains($0) }
+                summary.failure = kept.localizedDescription
+            }
+            if !deleted.isEmpty {
+                try MetadataStore(database: database).deleteAssets(ids: deleted)
+                try PhotoOrphanStore(database: database).markGoneFromLibrary(ids: deleted, at: now)
+                summary.recentlyDeleted = deleted.count
             }
         }
         return summary
@@ -104,23 +115,29 @@ extension DeletionService.Summary {
     func banner(trashName: String) -> String {
         var moved: [String] = []
         if trashedFiles > 0 {
-            moved.append(String(localized: "Moved \(trashedFiles) files to \(trashName)", comment: "Deletion banner: files sent to the Trash"))
+            moved.append(Self.words(AttributedString(localized: "Moved ^[\(trashedFiles) file](inflect: true) to \(trashName)", comment: "Deletion banner: files sent to the Trash")))
         }
         if recentlyDeleted > 0 {
             moved.append(moved.isEmpty
-                ? String(localized: "Moved \(recentlyDeleted) photos to Recently Deleted", comment: "Deletion banner: Photos items, first part")
-                : String(localized: "\(recentlyDeleted) photos to Recently Deleted", comment: "Deletion banner: Photos items after files"))
+                ? Self.words(AttributedString(localized: "Moved ^[\(recentlyDeleted) photo](inflect: true) to Recently Deleted", comment: "Deletion banner: Photos items, first part"))
+                : Self.words(AttributedString(localized: "^[\(recentlyDeleted) photo](inflect: true) to Recently Deleted", comment: "Deletion banner: Photos items after files")))
         }
         var sentences: [String] = moved.isEmpty ? [] : [moved.joined(separator: String(localized: " and ", comment: "Deletion banner joiner")) + "."]
         if removedFiles > 0 {
-            sentences.append(String(localized: "Deleted \(removedFiles) files permanently.", comment: "Deletion banner: files on a volume with no Trash"))
+            sentences.append(Self.words(AttributedString(localized: "Deleted ^[\(removedFiles) file](inflect: true) permanently.", comment: "Deletion banner: files on a volume with no Trash")))
         }
         for (name, n) in hidden.sorted(by: { $0.key < $1.key }) {
-            sentences.append(String(localized: "Hid \(n) photos on \(name).", comment: "Deletion banner: server photos hidden"))
+            sentences.append(Self.words(AttributedString(localized: "Hid ^[\(n) photo](inflect: true) on \(name).", comment: "Deletion banner: server photos hidden")))
         }
         if failedFiles > 0, let failure {
-            sentences.append(String(localized: "Couldn't move \(failedFiles) files to \(trashName): \(failure)", comment: "Deletion banner: some files stayed"))
+            sentences.append(Self.words(AttributedString(localized: "Couldn't move ^[\(failedFiles) file](inflect: true) to \(trashName): \(failure)", comment: "Deletion banner: some files stayed")))
         }
         return sentences.joined(separator: " ")
+    }
+
+
+    /// "1 file" / "2 files": grammar agreement on the counted noun.
+    private static func words(_ text: AttributedString) -> String {
+        String(text.inflected().characters)
     }
 }

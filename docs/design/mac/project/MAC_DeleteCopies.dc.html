@@ -94,11 +94,11 @@ input{font-family:inherit}
 <div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
 </div></sc-if>
 </nav>
-<!-- Scrim above sidebar and toolbar, then the confirmation: one row per copy of the photo, only the copy it opens from is ticked (FS-19 04 §1) -->
+<!-- Scrim above sidebar and toolbar, then the confirmation: one row per copy of the photo, only the copy ShotDex shows is ticked; the title counts copies while every photo keeps one (FS-19 04 §1) -->
 <div aria-hidden="true" style="position:absolute;inset:0;background:{{t.scrim}};border-radius:16px"></div>
-<div role="alertdialog" aria-label="Move 1 photo?" style="position:absolute;left:520px;top:52px;width:400px;border-radius:22px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:20px 16px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<div role="alertdialog" aria-label="Remove 1 copy?" style="position:absolute;left:520px;top:52px;width:400px;border-radius:22px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:20px 16px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
 <div style="width:56px;height:56px;border-radius:13px;background:linear-gradient(160deg,#F2B25C 0%,#C6730E 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 .01 0z M9.5 3.9l2.5 8.1 M20.4 10.4L12 12 M14.5 20.1L12 12 M3.6 13.6L12 12"></path></svg></div>
-<div style="font-size:13px;font-weight:700">Move 1 photo?</div>
+<div style="font-size:13px;font-weight:700">Remove 1 copy?</div>
 <div style="font-size:11px;line-height:15px">DSC04512.ARW has 3 copies. Choose the ones to remove; the photo stays in ShotDex with the copies you keep.</div>
 <div role="group" aria-label="Copies of DSC04512.ARW" style="width:100%;border-radius:10px;background:{{t.content}};border:1px solid {{t.sep}};box-sizing:border-box;text-align:left;overflow:hidden">
 <sc-for list="{{copies}}" as="c" hint-placeholder-count="3">
@@ -109,7 +109,7 @@ input{font-family:inherit}
 </label>
 </sc-for>
 </div>
-<div style="font-size:11px;line-height:15px;font-variant-numeric:tabular-nums">1 goes to the Trash with its .xmp sidecar. 2 copies stay.</div>
+<div style="font-size:11px;line-height:15px;font-variant-numeric:tabular-nums">1 goes to the Trash. Files go with their paired JPEG and .xmp sidecar. 2 copies stay.</div>
 <div style="font-size:11px;line-height:15px;color:{{t.label2}}">ShotDex never edits file contents.</div>
 <div style="display:flex;gap:8px;width:100%;margin-top:6px">
 <button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">Cancel</button>
@@ -239,9 +239,9 @@ class Component extends DCLogic {
     const cp=(name,icon,note,on,first)=>({ name, icon, note, on:on?'true':'false', checked:on,
       box:on?t.accentFill:t.field, border:on?'none':('1px solid '+t.checkboxStroke), line:first?'none':('1px solid '+t.sep) });
     const copies=[
-      cp('T7 RAW Archive › RAW/2026-09-27', I.drive, 'The copy this photo opens from · goes to the Trash', true, true),
-      cp('Photos Library', I.library, 'Backup · would go to Recently Deleted', false),
-      cp('NAS Home (hide)', I.server, 'Backup · can only be hidden in ShotDex', false)
+      cp('T7 RAW Archive › RAW/2026-09-27', I.drive, 'Shown in ShotDex · goes to the Trash', true, true),
+      cp('Photos Library', I.library, 'Also stored here · would go to Recently Deleted', false),
+      cp('NAS Home (hide)', I.server, 'Also stored here · can only be hidden in ShotDex', false)
     ];
     const e=edges(dark);
     return { t, groups, sections, copies, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };

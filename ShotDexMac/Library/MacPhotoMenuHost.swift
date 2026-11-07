@@ -19,6 +19,11 @@ struct MacPhotoMenuHost: ViewModifier {
     @Environment(\.undoManager) private var undoManager
     /// The plan of a Move to Trash is being read: a second one waits for it.
     @State private var isReadingPlan = false
+    /// A Move / Delete waiting on which copies go (`MacDeleteCopiesSheet`).
+    @State private var copiesRequest: MacDeleteCopiesRequest?
+    /// Confirmed in the checklist; runs once its sheet has gone, so the
+    /// red no-Trash dialog is never presented over a closing sheet.
+    @State private var confirmedCopies: DeletionTargetQueries.Request?
     /// Hidden or unhidden while this window was behind: reload when it comes forward.
     @State private var missedHiddenChange = false
 
@@ -28,6 +33,29 @@ struct MacPhotoMenuHost: ViewModifier {
             .photoDeletionPrompts(deletion)
             .sourceDeletion($sourceDeletion, context: dependencies.sourceDeletion) { removed, _ in
                 library?.removeDeleted(ids: removed)
+            }
+            // A window closed mid-dismiss drops the confirmed run: nothing is deleted.
+            .sheet(item: $copiesRequest, onDismiss: {
+                if let confirmed = confirmedCopies {
+                    confirmedCopies = nil
+                    sourceDeletion = confirmed
+                }
+            }) { pending in
+                MacDeleteCopiesSheet(copies: pending.copies, photoCount: pending.photoIds.count, fileName: pending.fileName,
+                                     cancel: { copiesRequest = nil },
+                                     confirm: { picked in
+                                         // Photos not indexed yet (no copy row) go with the Photos part, as without the checklist.
+                                         let destinations = picked.map { $0.map(\.destination) }
+                                             + pending.photosOnly.map { _ in [DeletionDestination.recentlyDeleted] }
+                                         var plan = MixedDeletionPlan(photos: destinations, selection: .photos)
+                                         plan.trashName = MixedDeletionPlan.macTrashName
+                                         var request = DeletionTargetQueries.Request(photoIds: pending.photoIds, targets: picked,
+                                                                                      photosOnly: pending.photosOnly, plan: plan)
+                                         request.isConfirmed = true
+                                         confirmedCopies = request
+                                         copiesRequest = nil
+                                     })
+                .id(pending.id)
             }
             .alert(String(localized: "Couldn't Delete", comment: "Mac: a delete failed"),
                    isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
@@ -122,25 +150,43 @@ struct MacPhotoMenuHost: ViewModifier {
     /// them and report success (FS-19.04 §2), so their plan is read first —
     /// off the main actor.
     private func delete(_ ids: [String]) {
-        guard let library, !deletion.isChecking, !isReadingPlan else { NSSound.beep(); return }
-        let database = dependencies.database, roots = dependencies.folderRoots
+        // One at a time: a checklist open, confirmed or running blocks a second.
+        guard let library, !deletion.isChecking, !isReadingPlan, copiesRequest == nil, confirmedCopies == nil,
+              sourceDeletion == nil else { NSSound.beep(); return }
         isReadingPlan = true
         Task {
             defer { isReadingPlan = false }
             // A failed read must not fall through to the PhotoKit-only path,
             // which would drop folder and server copies and call it done.
+            let queries = dependencies.sourceDeletion.makeQueries()
+            // Every copy, read once; the plain request only when no photo
+            // has a choice of copies.
             let read = await Task.detached(priority: .userInitiated) {
-                Result { try DeletionTargetQueries(database: database, hasTrash: { roots.hasTrash($0) })
-                    .request(photoIds: ids, selection: .photos) }
+                Result { () -> (DeletionTargetQueries.Request?, [[DeletionTarget]]) in
+                    let copies = try queries.allCopies(photoIds: ids)
+                    if copies.contains(where: { $0.count > 1 }) { return (nil, copies) }
+                    return (try queries.request(photoIds: ids, selection: .photos), copies)
+                }
             }.value
             let request: DeletionTargetQueries.Request?
+            let copies: [[DeletionTarget]]
             switch read {
-            case .success(let found): request = found
+            case .success(let found): (request, copies) = found
             case .failure(let error):
                 deleteError = error.localizedDescription
                 return
             }
-            if let request {
+            // A photo in more than one place: which copies go is the user's
+            // pick (FS-19.04 §1), the one it opens from checked.
+            if copies.contains(where: { $0.count > 1 }) {
+                let covered = Set(copies.compactMap(\.first?.photoId))
+                let name = ids.count == 1 ? copies.first?.compactMap(\.relativePath).first.map { ($0 as NSString).lastPathComponent } : nil
+                copiesRequest = MacDeleteCopiesRequest(photoIds: ids, copies: copies, photosOnly: ids.filter { !covered.contains($0) },
+                                                       fileName: name)
+                return
+            }
+            if var request {
+                request.plan.trashName = MixedDeletionPlan.macTrashName
                 sourceDeletion = request
                 return
             }

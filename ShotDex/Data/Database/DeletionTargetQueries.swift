@@ -27,13 +27,17 @@ struct DeletionTargetQueries: Sendable {
     /// Every copy of each photo that could be deleted, in copy order.
     func copies(photoIds: [String]) throws -> [String: [DeletionTarget]] {
         guard !photoIds.isEmpty else { return [:] }
+        // In chunks: a select-all is past SQLite's argument limit.
         let rows = try database.reader.read { db in
-            try Row.fetchAll(db, sql: """
-                SELECT c.id, c.photoId, c.sourceId, c.kind, c.photoKitId, c.relativePath, c.pairedPath, c.isOnline,
-                       c.isCloudPlaceholder, s.name, s.kind AS sourceKind
-                FROM photo_copies c JOIN sources s ON s.id = c.sourceId
-                WHERE c.photoId IN (\(databaseQuestionMarks(count: photoIds.count))) AND c.missingSince IS NULL AND c.isHidden = 0
-                """, arguments: StatementArguments(photoIds))
+            try stride(from: 0, to: photoIds.count, by: 500).flatMap { start in
+                let chunk = Array(photoIds[start..<min(start + 500, photoIds.count)])
+                return try Row.fetchAll(db, sql: """
+                    SELECT c.id, c.photoId, c.sourceId, c.kind, c.photoKitId, c.relativePath, c.pairedPath, c.isOnline,
+                           c.isCloudPlaceholder, s.name, s.kind AS sourceKind
+                    FROM photo_copies c JOIN sources s ON s.id = c.sourceId
+                    WHERE c.photoId IN (\(databaseQuestionMarks(count: chunk.count))) AND c.missingSince IS NULL AND c.isHidden = 0
+                    """, arguments: StatementArguments(chunk))
+            }
         }
         // Outside the read: `hasTrash` resolves the source's folder, which
         // reads the database itself, and GRDB reads are not reentrant.
@@ -93,7 +97,11 @@ struct DeletionTargetQueries: Sendable {
         /// Photos assets with no copy row yet (not indexed): deleted with
         /// the Photos part.
         let photosOnly: [String]
-        let plan: MixedDeletionPlan
+        /// `var`: the Mac names its own Trash (`MixedDeletionPlan.macTrashName`).
+        var plan: MixedDeletionPlan
+        /// Already confirmed by the copy checklist (Mac, `MAC_DeleteCopies`):
+        /// the flow skips its own first dialog.
+        var isConfirmed = false
     }
 
     /// The deletion of `photoIds` through their sources, or nil when every
@@ -114,10 +122,15 @@ struct DeletionTargetQueries: Sendable {
     func stillShown(photoIds: [String]) throws -> Set<String> {
         guard !photoIds.isEmpty else { return [] }
         return try database.reader.read { db in
-            Set(try String.fetchAll(db, sql: """
-                SELECT DISTINCT photoId FROM photo_copies
-                WHERE photoId IN (\(databaseQuestionMarks(count: photoIds.count))) AND missingSince IS NULL AND isHidden = 0
-                """, arguments: StatementArguments(photoIds)))
+            var shown = Set<String>()
+            for start in stride(from: 0, to: photoIds.count, by: 500) {
+                let chunk = Array(photoIds[start..<min(start + 500, photoIds.count)])
+                shown.formUnion(try String.fetchAll(db, sql: """
+                    SELECT DISTINCT photoId FROM photo_copies
+                    WHERE photoId IN (\(databaseQuestionMarks(count: chunk.count))) AND missingSince IS NULL AND isHidden = 0
+                    """, arguments: StatementArguments(chunk)))
+            }
+            return shown
         }
     }
 }

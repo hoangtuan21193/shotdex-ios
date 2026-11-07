@@ -35,6 +35,15 @@ enum MacTheme {
     static let greenText = dynamic(light: NSColor(red: 0x1F / 255, green: 0x7A / 255, blue: 0x35 / 255, alpha: 1),
                                    dark: NSColor(red: 0x30 / 255, green: 0xD1 / 255, blue: 0x58 / 255, alpha: 1))
 
+    /// `redText`: a destructive command's words (Move, Delete) — darker than
+    /// system red so it reads at 4.5:1 on a button's ground.
+    static let redText = dynamic(light: NSColor(red: 0xC4 / 255, green: 0x00 / 255, blue: 0x1A / 255, alpha: 1),
+                                 dark: NSColor(red: 0xFF / 255, green: 0x69 / 255, blue: 0x61 / 255, alpha: 1))
+    /// `pressed`: a sheet button's resting ground (board `MAC_DeleteCopies`).
+    static let pressed = dynamic(light: NSColor(white: 0, alpha: 0.09), dark: NSColor(white: 1, alpha: 0.12))
+    /// `checkboxStroke`: an empty checkbox's edge, on a `content` fill.
+    static let checkboxStroke = dynamic(light: NSColor(white: 0, alpha: 0.25), dark: NSColor(white: 1, alpha: 0.30))
+
     /// `fill`: a flat control's ground (DESIGN.md §10b).
     static let fill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.07))
     /// `greenSoft`: the tile behind a done job's check (board `MAC_Activity`).

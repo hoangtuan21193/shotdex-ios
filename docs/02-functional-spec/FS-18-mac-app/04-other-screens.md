@@ -72,6 +72,32 @@ Support thành cửa sổ riêng.
   Hidden Photos" + Try Again, không bao giờ "No Hidden Photos". Thư viện demo không bao giờ gọi Photos.
 - Chưa có: Grid/List và Filter and Sort trên mục này (board vẽ; lưới là đủ cho vài ảnh ẩn); tên nơi chụp ở đầu ngày.
 
+### 1.3 Xoá ảnh nhiều bản sao (board `MAC_DeleteCopies`, hành vi theo [FS-19.04 §1–§2](../FS-19-photo-sources/04-deleting-and-duplicates.md))
+
+- Move to Trash (⌘⌫, chuột phải, Image) ở All Photos / album khi **≥ 1 ảnh có ≥ 2 bản sao** → sheet 400 rộng thay hộp
+  thường: icon app, tiêu đề **đếm bản sao** khi ảnh nào cũng còn bản ("Remove 1 copy?"), đếm ảnh khi có ảnh mất hết bản
+  ("Move 1 photo?", "Delete 1 photo?", "Hide 1 photo?"); lời "DSC04512.ARW has 3 copies. Choose the ones to remove; the
+  photo stays in ShotDex with the copies you keep." (nhiều ảnh: một câu chung).
+- Danh sách: một ảnh → một hàng mỗi bản sao ("T7 RAW Archive › RAW/2026-09-27", "Photos Library", "NAS Home (hide)") với
+  "Shown in ShotDex · goes to …" (bản ShotDex hiện và mở) / "Also stored here · would go to …" / "… · can only be hidden in
+  ShotDex" (không gọi là "Backup": bản RAW gốc có thể nằm ở ổ); nhiều ảnh → một hàng mỗi nguồn ("2 photos · the copies
+  shown in ShotDex · …"), ô ba trạng thái. Mặc định chỉ bật bản ShotDex hiện (đầu thứ tự FS-19.02 §3); bấm cả hàng
+  cũng bật/tắt; VoiceOver đọc mỗi hàng là một nút: tên, on/off/mixed và nơi đến.
+- Dưới: lời của `MixedDeletionPlan` theo phần đã chọn + "Files go with their paired JPEG and .xmp sidecar." khi có file vào
+  Thùng rác + "N copies stay." + "No copy left: the photo leaves ShotDex." khi ảnh mất hết bản + "Photos asks to confirm its
+  part." khi có bản Photos + "You'll be asked once more…" khi có nơi không Thùng rác; "ShotDex never edits file
+  contents.". Nút Cancel (Esc) · Move/Delete/Hide chữ đỏ (`redText`), không bao giờ là nút mặc định; không chọn gì →
+  "Choose Copies to Remove", nút "Remove" mờ với gợi ý "Tick at least one copy".
+- Xong: một dòng ở chân cửa sổ (`MacToast`) "Moved 1 file to the Trash. Hid 1 photo on NAS Home." vài giây; chạy dở
+  (server giữ lại ảnh, file không chuyển được) thì hộp lỗi kèm phần đã làm. Một lần xoá một lúc mỗi cửa sổ.
+- Xác nhận ở sheet là bước hỏi của ShotDex: chạy luôn, chỉ còn hộp đỏ khi có nơi không Thùng rác và hộp của hệ thống cho
+  phần Photos. Ảnh không ảnh nào ≥ 2 bản sao → hộp thường như cũ. Trên Mac mọi hộp gọi Thùng rác là "the Trash"
+  (trước đây hộp Mac dùng chữ của iPad "Recently Deleted in Files" — sửa cùng lượt).
+- Demo `-ShotDexSection deleteCopies`: ảnh RAW có thêm bản trên ổ "T7 RAW Archive" và "NAS Home"; dịch vụ xoá của demo
+  không đụng file thật hay Photos.
+- Chưa có: sheet này trong smart album và Duplicates (vẫn hộp thường, cùng một lệnh nên hai hành vi); glyph ổ đĩa cho bản
+  sao trên ổ (đang là thư mục); chọn bản sao theo từng ảnh khi nhiều ảnh (hiện theo nguồn).
+
 ## 2. Statistics (D18)
 
 - Sidebar › Utilities › Statistics, Go ⌥⌘6. Tầng A. Toolbar: ◀ ▶ · "Statistics" + "54,027 photos · 1,204 videos" ·

@@ -723,8 +723,8 @@ struct MacMixedCheckbox: View {
         Button { set(!isOn) } label: {
             HStack(spacing: 6) {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isOn || isMixed ? MacTheme.accentFill : MacTheme.fill)
-                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(isOn || isMixed ? Color.clear : MacTheme.separator))
+                    .fill(isOn || isMixed ? MacTheme.accentFill : MacTheme.content)
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(isOn || isMixed ? Color.clear : MacTheme.checkboxStroke))
                     .overlay {
                         Image(systemName: isOn ? "checkmark" : "minus")
                             .font(.system(size: 9, weight: .bold))

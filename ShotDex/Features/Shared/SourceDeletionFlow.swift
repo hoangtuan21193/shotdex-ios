@@ -30,7 +30,7 @@ struct SourceDeletionFlow: ViewModifier {
         content
             .alert(
                 request?.plan.title ?? "",
-                isPresented: Binding(get: { request != nil }, set: { if !$0 { request = nil } }),
+                isPresented: Binding(get: { request.map { !$0.isConfirmed } ?? false }, set: { if !$0 { request = nil } }),
                 presenting: request
             ) { pending in
                 Button("Cancel", role: .cancel) { request = nil }
@@ -44,6 +44,16 @@ struct SourceDeletionFlow: ViewModifier {
                 }
             } message: { pending in
                 Text(pending.plan.message + "\n\n" + MixedDeletionPlan.footnote)
+            }
+            // Confirmed already (the copy checklist): only the no-Trash dialog may still ask.
+            .onChange(of: request?.id) {
+                guard let pending = request, pending.isConfirmed else { return }
+                request = nil
+                if pending.plan.needsPermanentConfirmation {
+                    permanent = pending
+                } else {
+                    run(pending)
+                }
             }
             .alert(
                 permanent?.plan.permanentTitle ?? "",
@@ -74,13 +84,15 @@ struct SourceDeletionFlow: ViewModifier {
         Task {
             do {
                 let summary = try await service.run(pending.targets, alsoPhotos: pending.photosOnly)
-                let shown = try queries.stillShown(photoIds: pending.photoIds)
+                let ids = pending.photoIds
+                let shown = try await Task.detached(priority: .userInitiated) { try queries.stillShown(photoIds: ids) }.value
                 var removed = Set(pending.photoIds).subtracting(shown)
                 // Photos items with no copy row: gone unless the dialog said Cancel.
                 if summary.photosCancelled { removed.subtract(pending.photosOnly) }
                 onFinished(removed, summary)
                 if let reason = summary.failure {
-                    failure = reason
+                    let done = summary.banner(trashName: pending.plan.trashName)
+                    failure = done.isEmpty ? reason : reason + "\n\n" + done
                 } else {
                     let text = summary.banner(trashName: pending.plan.trashName)
                     if !text.isEmpty { showBanner?(text) }

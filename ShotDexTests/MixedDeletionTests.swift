@@ -63,6 +63,23 @@ import Testing
                                })
     }
 
+    /// A Photos item the server check keeps (PhotoDeletionGate.Kept): the
+    /// files already moved stay moved, the other Photos item is gone, and the
+    /// run still reports — with the reason — instead of throwing half-way.
+    @Test func photosKeptByServerCheckStillFinishesTheRun() async throws {
+        let library = try Self.library()
+        defer { try? FileManager.default.removeItem(at: library.root.deletingLastPathComponent()) }
+        let targets = try DeletionTargetQueries(database: library.database).targets(photoIds: library.ids)
+        let summary = try await Self.service(library, photos: { ids in
+            throw PhotoDeletionGate.Kept(outcome: .init(notOnServer: ["NAS Home": [ids[0]]]))
+        }).run(targets)
+        #expect(summary.failure != nil)
+        #expect(summary.trashedFiles == 3)
+        #expect(summary.hidden == ["NAS Home": 1])
+        #expect(summary.recentlyDeleted == 1)
+        #expect(!summary.photosCancelled)
+    }
+
     /// AC-41: the dialog of AC-40, Move, then Cancel in the system's Photos
     /// dialog. Only the Photos part stays — still there, still Rejected; the
     /// folder files already went to the Trash and the NAS photo is hidden
@@ -103,7 +120,7 @@ import Testing
         #expect(summary.recentlyDeleted == 2)
         #expect(summary.hidden == ["NAS Home": 1])
         #expect(summary.banner(trashName: MixedDeletionPlan.macTrashName)
-                == "Moved 3 files to the Trash and 2 photos to Recently Deleted. Hid 1 photos on NAS Home.")
+                == "Moved 3 files to the Trash and 2 photos to Recently Deleted. Hid 1 photo on NAS Home.")
         #expect(asked.ids.sorted() == ["P-0", "P-1"])
         #expect(try FileManager.default.contentsOfDirectory(atPath: library.root.path).isEmpty)
         #expect(Set(try FileManager.default.contentsOfDirectory(atPath: library.trashed.path))

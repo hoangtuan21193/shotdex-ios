@@ -219,8 +219,9 @@ struct MacSmartAlbumScreen: View {
         // Folder and server photos have no PHAsset: PhotoKit alone would
         // drop them and report success (FS-19.04 §2).
         let roots = dependencies.folderRoots
-        if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+        if var request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
             .request(photoIds: ids, selection: .photos) {
+            request.plan.trashName = MixedDeletionPlan.macTrashName
             sourceDeletion = request
             return
         }
