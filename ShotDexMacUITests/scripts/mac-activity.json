@@ -32,7 +32,7 @@
   },
   {
    "action": "assertExists",
-   "label": "No Activity",
+   "label": "No Other Jobs",
    "seconds": 3
   },
   {
@@ -53,7 +53,7 @@
   },
   {
    "action": "assertMissing",
-   "label": "No Activity"
+   "label": "No Other Jobs"
   },
   {
    "action": "menu",
@@ -65,7 +65,7 @@
   },
   {
    "action": "assertExists",
-   "label": "No Activity",
+   "label": "No Other Jobs",
    "seconds": 3
   },
   {
@@ -87,7 +87,7 @@
   },
   {
    "action": "assertExists",
-   "label": "No Activity",
+   "label": "No Other Jobs",
    "seconds": 3
   },
   {
@@ -118,7 +118,7 @@
   },
   {
    "action": "assertExists",
-   "label": "No Activity",
+   "label": "No Other Jobs",
    "seconds": 3
   },
   {
@@ -337,7 +337,7 @@
   },
   {
    "action": "assertExists",
-   "label": "No Activity",
+   "label": "No Other Jobs",
    "seconds": 5
   },
   {

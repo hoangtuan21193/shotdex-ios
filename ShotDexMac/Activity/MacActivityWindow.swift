@@ -28,6 +28,9 @@ struct MacActivityView: View {
         var run: CommonPhotosRun
         var progress: CommonPhotosRunner.Progress
         var done = 0, skipped = 0, failed = 0, undone = 0
+        /// Another process (the helper) holds the run now: it is going, not
+        /// interrupted, though this launch has no task for it.
+        var isActiveElsewhere = false
     }
 
     private var runs: MacCommonPhotosRuns { dependencies.commonPhotos }
@@ -36,10 +39,13 @@ struct MacActivityView: View {
         Group {
             if !hasRead {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty && dependencies.uploads.history.isEmpty {
-                empty
             } else {
                 VStack(alignment: .leading, spacing: 10) {
+                    // What ShotDex does on its own, first (user 2026-11-08).
+                    MacBackgroundJobs()
+                    if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty && dependencies.uploads.history.isEmpty {
+                        empty
+                    }
                     if !dependencies.uploads.entries.isEmpty || !dependencies.uploads.history.isEmpty { uploads }
                     if !watchRows.isEmpty { gathering }
                     if !jobs.isEmpty {
@@ -78,13 +84,20 @@ struct MacActivityView: View {
     private var jobs: [LongRunningJob] {
         stored.compactMap { id, info -> LongRunningJob? in
             var input: CommonPhotosJob.Input
-            if let entry = runs.entries[id] {
-                input = CommonPhotosJob.Input(run: entry.run, progress: entry.progress, isRunning: entry.isRunning,
+            if let entry = runs.entries[id], entry.isRunning || !info.isActiveElsewhere {
+                input = CommonPhotosJob.Input(run: entry.run, progress: entry.isRunning ? entry.progress : info.progress,
+                                              isRunning: entry.isRunning,
                                               isPausedByUser: entry.isPausedByUser, problem: entry.problem,
                                               secondsLeft: entry.secondsLeft)
-                input.run.state = entry.state
+                // Not going here: the store has the say — the helper may have
+                // finished it since (user 2026-11-08: a finished run stayed
+                // "Interrupted").
+                input.run.state = entry.isRunning ? entry.state : info.run.state
+                if !entry.isRunning, info.run.state == .finished { input.problem = nil }
             } else {
-                input = CommonPhotosJob.Input(run: info.run, progress: info.progress, isRunning: false, isPausedByUser: false, problem: nil)
+                // Going in the helper (or idle since an earlier launch).
+                input = CommonPhotosJob.Input(run: info.run, progress: info.progress, isRunning: info.isActiveElsewhere,
+                                              isPausedByUser: false, problem: nil)
             }
             input.copiedOrMoved = info.done
             input.skipped = info.skipped
@@ -134,7 +147,8 @@ struct MacActivityView: View {
                                  done: items.filter { run.isUndo ? $0.status == .undone : [.copied, .moved, .undone].contains($0.status) }.count,
                                  skipped: items.filter { $0.status == .skipped }.count,
                                  failed: items.filter { $0.status == .failed }.count,
-                                 undone: run.isUndo ? 0 : items.filter { $0.status == .undone }.count)
+                                 undone: run.isUndo ? 0 : items.filter { $0.status == .undone }.count,
+                                 isActiveElsewhere: CommonPhotosRunner.isActive(runId: id, in: database))
             }
             return out
         }.value
@@ -265,10 +279,10 @@ struct MacActivityView: View {
     /// Board `MAC_Activity`, tweak `empty`.
     private var empty: some View {
         ContentUnavailableView {
-            Label(String(localized: "No Activity", comment: "Mac Activity: nothing running"), systemImage: "clock.arrow.circlepath")
+            Label(String(localized: "No Other Jobs", comment: "Mac Activity: nothing the user started is running"), systemImage: "clock.arrow.circlepath")
         } description: {
-            Text("Indexing, imports, uploads, backups, exports and merges show here while they run.",
-                 comment: "Mac Activity: empty state")
+            Text("Uploads, copies and moves between servers show here while they run.",
+                 comment: "Mac Activity: empty state under Background — no job the user started")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

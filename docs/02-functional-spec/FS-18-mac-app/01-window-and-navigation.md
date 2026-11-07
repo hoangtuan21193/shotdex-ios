@@ -90,6 +90,15 @@ sổ riêng là tuỳ chọn.
   **popover 680×520** từ nút **Activity** (đồng hồ vòng) ở đầu toolbar, trước ◀ ▶, có trên mọi màn của cửa sổ; Window ›
   Activity ⌥⌘0 mở nó ở cửa sổ đang trước; Esc hay bấm ra ngoài đóng — đóng không dừng việc nào. Biểu tượng đặc khi có việc
   đang chạy. Không bao giờ là sheet modal, không còn cửa sổ riêng.
+  - **Background** (người dùng 2026-11-08: "không có chỗ xem background đang làm gì"): mục đầu popover, một dòng cho
+    mỗi việc app tự chạy đang chạy hay đang chờ — Indexing the library (`12,408 of 55,231 photos · about 6 min left`),
+    Index waiting for iCloud, Finding places, Reading <nguồn>, **Matching photos with the server (SHA-256)** (dòng §7
+    của FS-19.07, cùng dòng ở chân sidebar), Backing up to <thư mục>, Checking which originals are on this Mac,
+    Importing from <thẻ>. Tên, dòng tiến độ, thanh 4pt (không thanh khi đang chờ). Không có gì: một dòng "Nothing
+    running — the library, checks and backups are up to date." Đọc thẳng trạng thái observable của từng việc, không truy
+    vấn trong popover. Code `MacBackgroundJobs`; test `mac-activity-background.json`, `mac-activity.json`.
+  - Một lượt Common Photos do helper chạy hoặc đã xong trong helper không còn hiện **Interrupted**: khi app không chạy lượt
+    đó, trạng thái lấy từ DB, và lượt đang được helper giữ (claim) hiện là đang chạy.
 - Không có màn hình thứ hai / Secondary Viewer (D14).
 
 ## 6. Toàn màn hình

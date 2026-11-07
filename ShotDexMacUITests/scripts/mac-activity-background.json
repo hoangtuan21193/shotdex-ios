@@ -1,0 +1,56 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "onServer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Checking On Server, Checking · 40 of 226",
+   "type": "button",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "menu",
+   "text": "Window > Activity"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Background",
+   "type": "staticText"
+  },
+  {
+   "action": "assertExists",
+   "label": "Matching photos with the server (SHA-256), Checking · 40 of 226",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-activity-background"
+  },
+  {
+   "action": "dump",
+   "name": "01-activity-background"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  }
+ ]
+}
