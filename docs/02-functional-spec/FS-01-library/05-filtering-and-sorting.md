@@ -113,13 +113,16 @@ Mục đích: tìm ảnh/video nặng nhất để dọn chỗ. Người dùng c
 - Ảnh và video sắp chung một danh sách; bộ lọc Photos Only / Videos Only vẫn áp trước.
 - Mac: popover `Sort By` có field thứ ba **File Size**; hàng `Order` đổi nhãn thành **Largest First /
   Smallest First** khi field là File Size (Newest First ↔ Largest First, cùng một công tắc).
-- Hiệu năng: 55.000 hàng sắp theo một cột không có chỉ mục là quét toàn bảng. Thêm migration
-  index `idx_photo_metadata_fileSize` (migration `v63-fileSizeIndex`) (chỉ mục, không đụng dữ liệu người dùng — BD-02 không vướng).
+- Hiệu năng: **không thêm index** cho `fileSize`. Đo 2026-11-07 trên 55.000 hàng (10 % `fileSize` rỗng, SQLite
+  3.54, đúng cột và `ORDER BY` của `gridItems`): sắp toàn bảng 82 ms; có index `fileSize` thì 100 ms — index không
+  phủ cột nên mỗi hàng thêm một lần tra rowid, và hai khoá phá hoà vẫn phải sắp. Script đo:
+  `docs/_plans/2026-11-07-fs0105-sort-file-size.md` §6.
 
 Đã chốt 2026-11-07:
 
 - **Scrubber chỉ hiện ở bốn thứ tự ngày** (Date Taken / Date Modified); File Size và các thứ tự thông số
-  ẩn nó.
+  ẩn nó. Cùng lý do, lưới Library trên **Mac bỏ tiêu đề ngày** khi thứ tự không phải ngày (thêm 2026-11-07 sau
+  review: chia theo ngày trên danh sách sắp theo dung lượng ra một tiêu đề cho gần như mỗi ảnh).
 - **Chỉ Library.** Album Detail / Smart Album giữ `AlbumSortOrder` như cũ.
 - **Board:** `MAC_MenuBar` (View ▸ Sort By) vẽ lại thành 6 dòng phẳng như code (`menuOrders`: Date Taken
   Newest/Oldest, Date Modified Newest/Oldest, File Size Largest/Smallest). `IP_MenuBar` là thiết kế đi trước
@@ -153,15 +156,16 @@ lớn hơn B), D video 210 MB (2025-12-24), E `fileSize` NULL (2026-06-10), F `f
 | AC-S5 | `SortOption` | đọc `menuOrders` | 6 phần tử, hai phần tử cuối là `.fileSizeLargest`, `.fileSizeSmallest`; cả hai có `photoKitSortKey == nil` | ⚠️ chưa có — `SortOptionTests.menuOffersFileSize` |
 | AC-S6 | `UserDefaults[librarySort] = "fileSizeLargest"` | tạo `LibraryModel` mới | `model.sort == .fileSizeLargest` (không rơi về mặc định) | ⚠️ chưa có — `LibraryModelSortTests.restoresFileSize` |
 | AC-S7 | lưới đọc từ index + 2 placeholder iCloud chưa index | `.fileSizeLargest` | placeholder nằm sau mọi hàng có `fileSize`, kể cả NULL | ⚠️ chưa có — `LibraryModelSortTests.placeholdersLast` |
-| AC-S8 | DB sau migration | `EXPLAIN QUERY PLAN` câu sắp `.fileSizeLargest` không lọc | dùng `idx_photo_metadata_fileSize`, không `SCAN` + `USE TEMP B-TREE FOR ORDER BY` | ⚠️ chưa có — `DatabaseTests.fileSizeSortUsesIndex` |
+| AC-S8 | 55.000 hàng, 10 % `fileSize` rỗng | sắp `.fileSizeLargest` / `.fileSizeSmallest` toàn bảng | ≤ 150 ms mỗi chiều trên Mac M-series; không có migration index | số đo trong plan §6 (82 / 83 ms) |
 | AC-S9 | Mac popover, sort = Date Taken / Newest First | chọn field File Size | `library.sort == .fileSizeLargest`; hàng Order hiện `Largest First` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeField` |
 | AC-S10 | Mac, sort = `.fileSizeSmallest` | `LibrarySortField(sort)` + `isNewestFirst` | `.fileSize`, `false` | ⚠️ chưa có — `MacFilterPopoverLogicTests.fileSizeDirection` |
 | AC-S11 | iPhone 17 (26.5), Library | mở Filter and sort ▸ Sort By, chọn File Size (Largest) | menu có 6 dòng, dấu ✓ ở dòng vừa chọn; ô dưới cùng của lưới (chỗ lưới mở ra) là ảnh lớn nhất demo library | ⚠️ chưa có — `ShotDexUITests/scripts/library-sort-filesize.json` + ảnh |
 | AC-S12 | như AC-S11 trên iOS 18.6 (nhánh pre-26) và iPad 13" | cùng thao tác | cùng kết quả; menu không cắt chữ | ⚠️ chưa có — cùng script, 2 máy + ảnh |
 | AC-S13 | iPhone 17, sort = File Size (Largest), cuộn lưới | đổi Sort By về Date Taken (Newest) | trước: không có scrubber mép phải; sau: scrubber hiện | ⚠️ chưa có — ảnh trước/sau từ AC-S11 |
+| AC-S15 | Mac, Library, sort = File Size (Largest) | mở lưới | không có tiêu đề ngày; đổi về Date Taken thì tiêu đề ngày hiện lại | ⚠️ chưa có — ảnh `mac-shot` trước/sau |
 | AC-S14 | board `IP_MenuBar`, `MAC_MenuBar`, `MAC_FilterPopover` | `Tools/design-board render` | Mac menu: 6 dòng phẳng như `menuOrders`; iPad menu: field Date Taken · Date Modified · File Size; popover có File Size; không còn Name/ISO/Focal Length/Aperture/Shutter Speed | ⚠️ chưa có — PNG render + `design-parity` |
 
-**Chưa chứng minh được:** AC-S1…AC-S14 — chưa có code.
+**Chưa chứng minh được:** AC-S1…AC-S15 — chưa có code.
 
 ### 7.2 Phần cũ
 

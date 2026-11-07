@@ -63,7 +63,7 @@ iCloud. Thanh cuộn ngày bị ẩn khi đang sắp theo dung lượng. Album D
 |---|---|---|---|
 | 1 | `SortOption` + `orderClause` | S1, S2, S5 | `LibraryQueriesSortTests.fileSizeLargest/Smallest`, `SortOptionTests.menuOffersFileSize` |
 | 2 | khoá hành vi có sẵn bằng test | S3, S4, S6, S7 | `fileSizeRespectsFilter`, `fileSizeIsStable`, `LibraryModelSortTests.restoresFileSize/placeholdersLast` |
-| 3 | migration index | S8 | `DatabaseTests.fileSizeSortUsesIndex` (EXPLAIN QUERY PLAN) |
+| 3 | ~~migration index~~ bỏ — đo ở §6a | S8 | số đo §6a |
 | 4 | ẩn scrubber | S13 | ảnh trước/sau |
 | 5 | Mac: `LibrarySortField.fileSize`, nhãn Order, cột Size | S9, S10 | `MacFilterPopoverLogicTests.fileSizeField/fileSizeDirection` + ảnh `mac-shot` |
 | 6 | board iPad/Mac theo quyết định mục 7, publish lên canvas | S14 | `Tools/design-board render` + `design-parity` |
@@ -80,6 +80,44 @@ Gộp S1/S2/S5 vào một commit: ba AC là một thay đổi enum, tách ra th�
 | Bảng Mac: bỏ sắp cục bộ cột Size → giá trị `mac.library.localSort` đã lưu = `size` | thấp | đọc lại thì đổi sang `SortOption` tương ứng, hoặc bỏ qua (app chưa release, không back-compat) |
 | Duo 669pt: menu thêm 2 dòng | thấp | menu hệ thống tự cuộn; chụp ở bước 7 nếu đủ giờ |
 | Index đầu chưa xong | đã chốt | như thứ tự ISO, không UI mới |
+
+### 6a. Task 3 bỏ — số đo (2026-11-07)
+
+Review `data-migration` báo index làm chậm truy vấn; đo lại xác nhận (`python3 -I bench.py`, SQLite 3.54, 55.000
+hàng, 10 % `fileSize` rỗng):
+
+| | DESC (Largest) | ASC (Smallest) | Plan |
+|---|---|---|---|
+| không index | 82 ms | 83 ms | `SCAN` + `USE TEMP B-TREE FOR ORDER BY` |
+| index `fileSize` | 100 ms | 96 ms | `SCAN USING INDEX` + `USE TEMP B-TREE FOR LAST 2 TERMS OF ORDER BY` |
+
+Index không phủ cột: mỗi hàng thêm một lần tra rowid, hai khoá phá hoà vẫn phải sắp. Không ship `v63`.
+
+```python
+import sqlite3,random,time,os
+print(sqlite3.sqlite_version)
+def run(index):
+    db=sqlite3.connect(":memory:")
+    db.execute("""CREATE TABLE photo_metadata(assetId TEXT PRIMARY KEY, creationDate INT, mediaType INT, originalFilename TEXT,
+      iso INT, aperture REAL, shutterSpeedDisplay TEXT, focalLength REAL, equivalentFocalLength REAL, width INT, height INT, fileSize INT,
+      cameraModel TEXT, lensModel TEXT, exifStatus TEXT, isHidden INT DEFAULT 0, padding TEXT)""")
+    db.execute("CREATE INDEX c ON photo_metadata(creationDate)")
+    random.seed(1)
+    rows=[(f"{random.getrandbits(64):016x}/L0/001", random.randint(1.4e9,1.8e9),1,f"IMG_{i}.HEIC",100,1.8,"1/100",50.0,50.0,6000,4000,
+           None if random.random()<0.1 else random.randint(1e5,5e8),"X-T5","XF 23",'indexed',0,"x"*300) for i in range(55000)]
+    db.executemany("INSERT INTO photo_metadata VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",rows)
+    if index: db.execute("CREATE INDEX idx ON photo_metadata(fileSize)")
+    db.execute("ANALYZE")
+    for d in ["DESC","ASC"]:
+        q=f"""SELECT assetId, creationDate, mediaType, originalFilename, iso, aperture, shutterSpeedDisplay, focalLength, equivalentFocalLength, width, height, fileSize
+              FROM photo_metadata WHERE isHidden = 0 ORDER BY fileSize {d} NULLS LAST, creationDate DESC NULLS LAST, assetId ASC"""
+        plan=[r[3] for r in db.execute("EXPLAIN QUERY PLAN "+q)]
+        ts=[]
+        for _ in range(5):
+            t=time.perf_counter(); db.execute(q).fetchall(); ts.append((time.perf_counter()-t)*1000)
+        print("index" if index else "noidx", d, f"{min(ts):.0f}ms", plan)
+run(False); run(True)
+```
 
 ## 7. Đã quyết (2026-11-07)
 
