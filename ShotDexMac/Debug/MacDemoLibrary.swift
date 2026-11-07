@@ -258,6 +258,14 @@ enum MacDemoLibrary {
         try? dependencies.fileServers.markUsed(server.id, folder: "photos/Uploads", usesDateFolders: false)
     }
 
+    /// `-ShotDexUploadFiles /a.jpg,/b.jpg`: Upload… in the server browser
+    /// takes these files instead of asking with an open panel.
+    static var uploadFiles: [URL]? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexUploadFiles"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1].split(separator: ",").map { URL(fileURLWithPath: String($0)) }
+    }
+
     /// `-ShotDexServerPath Tuan/2025`: the folder the server browser opens
     /// on, relative to the source's root.
     static var serverPath: String? {

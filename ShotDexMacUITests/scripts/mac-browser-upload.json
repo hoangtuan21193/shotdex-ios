@@ -1,0 +1,154 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "serverBrowser",
+    "-ShotDexServerPath",
+    "BrowserUpload",
+    "-ShotDexUploadFiles",
+    "/private/tmp/claude-501/-Users-hoangtuan-Project-shotdex-ios/3cb42d2b-000e-46ff-bc8a-0e80aae0bf34/scratchpad/upfiles/IMG_0001.JPG,/private/tmp/claude-501/-Users-hoangtuan-Project-shotdex-ios/3cb42d2b-000e-46ff-bc8a-0e80aae0bf34/scratchpad/upfiles/IMG_0003.JPG"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rescan",
+   "type": "button",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-browser"
+  },
+  {
+   "action": "dump",
+   "name": "01-browser"
+  },
+  {
+   "action": "click",
+   "label": "New Folder",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Trip"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-newfolder"
+  },
+  {
+   "action": "assertExists",
+   "label": "Trip"
+  },
+  {
+   "action": "click",
+   "label": "New Folder",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Trip"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "An item named “Trip” already exists."
+  },
+  {
+   "action": "screenshot",
+   "name": "03-taken"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Upload…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03b-after-upload-click"
+  },
+  {
+   "action": "dump",
+   "name": "03b"
+  },
+  {
+   "action": "waitFor",
+   "label": "Upload",
+   "type": "button",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "04-sheet"
+  },
+  {
+   "action": "click",
+   "label": "Upload",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove from List",
+   "type": "button",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-done"
+  }
+ ]
+}

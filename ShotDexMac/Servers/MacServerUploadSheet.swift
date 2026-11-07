@@ -1,11 +1,19 @@
 import AppKit
+import ImageIO
 import GRDB
 import SwiftUI
 
 /// File › Upload to Server… ⇧⌘U on the selected photos (FS-15.02, Mac).
 struct MacUploadRequest: Identifiable, Equatable {
     let id = UUID()
-    let photoIds: [String]
+    var photoIds: [String] = []
+    /// Upload… in a server browser: files on this Mac, not library photos.
+    var files: [URL] = []
+    /// The browser's server and open folder: the sheet is locked to them.
+    var serverId: String?
+    var folder: String?
+
+    var isLocked: Bool { serverId != nil }
 }
 
 /// Keeps the Mac awake while files go up, as the iPhone keeps its screen
@@ -50,7 +58,37 @@ extension ServerUploadModel {
     /// Photos, one call at a time per connection. Photos the Mac holds only
     /// as files (folders, servers) are not part of an upload yet.
     @MainActor
-    static func mac(photoIds: [String], dependencies: MacDependencies) -> ServerUploadModel {
+    static func mac(request: MacUploadRequest, dependencies: MacDependencies) -> ServerUploadModel {
+        guard !request.files.isEmpty else { return mac(photoIds: request.photoIds, initialServerId: request.serverId, dependencies: dependencies) }
+        // Files from this Mac: each is its own item under a run-only id (no path kept in the
+        // history), read off the main actor, copied into the work folder as it goes.
+        let files = request.files.map { (id: "file:\(UUID().uuidString)", url: $0) }
+        return ServerUploadModel(
+            assetIds: files.map(\.id),
+            initialServerId: request.serverId,
+            fileServers: dependencies.fileServers,
+            uploads: dependencies.serverUploads,
+            index: nil,
+            screenHold: MacUploadHold(),
+            listEntries: { _ in await Task.detached(priority: .userInitiated) { MacFileUpload.entries(files) }.value },
+            makeClient: Self.clientFactory,
+            connectionLock: dependencies.connectionLock,
+            exporter: MacFileUpload.Exporter(sources: Dictionary(files.map { ($0.id, $0.url) }, uniquingKeysWith: { first, _ in first })),
+            deleteAssets: { _ in }
+        )
+    }
+
+    /// Demo: only the local test server is reachable (`MacDemoUpload.loopbackOnly`).
+    @MainActor
+    private static var clientFactory: (FileServer, String) -> any RemoteFileClient {
+        #if DEBUG
+        if MacDemoLibrary.isOn { return MacDemoUpload.loopbackOnly }
+        #endif
+        return RemoteFileClientFactory.make(for:password:)
+    }
+
+    @MainActor
+    static func mac(photoIds: [String], initialServerId: String? = nil, dependencies: MacDependencies) -> ServerUploadModel {
         var listEntries: @Sendable ([String]) async -> [AssetUploadEntry] = { ids in
             await Task.detached(priority: .userInitiated) { PhotoKitOriginalExporter.entries(for: ids) }.value
         }
@@ -65,6 +103,7 @@ extension ServerUploadModel {
         #endif
         return ServerUploadModel(
             assetIds: photoIds,
+            initialServerId: initialServerId,
             fileServers: dependencies.fileServers,
             uploads: dependencies.serverUploads,
             index: dependencies.serverUploadIndex,
@@ -100,9 +139,20 @@ struct MacServerUploadSheet: View {
         }
         .task {
             guard model == nil, !Task.isCancelled else { return }
-            let made = ServerUploadModel.mac(photoIds: request.photoIds, dependencies: dependencies)
-            model = made
+            let made = ServerUploadModel.mac(request: request, dependencies: dependencies)
             await made.load()
+            guard !Task.isCancelled else { return }
+            // From a server browser: straight into the folder it has open — a one-off,
+            // so the connection keeps its own starting folder and Date Folders.
+            if let folder = request.folder {
+                made.folder = folder
+                made.usesDateFolders = false
+                made.remembersChoice = false
+            }
+            // Files from this Mac have no edited version and no RAW pairing to pick.
+            if !request.files.isEmpty { made.fileKind = .allOriginals }
+            // Shown once the destination is right, never the remembered one first.
+            model = made
         }
         // Closed before Upload: nothing started, the browse login and the hold go.
         // After Upload the batch belongs to Activity and keeps going.
@@ -140,22 +190,32 @@ struct MacServerUploadSheet: View {
             .padding(.horizontal, 20).padding(.bottom, 16)
         } else {
             Form {
-                Picker(String(localized: "Connection", comment: "Mac upload: which server"),
-                       selection: Binding(get: { model.selectedServerId }, set: { model.select($0) })) {
-                    ForEach(model.servers.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) { server in
-                        Text(server.name).tag(Optional(server.id))
+                if request.isLocked {
+                    // From a server browser: that server, the folder it has open.
+                    LabeledContent(String(localized: "Connection", comment: "Mac upload: which server"), value: model.selectedServer?.name ?? "")
+                    LabeledContent(String(localized: "Folder", comment: "Mac upload: the folder on the server"), value: model.folder.isEmpty ? "/" : model.folder)
+                } else {
+                    Picker(String(localized: "Connection", comment: "Mac upload: which server"),
+                           selection: Binding(get: { model.selectedServerId }, set: { model.select($0) })) {
+                        ForEach(model.servers.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) { server in
+                            Text(server.name).tag(Optional(server.id))
+                        }
                     }
+                    TextField(String(localized: "Folder", comment: "Mac upload: the folder on the server"), text: $model.folder,
+                              prompt: Text("Top of the share", comment: "Mac upload: empty folder = the share's top"))
                 }
-                TextField(String(localized: "Folder", comment: "Mac upload: the folder on the server"), text: $model.folder,
-                          prompt: Text("Top of the share", comment: "Mac upload: empty folder = the share's top"))
+                // Locked to a browsed folder: the files go exactly there.
                 Toggle(String(localized: "Date Folders", comment: "Mac upload: year and day folders"), isOn: $model.usesDateFolders)
+                    .disabled(request.isLocked)
                 Text(model.usesDateFolders
                      ? String(localized: "Photos go into year and day folders inside this folder, by the day they were taken.",
                               comment: "Mac upload: Date Folders on")
                      : String(localized: "Photos go straight into this folder.", comment: "Mac upload: Date Folders off"))
                     .font(.caption).foregroundStyle(.secondary)
-                Picker(String(localized: "Files", comment: "Mac upload: which files of each photo"), selection: $model.fileKind) {
-                    ForEach(ServerUploadFileKind.allCases) { Text($0.title).tag($0) }
+                if request.files.isEmpty {
+                    Picker(String(localized: "Files", comment: "Mac upload: which files of each photo"), selection: $model.fileKind) {
+                        ForEach(ServerUploadFileKind.allCases) { Text($0.title).tag($0) }
+                    }
                 }
                 summaryLine(model)
             }
@@ -215,10 +275,58 @@ struct MacServerUploadSheet: View {
     /// Upload: the batch goes to Activity, which opens on it — the window
     /// stays usable while the files go up (MAC_STYLE: long work never in a sheet).
     private func upload(_ model: ServerUploadModel) {
+        // Locked to a browser's connection: that one or none, never the last one used.
+        if let serverId = request.serverId, model.selectedServerId != serverId { NSSound.beep(); return }
         guard dependencies.uploads.start(model) else { NSSound.beep(); return }
         close()
         MacWindowRequest.showsActivity = true
         NotificationCenter.default.post(name: .macShowActivity, object: nil)
+    }
+}
+
+/// Upload… in a server browser (FS-19.03 §4): files on this Mac, each its
+/// own item. Never the user's file itself — a copy goes to the work folder,
+/// which the session empties as it goes.
+enum MacFileUpload {
+    static let rawExtensions: Set<String> = ["ARW", "CR2", "CR3", "NEF", "RAF", "DNG", "ORF", "RW2", "PEF", "SRW", "3FR", "IIQ"]
+
+    /// Each file as an upload entry. The date is when it was taken (EXIF,
+    /// header only), else when the file was made: Date Folders and the
+    /// server copy's date follow the shot, not the copy onto this Mac.
+    static func entries(_ files: [(id: String, url: URL)]) -> [AssetUploadEntry] {
+        files.map { id, url in
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey])
+            let date = takenDate(url) ?? values?.creationDate ?? values?.contentModificationDate ?? Date()
+            let file = AssetUploadFile(key: "file", filename: url.lastPathComponent,
+                                       isRAW: rawExtensions.contains(url.pathExtension.uppercased()), role: .original,
+                                       estimatedBytes: Int64(values?.fileSize ?? 0))
+            return AssetUploadEntry(assetId: id, captureDate: date, files: [file], takenAt: date)
+        }
+    }
+
+    private static func takenDate(_ url: URL) -> Date? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
+              let text = exif[kCGImagePropertyExifDateTimeOriginal] as? String else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        return formatter.date(from: text)
+    }
+
+    /// Never the user's file itself: a copy under a fresh name, which the
+    /// session deletes once it is up.
+    struct Exporter: AssetFileExporting {
+        let sources: [String: URL]
+
+        func export(assetId: String, file: AssetUploadFile, into directory: URL) async throws -> URL {
+            guard let source = sources[assetId] else { throw CocoaError(.fileNoSuchFile) }
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let copy = directory.appendingPathComponent("\(UUID().uuidString).\(source.pathExtension)")
+            try FileManager.default.copyItem(at: source, to: copy)
+            return copy
+        }
     }
 }
 

@@ -42,8 +42,14 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
 
 - Chạm nguồn server ở sidebar → màn duyệt kiểu Files (FS-17.01 §2): đường dẫn, ‹ ›, Icons/List, Sort By, New Folder,
   **Rescan**, **Upload…**, chân "1 folder · 36 photos · 2 other files hidden" và "15.21 GB free of 152.09 GB".
-- *Ngoại lệ tạm trên Mac (2026-11-03, FS-19.08 T9a):* **Upload…**, **New Folder** và **Show Inspector** vẽ nhưng mờ —
-  Mac chưa có sheet upload, luồng đặt tên folder, hay nội dung inspector cho file server. Ô search lọc theo tên trong folder đang mở.
+- Mac (hàng 25d, 2026-11-08): **New Folder** hỏi tên (luật FS-17.01 §4b: không rỗng, không "/" hay "\\", không bắt đầu ".", không kết thúc "." hay dấu cách; tên bị từ chối thì hộp
+  đặt tên mở lại giữ tên đã gõ, lý do ở dòng dưới; ở gốc SMB nút mờ; trùng tên →
+  "An item named “X” already exists."), tạo trong folder đang mở, màn **ở lại** đó và folder mới hiện đúng chỗ. **Upload…**
+  (nút nổi bật) mở hộp chọn file của macOS (ảnh, video, RAW trên Mac này) → sheet upload **khoá** vào server và folder đang mở
+  (Connection, Folder, Date Folders chỉ đọc — Date Folders tắt; không ghi đè folder/Date Folders mà kết nối nhớ; kết nối của màn
+  duyệt đã mất thì Upload không chạy; ô Files ẩn — file trên Mac gửi nguyên); ngày của file là ngày chụp EXIF, không có thì ngày tạo file → lô chạy trong Activity (FS-15.02 §9); xong thì folder đang mở
+  liệt kê lại. File gốc trên Mac không bao giờ bị đụng: một bản sao vào thư mục tạm của lô, lô xoá bản sao đó.
+  **Show Inspector** vẫn mờ (chưa có nội dung cho file server). Ô search lọc theo tên trong folder đang mở.
 - Ảnh trong màn duyệt là **ảnh của thư viện**: cùng ô, cùng glyph sao/cờ, cùng menu như ở All Photos.
 - **Không có Import to Library** ở thiết bị nào (D5). Ai cần ảnh trong Photos dùng **Save to Photos** — một lệnh **xuất**
   (menu Share/Export, như xuất ảnh đã sửa): chép bản gốc vào Photos. Asset mới là một bản sao của **cùng ảnh** khi băm

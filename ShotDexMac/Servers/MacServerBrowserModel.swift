@@ -113,6 +113,8 @@ final class MacServerBrowserModel {
     /// File › Find Common Photos… or the context menu asked for the sheet
     /// (FS-19.08 §4); the screen presents it from this (T10).
     var commonPhotosRequest: MacCommonPhotosRequest?
+    /// Upload…: files picked on this Mac, going into the open folder (FS-19.03 §4).
+    var uploadRequest: MacUploadRequest?
 
     @ObservationIgnored private let client: any RemoteFileClient
     @ObservationIgnored private let refresh: ServerSourceRefresh
@@ -469,6 +471,41 @@ final class MacServerBrowserModel {
     }
 
     private func remotePath(_ path: String) -> String { ServerUploadPath.join(server.folder, path) }
+
+    /// The open folder as the server names it: where Upload… puts files.
+    var openFolderOnServer: String { remotePath(path) }
+
+    /// New Folder (FS-17.01 §4b): a folder in the open one, which the
+    /// browser stays on; the new folder shows in place. Nil when made, else
+    /// what went wrong, in words.
+    func createFolder(named raw: String) async -> String? {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Also no "\\" (a separator on SMB), control characters, or a trailing dot or space (Windows drops them).
+        guard !name.isEmpty, !name.contains("/"), !name.contains("\\"), !name.hasPrefix("."),
+              !name.hasSuffix("."), !name.hasSuffix(" "),
+              !name.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
+            return String(localized: "A folder name can’t be empty, contain “/” or “\\”, start with “.”, or end with “.” or a space.",
+                          comment: "Mac server browser: New Folder name not allowed")
+        }
+        let folder = path
+        if contents(of: folder)?.folders.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) == true {
+            return String(localized: "An item named “\(name)” already exists.", comment: "Mac server browser: New Folder name taken")
+        }
+        do {
+            try await connect()
+            try await client.createDirectory(remotePath(ServerUploadPath.join(folder, name)))
+        } catch {
+            await dropSessionIfLost(error)
+            return (error as? RemoteFileError)?.localizedDescription ?? error.localizedDescription
+        }
+        await load(folder, force: true)
+        return nil
+    }
+
+    /// The open folder listed again: after an upload into it.
+    func reloadOpenFolder() {
+        start { await self.load(self.path, force: true) }
+    }
 
     private func connect() async throws {
         guard !isClosed else { throw CancellationError() }

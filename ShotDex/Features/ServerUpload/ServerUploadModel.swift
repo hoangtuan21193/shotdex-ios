@@ -60,6 +60,9 @@ final class ServerUploadModel {
     var folder = ""
     /// Year/day subfolders by capture date (FS-15.02 §3).
     var usesDateFolders = false
+    /// Whether this upload's folder and Date Folders become the connection's
+    /// next starting point. Off for a one-off upload into a browsed folder.
+    var remembersChoice = true
     var fileKind: ServerUploadFileKind = .allOriginals {
         didSet { updatePlanSummary() }
     }
@@ -220,7 +223,7 @@ final class ServerUploadModel {
                 )
             }
         }
-        try? fileServers.markUsed(server.id, folder: folder, usesDateFolders: usesDateFolders)
+        if remembersChoice { try? fileServers.markUsed(server.id, folder: folder, usesDateFolders: usesDateFolders) }
         run(items, on: server)
     }
 

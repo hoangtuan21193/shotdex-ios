@@ -63,6 +63,10 @@ private struct MacServerBrowserContent: View {
     @Environment(\.openSettings) private var openSettings
     @FocusState private var gridFocused: Bool
     @State private var hasPreselected = false
+    @State private var isNamingFolder = false
+    @State private var newFolderName = ""
+    /// Why the last name was refused, shown in the name box asked again.
+    @State private var nameProblem: String?
     @State private var rightClickMonitor: Any?
     /// Runs seen finished, so each ending refreshes the listing once.
     @State private var knownFinished: Set<String> = []
@@ -106,6 +110,33 @@ private struct MacServerBrowserContent: View {
         .focusedSceneValue(\.macServerBrowser, model)
         .sheet(item: $model.commonPhotosRequest) { request in
             MacCommonPhotosSheet(request: request, server: model.server)
+        }
+        .sheet(item: $model.uploadRequest) { request in
+            MacServerUploadSheet(request: request) { model.uploadRequest = nil }
+        }
+        // New Folder: a name, then the folder made where the browser stands (it stays there).
+        .alert(String(localized: "New Folder", comment: "Mac server browser: name a new folder, title"), isPresented: $isNamingFolder) {
+            TextField(String(localized: "Name", comment: "Mac server browser: new folder name field"), text: $newFolderName)
+            Button(String(localized: "Create", comment: "Mac server browser: make the folder")) {
+                let name = newFolderName
+                Task {
+                    // Refused or failed: asked again with the name kept and the reason under it.
+                    if let problem = await model.createFolder(named: name) {
+                        nameProblem = problem
+                        newFolderName = name
+                        isNamingFolder = true
+                    }
+                }
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(String(localized: "Cancel", comment: "Mac server browser: don't make a folder"), role: .cancel) {}
+        } message: {
+            Text(nameProblem ?? String(localized: "In “\(model.title(for: model.path))” on \(model.sourceName).",
+                                       comment: "Mac server browser: where New Folder makes it"))
+        }
+        // An upload into this connection ended: Rescan, so the new files are indexed and get thumbnails.
+        .onChange(of: dependencies.uploads.entries.filter { $0.model.stage == .finished && $0.model.selectedServerId == model.server.id }.count) {
+            model.rescan()
         }
         // Show CSV in Browser: open the run's destination here.
         .onChange(of: dependencies.commonPhotos.browserRequest?.path, initial: true) {
@@ -501,6 +532,27 @@ private struct MacServerBrowserContent: View {
 
     // MARK: Toolbar
 
+    /// Upload…: photos and videos picked on this Mac (an open panel, as
+    /// Finder would) go to the upload sheet, locked to this server and folder.
+    private func pickFilesToUpload() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.image, .movie, .rawImage]
+        panel.prompt = String(localized: "Choose", comment: "Mac server browser: the open panel's button for Upload…")
+        panel.message = String(localized: "Choose photos to upload into “\(model.title(for: model.path))” on \(model.sourceName).",
+                               comment: "Mac server browser: Upload… open panel message")
+        #if DEBUG
+        // `-ShotDexUploadFiles a.jpg,b.jpg`: the panel's answer, for a test.
+        if let files = MacDemoLibrary.uploadFiles {
+            model.uploadRequest = MacUploadRequest(files: files, serverId: model.server.id, folder: model.openFolderOnServer)
+            return
+        }
+        #endif
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+        model.uploadRequest = MacUploadRequest(files: panel.urls, serverId: model.server.id, folder: model.openFolderOnServer)
+    }
+
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
@@ -521,13 +573,13 @@ private struct MacServerBrowserContent: View {
             .pickerStyle(.segmented)
         }
         ToolbarItemGroup(placement: .primaryAction) {
-            // New Folder and the inspector are drawn and not offered yet
-            // (FS-19.03 §4: the Mac has no folder-naming flow, and the
-            // inspector has nothing to show for a server file).
-            Button { } label: {
+            // The inspector is drawn and not offered yet: it has nothing to show for a server file (FS-19.03 §4).
+            Button { newFolderName = ""; nameProblem = nil; isNamingFolder = true } label: {
                 Label(String(localized: "New Folder", comment: "Mac server browser toolbar"), systemImage: "folder.badge.plus")
             }
-            .disabled(true)
+            // The top of an SMB connection lists shares, which ShotDex can't make (FS-17.01 §4).
+            .disabled(model.server.transferProtocol == .smb && model.openFolderOnServer.isEmpty)
+            .help(String(localized: "New folder in “\(model.title(for: model.path))”", comment: "Mac server browser: New Folder tooltip"))
             Button { model.rescan() } label: {
                 Label(String(localized: "Rescan", comment: "Mac server browser toolbar: compare the server's listing again"),
                       systemImage: "arrow.clockwise")
@@ -547,14 +599,14 @@ private struct MacServerBrowserContent: View {
         }
         groupGap
         ToolbarItem(placement: .primaryAction) {
-            // Upload to Server… (FS-15) has no Mac sheet yet (FS-19.03 §4).
-            Button { } label: {
+            // Upload…: files from this Mac into the open folder (FS-19.03 §4), through the upload sheet.
+            Button { pickFilesToUpload() } label: {
                 Label(String(localized: "Upload…", comment: "Mac server browser toolbar: upload to this folder"),
                       systemImage: "arrow.up.to.line")
                     .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(true)
+            .help(String(localized: "Upload files from this Mac into “\(model.title(for: model.path))”", comment: "Mac server browser: Upload… tooltip"))
             .accessibilityLabel(String(localized: "Upload to Server…", comment: "Mac server browser toolbar"))
         }
     }
