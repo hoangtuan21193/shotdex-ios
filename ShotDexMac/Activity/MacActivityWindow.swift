@@ -1,28 +1,28 @@
 import SwiftUI
 
-/// Window › Activity ⌥⌘0 (board `MAC_Activity`, FS-18.01 §4): every
-/// long-running job as one row — going first, then waiting, then over —
-/// with its own controls. Its own window, never a sheet; closing it stops
-/// nothing. Common-photos runs are its first producer (FS-19.08 §7).
-struct MacActivityWindow: View {
-    static let id = "activity"
-    /// Board `MAC_Activity`: 900×560.
-    static let size = CGSize(width: 900, height: 560)
+/// Activity (board `MAC_Activity`, FS-18.01 §4): every long-running job as
+/// one row — going first, then waiting, then over — with its own controls.
+/// A popover from the toolbar's Activity button and Window › Activity ⌥⌘0,
+/// not a window of its own (user 2026-11-07: fewer windows); closing it
+/// stops nothing. Common-photos runs are its first producer (FS-19.08 §7).
+struct MacActivityView: View {
+    /// Board `MAC_Activity`: the popover's size.
+    static let size = CGSize(width: 680, height: 520)
+    /// Closes the popover: a button that opens a window leaves nothing over it.
+    var close: () -> Void = {}
+    /// The store's first read is in: until then "No Activity" would be a lie.
+    @State private var hasRead = false
 
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openWindow) private var openWindow
     /// What the store says of each listed run, read off the main actor when
     /// runs start or end — not on every progress tick.
     @State private var stored: [String: Stored] = [:]
-    @State private var stopping: LongRunningJob?
-    /// The Stop question's words, worked out once when it opens.
-    @State private var stopText = (title: "", message: "")
-    /// Remove from List… / Remove Finished from List… asked: these runs.
-    @State private var removing: [String] = []
     /// Keep gathering's sets (FS-19.08 §6c), read with the runs.
     @State private var watchRows: [CommonPhotosWatchRow] = []
-    /// Stop Gathering asked for this set.
-    @State private var stoppingWatch: CommonPhotosWatchRow?
+    /// The questions a row asks (Stop, Stop Gathering, Remove from List):
+    /// held and shown by the window, not the popover, which closes first.
+    let prompts: MacActivityPrompts
 
     struct Stored: Sendable {
         var run: CommonPhotosRun
@@ -34,7 +34,9 @@ struct MacActivityWindow: View {
 
     var body: some View {
         Group {
-            if jobs.isEmpty && watchRows.isEmpty {
+            if !hasRead {
+                ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if jobs.isEmpty && watchRows.isEmpty {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 10) {
@@ -49,10 +51,15 @@ struct MacActivityWindow: View {
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
-        .frame(minWidth: 640, idealWidth: Self.size.width, minHeight: 360, idealHeight: Self.size.height)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Text("Activity", comment: "Mac Activity popover title: long-running jobs")
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
         .tint(MacTheme.accent)
-        .navigationTitle(String(localized: "Activity", comment: "Mac window: long-running jobs"))
         .task(id: runs.generation) { await readStore() }
         // "checked 3 min ago" and what the helper did meanwhile.
         .task {
@@ -61,52 +68,6 @@ struct MacActivityWindow: View {
                 await readStore()
             }
         }
-        .confirmationDialog(String(localized: "Stop gathering “\(stoppingWatch?.title ?? "")”?", comment: "Mac Activity: confirm Stop Gathering"),
-                            isPresented: Binding(get: { stoppingWatch != nil }, set: { if !$0 { stoppingWatch = nil } })) {
-            Button(String(localized: "Stop Gathering", comment: "Mac Activity: Keep gathering stops for the set")) {
-                if let row = stoppingWatch { stopGathering(row) }
-            }
-            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
-                .keyboardShortcut(.defaultAction)
-        } message: {
-            Text("No more photos are gathered for these folders. Runs, logs and files stay as they are.",
-                 comment: "Mac Activity: what Stop Gathering does")
-        }
-        .confirmationDialog(stopText.title, isPresented: Binding(get: { stopping != nil }, set: { if !$0 { stopping = nil } })) {
-            Button(String(localized: "Stop", comment: "Common photos: end the run for good"), role: .destructive) {
-                if let job = stopping { runs.stop(runId: job.id) }
-            }
-            Button(String(localized: "Keep Going", comment: "Common photos: do not stop the run"), role: .cancel) {}
-                .keyboardShortcut(.defaultAction)
-        } message: {
-            Text(stopText.message)
-        }
-        .alert(removeTitle, isPresented: Binding(get: { !removing.isEmpty }, set: { if !$0 { removing = [] } })) {
-            Button(String(localized: "Remove", comment: "Mac Activity: remove finished runs from the list")) {
-                runs.remove(runIds: removing)
-            }
-            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
-                .keyboardShortcut(.defaultAction)
-        } message: {
-            if removesReady {
-                Text("Nothing was moved. While Keep gathering is on, its next check lists these photos again.",
-                     comment: "Mac Activity: what Remove from List does to photos ready to move")
-            } else {
-                Text("Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.",
-                     comment: "Mac Activity: what Remove from List costs")
-            }
-        }
-    }
-
-    /// Remove from List on a row ready to move (§6c): its photos go, unmoved.
-    private var removesReady: Bool {
-        removing.count == 1 && jobs.first { $0.id == removing[0] }?.state == .readyToMove
-    }
-
-    private var removeTitle: String {
-        removing.count == 1
-            ? String(localized: "Remove this run from the list?", comment: "Mac Activity: confirm Remove from List")
-            : String(localized: "Remove \(removing.count.formatted()) finished runs from the list?", comment: "Mac Activity: confirm Remove Finished from List")
     }
 
     // MARK: Jobs
@@ -179,6 +140,7 @@ struct MacActivityWindow: View {
         // A newer read (a later generation) has the say.
         guard !Task.isCancelled else { return }
         stored = read
+        hasRead = true
     }
 
     /// Board `MAC_Activity`, Gathering (FS-19.08 §6c): first in the window.
@@ -206,19 +168,13 @@ struct MacActivityWindow: View {
     private func perform(_ action: CommonPhotosWatchRow.Action, on row: CommonPhotosWatchRow) {
         switch action {
         case .runNow: dependencies.gatherNow(watchId: row.id)
-        case .stopGathering: stoppingWatch = row
+        case .stopGathering: close(); prompts.stoppingWatch = row
         case .remove:
             try? CommonPhotosWatchStore(database: dependencies.database).remove(id: row.id)
             Task { await readStore() }
         }
     }
 
-    private func stopGathering(_ row: CommonPhotosWatchRow) {
-        try? CommonPhotosWatchStore(database: dependencies.database).stopGathering(id: row.id)
-        dependencies.watchesChanged()
-        runs.storeChanged()
-        Task { await readStore() }
-    }
 
     private var list: some View {
         ScrollView {
@@ -229,7 +185,8 @@ struct MacActivityWindow: View {
                 }
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
+        // The rows the popover has room for; the rest scroll (20 finished runs stay).
+        .frame(maxHeight: .infinity)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(nsColor: .separatorColor)))
@@ -239,13 +196,14 @@ struct MacActivityWindow: View {
 
     private var foot: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("Closing this window doesn’t stop anything — jobs keep running and show at the foot of the sidebar. A job stopped by quitting ShotDex comes back here with Resume. The last 20 finished runs stay here so you can undo them.",
-                 comment: "Mac Activity: what closing the window does")
+            Text("Closing this doesn’t stop anything — jobs keep running and show at the foot of the sidebar. A job stopped by quitting ShotDex comes back here with Resume. The last 20 finished runs stay here so you can undo them.",
+                 comment: "Mac Activity: what closing the popover does")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button(String(localized: "Remove Finished from List…", comment: "Mac Activity: remove every row that is over, after asking")) {
-                removing = jobs.filter(\.isOver).map(\.id).filter { runs.canRemove(runId: $0) }
+                close()
+                prompts.ask(removing: jobs.filter(\.isOver).map(\.id).filter { runs.canRemove(runId: $0) }, readyToMove: false)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -272,16 +230,24 @@ struct MacActivityWindow: View {
         case .pause: runs.pause(runId: job.id)
         case .resume, .tryAgain: runs.resume(runId: job.id)
         case .stop:
-            stopText = stopWords(job)
-            stopping = job
-        case .showLog: openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
+            prompts.stopText = stopWords(job)
+            close()
+            prompts.stopping = job
+        case .showLog:
+            close()
+            openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
         case .runAgain:
             runs.runAgain(runId: job.id)
+            close()
             MacMainWindow.bringForward(openWindow)
-        case .remove: if runs.canRemove(runId: job.id) { removing = [job.id] }
+        case .remove:
+            guard runs.canRemove(runId: job.id) else { return }
+            close()
+            prompts.ask(removing: [job.id], readyToMove: job.state == .readyToMove)
         case .moveReady:
             // The run's window asks before anything moves (FS-19.08 §6c).
             runs.moveAsked = job.id
+            close()
             openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
         }
     }
@@ -494,4 +460,125 @@ private struct MacActivityRow: View {
         default: .secondary
         }
     }
+}
+
+/// The toolbar's Activity button and its popover, on every screen of the
+/// window; Window › Activity ⌥⌘0 opens it in the front window.
+struct MacActivityToolbar: ViewModifier {
+    @State private var isPresented = false
+    @State private var prompts = MacActivityPrompts()
+    @Environment(\.appearsActive) private var appearsActive
+    @Environment(MacDependencies.self) private var dependencies
+
+    private var isRunning: Bool { dependencies.commonPhotos.entries.values.contains { $0.isRunning } }
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                // Beside Back and Forward: the right-hand groups keep their places.
+                ToolbarItem(placement: .navigation) {
+                    Button { isPresented.toggle() } label: {
+                        Label(String(localized: "Activity", comment: "Mac toolbar: long-running jobs"),
+                              systemImage: "clock.arrow.circlepath")
+                            // Something is running: the symbol says so (a run in this launch).
+                            .symbolVariant(isRunning ? .fill : .none)
+                            // Filled alone is hard to tell at toolbar size: the accent too.
+                            .foregroundStyle(isRunning ? AnyShapeStyle(MacTheme.accent) : AnyShapeStyle(.primary))
+                    }
+                    .accessibilityValue(isRunning ? Text("Running", comment: "Mac toolbar: Activity has a job going") : Text(verbatim: ""))
+                    .help(String(localized: "Activity (⌥⌘0)", comment: "Mac toolbar tooltip"))
+                    .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+                        MacActivityView(close: { isPresented = false }, prompts: prompts)
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macShowActivity)) { _ in
+                guard appearsActive else { return }
+                isPresented = true
+            }
+            // A question answered "no": back to the list it was asked from.
+            .onChange(of: prompts.reopens) { _, reopens in
+                guard reopens else { return }
+                prompts.reopens = false
+                isPresented = true
+            }
+            .confirmationDialog(String(localized: "Stop gathering “\(prompts.stoppingWatch?.title ?? "")”?", comment: "Mac Activity: confirm Stop Gathering"),
+                                isPresented: Binding(get: { prompts.stoppingWatch != nil }, set: { if !$0 { prompts.stoppingWatch = nil } })) {
+                Button(String(localized: "Stop Gathering", comment: "Mac Activity: Keep gathering stops for the set")) {
+                    if let row = prompts.stoppingWatch { stopGathering(row) }
+                }
+                Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) { prompts.reopens = true }
+                    .keyboardShortcut(.defaultAction)
+            } message: {
+                Text("No more photos are gathered for these folders. Runs, logs and files stay as they are.",
+                     comment: "Mac Activity: what Stop Gathering does")
+            }
+            .confirmationDialog(prompts.stopText.title, isPresented: Binding(get: { prompts.stopping != nil }, set: { if !$0 { prompts.stopping = nil } })) {
+                Button(String(localized: "Stop", comment: "Common photos: end the run for good"), role: .destructive) {
+                    if let job = prompts.stopping { dependencies.commonPhotos.stop(runId: job.id) }
+                }
+                Button(String(localized: "Keep Going", comment: "Common photos: do not stop the run"), role: .cancel) { prompts.reopens = true }
+                    .keyboardShortcut(.defaultAction)
+            } message: {
+                Text(prompts.stopText.message)
+            }
+            .alert(prompts.removeTitle, isPresented: Binding(get: { !prompts.removing.isEmpty }, set: { if !$0 { prompts.removing = [] } })) {
+                Button(String(localized: "Remove", comment: "Mac Activity: remove finished runs from the list")) {
+                    dependencies.commonPhotos.remove(runIds: prompts.removing)
+                }
+                Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) { prompts.reopens = true }
+                    .keyboardShortcut(.defaultAction)
+            } message: {
+                if prompts.removesReady {
+                    Text("Nothing was moved. While Keep gathering is on, its next check lists these photos again.",
+                         comment: "Mac Activity: what Remove from List does to photos ready to move")
+                } else if prompts.removing.count == 1 {
+                    Text("Its log is removed, so you can’t undo this run afterwards. Nothing on the server changes.",
+                         comment: "Mac Activity: what Remove from List costs, one run")
+                } else {
+                    Text("Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.",
+                         comment: "Mac Activity: what Remove from List costs")
+                }
+            }
+    }
+
+    private func stopGathering(_ row: CommonPhotosWatchRow) {
+        try? CommonPhotosWatchStore(database: dependencies.database).stopGathering(id: row.id)
+        dependencies.watchesChanged()
+        dependencies.commonPhotos.storeChanged()
+    }
+}
+
+/// The questions an Activity row asks, held by the window: the popover
+/// closes before one shows, and a toolbar may build its item more than once.
+@MainActor
+@Observable
+final class MacActivityPrompts {
+    var stopping: LongRunningJob?
+    /// The Stop question's words, worked out once when it opens.
+    var stopText = (title: "", message: "")
+    /// Remove from List… / Remove Finished from List… asked: these runs.
+    var removing: [String] = []
+    /// Remove from List on a row ready to move (§6c): its photos go, unmoved.
+    var removesReady = false
+    /// Stop Gathering asked for this set.
+    var stoppingWatch: CommonPhotosWatchRow?
+    /// A question was answered Cancel or Keep Going: the popover opens again.
+    var reopens = false
+
+    func ask(removing ids: [String], readyToMove: Bool) {
+        removesReady = ids.count == 1 && readyToMove
+        removing = ids
+    }
+
+    var removeTitle: String {
+        removing.count == 1
+            ? String(localized: "Remove this run from the list?", comment: "Mac Activity: confirm Remove from List")
+            : String(localized: "Remove \(removing.count.formatted()) finished runs from the list?", comment: "Mac Activity: confirm Remove Finished from List")
+    }
+}
+
+extension Notification.Name {
+    /// Window › Activity ⌥⌘0: the front window opens its Activity popover.
+    static let macShowActivity = Notification.Name("ShotDexMacShowActivity")
 }

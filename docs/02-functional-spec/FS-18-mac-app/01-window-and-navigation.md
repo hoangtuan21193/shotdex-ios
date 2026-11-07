@@ -83,9 +83,13 @@ sổ riêng là tuỳ chọn.
 - **Collage, Resize, Combine Photos** mở trong cửa sổ chính như Editor: panel trái của công cụ thế chỗ sidebar,
   ◀ hoặc Cancel về nơi đã mở nó.
 - **⌥⌘O** khi đang ở Editor, Collage, Resize hay Combine Photos: màn đó sang cửa sổ riêng, cửa sổ chính về nơi đã mở nó.
-- Cửa sổ riêng: Video Studio (Window › Video Studio ⌥⌘V), Settings ⌘, , Get Info ⌘I (panel), Activity ⌥⌘0,
-  Support. Cửa sổ phụ vẽ nút thu nhỏ/phóng to tắt.
-- **Activity** gom mọi việc chạy lâu (index, upload, nhập thẻ, xuất, ghép ảnh) — không bao giờ là sheet modal.
+- **Ít cửa sổ** (user 2026-11-07): chi tiết vào panel phải, danh sách việc vào popover, form vào sheet, một luồng vào một
+  trang của cửa sổ chính; cửa sổ riêng chỉ khi bắt buộc (Settings ⌘, ; Video Studio ⌥⌘V). Get Info ⌘I là panel phải của
+  Library (FS-18.02 §8). Cửa sổ phụ vẽ nút thu nhỏ/phóng to tắt.
+- **Activity** (board `MAC_Activity`, 2026-11-07) gom mọi việc chạy lâu (index, upload, nhập thẻ, xuất, ghép ảnh): một
+  **popover 680×520** từ nút **Activity** (đồng hồ vòng) ở đầu toolbar, trước ◀ ▶, có trên mọi màn của cửa sổ; Window ›
+  Activity ⌥⌘0 mở nó ở cửa sổ đang trước; Esc hay bấm ra ngoài đóng — đóng không dừng việc nào. Biểu tượng đặc khi có việc
+  đang chạy. Không bao giờ là sheet modal, không còn cửa sổ riêng.
 - Không có màn hình thứ hai / Secondary Viewer (D14).
 
 ## 6. Toàn màn hình

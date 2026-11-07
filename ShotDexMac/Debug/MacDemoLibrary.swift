@@ -58,6 +58,7 @@ enum MacDemoLibrary {
         // drive (the copy they open from) and on the NAS — three copies each.
         if section == "deleteCopies" { seedDeleteCopies(dependencies) }
         if section == "onServer" { seedOnServer(dependencies) }
+        if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {
             var recipe = PhotoEditRecipe.identity
@@ -352,6 +353,28 @@ enum MacDemoLibrary {
                     WHERE upper(m.originalFilename) LIKE '%.ARW' OR upper(m.originalFilename) LIKE '%.RAF' OR upper(m.originalFilename) LIKE '%.CR3'
                     """, arguments: [source, source, kind, now])
             }
+        }
+    }
+
+    /// `-ShotDexSection activity` (board `MAC_Activity`): nine common-photos
+    /// runs over, on a connection with no password and nothing to dial —
+    /// eight finished, one stopped — so the popover's list scrolls and each
+    /// row's buttons are there to press. Rows only, no network.
+    private static func seedActivity(_ dependencies: MacDependencies) {
+        let now = Int(Date().timeIntervalSince1970)
+        try? dependencies.database.writer.write { db in
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO file_servers (id, name, transferProtocol, host, port, username, share, folder, createdAt)
+                VALUES ('demo-activity-nas', 'NAS Home', 'smb', '127.0.0.1', 1, 'demo', 'photos', 'photos', ?)
+                """, arguments: [now])
+        }
+        let store = CommonPhotosStore(database: dependencies.database)
+        for index in 0..<9 {
+            let run = CommonPhotosRun(id: "demo-activity-\(index)", connectionId: "demo-activity-nas",
+                                      folders: ["Tuấn", "Vợ"], destination: "Shared", action: index == 4 ? .move : .copy,
+                                      createdAt: now - index * 3600)
+            try? store.start(run, items: [])
+            try? store.markState(index == 0 ? .stopped : .finished, runId: run.id, now: now - index * 3600 - 600)
         }
     }
 

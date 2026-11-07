@@ -165,6 +165,7 @@ struct MacRootWindow: View {
             }
         }
         .tint(MacTheme.accent)
+        .modifier(MacActivityToolbar())
         // Get Info answers on every screen of the window, as the old panel did.
         .modifier(MacGetInfoCommand(showsInspector: $showsInspector, pane: $inspectorPane,
                                     selectionCount: photoSelection?.ids.count ?? 0,
@@ -1590,7 +1591,9 @@ struct MacRootWindow: View {
             smartAlbumForm = MacSmartAlbumFormRequest(editing: (try? dependencies.smartAlbums.fetchAllOrdered())?
                 .first { $0.id == MacDemoLibrary.originalAlbumId })
         }
-        if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") {
+            Task { try? await Task.sleep(for: .seconds(1)); NotificationCenter.default.post(name: .macShowActivity, object: nil) }
+        }
         if MacDemoLibrary.section == "support" { openWindow(id: MacSupportWindow.id) }
         // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
         if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {

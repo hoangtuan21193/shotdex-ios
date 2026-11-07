@@ -557,13 +557,13 @@
   "MAC_Activity.dc.html": {
    "x": 13320,
    "y": 6710,
-   "w": 900,
-   "h": 560,
-   "title": "Mac · Cửa sổ Activity ⌥⌘0: mỗi việc chạy lâu một kiểu hàng — Common photos đang chạy (Show Log), bị gián đoạn (Try Again), đã xong (Clear); index/backup chưa có nguồn dữ liệu trên Mac; tweak empty = No Activity",
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Activity là popover 680×520 từ nút Activity (đồng hồ) đầu thanh công cụ cửa sổ Library, trước Back/Forward — không còn cửa sổ riêng: Gathering, mỗi việc chạy lâu một kiểu hàng — Common photos đang chạy (Show Log), chờ Move, bị gián đoạn (Try Again), Undo, đã xong; tweak empty = No Activity",
    "radius": 16
   },
   "MAC_CommonPhotosCompare.dc.html": {
-   "x": 14300,
+   "x": 14840,
    "y": 6710,
    "w": 1180,
    "h": 760,

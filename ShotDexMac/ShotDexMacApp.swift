@@ -87,15 +87,6 @@ struct ShotDexMacApp: App {
                 .environment(dependencies)
         }
         .defaultSize(width: MacCommonPhotosCompareWindow.size.width, height: MacCommonPhotosCompareWindow.size.height)
-        // Window › Activity ⌥⌘0 (FS-18.01 §4): one window, never a sheet.
-        Window(String(localized: "Activity", comment: "Mac window: long-running jobs"), id: MacActivityWindow.id) {
-            MacActivityWindow()
-                .environment(dependencies)
-        }
-        .defaultSize(width: MacActivityWindow.size.width, height: MacActivityWindow.size.height)
-        // The scene's own Window-menu item carries no shortcut; MacActivityCommands
-        // puts Activity ⌥⌘0 there instead (FS-18.01b).
-        .commandsRemoved()
         // Help › ShotDex Support… (FS-18.04 §6): one window.
         Window(String(localized: "ShotDex Support", comment: "Mac window: support"), id: MacSupportWindow.id) {
             MacSupportWindow()
@@ -246,14 +237,20 @@ struct MacSupportCommands: Commands {
     }
 }
 
-/// Window › Activity ⌥⌘0 (FS-18.01b).
+/// Window › Activity ⌥⌘0 (FS-18.01b): the front window's Activity popover.
 struct MacActivityCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(before: .windowArrangement) {
             Button(String(localized: "Activity", comment: "Mac menu: Window › Activity")) {
-                openWindow(id: MacActivityWindow.id)
+                // From a log or Compare window too: the Library window comes forward
+                // first, then its toolbar opens the popover (only the front one answers).
+                MacMainWindow.bringForward(openWindow)
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(150))
+                    NotificationCenter.default.post(name: .macShowActivity, object: nil)
+                }
             }
             .keyboardShortcut("0", modifiers: [.option, .command])
         }

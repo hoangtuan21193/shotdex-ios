@@ -1,0 +1,289 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "No Activity",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-popover"
+  },
+  {
+   "action": "dump",
+   "name": "01-popover"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "No Activity"
+  },
+  {
+   "action": "menu",
+   "text": "Window>Activity"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "No Activity",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "0",
+   "modifiers": "option,cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "No Activity",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Albums",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "No Activity",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-albums"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "activity"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "All Photos",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-runs"
+  },
+  {
+   "action": "dump",
+   "name": "03-runs"
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Log",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Remove from List…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove this run from the list?",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "04-remove-asked"
+  },
+  {
+   "action": "click",
+   "x": 0.445,
+   "y": 0.552
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove this run from the list?"
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Log",
+   "type": "button",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Show Log",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Finished from List…",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Remove Finished from List…",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-remove-finished"
+  },
+  {
+   "action": "click",
+   "x": 0.53,
+   "y": 0.552
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "No Activity",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "06-cleared"
+  }
+ ]
+}
