@@ -720,16 +720,31 @@ final class MacCommonPhotosRuns {
     /// warns.
     private func afterRun(runId: String, server: FileServer) -> @Sendable (CommonPhotosRun, [CommonPhotosLog.HistoryChange]) async throws -> Void {
         let database = database
-        let rescan = rescanAfter(runId: runId, server: server)
-        return { run, changes in
+        let rescan = rescanAfter(runId: runId, server: server, othersOnly: true)
+        let log = Self.log
+        return { [weak self] run, changes in
             // Recorded in the same write: an undo puts each row back
             // where it was (FS-19.08 §6b).
             try ServerFileHistory(database: database).move(changes.map { (from: $0.from, to: $0.to) }, on: server) { db, rows in
                 try CommonPhotosStore.recordHistoryMoves(db, runId: run.id, rows: rows)
             }
+            // The index follows the run's own rows — no rescan of the share
+            // (user 2026-11-08: "why rescan WIN?"). What changed there outside
+            // ShotDex is found by the next periodic read.
+            let items = try CommonPhotosStore(database: database).items(runId: run.id)
+            let stamp = Int(Date().timeIntervalSince1970)
+            let summary = try await database.writer.write { db in
+                try CommonPhotosIndexFollow.apply(db, items: items, connectionId: server.id, folder: server.folder, at: stamp)
+            }
+            log.notice("common photos: index followed \(summary.moved) moved, \(summary.copied) copied, \(summary.missing) gone")
+            await self?.indexFollowed?()
+            // Sources of other connections reaching the same files are still read again.
             try await rescan(run)
         }
     }
+
+    /// The index changed without a read: screens showing a source read it again.
+    @ObservationIgnored var indexFollowed: (@MainActor () -> Void)?
 
     /// After an undo's last row and its CSV (FS-19.08 §6b): the history
     /// rows the Move moved go back to each copy written back, then the same
@@ -751,7 +766,7 @@ final class MacCommonPhotosRuns {
     /// source of the run's connection that cannot be rescanned throws, so
     /// the run stays `finishing` for Resume; one of another connection only
     /// warns.
-    private func rescanAfter(runId: String, server: FileServer) -> @Sendable (CommonPhotosRun) async throws -> Void {
+    private func rescanAfter(runId: String, server: FileServer, othersOnly: Bool = false) -> @Sendable (CommonPhotosRun) async throws -> Void {
         let database = database
         let servers = servers
         let refresh = refresh
@@ -764,7 +779,8 @@ final class MacCommonPhotosRuns {
             }.sorted { $0.sourceId < $1.sourceId }
             let targets = CommonPhotosSources.toRescan(paths: run.folders + [run.destination], on: server, sources: sources)
             var warnings: [String] = []
-            for sourceId in targets {
+            // After a run, the run's own connection is followed from its rows.
+            for sourceId in targets where !othersOnly || sources.first(where: { $0.sourceId == sourceId })?.connection.id != server.id {
                 let summary = await refresh.rescan(sourceId: sourceId, fresh: true)
                 try Task.checkCancellation()
                 let ownConnection = sources.first { $0.sourceId == sourceId }?.connection.id == server.id

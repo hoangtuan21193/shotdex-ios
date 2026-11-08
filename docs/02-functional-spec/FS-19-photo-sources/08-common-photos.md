@@ -99,6 +99,13 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
   download và sổ Backup của mọi bản bị dời hay xoá **chuyển sang đường dẫn ở đích** (byte giống hệt đang nằm đó) như
   Rename của FS-17.01 §4b. CSV, Rescan hay sửa lịch sử dở chừng → lượt ở `finishing`, Resume làm lại.
 
+- **Không quét lại cả share sau lượt (người dùng 2026-11-08: "sao phải quét lại WIN"):** chỉ mục của các nguồn server
+  trên connection của lượt đi theo chính các hàng của lượt (`CommonPhotosIndexFollow`): ảnh **Moved** — bản ở
+  `movedFrom` đổi sang đường dẫn đích (cùng hàng, cùng ảnh, giữ SHA), các bản Move đã xoá thành missing; ảnh **Copied** —
+  thêm một bản của cùng ảnh ở đích với SHA đã kiểm. Đường dẫn ngoài mọi nguồn để lượt đọc định kỳ sau. Chỉ nguồn của
+  connection **khác** cùng trỏ vào các file đó mới được Rescan như cũ. Lượt nào chỉ còn nợ log và bước này (mọi ảnh đã
+  xong) tự chạy nốt khi app mở. Test `CommonPhotosIndexFollowTests`. Undo vẫn Rescan.
+
 ## 6b. Hoàn tác (người dùng 2026-11-03)
 
 Hoàn tác đọc **log trong app** (bảng Lượt gom / Mục gom), không đọc CSV. Mỗi bản bị xoá ở lượt Move đã được kiểm cùng

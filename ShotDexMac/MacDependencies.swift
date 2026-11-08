@@ -273,6 +273,8 @@ final class MacDependencies: LibraryServices {
             LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
                                    lock: connectionLock, connectionId: server.id, priority: .normal)
         }
+        // A run's moves and copies go straight into the index: screens read it again.
+        commonPhotos.indexFollowed = { sourcesModel.serverListingChanged() }
         gatherer = MacCommonPhotosGatherer(database: database, servers: fileServers, runs: commonPhotos) { server in
             LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
                                    lock: connectionLock, connectionId: server.id, priority: .normal)
