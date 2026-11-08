@@ -174,8 +174,14 @@ final class MacDependencies: LibraryServices {
         let sourcesModel = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         // Thumbnails written since the last launch may have passed Cache Size
         // Limit (AC-76): held to it once per launch, off the main actor.
-        Task.detached(priority: .background) {
-            PreviewCacheStore.standard.trim(to: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()))
+        // The app only (the helper, built with `watchesOriginals` off, shares the
+        // cache), a minute after launch: it walks every cached file, and both
+        // processes doing it at once took the CPU while the window opened (2026-11-08).
+        if watchesOriginals {
+            Task.detached(priority: .background) {
+                try? await Task.sleep(for: .seconds(60))
+                PreviewCacheStore.standard.trim(to: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.limit()))
+            }
         }
         self.sourcesModel = sourcesModel
         let sidecarQueue = SidecarWriteQueue(writer: SidecarWriter(database: database) { sourceId, path in
