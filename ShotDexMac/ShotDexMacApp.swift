@@ -72,6 +72,7 @@ struct ShotDexMacApp: App {
             MacLibraryCommands()
             MacImageCommands()
             MacGoCommands()
+            MacAboutCommands()
         }
         Settings {
             MacSettingsWindow()
@@ -268,5 +269,37 @@ struct MacActivityCommands: Commands {
             }
             .keyboardShortcut("0", modifiers: [.option, .command])
         }
+    }
+}
+
+/// ShotDex › About ShotDex: the standard panel, with which build this is
+/// (user 2026-11-08: "how do I know it's the new one?") — the build number
+/// (the git commit count a release build is stamped with) and when the app
+/// was built.
+struct MacAboutCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button(String(localized: "About ShotDex", comment: "Mac menu: ShotDex › About ShotDex")) {
+                NSApplication.shared.orderFrontStandardAboutPanel(options: [.credits: Self.credits])
+                NSApplication.shared.activate()
+            }
+        }
+    }
+
+    /// `Built 8 Nov 2026 at 11:09`.
+    static var credits: NSAttributedString {
+        let built = Bundle.main.executableURL
+            .flatMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
+        let line = built.map {
+            String(localized: "Built \($0.formatted(date: .abbreviated, time: .shortened))",
+                   comment: "Mac About panel: when this copy of the app was built")
+        } ?? ""
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        return NSAttributedString(string: line, attributes: [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.secondaryLabelColor,
+            .paragraphStyle: style,
+        ])
     }
 }
