@@ -612,6 +612,26 @@ final class MacCommonPhotosRuns {
             .map { ($0, (try? store.items(runId: $0.id)) ?? []) }
     }
 
+    /// Runs left with every photo done — a quit or a pause during Finish —
+    /// owe only their log and a rescan: done at launch, with no question
+    /// (user 2026-11-08: "Interrupted" came back at every launch). A run
+    /// with photos still to move waits for Resume, as before.
+    func finishOwedRuns() {
+        let store = self.store
+        let database = self.database
+        Task {
+            let owed = await Task.detached(priority: .utility) { () -> [String] in
+                ((try? store.unfinishedRuns()) ?? []).filter { run in
+                    guard run.canResume, !CommonPhotosRunner.isActive(runId: run.id, in: database) else { return false }
+                    if run.state == .finishing { return true }
+                    let items = (try? store.items(runId: run.id)) ?? []
+                    return !items.isEmpty && items.allSatisfy(\.isDone)
+                }.map(\.id)
+            }.value
+            for id in owed where tasks[id] == nil { resume(runId: id) }
+        }
+    }
+
     /// The foot's run: one going, else the newest interrupted or paused.
     private func refreshFoot() {
         let going = entries.values.filter(\.isRunning).min { $0.run.createdAt < $1.run.createdAt }?.id

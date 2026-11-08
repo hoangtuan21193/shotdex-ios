@@ -296,6 +296,8 @@ final class MacDependencies: LibraryServices {
         gatherer.onChange = { runs.storeChanged() }
         MacAgentLink.observe(MacAgentLink.commonPhotosChanged) { runs.storeChanged() }
         gatherer.start()
+        // A run that only owes its log and rescan finishes on its own.
+        runs.finishOwedRuns()
     }
 
     /// Run Now (Activity): the helper's pass when it runs jobs, else ours.
