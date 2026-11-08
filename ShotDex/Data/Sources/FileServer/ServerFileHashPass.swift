@@ -38,11 +38,18 @@ struct ServerFileHashPass: Sendable {
         var summary = Summary()
         let unhashed = try store.unhashedServerFiles(sourceId: sourceId)
         let known = unhashed.isEmpty ? [:] : try store.backupRecords(connectionId: connectionId)
+        // Find Common Photos read these files whole already: their hashes
+        // are taken, not read again (user 2026-11-08).
+        let common = unhashed.isEmpty ? [:] : try store.commonPhotosRecords(connectionId: connectionId)
         for file in unhashed {
             let key = FolderSourceIndexer.pathKey(ServerUploadPath.join(folder, file.relativePath))
-            guard let record = known[key], record.size == file.size else { continue }
-            try store.saveHash(record.sha256, copyId: file.copyId, fileKey: file.fileKey, origin: .backup, at: now)
-            summary.seeded += 1
+            if let record = known[key], record.size == file.size {
+                try store.saveHash(record.sha256, copyId: file.copyId, fileKey: file.fileKey, origin: .backup, at: now)
+                summary.seeded += 1
+            } else if let record = common[key], record.size == file.size {
+                try store.saveHash(record.sha256, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
+                summary.seeded += 1
+            }
         }
         // The server is woken only for a file worth reading, or for
         // hashes this device owes its ledger once it has nothing left to read.

@@ -81,7 +81,7 @@ struct MacOnServerFoot: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 12)
-        .help(String(localized: "Show On Server", comment: "Mac sidebar foot: tooltip, opens the On Server place"))
+        .help(String(localized: "Show what runs in Activity", comment: "Mac sidebar foot: tooltip, opens Activity on its Background list"))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
     }

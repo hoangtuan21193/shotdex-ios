@@ -252,7 +252,11 @@ struct MacSidebar: View {
             // The On Server check matching photos with server files (FS-19.07 §7).
             MacOnServerFoot(status: dependencies.onServerStatus,
                             indexLine: library?.isIndexing == true ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running") : nil,
-                            open: { selection = .onServer })
+                            // The detail of what runs (user 2026-11-08): Activity › Background.
+                            open: {
+                                MacWindowRequest.showsActivity = true
+                                NotificationCenter.default.post(name: .macShowActivity, object: nil)
+                            })
         } else if let library {
             // "Up to date · indexed 2 min ago" (FS-18.01 §2), the age kept
             // current once a minute.

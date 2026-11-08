@@ -18,6 +18,11 @@ struct PhotosFileHashPass: Sendable {
     var download: @Sendable (_ assetId: String, _ fileKey: String, _ directory: URL) async throws -> URL = Self.liveDownloader()
     var workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexOnServer", isDirectory: true)
     var freeBytes: @Sendable () -> Int64? = { DiskSpace.availableBytes() }
+    /// Originals hashed at once. One on iPhone and iPad (FS-19.07 §4: one
+    /// temporary file at a time on a device short of room); the Mac, whose
+    /// library is usually on disk, reads several (user 2026-11-08: "use
+    /// more than one thread").
+    var concurrentDownloads = 1
     /// The Mac hashing for every device (FS-19.07 §12.1): every file, not
     /// only those with a file of the same size on a server.
     var hashesEverything = false
@@ -77,26 +82,59 @@ struct PhotosFileHashPass: Sendable {
         let candidates = try store.photosCandidates(triedBefore: now, limit: limit, everything: hashesEverything)
         guard !candidates.isEmpty else { return summary }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
-        for file in candidates {
-            try Task.checkCancellation()
-            // The same rule as Backup: never fill the device (FS-22.02 §2).
-            // A size Photos did not give counts as 2 GB more: the download
-            // is not watched while it runs.
-            if let free = freeBytes(), free - (file.size ?? Self.unknownSizeAllowance) < BackupRunner.minimumFreeBytes {
-                summary.waitingForSpace = true
-                break
+        // Up to `concurrentDownloads` at once; the space rule counts what
+        // the ones in flight will take.
+        enum Outcome: Sendable { case hashed(Int64), failed(String, String, String, Int64), cancelled(Int64) }
+        var queue = candidates[...]
+        try await withThrowingTaskGroup(of: Outcome.self) { group in
+            var inFlight = 0
+            var reserved: Int64 = 0
+            func launchNext() -> Bool {
+                guard let file = queue.first, !Task.isCancelled else { return false }
+                let size = file.size ?? Self.unknownSizeAllowance
+                // The same rule as Backup: never fill the device (FS-22.02 §2).
+                if let free = freeBytes(), free - reserved - size < BackupRunner.minimumFreeBytes {
+                    summary.waitingForSpace = true
+                    queue = []
+                    return false
+                }
+                queue = queue.dropFirst()
+                reserved += size
+                inFlight += 1
+                let (download, workDirectory, store) = (self.download, self.workDirectory, self.store)
+                group.addTask {
+                    do {
+                        let url = try await download(file.assetId, file.fileKey, workDirectory)
+                        defer { try? FileManager.default.removeItem(at: url) }
+                        let sha = try FileChecksum.sha256(of: url)
+                        try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
+                        return .hashed(size)
+                    } catch {
+                        if error is CancellationError || Task.isCancelled { return .cancelled(size) }
+                        return .failed(error.localizedDescription, file.copyId, file.fileKey, size)
+                    }
+                }
+                return true
             }
-            do {
-                let url = try await download(file.assetId, file.fileKey, workDirectory)
-                defer { try? FileManager.default.removeItem(at: url) }
-                let sha = try FileChecksum.sha256(of: url)
-                try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
-                summary.hashed += 1
-            } catch {
-                if error is CancellationError || Task.isCancelled { throw CancellationError() }
-                try store.saveFailure(error.localizedDescription, copyId: file.copyId, fileKey: file.fileKey, at: now)
-                summary.failed += 1
+            while inFlight < max(1, concurrentDownloads), launchNext() {}
+            var wasCancelled = false
+            while inFlight > 0, let outcome = try await group.next() {
+                inFlight -= 1
+                switch outcome {
+                case .hashed(let size):
+                    reserved -= size
+                    summary.hashed += 1
+                case .failed(let message, let copyId, let fileKey, let size):
+                    reserved -= size
+                    try store.saveFailure(message, copyId: copyId, fileKey: fileKey, at: now)
+                    summary.failed += 1
+                case .cancelled(let size):
+                    reserved -= size
+                    wasCancelled = true
+                }
+                if !wasCancelled && !Task.isCancelled { _ = launchNext() }
             }
+            if wasCancelled || Task.isCancelled { throw CancellationError() }
         }
         return summary
     }

@@ -56,6 +56,12 @@ final class OnServerCheck {
     /// What iCloud downloads wait for.
     private(set) var photosWait: OnServerSchedule.Wait?
     private(set) var isRunning = false
+    /// What a pass is doing now (user 2026-11-08: "stopped, and I can't see
+    /// what the app is doing"), for Activity; nil between passes.
+    enum Stage: String, Sendable { case listing, hashingServer, hashingPhotos, auditing, merging }
+    private(set) var stage: Stage? {
+        didSet { if stage != oldValue { onBatch?() } }
+    }
     /// When a pass last went through with nothing left to do.
     private(set) var finishedAt: Date?
     /// Devices whose hashes the random check last caught wrong (§12.4) —
@@ -98,6 +104,7 @@ final class OnServerCheck {
         task = Task { [weak self] in
             await self?.run()
             self?.isRunning = false
+            self?.stage = nil
             self?.task = nil
         }
     }
@@ -118,6 +125,7 @@ final class OnServerCheck {
         let started = Task { [weak self] in
             await self?.run()
             self?.isRunning = false
+            self?.stage = nil
             self?.task = nil
         }
         task = started
@@ -128,7 +136,8 @@ final class OnServerCheck {
     /// its waits and finish time, then a new generation so screens read
     /// progress again.
     func showRemote(waits: [String: OnServerSchedule.Wait], photosWait: OnServerSchedule.Wait?,
-                    finishedAt: Date?, isRunning: Bool) {
+                    finishedAt: Date?, isRunning: Bool, stage: Stage? = nil) {
+        self.stage = stage
         self.waits = waits
         self.photosWait = photosWait
         self.finishedAt = finishedAt
@@ -174,6 +183,7 @@ final class OnServerCheck {
                 continue
             }
             guard !Task.isCancelled else { break }
+            stage = .listing
             if await environment.list(source.id) {
                 openSources.append((source.id, source.connectionId))
             } else {
@@ -192,6 +202,7 @@ final class OnServerCheck {
         // The random check, once both sides are hashed (§12.4). A device
         // caught wrong leaves files unhashed: they are read here now.
         if !Task.isCancelled {
+            stage = .auditing
             let open = Set(openSources.map(\.id).filter { waits[$0] == nil })
             let audit = await environment.audit(start, photosWait == nil, open)
             caughtDevices = Array(Set(caughtDevices).subtracting(audit.cleared).union(audit.caught)).sorted()
@@ -200,10 +211,12 @@ final class OnServerCheck {
                 await hashRounds(openSources: openSources, sources: sources, start: start)
             }
         }
+        if !Task.isCancelled { stage = .merging }
         if !Task.isCancelled, (try? await environment.merge()) ?? 0 > 0 {
             generation &+= 1
         }
         if !Task.isCancelled { await environment.publishShared(start) }
+        stage = nil
         if Task.isCancelled {
             for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
             if photosWait == nil { photosWait = .openApp }
@@ -220,6 +233,7 @@ final class OnServerCheck {
             var didWork = false
             for source in openSources where waits[source.id] == nil {
                 guard !Task.isCancelled else { break }
+                stage = .hashingServer
                 guard let summary = try? await environment.hashServer(source.id, source.connectionId, start) else { continue }
                 if summary.stoppedBy != nil, let name = sources.first(where: { $0.id == source.id })?.name {
                     waits[source.id] = .unreachable(name)
@@ -227,6 +241,7 @@ final class OnServerCheck {
                 lastPassHashed.server += summary.seeded + summary.fromLedger + summary.hashed
                 didWork = didWork || summary.seeded + summary.fromLedger + summary.hashed + summary.failed > 0
             }
+            if photosWait == nil, !Task.isCancelled { stage = .hashingPhotos }
             if photosWait == nil, !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
                 if summary.waitingForSpace { photosWait = .space }
                 lastPassHashed.photos += summary.adopted + summary.seeded + summary.hashed
@@ -300,6 +315,10 @@ extension OnServerCheck.Environment {
             hashPhotos: { now in
                 var pass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
                 pass.hashesEverything = hashesEverything()
+                #if os(macOS)
+                // A Mac library is usually on disk: four originals at once.
+                pass.concurrentDownloads = 4
+                #endif
                 if let exchange, IndexShareService.sharesIndex {
                     pass.adoptListed = { copyIds, now in
                         do { return try await exchange.adoptPhotos(copyIds: copyIds, now: now) } catch {

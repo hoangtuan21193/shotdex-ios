@@ -96,7 +96,8 @@ struct MacBackgroundJobs: View {
             rows.append(Row(id: "onServer", symbol: "externaldrive.connected.to.line.below",
                             title: String(localized: "Matching photos with the server (SHA-256)",
                                           comment: "Mac Activity › Background: the On Server check hashes iCloud originals and server files to find the same photos"),
-                            detail: dependencies.onServerStatus.line, fraction: dependencies.onServerStatus.fraction,
+                            detail: [check.stage.map(Self.stageText), dependencies.onServerStatus.line].compactMap { $0 }.joined(separator: " — "),
+                            fraction: dependencies.onServerStatus.fraction,
                             isWaiting: !check.isRunning && (!check.waits.isEmpty || check.photosWait != nil)))
         }
         let backups = dependencies.backupCoordinator
@@ -133,6 +134,17 @@ struct MacBackgroundJobs: View {
 }
 
 extension MacBackgroundJobs {
+    /// What a pass of the On Server check is doing now.
+    static func stageText(_ stage: OnServerCheck.Stage) -> String {
+        switch stage {
+        case .listing: String(localized: "Listing the server's files", comment: "Mac Activity: On Server check step")
+        case .hashingServer: String(localized: "Reading files on the server", comment: "Mac Activity: On Server check step — SHA-256 of server files")
+        case .hashingPhotos: String(localized: "Hashing originals from Photos", comment: "Mac Activity: On Server check step — SHA-256 of library originals")
+        case .auditing: String(localized: "Spot-checking other devices' hashes", comment: "Mac Activity: On Server check step")
+        case .merging: String(localized: "Linking matched photos", comment: "Mac Activity: On Server check step")
+        }
+    }
+
     /// By bytes, else by items; nil when neither is known.
     static func fraction(_ progress: BackupProgress) -> Double? {
         if progress.bytesTotal > 0 { return min(1, Double(progress.bytesDone) / Double(progress.bytesTotal)) }

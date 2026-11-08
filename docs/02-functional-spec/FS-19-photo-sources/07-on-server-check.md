@@ -196,6 +196,18 @@ AC: [07b §3](07b-on-server-check-ac.md#3-mac).
 
 ### 11.1 Tiến độ luôn thấy và kiểm lại khi cần (2026-11-08)
 
+- **Nhanh hơn trên Mac (người dùng 2026-11-08: "library đã tải full, WIN đã có SHA từ Common Photos, sao vẫn tắc"):**
+  - SHA mà Find Common Photos đã đọc trên connection (`common_photo_scan_records`, khớp đường dẫn + cỡ) được dùng thẳng
+    cho file server, như sổ Backup — không đọc lại file.
+  - Mac băm **4 bản gốc cùng lúc** (`concurrentDownloads`; iPhone/iPad vẫn 1 file một lúc như §4), luật chỗ trống cộng
+    cả các file đang chạy.
+  - Quét lại nguồn server: đọc mọi bản ghi cũ một lần và ghi file không đổi theo lô 500 (trước là 1 đọc + 1 ghi mỗi file);
+    khoá file cạnh DB để app và helper không cùng quét một nguồn (trước hai process giành khoá ghi hàng giờ).
+  - Helper gửi số lô mỗi lần (trước chỉ gửi khi lý do chờ đổi, nên dòng tiến độ của app đứng yên) và **bước hiện tại**:
+    Listing the server's files · Reading files on the server · Hashing originals from Photos · Spot-checking other
+    devices' hashes · Linking matched photos — hiện trong Activity › Background.
+- Dòng `Checking · …` ở header smart album và chân sidebar bấm được → Activity › Background.
+
 - **Chân sidebar Mac:** khi còn mục chưa có câu trả lời, khi đang chạy hay đang chờ — `Checking On Server`, dòng §7 của
   nguồn server đầu tiên (`Checking · 1,240 of 23,904 · 38 GB to download` hoặc lý do chờ) và thanh tiến độ; bấm mở
   On Server. Đọc ngoài main mỗi lô (`generation`), không mỗi khung hình. Hết việc thì về dòng index.

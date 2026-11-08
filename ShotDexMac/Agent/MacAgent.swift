@@ -146,8 +146,11 @@ final class MacAgent {
 
     /// The check's waits and finish time, for the app's progress line.
     private func publishOnServer() {
+        // The batch count too: without it the app's counts stood still while
+        // the helper hashed (user 2026-11-08: "Checking · 9,852" for an hour).
         let state = MacAgentLink.OnServerState(waits: check.waits, photosWait: check.photosWait,
-                                               finishedAt: check.finishedAt, isRunning: check.isRunning)
+                                               finishedAt: check.finishedAt, isRunning: check.isRunning,
+                                               stage: check.stage, batch: check.generation)
         guard state != lastOnServer else { return }
         lastOnServer = state
         MacAgentLink.publish(state)

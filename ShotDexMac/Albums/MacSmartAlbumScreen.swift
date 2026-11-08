@@ -56,8 +56,20 @@ struct MacSmartAlbumHeader: View {
                     // The counts keep to one line; the sentences after them
                     // (a hash mismatch names a device, FS-19.07 §12.4) wrap.
                     if let first = onServerLines.first {
-                        Text(first).lineLimit(1)
-                            .accessibilityAddTraits(.updatesFrequently)
+                        // A click shows what the check is doing (Activity › Background).
+                        Button {
+                            MacWindowRequest.showsActivity = true
+                            NotificationCenter.default.post(name: .macShowActivity, object: nil)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(first).lineLimit(1)
+                                Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(String(localized: "Show what the check is doing", comment: "Mac smart album: the On Server line opens Activity"))
+                        .accessibilityAddTraits(.updatesFrequently)
                     }
                     // The originals check, under the On Server counts
                     // (FS-06.10 §3): its own element, the two tick apart.

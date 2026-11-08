@@ -286,13 +286,45 @@
   },
   {
    "action": "waitFor",
-   "label": "Where They Are",
+   "label": "Background",
    "type": "staticText",
-   "seconds": 15
+   "seconds": 10
   },
   {
    "action": "screenshot",
-   "name": "07-onserver-from-foot"
+   "name": "07-activity-from-foot"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Background",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "Checking · 40 of 226",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Background",
+   "type": "staticText",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "08-activity-from-header"
+  },
+  {
+   "action": "key",
+   "text": "escape"
   }
  ]
 }

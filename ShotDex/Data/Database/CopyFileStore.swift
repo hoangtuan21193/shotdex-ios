@@ -279,6 +279,22 @@ struct CopyFileStore: Sendable {
     /// What Backup knows of the files it wrote on a connection — its ledger
     /// and the destination index, which holds other phones' files too — by
     /// path key from the server's root: size and SHA-256.
+    /// What Find Common Photos read whole on this connection (FS-19.08):
+    /// SHA-256 by path key, with the size it had — a file it hashed is not
+    /// read again for the on-server check (user 2026-11-08: "WIN already has
+    /// the hashes from Common Photos").
+    func commonPhotosRecords(connectionId: String) throws -> [String: (size: Int64, sha256: String)] {
+        try database.reader.read { db in
+            var out: [String: (Int64, String)] = [:]
+            for row in try Row.fetchAll(db, sql: """
+                SELECT path, size, sha256 FROM common_photo_scan_records WHERE connectionId = ? AND sha256 IS NOT NULL
+                """, arguments: [connectionId]) {
+                out[FolderSourceIndexer.pathKey(row[0])] = (row[1], row[2])
+            }
+            return out
+        }
+    }
+
     func backupRecords(connectionId: String) throws -> [String: (size: Int64, sha256: String)] {
         try database.reader.read { db in
             var out: [String: (Int64, String)] = [:]

@@ -67,20 +67,34 @@ struct ServerSourceIndexer: Sendable {
         var vanished = try await database.reader.read { db in
             try FileCopyWriter.vanished(db, sourceId: sourceId, kind: "server", listed: listed)
         }
+        // One read for every recorded copy, and unchanged files written 500 to
+        // a transaction: one read and one write per file held the database for
+        // minutes on a large share, while another process waited for its lock
+        // (Mac, 2026-11-08).
+        let known = try await database.reader.read { db in try FileCopyWriter.existingAll(db, sourceId: sourceId) }
+        var seen: [(FileCopyWriter.Existing, [CopyFileStore.ListedFile])] = []
+        func flushSeen() async throws {
+            guard !seen.isEmpty else { return }
+            let batch = seen
+            seen = []
+            try await database.writer.write { db in
+                for (existing, files) in batch {
+                    try FileCopyWriter.touch(db, existing: existing, at: stamp)
+                    try CopyFileStore.saveServerFiles(db, copyId: existing.id, files: files)
+                }
+            }
+        }
 
         for unit in units {
             try Task.checkCancellation()
             let file = unit.primary
             let key = FolderSourceIndexer.pathKey(file.relativePath)
             let modified = file.modified.map { Int($0.timeIntervalSince1970) }
-            let existing = try await database.reader.read { db in try FileCopyWriter.existing(db, sourceId: sourceId, key: key) }
+            let existing = known[key]
             if let existing, FileCopyWriter.isUnchanged(existing, size: file.size, modified: modified) {
                 // Same size, same date: not one byte read (FS-19.03 §3).
-                let (copyId, files) = (existing.id, Self.listedFiles(unit))
-                try await database.writer.write { db in
-                    try FileCopyWriter.touch(db, existing: existing, at: stamp)
-                    try CopyFileStore.saveServerFiles(db, copyId: copyId, files: files)
-                }
+                seen.append((existing, Self.listedFiles(unit)))
+                if seen.count >= 500 { try await flushSeen() }
                 summary.unchanged += 1
                 continue
             }
@@ -90,6 +104,7 @@ struct ServerSourceIndexer: Sendable {
             do {
                 read = try await self.read(unit, folder: folder, ranges: ranges, namesByFolder: namesByFolder, sidecars: sidecars)
             } catch let error as RemoteFileError where error.stopsBatch {
+                try await flushSeen()
                 try stop(&summary, error, sourceId: sourceId)
                 return summary
             } catch is CancellationError {
@@ -134,6 +149,7 @@ struct ServerSourceIndexer: Sendable {
             }
             summary.photos += 1
         }
+        try await flushSeen()
         let missing = vanished.map(\.copyId)
         try await database.writer.write { db in try FileCopyWriter.markMissing(db, missing, at: stamp) }
         return summary

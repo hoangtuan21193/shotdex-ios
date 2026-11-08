@@ -91,6 +91,13 @@ actor ServerSourceRefresh {
         guard let found, let connectionId = found.connectionId,
               let server = try? servers.fetch(id: connectionId)
         else { return nil }
+        // One process at a time per source (the Mac app and its helper share
+        // the database): a second pass waits for the first, then finds every
+        // file unchanged — two at once fought for the write lock for minutes
+        // (2026-11-08).
+        let lock = ProcessFileLock(path: database.writer.path, name: "server-rescan-\(sourceId)")
+        guard await lock.acquire() else { return nil }
+        defer { lock.release() }
         let client = makeClient(server, servers.password(for: server.id) ?? "")
         let indexer = ServerSourceIndexer(database: database, composer: composer, client: client, thumbnails: thumbnails)
         do {
@@ -100,5 +107,38 @@ actor ServerSourceRefresh {
             Self.logger.error("server pass \(sourceId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
+    }
+}
+
+/// An advisory lock (flock) on a file beside the database, so two processes
+/// sharing it do not run the same pass at once. An in-memory database has
+/// no file: the lock is always free.
+final class ProcessFileLock: @unchecked Sendable {
+    private let url: URL?
+    private var descriptor: Int32 = -1
+
+    init(path: String, name: String) {
+        guard path.hasPrefix("/") else { url = nil; return }
+        let safe = name.map { $0.isLetter || $0.isNumber || $0 == "-" ? $0 : "_" }
+        url = URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent(".\(String(safe)).lock")
+    }
+
+    /// Waits (cancellably, a second at a time) until no other process holds it.
+    func acquire() async -> Bool {
+        guard let url else { return true }
+        descriptor = open(url.path, O_CREAT | O_RDWR, 0o644)
+        guard descriptor >= 0 else { return true }
+        while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
+            guard !Task.isCancelled else { close(descriptor); descriptor = -1; return false }
+            try? await Task.sleep(for: .seconds(1))
+        }
+        return true
+    }
+
+    func release() {
+        guard descriptor >= 0 else { return }
+        flock(descriptor, LOCK_UN)
+        close(descriptor)
+        descriptor = -1
     }
 }

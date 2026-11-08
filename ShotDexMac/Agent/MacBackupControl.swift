@@ -172,7 +172,7 @@ final class MacBackupControl {
         guard usesAgent else { return }
         let state = MacAgentLink.currentOnServer()
         onServerCheck.showRemote(waits: state.waits, photosWait: state.photosWait,
-                                 finishedAt: state.finishedAt, isRunning: state.isRunning)
+                                 finishedAt: state.finishedAt, isRunning: state.isRunning, stage: state.stage)
     }
 
     /// The helper wrote: read the jobs' states again and show its run.

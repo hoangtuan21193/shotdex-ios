@@ -111,12 +111,17 @@ enum MacAgentLink {
         var photosWait: OnServerSchedule.Wait?
         var finishedAt: Date?
         var isRunning = false
+        var stage: OnServerCheck.Stage?
+        /// The helper's batch count: a new one makes the app read the counts again.
+        var batch = 0
     }
 
     static func publish(_ state: OnServerState) {
         var entry: [String: Any] = ["waits": state.waits.mapValues(encode), "isRunning": state.isRunning]
         entry["photosWait"] = state.photosWait.map(encode)
         entry["finishedAt"] = state.finishedAt?.timeIntervalSince1970
+        entry["stage"] = state.stage?.rawValue
+        entry["batch"] = state.batch
         defaults.set(entry, forKey: onServerKey)
         notify_post(onServerChanged)
     }
@@ -127,7 +132,9 @@ enum MacAgentLink {
             waits: (entry["waits"] as? [String: String] ?? [:]).compactMapValues(decode),
             photosWait: (entry["photosWait"] as? String).flatMap(decode),
             finishedAt: (entry["finishedAt"] as? Double).map(Date.init(timeIntervalSince1970:)),
-            isRunning: entry["isRunning"] as? Bool ?? false
+            isRunning: entry["isRunning"] as? Bool ?? false,
+            stage: (entry["stage"] as? String).flatMap(OnServerCheck.Stage.init(rawValue:)),
+            batch: entry["batch"] as? Int ?? 0
         )
     }
 

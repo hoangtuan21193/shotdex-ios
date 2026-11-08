@@ -37,6 +37,22 @@ enum FileCopyWriter {
         let hasMetadata: Bool
     }
 
+    /// Every copy of a source by path key, read once for a whole pass — not
+    /// one read per file (a 50,000-file share made 50,000 reads).
+    static func existingAll(_ db: Database, sourceId: String) throws -> [String: Existing] {
+        var out: [String: Existing] = [:]
+        let rows = try Row.fetchCursor(db, sql: """
+            SELECT c.id, c.photoId, c.size, c.modifiedAt, c.relativePathKey,
+                   EXISTS(SELECT 1 FROM photo_metadata m WHERE m.assetId = c.photoId) AS hasMetadata
+            FROM photo_copies c WHERE c.sourceId = ?
+            """, arguments: [sourceId])
+        while let row = try rows.next() {
+            out[row["relativePathKey"]] = Existing(id: row["id"], photoId: row["photoId"], size: row["size"],
+                                                   modifiedAt: row["modifiedAt"], hasMetadata: row["hasMetadata"])
+        }
+        return out
+    }
+
     static func existing(_ db: Database, sourceId: String, key: String) throws -> Existing? {
         try Row.fetchOne(db, sql: """
             SELECT c.id, c.photoId, c.size, c.modifiedAt,
