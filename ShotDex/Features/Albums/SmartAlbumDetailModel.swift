@@ -106,8 +106,11 @@ final class SmartAlbumDetailModel {
         let folder = rule.folder
         let caught = check.caughtDevices
         let shared = SharedIndexStore(database: database)
-        let progress = (try? await Task.detached { try queries.progress(sourceId: rule.text, folder: folder) }.value)
-            ?? OnServerProgress()
+        let sourceId = rule.text
+        // One read at a time, shared with every screen that asks (OnServerReadGate).
+        let progress = await OnServerReadGate.shared.value("progress:\(sourceId):\(folder ?? "")", database: database) {
+            try queries.progress(sourceId: sourceId, folder: folder)
+        } ?? OnServerProgress()
         let names = (try? await Task.detached { try shared.deviceNames(caught) }.value) ?? [:]
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
         return OnServerProgressLine.lines(.init(

@@ -184,9 +184,13 @@ struct CopyFileStore: Sendable {
                 JOIN photo_copies c ON c.id = f.copyId AND c.kind = 'photos' AND c.photoKitId IS NOT NULL
                 LEFT JOIN photo_metadata m ON m.assetId = c.photoKitId
                 WHERE f.sha256 IS NULL AND (f.triedAt IS NULL OR f.triedAt < ?)
-                  AND (\(everything ? "f.attempts < \(Self.everythingAttempts)" : "0") OR EXISTS (
-                    SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
-                    WHERE sc.kind = 'server' AND sc.missingSince IS NULL AND (f.size IS NULL OR s.size = f.size)))
+                  AND (\(everything ? "f.attempts < \(Self.everythingAttempts)" : "0")
+                    OR (f.size IS NOT NULL AND EXISTS (
+                        SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+                        WHERE s.size = f.size AND sc.kind = 'server' AND sc.missingSince IS NULL))
+                    -- Split from the size test: an OR there keeps SQLite off the size index.
+                    OR (f.size IS NULL AND EXISTS (
+                        SELECT 1 FROM photo_copies sc WHERE sc.kind = 'server' AND sc.missingSince IS NULL)))
                 ORDER BY \(everything ? Self.photosSameSizeFirst : "")m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
                 """, arguments: [Int(triedBefore.timeIntervalSince1970), limit]).map { ($0[0], $0[1], $0[2], $0[3]) }
         }

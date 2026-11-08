@@ -60,11 +60,17 @@ enum OnServerPresenceSQL {
     static func unsettled(file f: String, sourceId: String, folder: String?) -> (sql: String, values: [DatabaseValueConvertible]) {
         let (match, matchValues) = matched(file: f, sourceId: sourceId, folder: folder)
         let (scope, scopeValues) = serverScope(sourceId: sourceId, folder: folder)
+        // Two branches, not `size IS NULL OR s.size = size`: with the OR,
+        // SQLite cannot use the size index and every Photos file scanned every
+        // server file — 4 s at 3,000 photos, about 20 min at 55,000, holding a
+        // reader of the pool the whole time (Mac hang 2026-11-08).
         return ("""
-            (NOT \(match) AND EXISTS (SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
-                WHERE \(scope) AND (\(f).size IS NULL OR s.size = \(f).size)
-                  AND (\(f).sha256 IS NULL OR s.sha256 IS NULL)))
-            """, matchValues + scopeValues)
+            (NOT \(match) AND (
+                (\(f).size IS NOT NULL AND EXISTS (SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+                    WHERE s.size = \(f).size AND \(scope) AND (\(f).sha256 IS NULL OR s.sha256 IS NULL)))
+                OR (\(f).size IS NULL AND EXISTS (SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+                    WHERE \(scope) AND (\(f).sha256 IS NULL OR s.sha256 IS NULL)))))
+            """, matchValues + scopeValues + scopeValues)
     }
 
     /// A server copy `sc` that is there now, on the source, under the folder

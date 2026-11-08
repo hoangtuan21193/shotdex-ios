@@ -29,9 +29,17 @@ struct MacServerBrowserScreen: View {
             let previous = model
             model = nil
             await previous?.close()
-            guard let connectionId = (try? dependencies.sources.serverConnections())?[source.id],
-                  let server = try? dependencies.fileServers.fetch(id: connectionId)
-            else {
+            // Off the main actor: a read here waits for a free reader of the
+            // pool, and a long background read once held them all for minutes
+            // (hang report 2026-11-08).
+            let sources = dependencies.sources
+            let servers = dependencies.fileServers
+            let sourceId = source.id
+            let server = await Task.detached(priority: .userInitiated) {
+                ((try? sources.serverConnections())?[sourceId]).flatMap { try? servers.fetch(id: $0) }
+            }.value
+            guard !Task.isCancelled else { return }
+            guard let server else {
                 isMissingConnection = true
                 return
             }

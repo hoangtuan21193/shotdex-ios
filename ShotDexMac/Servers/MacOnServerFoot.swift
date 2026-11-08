@@ -16,18 +16,21 @@ final class MacOnServerStatus {
     func refresh(check: OnServerCheck, database: AppDatabase) async {
         guard check.generation != readGeneration else { return }
         readGeneration = check.generation
-        let found = await Task.detached(priority: .utility) { () -> (String, String, OnServerProgress)? in
-            guard let source = (try? SourceStore(database: database).sources())?.first(where: { $0.kind == "server" }),
-                  let progress = try? OnServerProgressQueries(database: database).progress(sourceId: source.id, folder: nil)
-            else { return nil }
-            return (source.id, source.name, progress)
+        let source = await Task.detached(priority: .utility) {
+            (try? SourceStore(database: database).sources())?.first(where: { $0.kind == "server" })
         }.value
-        guard let (id, name, progress) = found else {
+        guard let source else {
             line = nil
             fraction = nil
             isIncomplete = false
             return
         }
+        let sourceId = source.id
+        // The same read a smart album over this source asks for: one at a time, shared.
+        guard let progress = await OnServerReadGate.shared.value("progress:\(sourceId):", database: database, {
+            try OnServerProgressQueries(database: database).progress(sourceId: sourceId, folder: nil)
+        }) else { return }
+        let (id, name) = (source.id, source.name)
         let wait = check.waits[id] ?? (progress.checked < progress.total ? check.photosWait : nil)
         line = OnServerProgressLine.lines(.init(progress: progress, wait: wait, finishedAt: check.finishedAt,
                                                 sourceName: name, thisDevice: .mac)).first

@@ -118,6 +118,7 @@ struct MacRootWindow: View {
     @State private var tableDetailsGeneration = 0
     /// The sidebar's sources, read when they change — not on every body.
     @State private var sources: [SourceStore.Source] = []
+    @State private var sourcesReadToken = 0
     /// Filter and Sort (FS-18.02 §5): the popover, its Advanced Filter…
     /// sheet, and the bar of chips under the toolbar.
     @State private var showsFilterPopover = false
@@ -251,8 +252,11 @@ struct MacRootWindow: View {
         // The "on server" glyph on a smart album's tiles (FS-19.07 §11): again on each check pass.
         .task(id: isSmartAlbumOpen ? dependencies.onServerCheck.generation : -1) {
             guard isSmartAlbumOpen else { onServerPhotoIds = []; return }
-            let queries = OnServerProgressQueries(database: dependencies.database)
-            onServerPhotoIds = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
+            let database = dependencies.database
+            let queries = OnServerProgressQueries(database: database)
+            onServerPhotoIds = await OnServerReadGate.shared.value("presentAnywhere", database: database) {
+                try queries.presentAnywhere()
+            } ?? []
         }
         .onChange(of: selection) {
             // Only a row that shows the grid moves it: Backup or Statistics
@@ -333,15 +337,7 @@ struct MacRootWindow: View {
         // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
         // browser goes to the destination.
         .onChange(of: dependencies.commonPhotos.browserRequest?.path) {
-            guard let request = dependencies.commonPhotos.browserRequest else { return }
-            // One source per connection; sorted, so two would pick the same one every time.
-            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
-                .filter({ $0.value == request.connectionId }).keys.sorted().first
-            else {
-                dependencies.commonPhotos.browserRequest = nil
-                return
-            }
-            selection = .source(sourceId)
+            openBrowserRequest()
         }
         // Keep gathering's notice clicked (FS-19.08 §6c): the run's window.
         .onChange(of: dependencies.commonPhotos.logRequest?.runId, initial: true) {
@@ -353,17 +349,7 @@ struct MacRootWindow: View {
         // Run Again (FS-19.08 §6c): the run's source opens; its browser
         // opens the sheet on the run's set.
         .onChange(of: dependencies.commonPhotos.runAgainRequest?.id, initial: true) {
-            guard let run = dependencies.commonPhotos.runAgainRequest else { return }
-            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
-                .filter({ $0.value == run.connectionId }).keys.sorted().first
-            else {
-                dependencies.commonPhotos.runAgainRequest = nil
-                return
-            }
-            // The browser that opens the sheet is under the log's page: the page goes first
-            // (already on that source, `selection` alone would change nothing).
-            commonPhotosRunId = nil
-            selection = .source(sourceId)
+            openRunAgainRequest()
         }
         .modifier(MacRootRequests(root: self))
     }
@@ -412,11 +398,16 @@ struct MacRootWindow: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
                 guard !showsAddSource else { return }
-                serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
+                let servers = dependencies.fileServers
+                let id = note.object as? String
+                Task {
+                    let editing = await Task.detached(priority: .userInitiated) { id.flatMap { try? servers.fetch(id: $0) } }.value
+                    serverForm = MacServerFormRequest(editing: editing)
+                }
             }
             .sheet(item: $smartAlbumForm) { request in
                 MacSmartAlbumEditorSheet(existing: request.editing, initialQuery: request.query, onSaved: { album in
-                    smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+                    reloadSmartAlbums()
                     selection = .smartAlbum(album.id)
                 })
             }
@@ -426,7 +417,7 @@ struct MacRootWindow: View {
                     smartAlbumForm = MacSmartAlbumFormRequest(editing: album)
                 }
             }
-            .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
+            .onAppear { reloadSmartAlbums() }
             .sheet(isPresented: $showsAddSource, onDismiss: runAddSourceRequest) {
                 MacAddSourceSheet(photosAdded: photosAdded,
                                   addPhotosLibrary: { addSourceRequest = .photos },
@@ -768,8 +759,66 @@ struct MacRootWindow: View {
         placeCounts = counts
     }
 
-    private func reloadSources() {
-        sources = (try? dependencies.sources.sources()) ?? []
+    /// Show CSV in Browser: the run's connection's source, read off the main actor.
+    private func openBrowserRequest() {
+        guard let request = dependencies.commonPhotos.browserRequest else { return }
+        // One source per connection; sorted, so two would pick the same one every time.
+        let store = dependencies.sources
+        let connectionId = request.connectionId
+        Task {
+            // Off the main actor, as every read here (hang report 2026-11-08).
+            let sourceId = await Task.detached(priority: .userInitiated) {
+                ((try? store.serverConnections()) ?? [:]).filter({ $0.value == connectionId }).keys.sorted().first
+            }.value
+            guard let sourceId else {
+                dependencies.commonPhotos.browserRequest = nil
+                return
+            }
+            selection = .source(sourceId)
+        }
+    }
+
+    /// Run Again: the run's source, read off the main actor.
+    private func openRunAgainRequest() {
+        guard let run = dependencies.commonPhotos.runAgainRequest else { return }
+        let store = dependencies.sources
+        let connectionId = run.connectionId
+        Task {
+            let sourceId = await Task.detached(priority: .userInitiated) {
+                ((try? store.serverConnections()) ?? [:]).filter({ $0.value == connectionId }).keys.sorted().first
+            }.value
+            guard let sourceId else {
+                dependencies.commonPhotos.runAgainRequest = nil
+                return
+            }
+            // The browser that opens the sheet is under the log's page: the page goes first
+            // (already on that source, `selection` alone would change nothing).
+            commonPhotosRunId = nil
+            selection = .source(sourceId)
+        }
+    }
+
+    private func reloadSmartAlbums() {
+        let store = dependencies.smartAlbums
+        Task {
+            let read = await Task.detached(priority: .userInitiated) { (try? store.fetchAllOrdered()) ?? [] }.value
+            if read != smartAlbums { smartAlbums = read }
+        }
+    }
+
+    /// Off the main actor (hang report 2026-11-08: a read here waits for a
+    /// free reader of the pool, and long background reads can hold them
+    /// all). Runs on every Sources change, so the newest read wins.
+    @discardableResult
+    private func reloadSources() -> Task<Void, Never> {
+        sourcesReadToken &+= 1
+        let token = sourcesReadToken
+        let store = dependencies.sources
+        return Task {
+            let read = await Task.detached(priority: .userInitiated) { (try? store.sources()) ?? [] }.value
+            guard token == sourcesReadToken else { return }
+            if read != sources { sources = read }
+        }
     }
 
     /// The first run's Add Folder or Drive… and File › Add Folder…: what
@@ -1754,7 +1803,7 @@ struct MacRootWindow: View {
             }
         }
         if MacDemoLibrary.section == "serverBrowser", let item = await MacDemoLibrary.seedServerSource(dependencies) {
-            reloadSources()
+            await reloadSources().value
             selection = item
         }
         if MacDemoLibrary.isOn {
@@ -1762,7 +1811,7 @@ struct MacRootWindow: View {
             library?.loadIfNeeded()
             // `-ShotDexDemoSources`: the folder sources in the sidebar too.
             await MacDemoSources.seedIfAsked(dependencies)
-            reloadSources()
+            await reloadSources().value
             MacDemoLibrary.seedScaleIfAsked(dependencies) { library?.reload() }
             // `-ShotDexPerfCycle`: switch list/grid and sort by itself, then
             // quit — the hang watchdog's numbers without XCTest reading the

@@ -202,6 +202,11 @@ AC: [07b §3](07b-on-server-check-ac.md#3-mac).
 - **Chạy lại:** mỗi lần app Mac về trước mặt và khi mở một smart album có điều kiện server (lệnh `checkOnServer` cho
   helper nếu helper chạy), không chờ lượt 30 phút; một lượt đang chạy thì không mở thêm.
 - Kiểm: `mac-smartalbum-onserver.json` (chân sidebar, bấm → On Server).
+- **Không bao giờ giữ DB lâu (hang 2026-11-08, Mac treo 17 phút):** truy vấn tiến độ có `size IS NULL OR s.size =
+  size` không dùng được index cỡ — mỗi file Photos quét mọi file server, ~20 phút ở 55.000 ảnh, giữ một reader của pool;
+  các màn hỏi lại mỗi lô nên giữ hết reader và main thread chờ. Sửa: tách hai nhánh (0,43 s ở 30.000 ảnh,
+  `OnServerScaleTests`), `OnServerReadGate` (mỗi câu hỏi một lần đọc chạy một lúc, kết quả giữ 10 s, các màn dùng
+  chung), và không đọc DB đồng bộ trên main ở các màn Mac (trình duyệt server, cửa sổ gốc, chọn người chạy nền).
 
 ## 12. Băm dùng chung — Mac băm hộ, máy khác chỉ đọc (2026-11-03)
 

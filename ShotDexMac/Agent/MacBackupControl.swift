@@ -111,8 +111,10 @@ final class MacBackupControl {
     /// Picks the runner: register the helper when there is work and the
     /// user wants it; fall back to the app when macOS says no.
     private func decide() {
-        let hasWork = !coordinator.jobs.isEmpty || MacAgentLink.hasOnServerWork(database)
-            || MacCommonPhotosGatherer.hasWork(database)
+        // Server sources and gathering sets are read off the main actor
+        // (hang report 2026-11-08); until the first read is in, assume work.
+        let hasWork = !coordinator.jobs.isEmpty || (hasOtherWork ?? true)
+        refreshOtherWork()
         MacAgentLink.ensureAgent(hasWork: hasWork)
         agentStatus = MacAgentLink.service.status
         let local = !(MacAgentLink.keepsWorkingAfterQuit && agentStatus == .enabled)
@@ -134,6 +136,27 @@ final class MacBackupControl {
     }
 
     @ObservationIgnored private var hasDecided = false
+    /// A server source or a gathering set exists — read off the main actor.
+    @ObservationIgnored private var hasOtherWork: Bool?
+    @ObservationIgnored private var isReadingWork = false
+
+    /// Reads whether there is server or gathering work, and decides again
+    /// when the answer changed.
+    private func refreshOtherWork() {
+        guard !isReadingWork else { return }
+        isReadingWork = true
+        let database = self.database
+        Task {
+            let found = await Task.detached(priority: .utility) {
+                !((try? SourceStore(database: database).serverConnections()) ?? [:]).isEmpty
+                    || ((try? CommonPhotosWatchStore(database: database).watches()) ?? []).contains(where: \.isOn)
+            }.value
+            isReadingWork = false
+            guard found != hasOtherWork else { return }
+            hasOtherWork = found
+            decide()
+        }
+    }
 
     private func send(_ action: MacAgentLink.Action, _ id: String, locally: (BackupCoordinator) -> Void) {
         if usesAgent {

@@ -105,3 +105,30 @@ extension OnServerProgressQueries {
         return out
     }
 }
+
+/// One heavy on-server read at a time per question (FS-19.07 §7). The check
+/// bumps its generation after every batch and each screen asked again then:
+/// on a 50,000-photo library a read took longer than a batch, new ones
+/// started before the last ended, every reader of the pool was held, and the
+/// main thread waited 17 minutes for one (Mac hang report, 2026-11-08). A
+/// caller asking while the same read runs waits for that one; a fresh answer
+/// (younger than `freshFor`) is handed out again without a read.
+actor OnServerReadGate {
+    static let shared = OnServerReadGate()
+
+    private var running: [String: Task<(any Sendable)?, Never>] = [:]
+    private var answers: [String: (at: ContinuousClock.Instant, value: (any Sendable)?)] = [:]
+
+    func value<T: Sendable>(_ key: String, database: AppDatabase, freshFor: Duration = .seconds(10),
+                            _ read: @escaping @Sendable () throws -> T) async -> T? {
+        let key = "\(ObjectIdentifier(database).hashValue):\(key)"
+        if let answer = answers[key], ContinuousClock.now - answer.at < freshFor { return answer.value as? T }
+        if let task = running[key] { return await task.value as? T }
+        let task = Task.detached(priority: .utility) { () -> (any Sendable)? in try? read() }
+        running[key] = task
+        let value = await task.value
+        running[key] = nil
+        answers[key] = (.now, value)
+        return value as? T
+    }
+}
