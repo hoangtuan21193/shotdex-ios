@@ -134,6 +134,14 @@ enum CommonPhotosJob {
                                   comment: "Activity: photo N of M")
             let bytes = String(localized: "\(progress.doneBytes.formatted(.byteCount(style: .file))) of \(progress.totalBytes.formatted(.byteCount(style: .file)))",
                                comment: "Activity: bytes done of total")
+            // Every photo done, the run still going: it writes its log and reads
+            // the folders again (user 2026-11-08: "100%, what is it doing?").
+            if progress.totalCount > 0, progress.doneCount >= progress.totalCount {
+                return LongRunningJob(id: run.id, kind: kind, title: title, aside: percent, fraction: fraction,
+                                      status: String(localized: "All \(progress.totalCount.formatted()) done · writing the log and reading the folders again…",
+                                                     comment: "Activity: a common-photos run past its last photo"),
+                                      detail: nil, state: state, actions: [.pause, .stop, .showLog])
+            }
             var status = run.isUndo
                 ? String(localized: "Undoing \(position) · \(bytes)", comment: "Activity: an undo going")
                 : run.action == .move

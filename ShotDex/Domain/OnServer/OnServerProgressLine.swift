@@ -36,7 +36,11 @@ enum OnServerProgressLine {
             first = String(localized: "Checking · \(counts)", comment: "On-server check: running; e.g. Checking · 12,408 of 54,920")
             if p.bytesToDownload > 0 {
                 let bytes = p.bytesToDownload.formatted(.byteCount(style: .file))
-                first += " · " + String(localized: "\(bytes) to download", comment: "On-server check: what is left to download from iCloud")
+                // The Mac keeps its originals on disk: they are read there, not
+                // downloaded (user 2026-11-08: "why download?").
+                first += " · " + (input.thisDevice == .mac
+                    ? String(localized: "\(bytes) to read", comment: "On-server check on the Mac: originals left to read and hash")
+                    : String(localized: "\(bytes) to download", comment: "On-server check: what is left to download from iCloud"))
             }
         }
         var out = [first]

@@ -74,9 +74,14 @@ struct MacBackgroundJobs: View {
                 rows.append(Row(id: "index", symbol: "arrow.triangle.2.circlepath",
                                 title: String(localized: "Indexing the library", comment: "Mac Activity › Background: the index reads photos' metadata")))
             } else if library.pendingICloudCount > 0 {
+                // Photos whose original is not on this Mac (iCloud has not sent it,
+                // or cannot while iCloud is full): only their camera details wait;
+                // nothing else does (user 2026-11-08).
                 rows.append(Row(id: "index", symbol: "icloud",
-                                title: String(localized: "Index waiting for iCloud", comment: "Mac Activity › Background: photos whose metadata iCloud has not sent yet"),
-                                detail: String(localized: "\(library.pendingICloudCount.formatted()) photos", comment: "Mac Activity › Background: a count of photos"),
+                                title: String(localized: "\(library.pendingICloudCount.formatted()) photos not on this Mac yet",
+                                              comment: "Mac Activity › Background: photos whose original iCloud has not sent"),
+                                detail: String(localized: "Their camera details are read when iCloud sends them. Everything else keeps working.",
+                                               comment: "Mac Activity › Background: what waiting for iCloud means"),
                                 isWaiting: true))
             }
             if let left = library.placeLookupRemaining, left > 0 {
@@ -166,7 +171,7 @@ private struct MacBackgroundRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(row.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
                 if let detail = row.detail {
-                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).monospacedDigit()
+                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2).monospacedDigit()
                 }
                 if row.isWaiting {
                     EmptyView()
