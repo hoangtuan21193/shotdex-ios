@@ -165,6 +165,7 @@ final class OnServerCheck {
         // One start time for the whole pass: a file that fails is tried
         // again on the next pass, not in the next round of this one.
         let start = now()
+        lastPassHashed = (0, 0)
         let sources = (try? environment.serverSources()) ?? []
         guard !sources.isEmpty else {
             waits = [:]
@@ -175,8 +176,25 @@ final class OnServerCheck {
         var openSources: [(id: String, connectionId: String)] = []
         var allRules: [OnServerSchedule.JobRules] = []
         var newWaits: [String: OnServerSchedule.Wait] = [:]
-        for source in sources {
-            let jobs = (try? environment.jobRules(source.connectionId)) ?? []
+        let jobsBySource = sources.map { (try? environment.jobRules($0.connectionId)) ?? [] }
+        // The Photos side needs no server: its originals are listed and
+        // hashed while the servers are listed, not after (user 2026-11-08:
+        // a share's listing took an hour and nothing else moved meanwhile).
+        let photosRules = OnServerSchedule.wait(for: jobsBySource.map(OnServerSchedule.rules(of:)),
+                                                isExpensivePath: isExpensive, isCharging: isCharging)
+        let environment = self.environment
+        let photosMeanwhile: Task<Int, Never>? = photosRules == nil && !Task.isCancelled ? Task { [weak self] in
+            var hashed = 0
+            while !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
+                hashed += summary.adopted + summary.seeded + summary.hashed
+                // Screens read the counts again, as after any batch.
+                self?.generation &+= 1
+                if summary.waitingForSpace || summary.listed + summary.seeded + summary.hashed + summary.failed == 0 { break }
+            }
+            return hashed
+        } : nil
+        for (index, source) in sources.enumerated() {
+            let jobs = jobsBySource[index]
             allRules.append(OnServerSchedule.rules(of: jobs))
             if let wait = OnServerSchedule.wait(for: jobs, isExpensivePath: isExpensive, isCharging: isCharging) {
                 newWaits[source.id] = wait
@@ -190,11 +208,15 @@ final class OnServerCheck {
                 newWaits[source.id] = .unreachable(source.name)
             }
         }
+        if let photosMeanwhile {
+            // Cancelled with the pass: the batch in hand finishes first.
+            let hashed = await withTaskCancellationHandler { await photosMeanwhile.value } onCancel: { photosMeanwhile.cancel() }
+            lastPassHashed.photos += hashed
+        }
         waits = newWaits
         photosWait = OnServerSchedule.wait(for: allRules, isExpensivePath: isExpensive, isCharging: isCharging)
         generation &+= 1
 
-        lastPassHashed = (0, 0)
         // Hashes the other devices worked out come first: what they read is
         // not read here (§12.3).
         if !Task.isCancelled, await environment.adoptShared(start) > 0 { generation &+= 1 }

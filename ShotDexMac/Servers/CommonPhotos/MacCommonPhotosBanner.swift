@@ -174,6 +174,10 @@ struct MacCommonPhotosFoot: View {
         if entry.isRunningElsewhere {
             return String(localized: "In background", comment: "Mac sidebar foot: the helper runs this common-photos run")
         }
+        // Past the last photo: writing the log and reading the folders again.
+        if entry.progress.totalCount > 0, entry.progress.doneCount >= entry.progress.totalCount {
+            return String(localized: "Finishing…", comment: "Mac sidebar foot: a common-photos run writing its log and rescanning")
+        }
         return entry.fraction.formatted(.percent.precision(.fractionLength(0)))
     }
 }

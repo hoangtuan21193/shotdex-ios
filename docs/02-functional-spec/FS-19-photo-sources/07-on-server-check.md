@@ -207,6 +207,11 @@ AC: [07b §3](07b-on-server-check-ac.md#3-mac).
     Listing the server's files · Reading files on the server · Hashing originals from Photos · Spot-checking other
     devices' hashes · Linking matched photos — hiện trong Activity › Background.
 - Dòng `Checking · …` ở header smart album và chân sidebar bấm được → Activity › Background.
+- **Ảnh Find Common Photos vừa chuyển không bị đọc lại:** khi quét lại server, một file mới mà Common Photos đã ghi lúc
+  đặt vào (`common_photo_scan_records`: đường dẫn, cỡ, SHA) và trùng SHA với một bản ghi vừa mất ở chỗ cũ là **chính
+  bản ghi đó, đã chuyển** — chỉ đổi đường dẫn, giữ SHA, không tải ảnh xem trước qua mạng (trước: 14.080 ảnh chuyển bị
+  đọc lại toàn bộ, lượt kiểm và nút Finish chờ hàng giờ).
+- **Phía Photos không chờ server:** trong lúc liệt kê server, bản gốc Photos vẫn được liệt kê và băm; số đếm tăng mỗi lô.
 
 - **Chân sidebar Mac:** khi còn mục chưa có câu trả lời, khi đang chạy hay đang chờ — `Checking On Server`, dòng §7 của
   nguồn server đầu tiên (`Checking · 1,240 of 23,904 · 38 GB to download` hoặc lý do chờ) và thanh tiến độ; bấm mở

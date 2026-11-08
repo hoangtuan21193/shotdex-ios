@@ -72,6 +72,29 @@ struct ServerSourceIndexer: Sendable {
         // minutes on a large share, while another process waited for its lock
         // (Mac, 2026-11-08).
         let known = try await database.reader.read { db in try FileCopyWriter.existingAll(db, sourceId: sourceId) }
+        // Files Find Common Photos moved here: it recorded their new path,
+        // size and SHA-256 when they landed. One that matches a copy gone from
+        // its old path is that copy, moved — not read again over the network
+        // (user 2026-11-08: 14,080 moved photos were read whole a second time).
+        let landed: [String: (size: Int64, sha256: String)]
+        var vanishedHashes: [String: String] = [:]
+        if vanished.isEmpty {
+            landed = [:]
+        } else {
+            let vanishedIds = vanished.map(\.copyId)
+            (landed, vanishedHashes) = try await database.reader.read { db in
+                let connectionId = try String.fetchOne(db, sql: "SELECT connectionId FROM sources WHERE id = ?", arguments: [sourceId])
+                var landed: [String: (Int64, String)] = [:]
+                if let connectionId {
+                    for row in try Row.fetchAll(db, sql: """
+                        SELECT path, size, sha256 FROM common_photo_scan_records WHERE connectionId = ? AND sha256 IS NOT NULL
+                        """, arguments: [connectionId]) {
+                        landed[FolderSourceIndexer.pathKey(row[0])] = (row[1], row[2])
+                    }
+                }
+                return (landed, try FileCopyWriter.primaryHashes(db, copyIds: vanishedIds))
+            }
+        }
         var seen: [(FileCopyWriter.Existing, [CopyFileStore.ListedFile])] = []
         func flushSeen() async throws {
             guard !seen.isEmpty else { return }
@@ -95,6 +118,27 @@ struct ServerSourceIndexer: Sendable {
                 // Same size, same date: not one byte read (FS-19.03 §3).
                 seen.append((existing, Self.listedFiles(unit)))
                 if seen.count >= 500 { try await flushSeen() }
+                summary.unchanged += 1
+                continue
+            }
+
+            if existing == nil, !vanished.isEmpty,
+               let record = landed[FolderSourceIndexer.pathKey(ServerUploadPath.join(folder, file.relativePath))],
+               record.size == file.size,
+               let match = vanished.firstIndex(where: { vanishedHashes[$0.copyId] == record.sha256 }) {
+                let copyId = vanished[match].copyId
+                vanished.remove(at: match)
+                let (files, paired, sha) = (Self.listedFiles(unit), unit.companion?.relativePath, record.sha256)
+                try await database.writer.write { db in
+                    try FileCopyWriter.moved(db, copyId: copyId, relativePath: file.relativePath, key: key, size: file.size,
+                                             modified: modified, pairedPath: paired, at: stamp)
+                    try CopyFileStore.saveServerFiles(db, copyId: copyId, files: files)
+                    // A new write time clears the hash: the bytes are the ones Common Photos checked.
+                    try db.execute(sql: """
+                        UPDATE copy_files SET sha256 = ?, origin = 'hashed', hashedAt = ?
+                        WHERE copyId = ? AND fileKey = 'primary' AND sha256 IS NULL
+                        """, arguments: [sha, stamp, copyId])
+                }
                 summary.unchanged += 1
                 continue
             }

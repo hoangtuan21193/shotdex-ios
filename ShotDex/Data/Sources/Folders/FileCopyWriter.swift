@@ -26,6 +26,33 @@ enum FileCopyWriter {
             .map { Vanished(copyId: $0["id"], photoId: $0["photoId"], size: $0["size"], fast: $0["fastHash"]) }
     }
 
+    /// SHA-256 of each copy's primary file, for matching a moved file to the
+    /// copy it was without reading it again.
+    static func primaryHashes(_ db: Database, copyIds: [String]) throws -> [String: String] {
+        var out: [String: String] = [:]
+        for start in stride(from: 0, to: copyIds.count, by: 500) {
+            let chunk = Array(copyIds[start..<min(start + 500, copyIds.count)])
+            for row in try Row.fetchAll(db, sql: """
+                SELECT copyId, sha256 FROM copy_files
+                WHERE fileKey = 'primary' AND sha256 IS NOT NULL AND copyId IN (\(databaseQuestionMarks(count: chunk.count)))
+                """, arguments: StatementArguments(chunk)) {
+                out[row[0]] = row[1]
+            }
+        }
+        return out
+    }
+
+    /// A copy that moved on the server (Find Common Photos' Move, FS-19.08):
+    /// the same row and photo at its new path, seen now — nothing read.
+    static func moved(_ db: Database, copyId: String, relativePath: String, key: String, size: Int64, modified: Int?,
+                      pairedPath: String?, at stamp: Int) throws {
+        try db.execute(sql: """
+            UPDATE photo_copies SET relativePath = ?, relativePathKey = ?, size = ?, modifiedAt = ?, pairedPath = ?,
+                lastSeenAt = ?, isOnline = 1, missingSince = NULL
+            WHERE id = ?
+            """, arguments: [relativePath, key, size, modified, pairedPath, stamp, copyId])
+    }
+
     /// The copy already recorded at a path.
     struct Existing: Sendable {
         let id: String

@@ -54,7 +54,9 @@ struct OnServerScheduleTests {
         calls.workRounds = 2
         let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
         await check.run(now: { Date(timeIntervalSince1970: 1_000) })
-        #expect(calls.counts == Calls.Counts(list: 1, server: 3, photos: 3))
+        // The Photos side runs while the source is listed (3 calls: 2 with
+        // work, 1 without), then once a round with the server's 3.
+        #expect(calls.counts == Calls.Counts(list: 1, server: 3, photos: 6))
         #expect(check.waits.isEmpty)
         #expect(check.photosWait == nil)
         #expect(check.finishedAt == Date(timeIntervalSince1970: 1_000))
@@ -69,7 +71,8 @@ struct OnServerScheduleTests {
         calls.reachable = false
         let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
         await check.run()
-        #expect(calls.counts == Calls.Counts(list: 1, server: 0, photos: 1))
+        // Once while it is listed, once after — no server call.
+        #expect(calls.counts == Calls.Counts(list: 1, server: 0, photos: 2))
         #expect(check.waits == ["S1": .unreachable("NAS Home")])
     }
 
