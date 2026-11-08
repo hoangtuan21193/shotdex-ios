@@ -89,11 +89,17 @@ struct PhotosFileHashPass: Sendable {
         try await withThrowingTaskGroup(of: Outcome.self) { group in
             var inFlight = 0
             var reserved: Int64 = 0
+            // Asked every 25 files, not before each: on the Mac the answer
+            // (purgeable space included) takes a moment (2026-11-08 sample).
+            var free: Int64? = nil
+            var launched = 0
             func launchNext() -> Bool {
                 guard let file = queue.first, !Task.isCancelled else { return false }
                 let size = file.size ?? Self.unknownSizeAllowance
+                if launched % 25 == 0 { free = freeBytes() }
+                launched += 1
                 // The same rule as Backup: never fill the device (FS-22.02 §2).
-                if let free = freeBytes(), free - reserved - size < BackupRunner.minimumFreeBytes {
+                if let free, free - reserved - size < BackupRunner.minimumFreeBytes {
                     summary.waitingForSpace = true
                     queue = []
                     return false
