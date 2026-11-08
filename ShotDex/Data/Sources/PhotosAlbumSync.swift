@@ -109,7 +109,11 @@ final class PhotosAlbumSync {
         let albums = self.albums
         let enabled: [SmartAlbumPhotosAlbum]
         do {
-            enabled = try await Task.detached { try links.links() }.value.filter(\.isEnabled)
+            // On by default (user 2026-11-08): albums with no link get one first.
+            enabled = try await Task.detached {
+                try links.addDefaultLinks()
+                return try links.links()
+            }.value.filter(\.isEnabled)
         } catch {
             Self.logger.error("links: \(error.localizedDescription, privacy: .public)")
             return

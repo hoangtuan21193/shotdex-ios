@@ -28,6 +28,8 @@ struct MacSmartAlbumHeader: View {
     @State private var kickedAlbumId: String?
     /// The album's own size, whatever narrows the grid.
     @State private var total: Int?
+    /// Its Keep in Photos link (FS-06.12 §9), read again after each pass.
+    @State private var photosLink: SmartAlbumPhotosAlbum?
 
     var body: some View {
         // Chips and count centred on the lines at the right, one or three (board).
@@ -51,7 +53,7 @@ struct MacSmartAlbumHeader: View {
                 .frame(height: 24)
                 .help(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"))
             Spacer(minLength: 12)
-            if !onServerLines.isEmpty || originalCheck != nil {
+            if !onServerLines.isEmpty || originalCheck != nil || photosLine != nil {
                 VStack(alignment: .trailing, spacing: 1) {
                     // The counts keep to one line; the sentences after them
                     // (a hash mismatch names a device, FS-19.07 §12.4) wrap.
@@ -85,6 +87,13 @@ struct MacSmartAlbumHeader: View {
                     ForEach(Array(onServerLines.dropFirst().enumerated()), id: \.offset) { _, line in
                         Text(line).multilineTextAlignment(.trailing)
                     }
+                    // Keep in Photos, last (FS-06.12 §3): `In Photos · 1,284 photos · Updated 2 min ago`.
+                    if let photosLine {
+                        Text(photosLine.text)
+                            .lineLimit(1)
+                            .help(photosLine.showsHint ? PhotosAlbumSyncLine.hint : "")
+                            .accessibilityAddTraits(.updatesFrequently)
+                    }
                 }
                 .font(.caption)
                 .monospacedDigit()
@@ -95,6 +104,14 @@ struct MacSmartAlbumHeader: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .overlay(alignment: .bottom) { Divider() }
+        // The Keep in Photos link: again after each pass, and for another album.
+        .task(id: "\(album.id)-\(dependencies.photosAlbumSync?.generation ?? -1)") {
+            let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+            let id = album.id
+            let link = await Task.detached(priority: .utility) { try? links.link(id) }.value
+            guard !Task.isCancelled else { return }
+            photosLink = link
+        }
         // The album's size: again when its rules or the Library's rows change.
         .task(id: TotalKey(query: album.query, generation: generation)) {
             let queries = dependencies.libraryQueries
@@ -144,6 +161,14 @@ struct MacSmartAlbumHeader: View {
             lastOriginalReload = Date()
             reload()
         }
+    }
+
+    private var photosLine: PhotosAlbumSyncLine.Line? {
+        guard let photosLink else { return nil }
+        return PhotosAlbumSyncLine.line(
+            state: photosLink.state, isEnabled: photosLink.isEnabled, assetCount: photosLink.assetCount,
+            lastSyncedAt: photosLink.lastSyncedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            progress: dependencies.photosAlbumSync?.progress[album.id])
     }
 
     private struct OnServerKey: Equatable {

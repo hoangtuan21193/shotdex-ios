@@ -303,6 +303,31 @@ struct PhotosAlbumSyncTests {
         #expect(try links.photoKitIds(matching: Self.favorites).count == 10)
     }
 
+    /// User 2026-11-08: on by default. A smart album nobody touched — old or
+    /// new — gets its album in Photos; one turned off stays off; one with no
+    /// condition makes no album.
+    @Test func onByDefault() async throws {
+        try library(20, favorites: 8)
+        let store = SmartAlbumStore(database: database)
+        try store.upsert(SmartAlbum(id: "S", name: "Favorites", query: Self.favorites, createdAt: 1))
+        try store.upsert(SmartAlbum(id: "Off", name: "Turned Off", query: Self.favorites, createdAt: 2))
+        try store.upsert(SmartAlbum(id: "Empty", name: "No Conditions", query: .empty, createdAt: 3))
+        try links.setEnabled(false, smartAlbumId: "Off")
+        #expect(try links.isEnabled("S"))
+        await sync.syncNow()
+        let id = try #require(try link().collectionLocalId)
+        #expect(await photos.count(id) == 8)
+        #expect(await photos.albumCount == 1)
+        #expect(try links.link("Off")?.isEnabled == false)
+        #expect(try links.link("Empty") == nil)
+        // Deleted in Photos while kept: off for good, not made again by default.
+        await photos.delete(id)
+        await sync.syncNow()
+        await sync.syncNow()
+        #expect(try link().isEnabled == false && link().state == .deletedInPhotos)
+        #expect(await photos.albumCount == 0)
+    }
+
     /// The diff keeps the smart album's order and splits into runs.
     @Test func diffAndBatches() {
         let diff = PhotosAlbumDiff(target: ["a", "b", "c", "b"], current: ["c", "x"])

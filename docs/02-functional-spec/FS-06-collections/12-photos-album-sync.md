@@ -1,7 +1,7 @@
 # FS-06.12 — Giữ smart album thành một album trong Photos
 
 `FS-06.12` · tier B · `Features/Albums/SmartAlbumEditorSheet.swift` · `Features/Albums/SmartAlbumDetailScreen.swift` ·
-`Data/Sources/PhotoLibraryService.swift` (`createAlbum`, `addAssets`, `removeAssets`) · bảng mới · cập nhật 2026-11-06
+`Data/Sources/PhotoLibraryService.swift` (`createAlbum`, `addAssets`, `removeAssets`) · bảng mới · cập nhật 2026-11-08 (mặc định bật, Mac §9)
 
 **Một câu:** người dùng bật một công tắc trên smart album, ShotDex giữ một **album thật trong app Photos** luôn có
 đúng những ảnh đó. Nhờ vậy người dùng mở được tập ảnh ấy trong Photos để làm những việc chỉ Photos làm được, trước
@@ -21,7 +21,8 @@ làm được: chọn ảnh → Move to Shared Library. Smart album của ShotDe
 ## 2. Phạm vi
 
 **Có:**
-- Công tắc **Keep in Photos** trên smart album. Bật lần đầu thì tạo một album thường trong Photos.
+- Công tắc **Keep in Photos** trên smart album, **mặc định bật** cho mọi smart album, cũ lẫn mới (người dùng chốt
+  2026-11-08). Bật thì tạo một album thường trong Photos. Smart album không có điều kiện nào thì không tạo album.
 - Đồng bộ liên tục: thêm ảnh mới khớp, bỏ ảnh không còn khớp. Album Photos **luôn bằng** smart album (người dùng chốt
   2026-11-06: ghi đè cả thay đổi tay trong Photos).
 - Chạy khi app ở trước mặt **và ở nền**, cùng lượt kiểm On Server (người dùng chốt 2026-11-06).
@@ -33,7 +34,7 @@ làm được: chọn ảnh → Move to Shared Library. Smart album của ShotDe
 - Biết ảnh nào đã ở Shared Library. Đó là spike của [FS-06.11](11-shared-library.md). Chưa có API thì không đoán.
 - Xoá ảnh. Đồng bộ chỉ thêm/bỏ ảnh **khỏi album**, không bao giờ xoá ảnh khỏi thư viện.
 - Album thường của người dùng làm đích. ShotDex chỉ đụng album do chính nó tạo cho smart album đó.
-- Mac — ngoài phạm vi lần này (intent Q7). Thư viện Photos trên Mac là việc riêng.
+- ~~Mac — ngoài phạm vi lần này (intent Q7).~~ Mac có từ 2026-11-08, xem §9.
 - Folder Photos (`PHCollectionList`) để gom các album đồng bộ.
 
 ## 3. Trạng thái màn hình
@@ -134,3 +135,36 @@ Thư viện thử trên simulator iPhone 17 iOS 26.5 (và 18.6 cho AC-UI). Khôn
 | App sửa thư viện Photos ở nền, người dùng bất ngờ | chỉ đụng album ShotDex tạo; không bao giờ xoá ảnh; dòng trạng thái ghi lần cập nhật cuối |
 | 55.000 ảnh thêm một lượt làm Photos/iCloud đồng bộ nặng | lô 500, gom lượt 10 s; đo trên máy thật cùng S3 |
 | Hai máy (vợ/chồng) cùng bật cho smart album cùng tên → hai album trùng tên trong Photos chung? | album thường thuộc thư viện riêng của từng Apple Account — không trùng. Ghi lại nếu spike AC-1 thấy khác |
+
+## 9. Mặc định bật và Mac (2026-11-08)
+
+Người dùng (2026-11-08): *"smartalbum phải hiện ở app Photos của iOS nữa chứ. có option bật tắt, mặc định bật"*.
+Chốt bằng câu hỏi chọn: Mac giữ album (iCloud Photos đưa nó lên iPhone/iPad); mặc định bật cho cả album cũ lẫn mới;
+công tắc chỉ ở từng album, không có công tắc chung.
+
+- **Mặc định bật.** Smart album chưa có dòng `smart_album_photos_album` được coi là bật: mỗi lượt đồng bộ thêm dòng
+  `isEnabled = 1` cho nó trước (`SmartAlbumPhotosAlbumStore.addDefaultLinks`, `INSERT OR IGNORE`, cùng transaction với
+  việc đọc smart album). Dòng người dùng đã tắt, hay album đã bị xoá trong Photos (`isEnabled = 0`), giữ nguyên — không
+  bật lại. Smart album không có điều kiện nào thì không có dòng, vì nó chỉ tạo một album rỗng. Editor mở album mới với
+  công tắc bật.
+- **Mac.** Cùng `PhotosAlbumSync` và bảng, chạy **trong app** (`MacDependencies.startKeepingInPhotos`, gọi khi cửa sổ
+  Library hiện). Helper đăng nhập không ghi album: hai tiến trình cùng ghi thì mỗi bên tạo một album. Không chạy khi
+  dùng demo library (`-ShotDexDemoLibrary`): smart album của demo không bao giờ được chạm tới thư viện Photos thật.
+  - Kích hoạt: PhotoKit báo đổi thư viện; helper báo đổi (`agentChanged`, gồm mỗi lô của đợt kiểm On Server); lô kiểm
+    của chính app; app về trước mặt; Save trong editor. Tối đa một lượt mỗi **30 giây** (helper báo nhiều lần mỗi phút).
+  - App đóng thì album đứng yên tới lần mở sau. Lượt mở sau so với nội dung thật của album nên không mất gì.
+  - Editor (`MAC_SmartAlbumEditor`): checkbox **Keep in Photos** dưới khung điều kiện, chân chữ
+    `ShotDex keeps an album in Photos with exactly these photos. It shows on your other devices through iCloud Photos.`
+    Không có Full Access thì chân ghi `Needs Full Photos Access in System Settings › Privacy & Security › Photos.`, và
+    checkbox chỉ tắt được, không bật được. Advanced Filter (cùng sheet) không có checkbox.
+  - Header smart album (`MAC_SmartAlbum`): dòng §3 cuối cột phải, dưới dòng On Server và originals. Câu Move to Shared
+    Library nằm ở tooltip của dòng, vì header chỉ có một hàng.
+- **Trùng album.** Smart album không đồng bộ giữa các máy. iPhone và Mac cùng có smart album tên giống nhau, cùng bật,
+  thì Photos có hai album trùng tên. Người dùng tắt ở một máy để bỏ một album.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-18 | 3 smart album: "Favorites" (chưa đụng), "Turned Off" (đã tắt), "No Conditions" (không điều kiện) | một lượt đồng bộ | chỉ "Favorites" có album trong Photos; "Turned Off" vẫn tắt; "No Conditions" không có dòng. Xoá album trong Photos → tắt hẳn, không tạo lại | `PhotosAlbumSyncTests.onByDefault` |
+| AC-19 | Mac, demo library | mở app, lưu smart album | không lượt đồng bộ nào chạy (`photosAlbumSync == nil`) | code: `startKeepingInPhotos` thoát sớm khi `MacDemoLibrary.isOn` |
+| AC-20 | Mac, thư viện thật, smart album "Also on Server" | mở app | Photos trên Mac có album "Also on Server", lên iPhone qua iCloud | ⚠️ chưa: không thử trên thư viện thật khi test (luật người dùng); chứng minh khi người dùng cài bản Release |
+

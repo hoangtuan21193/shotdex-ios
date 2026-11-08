@@ -148,7 +148,8 @@ struct SmartAlbumEditorSheet: View {
         let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
         let albumId = existing?.id
         let kept = await Task.detached(priority: .utility) {
-            albumId.flatMap { try? links.link($0) }?.isEnabled ?? false
+            // On unless turned off, a new album included (user 2026-11-08).
+            albumId.flatMap { try? links.link($0) }?.isEnabled ?? SmartAlbumPhotosAlbumStore.isOnByDefault
         }.value
         let catalog = await suggestionLoad
         guard !Task.isCancelled else { return }

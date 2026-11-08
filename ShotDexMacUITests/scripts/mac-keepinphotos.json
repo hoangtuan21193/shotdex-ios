@@ -1,0 +1,16 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-ShotDexSection", "smartAlbumEditor"]},
+  {"action": "waitFor", "label": "New Smart Album", "type": "staticText", "seconds": 20},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "01-editor-keep-on"},
+  {"action": "dump", "name": "01-editor-keep-on"},
+  {"action": "assertExists", "label": "Keep in Photos", "type": "checkBox"},
+  {"action": "assertValue", "label": "Keep in Photos", "type": "checkBox", "text": "1"},
+  {"action": "click", "label": "Keep in Photos", "type": "checkBox"},
+  {"action": "wait", "seconds": 1},
+  {"action": "assertValue", "label": "Keep in Photos", "type": "checkBox", "text": "0"},
+  {"action": "screenshot", "name": "02-editor-keep-off"},
+  {"action": "dump", "name": "02-editor-keep-off"}
+ ]
+}

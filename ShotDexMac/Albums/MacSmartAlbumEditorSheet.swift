@@ -34,6 +34,10 @@ struct MacSmartAlbumEditorSheet: View {
     @State private var isOpeningFolder = false
     /// A group just added: scrolled into view.
     @State private var scrollTarget: UUID?
+    /// Keep in Photos (FS-06.12 §9): on unless turned off (user 2026-11-08).
+    @State private var keepsInPhotos = SmartAlbumPhotosAlbumStore.isOnByDefault
+    /// What the album had when the sheet opened: Save writes the switch only if it moved.
+    @State private var keptInPhotos = SmartAlbumPhotosAlbumStore.isOnByDefault
 
     struct FolderPick: Identifiable {
         let id = UUID()
@@ -160,6 +164,7 @@ struct MacSmartAlbumEditorSheet: View {
             }
             .padding(.bottom, 12)
             conditions
+            if !isFilter { keepInPhotosRow }
             HStack(spacing: 8) {
                 Button { showsHelp.toggle() } label: { Image(systemName: "questionmark") }
                     .buttonStyle(.bordered)
@@ -188,7 +193,7 @@ struct MacSmartAlbumEditorSheet: View {
         .padding(.top, 20)
         .padding(.bottom, 20)
         // Accent on Create and the segments only: popups stay system (board).
-        .frame(width: 640, height: 560, alignment: .top)
+        .frame(width: 640, height: isFilter ? 560 : 600, alignment: .top)
         .presentationBackground(MacTheme.sheet)
         .onModifierKeysChanged(mask: .option) { _, keys in isOptionDown = keys.contains(.option) }
         .task { await prepare() }
@@ -201,6 +206,34 @@ struct MacSmartAlbumEditorSheet: View {
                 }
             }
         }
+    }
+
+    /// Keep in Photos, under the conditions (board `MAC_SmartAlbumEditor`):
+    /// a checkbox and what it does. Needs Full Photos access — without it the
+    /// album could not hold exactly these photos; on stays turn-off-able.
+    private var keepInPhotosRow: some View {
+        let isFullAccess = dependencies.photoLibrary.authorizationState == .authorized
+        return VStack(alignment: .leading, spacing: 2) {
+            Toggle(isOn: $keepsInPhotos) {
+                Text("Keep in Photos", comment: "Mac smart album editor: checkbox, keep an album in Photos with these photos")
+            }
+            .toggleStyle(.checkbox)
+            .disabled(!isFullAccess && !keepsInPhotos)
+            Group {
+                if isFullAccess {
+                    Text("ShotDex keeps an album in Photos with exactly these photos. It shows on your other devices through iCloud Photos.",
+                         comment: "Mac smart album editor: under Keep in Photos")
+                } else {
+                    Text("Needs Full Photos Access in System Settings › Privacy & Security › Photos.",
+                         comment: "Mac smart album editor: Keep in Photos cannot work without full Photos access")
+                }
+            }
+            .font(.system(size: 11)).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 20)
+        }
+        .padding(.top, 12)
+        .accessibilityElement(children: .contain)
     }
 
     private func label(_ text: String) -> some View {
@@ -372,6 +405,13 @@ struct MacSmartAlbumEditorSheet: View {
         let store = SourceStore(database: dependencies.database)
         let albumStore = dependencies.smartAlbums
         let existingId = existing?.id
+        let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+        let kept = await Task.detached(priority: .userInitiated) {
+            existingId.flatMap { try? links.link($0) }?.isEnabled ?? SmartAlbumPhotosAlbumStore.isOnByDefault
+        }.value
+        // The checkbox as the person left it if they clicked it while this read.
+        if keepsInPhotos == keptInPhotos { keepsInPhotos = kept }
+        keptInPhotos = kept
         let read = await Task.detached(priority: .userInitiated) {
             let everySource = (try? store.sources()) ?? []
             let names = ((try? albumStore.fetchAllOrdered()) ?? []).filter { $0.id != existingId }
@@ -428,6 +468,15 @@ struct MacSmartAlbumEditorSheet: View {
         Task {
             do {
                 try await dependencies.smartAlbums.save(album)
+                // Only after the album row exists: a link to no album is never cleaned up.
+                if keepsInPhotos != keptInPhotos {
+                    let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+                    let (keeps, id) = (keepsInPhotos, album.id)
+                    try await Task.detached { try links.setEnabled(keeps, smartAlbumId: id) }.value
+                    dependencies.photosAlbumSync?.linksChanged()
+                }
+                // A rename or new conditions change the album in Photos too.
+                dependencies.photosAlbumSync?.setNeedsSync()
                 onSaved(album)
                 dismiss()
             } catch {

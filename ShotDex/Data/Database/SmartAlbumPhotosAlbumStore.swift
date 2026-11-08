@@ -63,8 +63,36 @@ struct SmartAlbumPhotosAlbumStore: Sendable {
     func isEnabled(_ smartAlbumId: String) throws -> Bool {
         try database.reader.read { db in
             try Bool.fetchOne(db, sql: "SELECT isEnabled FROM smart_album_photos_album WHERE smartAlbumId = ?",
-                              arguments: [smartAlbumId]) ?? false
+                              arguments: [smartAlbumId]) ?? Self.isOnByDefault
         }
+    }
+
+    /// Keep in Photos is on unless the person turned it off (user
+    /// 2026-11-08): a smart album with no link yet — old or new — is kept.
+    static let isOnByDefault = true
+
+    /// Gives every smart album that has no link yet one that is on, in one
+    /// transaction with reading the albums — never a link to an album
+    /// deleted meanwhile. A link the person turned off, or whose album was
+    /// deleted in Photos, keeps its row and stays off. An album with no
+    /// condition gets none: it would only make an empty album in Photos.
+    func addDefaultLinks() throws {
+        try database.writer.write { db in
+            let albums = try SmartAlbum.fetchAll(db)
+            for album in albums where Self.canKeep(album.query) {
+                try db.execute(sql: """
+                    INSERT OR IGNORE INTO smart_album_photos_album (smartAlbumId, isEnabled, assetCount, state)
+                    VALUES (?, 1, 0, 'idle')
+                    """, arguments: [album.id])
+            }
+        }
+    }
+
+    /// Whether the query has a condition that narrows anything: never the
+    /// whole library (review 2026-11-07).
+    static func canKeep(_ query: SmartAlbumQuery) -> Bool {
+        let rules = query.validRules + query.validGroups.flatMap(\.rules)
+        return !rules.isEmpty && rules.allSatisfy { SmartAlbumSQLBuilder.clause(for: $0) != nil }
     }
 
     /// Turns Keep in Photos on or off. Off keeps the album's id so turning it
@@ -92,8 +120,7 @@ struct SmartAlbumPhotosAlbumStore: Sendable {
         // Never the whole library: no condition, or one that compiles to
         // nothing (a term that folds to empty), would widen the album to
         // every photo (review 2026-11-07).
-        let rules = query.validRules + query.validGroups.flatMap(\.rules)
-        guard !rules.isEmpty, rules.allSatisfy({ SmartAlbumSQLBuilder.clause(for: $0) != nil }) else { return [] }
+        guard Self.canKeep(query) else { return [] }
         let (whereSQL, arguments) = SmartAlbumSQLBuilder.whereClause(for: query)
         return try database.reader.read { db in
             try String.fetchAll(db, sql: """

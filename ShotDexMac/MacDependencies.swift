@@ -302,6 +302,40 @@ final class MacDependencies: LibraryServices {
         runs.finishOwedRuns()
     }
 
+    /// Keep in Photos (FS-06.12 §9): the app's own, from
+    /// `startKeepingInPhotos`. Nil in the login-item helper — one process
+    /// writes the albums, or two would each make one — and in the demo,
+    /// whose smart albums must never reach the real Photos library.
+    private(set) var photosAlbumSync: PhotosAlbumSync?
+
+    /// Starts Keep in Photos in the app, once: albums follow the library,
+    /// each batch of the On Server check (the helper's, seen through its
+    /// notice, or the app's own) and every save. At most one pass every 30 s:
+    /// the helper says something changed several times a minute.
+    func startKeepingInPhotos() {
+        guard photosAlbumSync == nil else { return }
+        #if DEBUG
+        if MacDemoLibrary.isOn { return }
+        #endif
+        let photoLibrary = self.photoLibrary
+        let sync = PhotosAlbumSync(database: database, writer: LivePhotosAlbumWriter(),
+                                   canWrite: { photoLibrary.authorizationState == .authorized },
+                                   minimumGap: .seconds(30))
+        photosAlbumSync = sync
+        let assetsChanged = photoLibrary.onAssetsChanged
+        photoLibrary.onAssetsChanged = { ids in
+            assetsChanged?(ids)
+            sync.setNeedsSync()
+        }
+        let batch = onServerCheck.onBatch
+        onServerCheck.onBatch = {
+            batch?()
+            sync.setNeedsSync()
+        }
+        _ = MacAgentLink.observe(MacAgentLink.agentChanged) { sync.setNeedsSync() }
+        sync.setNeedsSync()
+    }
+
     /// Run Now (Activity): the helper's pass when it runs jobs, else ours.
     func gatherNow(watchId: String) {
         if MacAgentLink.agentRunsJobs {

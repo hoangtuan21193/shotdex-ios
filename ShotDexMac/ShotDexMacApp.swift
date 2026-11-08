@@ -47,6 +47,8 @@ struct ShotDexMacApp: App {
                     appDelegate.runs = dependencies.commonPhotos
                     appDelegate.uploads = dependencies.uploads
                     dependencies.startGatheringInApp()
+                    // Smart albums as albums in Photos (FS-06.12 §9).
+                    dependencies.startKeepingInPhotos()
                     // Which originals are on this Mac (FS-06.10 §4): a
                     // window on screen is the app in front.
                     dependencies.originalPresenceCheck.appBecameActive()
@@ -58,6 +60,8 @@ struct ShotDexMacApp: App {
                     dependencies.originalPresenceCheck.appBecameActive()
                     // The On Server check too (FS-19.07 §5): a pass starts unless one runs.
                     dependencies.backupControl.appCameForward()
+                    // Keep in Photos: changes made in Photos while away (FS-06.12 §4).
+                    dependencies.photosAlbumSync?.setNeedsSync()
                 }
                 .frame(minWidth: MacWindowMetrics.minimumSize.width, minHeight: MacWindowMetrics.minimumSize.height)
         }
