@@ -1,0 +1,102 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "activity",
+    "-ShotDexInterruptedRun"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Resume",
+   "type": "button",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "01-foot"
+  },
+  {
+   "action": "dump",
+   "name": "01-foot"
+  },
+  {
+   "action": "assertExists",
+   "label": "Stop this run",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Interrupted — photos already done stay done."
+  },
+  {
+   "action": "click",
+   "label": "Stop this run",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Stop this run?"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-ask"
+  },
+  {
+   "action": "dump",
+   "name": "02-ask"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Stop this run",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "x": 0.541,
+   "y": 0.5656
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Resume",
+   "type": "button",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-stopped"
+  }
+ ]
+}

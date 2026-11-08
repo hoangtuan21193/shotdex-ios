@@ -84,6 +84,34 @@ final class BackupCoordinator {
         onJobsReloaded?(jobs)
     }
 
+    /// `reload` with its reads off the main actor — for callers that run
+    /// often (the Mac app mirroring the helper's run, twice a second): a
+    /// synchronous read there waits for a free reader of the pool (Mac hang
+    /// 2026-11-08). The newest read wins.
+    func reloadInBackground() async {
+        reloadToken &+= 1
+        let token = reloadToken
+        let store = self.store
+        let read = await Task.detached(priority: .utility) { () -> ([BackupJob], [String: BackupJobState], [String: Int]) in
+            try? store.removeJobsWithoutSource()
+            let jobs = (try? store.jobs()) ?? []
+            var states: [String: BackupJobState] = [:]
+            var counts: [String: Int] = [:]
+            for job in jobs {
+                states[job.id] = (try? store.state(jobId: job.id)) ?? BackupJobState(jobId: job.id)
+                counts[job.id] = (try? store.handledItemCount(jobId: job.id)) ?? 0
+            }
+            return (jobs, states, counts)
+        }.value
+        guard token == reloadToken else { return }
+        if read.0 != jobs { jobs = read.0 }
+        if read.1 != states { states = read.1 }
+        if read.2 != backedUpItems { backedUpItems = read.2 }
+        onJobsReloaded?(jobs)
+    }
+
+    @ObservationIgnored private var reloadToken = 0
+
     /// The jobs list changed (added, edited, deleted): pick it up and let a
     /// new job start at once.
     func jobsChanged(start jobId: String? = nil) {

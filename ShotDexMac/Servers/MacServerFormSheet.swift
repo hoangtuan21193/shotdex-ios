@@ -103,7 +103,11 @@ struct MacServerFormSheet: View {
         .tint(MacTheme.accent)
         .task {
             if !draft.isNew {
-                showsInSidebar = ((try? SourceStore(database: dependencies.database).serverSourceId(connectionId: draft.server.id)) ?? nil) != nil
+                let store = SourceStore(database: dependencies.database)
+                let id = draft.server.id
+                showsInSidebar = await Task.detached(priority: .userInitiated) {
+                    ((try? store.serverSourceId(connectionId: id)) ?? nil) != nil
+                }.value
             }
             guard draft.isNew, discovery == nil else { return }
             let model = ServerDiscoveryModel(browser: BonjourServerBrowser(), scanner: SubnetSMBScanner())

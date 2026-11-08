@@ -28,6 +28,9 @@ final class MacCommonPhotosRuns {
         var state: CommonPhotosRun.State
         /// Pause was pressed: the run is paused, not interrupted.
         var isPausedByUser = false
+        /// Going in the other process (the helper): not interrupted, though
+        /// this launch has no task for it (user 2026-11-08).
+        var isRunningElsewhere = false
         /// Bytes per second over the last half minute, for "about 3 h left".
         var bytesPerSecond: Double?
         var id: String { run.id }
@@ -566,6 +569,17 @@ final class MacCommonPhotosRuns {
         return (try? store.hasUndoableRows(runId: runId)) ?? false
     }
 
+    /// `canUndo`, its three reads off the main actor (hang report 2026-11-08).
+    func canUndoAsync(runId: String) async -> Bool {
+        guard tasks[runId] == nil, restoreTasks[runId] == nil else { return false }
+        let store = self.store
+        return await Task.detached(priority: .userInitiated) {
+            guard let run = (try? store.run(id: runId)) ?? nil, !run.isUndo, run.isOver, run.isReadable,
+                  ((try? store.undoRuns(of: runId)) ?? []).allSatisfy(\.isOver) else { return false }
+            return (try? store.hasUndoableRows(runId: runId)) ?? false
+        }.value
+    }
+
     /// Undo Copy… / Undo Move… and Undo Selected…: an undo run over the
     /// chosen photos (every one when nil), started at once. Refused like a
     /// new run when one going works in the same folders. Returns its id.
@@ -607,9 +621,14 @@ final class MacCommonPhotosRuns {
         let next = going ?? waiting
         if next != footRunId { footRunId = next }
         generation += 1
-        if let next, entries[next] == nil, let run = (try? store.run(id: next)) ?? nil {
-            var entry = Entry(run: run)
+        // Not going here: what the store says now — the helper may have
+        // moved it on or be running it (a stale entry kept "Interrupted").
+        if let next, tasks[next] == nil, let run = (try? store.run(id: next)) ?? nil {
+            var entry = entries[next] ?? Entry(run: run)
+            entry.run = run
+            entry.state = run.state
             entry.progress = Self.progress((try? store.items(runId: next)) ?? [])
+            entry.isRunningElsewhere = CommonPhotosRunner.isActive(runId: next, in: database)
             entries[next] = entry
         }
     }

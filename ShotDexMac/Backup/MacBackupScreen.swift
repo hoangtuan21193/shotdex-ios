@@ -52,14 +52,20 @@ struct MacBackupScreen: View {
         ) { job in
             Button(String(localized: "Delete Backup", comment: "Backup: delete the job"), role: .destructive) {
                 control.pause(job.id)
-                try? dependencies.backups.delete(id: job.id)
-                control.jobsChanged()
+                let backups = dependencies.backups
+                let id = job.id
+                Task {
+                    // Off the main actor (hang report 2026-11-08).
+                    await Task.detached(priority: .userInitiated) { try? backups.delete(id: id) }.value
+                    control.jobsChanged()
+                }
             }
         } message: { _ in
             Text(String(localized: "Files already on the server stay there.", comment: "Backup: deleting a job deletes nothing on the server"))
         }
-        .onAppear {
-            coordinator.reload()
+        .task {
+            // Off the main actor (hang report 2026-11-08).
+            await coordinator.reloadInBackground()
             if !control.usesAgent { coordinator.sourcesTick() }
             if selection == nil { selection = coordinator.jobs.first?.id }
         }
@@ -67,7 +73,10 @@ struct MacBackupScreen: View {
         .onChange(of: opensNewBackup, initial: true) { _, opens in
             guard opens else { return }
             opensNewBackup = false
-            if dependencies.fileServers.hasConnections { openForm(editing: nil) }
+            Task {
+                await dependencies.storeNames.loaded()
+                if dependencies.storeNames.hasConnections { openForm(editing: nil) }
+            }
         }
     }
 
@@ -118,7 +127,7 @@ struct MacBackupScreen: View {
         } description: {
             Text("Back up a whole library to your NAS.", comment: "Backup: empty state")
         } actions: {
-            if dependencies.fileServers.hasConnections {
+            if dependencies.storeNames.hasConnections {
                 Button(String(localized: "New Backup…", comment: "Mac Backup: create a job")) { openForm(editing: nil) }
                     .keyboardShortcut(.defaultAction)
             } else {
@@ -171,7 +180,7 @@ struct MacBackupScreen: View {
             Button { openForm(editing: nil) } label: {
                 Label(String(localized: "New Backup…", comment: "Mac Backup: create a job"), systemImage: "plus")
             }
-            .disabled(!dependencies.fileServers.hasConnections)
+            .disabled(!dependencies.storeNames.hasConnections)
         }
     }
 
@@ -298,10 +307,11 @@ struct MacBackupJobInfo {
         if job.sourceId == PhotoLibrarySource.id {
             sourceName = String(localized: "Photos Library", comment: "Backup source: the Photos library")
         } else {
-            sourceName = (try? dependencies.sources.sources())?.first { $0.id == job.sourceId }?.name
+            // Read off the main actor once, not per row per tick (hang report 2026-11-08).
+            sourceName = dependencies.storeNames.sources[job.sourceId]
                 ?? String(localized: "Source", comment: "Backup: a source whose name is unknown")
         }
-        connectionName = (try? dependencies.fileServers.fetch(id: job.connectionId))?.name
+        connectionName = dependencies.storeNames.connections[job.connectionId]
             ?? String(localized: "Server", comment: "Backup: a connection whose name is unknown")
         let content = switch job.settings.content {
         case .photosAndVideos: String(localized: "Photos & Videos", comment: "Backup: what the job copies")

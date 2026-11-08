@@ -813,6 +813,8 @@ struct MacRootWindow: View {
     private func reloadSources() -> Task<Void, Never> {
         sourcesReadToken &+= 1
         let token = sourcesReadToken
+        // The names Backup and Settings draw per row: read again with them.
+        dependencies.storeNames.refresh()
         let store = dependencies.sources
         return Task {
             let read = await Task.detached(priority: .userInitiated) { (try? store.sources()) ?? [] }.value

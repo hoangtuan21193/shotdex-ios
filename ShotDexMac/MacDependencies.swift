@@ -43,6 +43,8 @@ final class MacDependencies: LibraryServices {
     /// progress from; nil until the window has opened.
     var library: LibraryModel?
     let fileServers: FileServerStore
+    /// Source and server names read off the main actor, for rows drawn per tick.
+    let storeNames: MacStoreNames
     /// What went up to which server (FS-15.02) and the set the grid asks.
     let serverUploads: ServerUploadStore
     let serverUploadIndex: ServerUploadIndex
@@ -143,6 +145,7 @@ final class MacDependencies: LibraryServices {
         sources = SourceStore(database: database)
         let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
         self.fileServers = fileServers
+        storeNames = MacStoreNames(sources: sources, fileServers: fileServers)
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
         serverUploadIndex = ServerUploadIndex(store: serverUploads)

@@ -88,30 +88,76 @@ struct MacCommonPhotosFoot: View {
     let runId: String
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openWindow) private var openWindow
+    @State private var asksStop = false
 
     var body: some View {
         if let entry = dependencies.commonPhotos.entries[runId] {
-            Button { MacCommonPhotosRunRoute.open(runId, openWindow) } label: {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(label(entry)).foregroundStyle(.primary).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(state(entry)).foregroundStyle(entry.isRunning ? .secondary : Color.orange).lineLimit(1)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Button { MacCommonPhotosRunRoute.open(runId, openWindow) } label: {
+                        Text(label(entry)).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    ProgressView(value: entry.fraction).progressViewStyle(.linear).tint(MacTheme.accent)
+                    .buttonStyle(.plain)
+                    .help(String(localized: "Show the run's log", comment: "Mac sidebar foot: open the common-photos run"))
+                    if isStuck(entry) {
+                        // What to do, not only what happened (user 2026-11-08: "Interrupted"
+                        // with nothing to press): Resume picks up where it stopped; with
+                        // every photo done, Finish writes the log and rescans.
+                        Button(entry.position >= entry.progress.totalCount && entry.progress.totalCount > 0
+                               ? String(localized: "Finish", comment: "Mac sidebar foot: complete a run whose photos are all done (log, rescan)")
+                               : String(localized: "Resume", comment: "Mac sidebar foot: continue an interrupted common-photos run")) {
+                            dependencies.commonPhotos.resume(runId: runId)
+                        }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(MacTheme.accent)
+                        .fontWeight(.semibold)
+                        if dependencies.commonPhotos.canStop(runId: runId) {
+                            Button { asksStop = true } label: { Image(systemName: "xmark.circle.fill") }
+                                .buttonStyle(.borderless)
+                                .foregroundStyle(.secondary)
+                                .help(String(localized: "Stop this run", comment: "Mac sidebar foot: stop an interrupted common-photos run for good"))
+                                .accessibilityLabel(String(localized: "Stop this run", comment: "Mac sidebar foot: stop an interrupted common-photos run for good"))
+                        }
+                    } else {
+                        Text(state(entry)).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(MacTheme.rowAlternate, in: RoundedRectangle(cornerRadius: 10))
-                .contentShape(Rectangle())
+                .font(.subheadline)
+                .monospacedDigit()
+                ProgressView(value: entry.fraction).progressViewStyle(.linear).tint(MacTheme.accent)
+                if let problem = entry.problem, isStuck(entry) {
+                    Text(problem).font(.caption).foregroundStyle(.orange).lineLimit(2)
+                } else if isStuck(entry) {
+                    Text(entry.isPausedByUser
+                         ? String(localized: "Paused", comment: "Mac sidebar foot: a common-photos run is paused")
+                         : String(localized: "Interrupted — photos already done stay done.",
+                                  comment: "Mac sidebar foot: a common-photos run stopped by a quit or an error"))
+                        .font(.caption).foregroundStyle(.orange).lineLimit(2)
+                }
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(MacTheme.rowAlternate, in: RoundedRectangle(cornerRadius: 10))
             .padding(8)
-            .help(String(localized: "Show the run's window", comment: "Mac sidebar foot: open the common-photos window"))
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .contain)
+            .confirmationDialog(String(localized: "Stop this run?", comment: "Mac sidebar foot: confirm Stop of an interrupted run"),
+                                isPresented: $asksStop) {
+                Button(String(localized: "Stop Run", comment: "Mac sidebar foot: stop an interrupted run"), role: .destructive) {
+                    dependencies.commonPhotos.stop(runId: runId)
+                }
+                Button(String(localized: "Keep It", comment: "Mac sidebar foot: keep an interrupted run to resume later"), role: .cancel) {}
+            } message: {
+                Text("Photos already copied or moved stay where they are. The rest won't be done, and the run can't be resumed.",
+                     comment: "Mac sidebar foot: what stopping an interrupted run does")
+            }
         }
+    }
+
+    /// Not going anywhere: the user can Resume or Stop it.
+    private func isStuck(_ entry: MacCommonPhotosRuns.Entry) -> Bool {
+        !entry.isRunning && !entry.isRunningElsewhere
     }
 
     /// "Common photos · 120 of 280" — the same count the window shows.
@@ -123,11 +169,11 @@ struct MacCommonPhotosFoot: View {
             : String(localized: "Common photos · \(position)", comment: "Mac sidebar foot: a common-photos run")
     }
 
-    /// The percentage while it goes, else why it is not going.
+    /// The percentage while it goes here, or that the helper runs it.
     private func state(_ entry: MacCommonPhotosRuns.Entry) -> String {
-        if entry.isRunning { return entry.fraction.formatted(.percent.precision(.fractionLength(0))) }
-        return entry.isPausedByUser
-            ? String(localized: "Paused", comment: "Mac sidebar foot: a common-photos run is paused")
-            : String(localized: "Interrupted", comment: "Mac sidebar foot: a common-photos run was interrupted")
+        if entry.isRunningElsewhere {
+            return String(localized: "In background", comment: "Mac sidebar foot: the helper runs this common-photos run")
+        }
+        return entry.fraction.formatted(.percent.precision(.fractionLength(0)))
     }
 }

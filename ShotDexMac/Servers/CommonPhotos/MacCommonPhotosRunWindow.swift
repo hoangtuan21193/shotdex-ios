@@ -400,7 +400,7 @@ private struct MacCommonPhotosRunContent: View {
         .onChange(of: entry.isRunning) { log.read() }
         // An undo of this run started or ended: its rows changed under it.
         .onChange(of: runs.generation) { log.read() }
-        .task(id: "\(entry.state.rawValue)-\(entry.isRunning)-\(log.rows.count)-\(log.undoneCount)-\(runs.generation)") { refreshCanUndo() }
+        .task(id: "\(entry.state.rawValue)-\(entry.isRunning)-\(log.rows.count)-\(log.undoneCount)-\(runs.generation)") { await refreshCanUndo() }
         #if DEBUG
         // `-ShotDexCommonPhotosReadyLeaveOut IMG_0002.JPG`: that ready row unchecked (§6d), for screenshots.
         .task(id: "\(entry.isReady)-\(log.rows.count)") {
@@ -412,7 +412,7 @@ private struct MacCommonPhotosRunContent: View {
         // `-ShotDexCommonPhotosAskUndo`: the Undo question once the run is done;
         // `-ShotDexCommonPhotosUndoAfterRun`: undo it at once, for screenshots.
         .task(id: "\(entry.state.rawValue)-\(log.rows.count)") {
-            guard entry.isFinished, !run.isUndo, !log.rows.isEmpty, runs.canUndo(runId: run.id) else { return }
+            guard entry.isFinished, !run.isUndo, !log.rows.isEmpty, await runs.canUndoAsync(runId: run.id) else { return }
             let arguments = ProcessInfo.processInfo.arguments
             if arguments.contains("-ShotDexCommonPhotosAskUndo") { undoing = .some(nil) }
             if arguments.contains("-ShotDexCommonPhotosUndoAfterRun"), canUndo { startUndo(nil) }
@@ -494,8 +494,9 @@ private struct MacCommonPhotosRunContent: View {
     /// undo's window, to retry rows not undone — the run it undid.
     private var undoTarget: String { run.undoOf ?? run.id }
 
-    private func refreshCanUndo() {
-        canUndo = (entry.isFinished || entry.isStopped) && runs.canUndo(runId: undoTarget)
+    private func refreshCanUndo() async {
+        guard entry.isFinished || entry.isStopped else { canUndo = false; return }
+        canUndo = await runs.canUndoAsync(runId: undoTarget)
     }
 
     private var undoTitle: String {
@@ -540,7 +541,7 @@ private struct MacCommonPhotosRunContent: View {
             undoProblem = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
         log.read()
-        refreshCanUndo()
+        Task { await refreshCanUndo() }
     }
 
     // MARK: Header

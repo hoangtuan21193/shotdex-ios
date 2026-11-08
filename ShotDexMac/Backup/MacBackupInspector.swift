@@ -6,6 +6,9 @@ struct MacBackupInspector: View {
     let job: BackupJob
     var edit: () -> Void
     @Environment(MacDependencies.self) private var dependencies
+    /// Files not copied, read off the main actor every 10 s while shown —
+    /// not in the body on every progress tick (hang report 2026-11-08).
+    @State private var failedCount = 0
 
     private var coordinator: BackupCoordinator { dependencies.backupCoordinator }
     private var control: MacBackupControl { dependencies.backupControl }
@@ -66,11 +69,11 @@ struct MacBackupInspector: View {
                             String(localized: "\(Int64(speed).formatted(.byteCount(style: .file)))/s", comment: "Mac Backup inspector: upload speed"))
                     }
                 }
-                if let failed = try? dependencies.backups.failedEntries(jobId: job.id), !failed.isEmpty {
+                if failedCount > 0 {
                     Divider()
-                    Label(failed.count == 1
+                    Label(failedCount == 1
                           ? String(localized: "1 File Not Copied", comment: "Backup: files that failed")
-                          : String(localized: "\(failed.count) Files Not Copied", comment: "Backup: files that failed"),
+                          : String(localized: "\(failedCount) Files Not Copied", comment: "Backup: files that failed"),
                           systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
                 }
@@ -80,6 +83,14 @@ struct MacBackupInspector: View {
                     .foregroundStyle(.secondary)
             }
             .padding(16)
+        }
+        .task(id: job.id) {
+            let backups = dependencies.backups
+            let jobId = job.id
+            while !Task.isCancelled {
+                failedCount = await Task.detached(priority: .utility) { ((try? backups.failedEntries(jobId: jobId)) ?? []).count }.value
+                try? await Task.sleep(for: .seconds(10))
+            }
         }
     }
 

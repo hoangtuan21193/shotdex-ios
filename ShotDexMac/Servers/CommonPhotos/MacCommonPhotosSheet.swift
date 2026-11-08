@@ -23,13 +23,19 @@ struct MacCommonPhotosSheet: View {
             }
         }
         .task {
-            let all = (try? dependencies.sources.sources()) ?? []
-            let connections = (try? dependencies.sources.serverConnections()) ?? [:]
-            sources = all.compactMap { source in
-                guard let id = connections[source.id], let connection = try? dependencies.fileServers.fetch(id: id),
-                      CommonPhotosSources.sameFiles(connection, server) else { return nil }
-                return (source, connection)
-            }
+            // Off the main actor (hang report 2026-11-08): 2 + one per source reads.
+            let sourceStore = dependencies.sources
+            let fileServers = dependencies.fileServers
+            let server = self.server
+            sources = await Task.detached(priority: .userInitiated) {
+                let all = (try? sourceStore.sources()) ?? []
+                let connections = (try? sourceStore.serverConnections()) ?? [:]
+                return all.compactMap { source in
+                    guard let id = connections[source.id], let connection = try? fileServers.fetch(id: id),
+                          CommonPhotosSources.sameFiles(connection, server) else { return nil }
+                    return (source, connection)
+                }
+            }.value
             let model = CommonPhotosScanModel(connectionId: request.connectionId, sourceId: request.sourceId, folders: request.folders,
                                               client: dependencies.lockedClient(for: server), database: dependencies.database,
                                               sources: sources.map { CommonPhotosSources.Source(sourceId: $0.source.id, connection: $0.connection) })

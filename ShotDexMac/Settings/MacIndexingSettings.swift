@@ -79,8 +79,12 @@ struct MacIndexingSettings: View {
         return String(localized: "Results go to your own iCloud account only. Last synced \(date).", comment: "Mac Settings: sharing footer with the last sync time")
     }
 
+    /// A count over the whole library: off the main actor (hang report 2026-11-08).
     private func refreshCount() {
-        missingCount = (try? dependencies.metadataStore.pendingICloudReadCount()) ?? 0
+        let store = dependencies.metadataStore
+        Task {
+            missingCount = await Task.detached(priority: .userInitiated) { (try? store.pendingICloudReadCount()) ?? 0 }.value
+        }
     }
 
     private func publishIndexesForAll(_ isOn: Bool) {

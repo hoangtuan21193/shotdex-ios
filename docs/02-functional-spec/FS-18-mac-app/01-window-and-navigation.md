@@ -97,6 +97,10 @@ sổ riêng là tuỳ chọn.
     Importing from <thẻ>. Tên, dòng tiến độ, thanh 4pt (không thanh khi đang chờ). Không có gì: một dòng "Nothing
     running — the library, checks and backups are up to date." Đọc thẳng trạng thái observable của từng việc, không truy
     vấn trong popover. Code `MacBackgroundJobs`; test `mac-activity-background.json`, `mac-activity.json`.
+  - **Chân sidebar Common Photos** (người dùng 2026-11-08: "cứ hiện interrupted, không có cách sửa"): lượt bị ngắt có
+    **Resume** (thanh đầy: **Finish** — chỉ còn ghi log và quét lại), nút ✕ **Stop this run** hỏi lại ("Stop this
+    run?" · Stop Run · Keep It) và dòng "Interrupted — photos already done stay done." (hoặc lý do Resume không chạy
+    được); lượt helper đang chạy ghi **In background**. Test `mac-commonphotos-foot.json` (`-ShotDexInterruptedRun`).
   - Một lượt Common Photos do helper chạy hoặc đã xong trong helper không còn hiện **Interrupted**: khi app không chạy lượt
     đó, trạng thái lấy từ DB, và lượt đang được helper giữ (claim) hiện là đang chạy.
 - Không có màn hình thứ hai / Secondary Viewer (D14).

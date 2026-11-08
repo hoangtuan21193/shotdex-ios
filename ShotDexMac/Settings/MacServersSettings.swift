@@ -265,17 +265,26 @@ struct MacServersSettings: View {
 
     // MARK: Actions
 
+    /// Runs on every source read's tick: the servers and their source ids
+    /// are read off the main actor (hang report 2026-11-08).
     private func reload() {
         let store = SourceStore(database: dependencies.database)
+        let fileServers = dependencies.fileServers
         let statuses = Dictionary(dependencies.sourcesModel.rows.map { ($0.id, $0.text.status) }) { first, _ in first }
-        // A Files connection (iPhone and iPad) has no place on the Mac.
-        rows = ((try? dependencies.fileServers.fetchAll()) ?? []).filter { $0.transferProtocol.isNetwork }.map { server in
-            let sourceId = (try? store.serverSourceId(connectionId: server.id)) ?? nil
-            return ConnectionRow(server: server, sourceId: sourceId, sourceStatus: sourceId.flatMap { statuses[$0] })
+        Task {
+            // A Files connection (iPhone and iPad) has no place on the Mac.
+            let read = await Task.detached(priority: .userInitiated) {
+                ((try? fileServers.fetchAll()) ?? []).filter { $0.transferProtocol.isNetwork }.map { server in
+                    (server, (try? store.serverSourceId(connectionId: server.id)) ?? nil)
+                }
+            }.value
+            rows = read.map { server, sourceId in
+                ConnectionRow(server: server, sourceId: sourceId, sourceStatus: sourceId.flatMap { statuses[$0] })
+            }
+            if let selection, !rows.contains(where: { $0.id == selection }) { self.selection = nil }
+            if selection == nil { selection = rows.first?.id }
+            tests = tests.filter { id, _ in rows.contains { $0.id == id } }
         }
-        if let selection, !rows.contains(where: { $0.id == selection }) { self.selection = nil }
-        if selection == nil { selection = rows.first?.id }
-        tests = tests.filter { id, _ in rows.contains { $0.id == id } }
     }
 
     private func test(_ server: FileServer) {

@@ -178,8 +178,11 @@ final class MacBackupControl {
     /// The helper wrote: read the jobs' states again and show its run.
     private func agentChanged() {
         guard usesAgent else { return }
-        coordinator.reload()
         let run = MacAgentLink.currentRun()
         coordinator.showRemoteRun(jobId: run?.jobId, progress: run?.progress, bytesPerSecond: run?.bytesPerSecond)
+        // Up to twice a second while the helper backs up: the jobs and states
+        // are read off the main actor (hang report 2026-11-08).
+        let coordinator = self.coordinator
+        Task { await coordinator.reloadInBackground() }
     }
 }

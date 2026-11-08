@@ -410,6 +410,7 @@ enum MacDemoLibrary {
     /// runs over, on a connection with no password and nothing to dial —
     /// eight finished, one stopped — so the popover's list scrolls and each
     /// row's buttons are there to press. Rows only, no network.
+    @MainActor
     private static func seedActivity(_ dependencies: MacDependencies) {
         let now = Int(Date().timeIntervalSince1970)
         try? dependencies.database.writer.write { db in
@@ -425,6 +426,14 @@ enum MacDemoLibrary {
                                       createdAt: now - index * 3600)
             try? store.start(run, items: [])
             try? store.markState(index == 0 ? .stopped : .finished, runId: run.id, now: now - index * 3600 - 600)
+        }
+        // `-ShotDexInterruptedRun`: one more run left going by a quit — the
+        // sidebar foot's Resume / Stop (user 2026-11-08).
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexInterruptedRun") {
+            let run = CommonPhotosRun(id: "demo-activity-interrupted", connectionId: "demo-activity-nas",
+                                      folders: ["Tuấn", "Vợ"], destination: "Shared", action: .copy, createdAt: now - 60)
+            try? store.start(run, items: [])
+            dependencies.commonPhotos.storeChanged()
         }
     }
 
