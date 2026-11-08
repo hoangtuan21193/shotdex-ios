@@ -10,7 +10,7 @@
   },
   {
    "action": "waitFor",
-   "label": "Checking On Server, Checking · 40 of 226",
+   "label": "Checking On Server, 186 photos left to check on NAS Home",
    "type": "button",
    "seconds": 40
   },
@@ -33,7 +33,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Matching photos with the server (SHA-256), Checking · 40 of 226",
+   "label": "Matching photos with the server (SHA-256), 186 photos left to check on NAS Home",
    "seconds": 5
   },
   {

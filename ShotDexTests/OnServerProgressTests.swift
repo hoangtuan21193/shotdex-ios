@@ -6,7 +6,8 @@ import Testing
 @MainActor
 struct OnServerProgressTests {
     /// AC-80: 100 items, 30 known, 70 with a same-size NAS file to hash —
-    /// `Checking · 30 of 100`, with what is left to download.
+    /// `70 photos left to check on NAS Home › Shared` — one number, and
+    /// where it counts.
     @Test func checkingCounts() async throws {
         let f = try OnServerFixture(photos: 100)
         for n in 0..<30 {
@@ -17,9 +18,12 @@ struct OnServerProgressTests {
         }
         try f.server("Shared/big.HEIC", size: 1_000_000, sha: "other")
         let progress = try OnServerProgressQueries(database: f.database).progress(sourceId: f.source, folder: "Shared")
-        #expect(progress == OnServerProgress(checked: 30, total: 100, bytesToDownload: 70_000_000, editedOnlyMissing: 0))
-        let lines = OnServerProgressLine.lines(.init(progress: progress, wait: nil, finishedAt: nil, sourceName: "NAS Home", thisDevice: .iPhone))
-        #expect(lines == ["Checking · 30 of 100 · \(Int64(70_000_000).formatted(.byteCount(style: .file))) to download"])
+        #expect(progress == OnServerProgress(checked: 30, total: 100, editedOnlyMissing: 0))
+        let lines = OnServerProgressLine.lines(.init(progress: progress, wait: nil, finishedAt: nil, sourceName: "NAS Home", folder: "Shared", thisDevice: .iPhone))
+        #expect(lines == ["70 photos left to check on NAS Home › Shared"])
+        let whole = OnServerProgressLine.lines(.init(progress: OnServerProgress(checked: 54_920 - 1, total: 54_920), wait: nil, finishedAt: nil,
+                                                     sourceName: "WIN", thisDevice: .mac))
+        #expect(whole == ["1 photo left to check on WIN"])
     }
 
     /// AC-99: an edited item whose render is not on the NAS is named.
@@ -30,7 +34,7 @@ struct OnServerProgressTests {
         let progress = try OnServerProgressQueries(database: f.database).progress(sourceId: f.source, folder: nil)
         #expect(progress.editedOnlyMissing == 1)
         let lines = OnServerProgressLine.lines(.init(progress: progress, wait: nil, finishedAt: nil, sourceName: "NAS Home", thisDevice: .iPhone))
-        #expect(lines.last == "1 Edited — edit not on NAS Home")
+        #expect(lines.last == "1 edited photo without the edit on NAS Home")
     }
 
     /// AC-92 and the waits: `.limited` adds its sentence; a wait leads the
@@ -40,10 +44,10 @@ struct OnServerProgressTests {
         func first(_ wait: OnServerSchedule.Wait) -> String? {
             OnServerProgressLine.lines(.init(progress: half, wait: wait, finishedAt: nil, sourceName: "NAS Home", thisDevice: .iPhone)).first
         }
-        #expect(first(.wifi) == "Waiting for Wi‑Fi · 5 of 10")
-        #expect(first(.space) == "Waiting for space · 5 of 10")
-        #expect(first(.unreachable("NAS Home")) == "NAS Home isn't reachable · 5 of 10")
-        #expect(first(.openApp) == "Open ShotDex to continue · 5 of 10")
+        #expect(first(.wifi) == "Waiting for Wi‑Fi · 5 photos left")
+        #expect(first(.space) == "Waiting for space · 5 photos left")
+        #expect(first(.unreachable("NAS Home")) == "NAS Home isn't reachable · 5 photos left")
+        #expect(first(.openApp) == "Open ShotDex to continue · 5 photos left")
         let limited = OnServerProgressLine.lines(.init(progress: half, wait: nil, finishedAt: nil, sourceName: "NAS Home", isLimited: true, thisDevice: .iPhone))
         #expect(limited.last == "Only photos ShotDex can access are checked.")
         let now = Date(timeIntervalSince1970: 10_000)
@@ -62,10 +66,10 @@ struct OnServerProgressTests {
                                              mismatchFrom: from, thisDevice: device))
         }
         #expect(lines(["Tuấn's MacBook"], .iPhone)
-            == ["Checking · 5 of 10", "Hashes from Tuấn's MacBook didn't match — checking on this iPhone."])
+            == ["5 photos left to check on NAS Home", "Hashes from Tuấn's MacBook didn't match — checking on this iPhone."])
         #expect(lines(["Tuấn's iPhone"], .mac).last == "Hashes from Tuấn's iPhone didn't match — checking on this Mac.")
         #expect(lines([nil], .iPad).last == "Hashes from another device didn't match — checking on this iPad.")
-        #expect(lines([], .iPhone) == ["Checking · 5 of 10"])
+        #expect(lines([], .iPhone) == ["5 photos left to check on NAS Home"])
         // Two caught, one unnamed; a name twice is said once.
         #expect(lines(["iPad", nil, "iPad"], .mac).last
             == "Hashes from another device and iPad didn't match — checking on this Mac.")

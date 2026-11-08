@@ -2,7 +2,7 @@
 
 `FS-19.07` · tier B (smart album, lưới, Photo Info) · mã có sẵn: `Data/Sources/PhotosContentHashPass.swift`,
 `Data/Sources/FileServer/ServerSourceIndexer.swift`, `Data/Database/SmartAlbumSQLBuilder.swift`,
-`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-11-06 (§7 Also on Server; §12 băm dùng chung)
+`Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-11-08 (§7 một số mỗi dòng, gọi tên nơi đếm; §12 băm dùng chung)
 
 **Một câu:** ShotDex biết chắc từng ảnh/video trong Photos có bản **giống hệt từng byte** trên một folder của nguồn
 server hay chưa — kể cả file do công cụ khác chép, hay bị script dời, đổi tên — và kiểm lại NAS trước khi xoá.
@@ -36,8 +36,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 - **Hash:** SHA-256 của **cả file**, cho từng file gốc — cùng loại hash Backup đã ghi. Khác một byte là khác.
 - Một mục Photos **có trên folder F của nguồn S** khi mỗi file sau có một file trong F (mọi tầng con) cùng SHA-256:
   ảnh · RAW của RAW+JPEG · video đi kèm Live Photo · video · và, nếu mục **đã sửa** trong Photos, **bản sửa** (ảnh, video).
-- Mục đã sửa mà bản sửa chưa có trên NAS → **không** có trên F; tiến độ và hộp xoá gọi tên: *"Edited — edit not on NAS
-  Home"*. Bản sửa lên NAS khi job Backup bật **Include Edited Versions** (FS-22.01 §2).
+- Mục đã sửa mà bản sửa chưa có trên NAS → **không** có trên F; tiến độ và hộp xoá gọi tên: *"edited photos without the edit
+  on NAS Home"*. Bản sửa lên NAS khi job Backup bật **Include Edited Versions** (FS-22.01 §2).
 - Kiểm **không phụ thuộc** việc gộp ảnh của FS-19 (§02): đọc thẳng bảng hash theo file. Gộp chỉ để hiển thị (đợt 2), và
   không bao giờ ghi sidecar lên NAS vì một lần kiểm.
 - Gộp (đợt 2, `OnServerMergePass`, chạy cuối mỗi lượt kiểm): ảnh server chỉ có bản server, mà mọi file của nó cùng SHA-256
@@ -113,9 +113,12 @@ hệt trên NAS. Tách ra thành trường riêng; Source thôi nhận nguồn s
   Không đổi được (server đã gỡ) thì rule rơi ra, và album **còn 0 điều kiện vì thế** hiện *No Photos Match* + nút Edit
   Smart Album thay vì khớp cả thư viện — album "để xoá" không được nở ra.
 - **Popup Source của màn** (Statistics trên Mac, FS-18.04 §2) không phải bộ dựng điều kiện — giữ nguyên, vẫn có server.
-- Thanh điều kiện: `Checking · 12,408 of 54,920 · 38 GB to download`; lý do chờ (`Waiting for Wi‑Fi`, `Waiting for space`,
+- Thanh điều kiện: `42,512 photos left to check on NAS Home › Shared` — **một con số mỗi dòng** (số ảnh chưa có câu
+  trả lời) và **gọi tên nơi đếm** (nguồn › folder của điều kiện); không còn số đã kiểm/tổng, không còn dung lượng còn
+  tải/đọc (người dùng 2026-11-08: header album và Activity ra hai số khác nhau mà không nói đếm trên hai phạm vi khác
+  nhau; "số liệu quá nhiều và khó hiểu"). Lý do chờ đứng trước: `Waiting for Wi‑Fi · 38 photos left` (`Waiting for space`,
   `NAS Home isn't reachable`, `Open ShotDex to continue` ở đợt 1); xong thì `Checked 3 min ago`.
-  Dòng thêm: `3 Edited — edit not on NAS Home` khi có mục chỉ thiếu bản sửa; `Only photos ShotDex can access are
+  Dòng thêm: `3 edited photos without the edit on NAS Home` khi có mục chỉ thiếu bản sửa; `Only photos ShotDex can access are
   checked.` khi quyền `.limited`; `Waiting to Charge` khi job bật Only While Charging. Tính cho điều kiện **Also on
   Server** đầu tiên của album, đọc lại sau mỗi đợt băm (album tải lại theo). Mã: `OnServerProgressQueries`,
   `OnServerProgressLine`.
@@ -214,7 +217,9 @@ AC: [07b §3](07b-on-server-check-ac.md#3-mac).
 - **Phía Photos không chờ server:** trong lúc liệt kê server, bản gốc Photos vẫn được liệt kê và băm; số đếm tăng mỗi lô.
 
 - **Chân sidebar Mac:** khi còn mục chưa có câu trả lời, khi đang chạy hay đang chờ — `Checking On Server`, dòng §7 của
-  nguồn server đầu tiên (`Checking · 1,240 of 23,904 · 38 GB to download` hoặc lý do chờ) và thanh tiến độ; bấm mở
+  nguồn server đầu tiên, đếm trên **cả nguồn** (`5,664 photos left to check on NAS Home` hoặc lý do chờ) và thanh tiến
+  độ; Activity › Background dùng cùng dòng, sau bước đang chạy (`Reading files on the server — 5,664 photos left to
+  check on NAS Home`). Album trỏ một folder thì số của nó nhỏ hơn số của cả nguồn — tên nơi đếm nói vì sao; bấm mở
   On Server. Đọc ngoài main mỗi lô (`generation`), không mỗi khung hình. Hết việc thì về dòng index.
 - **Chạy lại:** mỗi lần app Mac về trước mặt và khi mở một smart album có điều kiện server (lệnh `checkOnServer` cho
   helper nếu helper chạy), không chờ lượt 30 phút; một lượt đang chạy thì không mở thêm.

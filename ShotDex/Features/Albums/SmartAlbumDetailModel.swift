@@ -115,7 +115,7 @@ final class SmartAlbumDetailModel {
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
         return OnServerProgressLine.lines(.init(
             progress: progress, wait: wait, finishedAt: check.finishedAt,
-            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited,
+            sourceName: sourceNames[rule.text] ?? "", folder: folder, isLimited: isLimited,
             mismatchFrom: caught.map { names[$0] }, thisDevice: Self.thisDevice
         ))
     }

@@ -234,7 +234,7 @@ class Component extends DCLogic {
     // 12,408 of 54,920 checked = 22.6% of the ring's 56.5 circumference (r=9).
     return { t, groups, tiles: empty ? [] : tiles(40,3,{onServer:true, noVideo:true}), serverIcon: I.server, empty,
       chip:'Also on NAS Home › Shared', count: empty ? '0 photos' : '40 photos', dash:'12.8 100',
-      progress:'Checking · 12,408 of 54,920 · 38 GB to download', progress2:'3 Edited — edit not on NAS Home',
+      progress:'42,512 photos left to check on NAS Home › Shared', progress2:'3 edited photos without the edit on NAS Home',
       mismatch: !!this.props.mismatch, origOn: orig!=='off', origChecking: orig==='checking', origChecked: orig==='checked',
       origChip:'Original is iCloud Only', origDash:'12.7 100', cloudIcon:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z', edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
   }

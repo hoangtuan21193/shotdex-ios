@@ -1,8 +1,11 @@
 import Foundation
 
 /// The words under a smart album's conditions while the on-server check
-/// runs (FS-19.07 §7): `Checking · 12,408 of 54,920 · 38 GB to download`,
-/// the reason it waits, or `Checked 3 min ago` once it is done.
+/// runs (FS-19.07 §7): `38 photos left to check on WIN › Photos`, the
+/// reason it waits, or `Checked 3 min ago` once it is done. One number per
+/// line, and the place it counts on named (user 2026-11-08: the album and
+/// Activity showed different counts with nothing saying they counted
+/// different folders; "too many numbers").
 enum OnServerProgressLine {
     /// Which device the words are on — the one that reads again what another
     /// device got wrong.
@@ -13,6 +16,8 @@ enum OnServerProgressLine {
         var wait: OnServerSchedule.Wait?
         var finishedAt: Date?
         var sourceName: String
+        /// The folder of the source the count is on; nil or empty for all of it.
+        var folder: String? = nil
         /// Photos access is `.limited`.
         var isLimited = false
         /// Devices whose hashes the random check found wrong (§12.4), by
@@ -24,32 +29,24 @@ enum OnServerProgressLine {
     /// One line per fact, top first.
     static func lines(_ input: Input, now: Date = Date()) -> [String] {
         let p = input.progress
-        let counts = String(localized: "\(p.checked.formatted()) of \(p.total.formatted())",
-                            comment: "On-server check: items checked of all items")
-        var first: String
+        let left = max(0, p.total - p.checked)
+        let first: String
         if let wait = input.wait {
-            first = "\(text(for: wait)) · \(counts)"
-        } else if p.checked >= p.total, let finishedAt = input.finishedAt {
+            first = left > 0 ? "\(text(for: wait)) · \(photosLeft(left))" : text(for: wait)
+        } else if left == 0, let finishedAt = input.finishedAt {
             let ago = finishedAt.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
             first = String(localized: "Checked \(ago)", comment: "On-server check: done, and when; e.g. Checked 3 min ago")
         } else {
-            first = String(localized: "Checking · \(counts)", comment: "On-server check: running; e.g. Checking · 12,408 of 54,920")
-            if p.bytesToDownload > 0 {
-                let bytes = p.bytesToDownload.formatted(.byteCount(style: .file))
-                // The Mac keeps its originals on disk: they are read there, not
-                // downloaded (user 2026-11-08: "why download?").
-                first += " · " + (input.thisDevice == .mac
-                    ? String(localized: "\(bytes) to read", comment: "On-server check on the Mac: originals left to read and hash")
-                    : String(localized: "\(bytes) to download", comment: "On-server check: what is left to download from iCloud"))
-            }
+            first = words(AttributedString(localized: "^[\(left) photo](inflect: true) left to check on \(scope(input))",
+                                           comment: "On-server check: running; photos with no answer yet, and the server (› folder) counted on, e.g. 38 photos left to check on WIN › Photos"))
         }
         var out = [first]
         if !input.mismatchFrom.isEmpty {
             out.append(mismatch(input.mismatchFrom, on: input.thisDevice))
         }
         if p.editedOnlyMissing > 0 {
-            out.append(String(localized: "\(p.editedOnlyMissing.formatted()) Edited — edit not on \(input.sourceName)",
-                              comment: "On-server check: items edited in Photos whose edit is not on the server"))
+            out.append(words(AttributedString(localized: "^[\(p.editedOnlyMissing) edited photo](inflect: true) without the edit on \(input.sourceName)",
+                                              comment: "On-server check: photos edited in Photos whose original is on the server but whose edit is not, e.g. 136 edited photos without the edit on WIN")))
         }
         if input.isLimited {
             out.append(String(localized: "Only photos ShotDex can access are checked.",
@@ -57,6 +54,20 @@ enum OnServerProgressLine {
         }
         return out
     }
+
+    /// `19,443 photos left`, after a wait.
+    static func photosLeft(_ count: Int) -> String {
+        words(AttributedString(localized: "^[\(count) photo](inflect: true) left",
+                                comment: "On-server check: photos with no answer yet, after the reason it waits, e.g. Waiting for Wi-Fi · 38 photos left"))
+    }
+
+    /// `WIN` or `WIN › Photos › 2025`.
+    static func scope(_ input: Input) -> String {
+        let parts = (input.folder ?? "").split(separator: "/").map(String.init).filter { !$0.isEmpty }
+        return ([input.sourceName] + parts).joined(separator: " › ")
+    }
+
+    private static func words(_ text: AttributedString) -> String { String(text.characters) }
 
     /// `Hashes from Tuấn's MacBook didn't match — checking on this iPhone.`
     static func mismatch(_ names: [String?], on device: ThisDevice) -> String {
