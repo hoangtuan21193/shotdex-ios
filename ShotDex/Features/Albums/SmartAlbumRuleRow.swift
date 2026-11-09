@@ -148,7 +148,7 @@ struct SmartAlbumRuleRow: View {
     }
 
     static let noServerHint = String(
-        localized: "No server on this device yet. Add one under Sources, then this condition can ask which photos also have a copy there.",
+        localized: "No server is a source on this device yet. In Settings › File Servers, open the server and turn on Add as Source — a connected server alone is not read.",
         comment: "Smart album Also on Server condition when no server source has been added")
 
     @ViewBuilder
