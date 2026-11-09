@@ -217,9 +217,10 @@ AC: [07b §3](07b-on-server-check-ac.md#3-mac).
 - **Phía Photos không chờ server:** trong lúc liệt kê server, bản gốc Photos vẫn được liệt kê và băm; số đếm tăng mỗi lô.
 
 - **Chân sidebar Mac:** khi còn mục chưa có câu trả lời, khi đang chạy hay đang chờ — `Checking On Server`, dòng §7 của
-  nguồn server đầu tiên, đếm trên **cả nguồn** (`5,664 photos left to check on NAS Home` hoặc lý do chờ) và thanh tiến
-  độ; Activity › Background dùng cùng dòng, sau bước đang chạy (`Reading files on the server — 5,664 photos left to
-  check on NAS Home`). Album trỏ một folder thì số của nó nhỏ hơn số của cả nguồn — tên nơi đếm nói vì sao; bấm mở
+  nguồn server đầu tiên, đếm trên **folder mà các smart album hỏi** khi chúng cùng hỏi một folder (người dùng
+  2026-11-09: album báo 38, sidebar báo 17,875), không thì trên cả nguồn (`42,512 photos left to check on NAS Home ›
+  Shared` hoặc lý do chờ) và thanh tiến độ; Activity › Background dùng cùng dòng, sau bước đang chạy (`Reading files on
+  the server — 42,512 photos left to check on NAS Home › Shared`). Album và chân sidebar vì vậy ra cùng một số; bấm mở
   On Server. Đọc ngoài main mỗi lô (`generation`), không mỗi khung hình. Hết việc thì về dòng index.
 - **Chạy lại:** mỗi lần app Mac về trước mặt và khi mở một smart album có điều kiện server (lệnh `checkOnServer` cho
   helper nếu helper chạy), không chờ lượt 30 phút; một lượt đang chạy thì không mở thêm.

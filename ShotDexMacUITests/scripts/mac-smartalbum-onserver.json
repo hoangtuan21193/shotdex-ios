@@ -28,7 +28,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Checking On Server, 186 photos left to check on NAS Home",
+   "label": "Checking On Server, 186 photos left to check on NAS Home › Shared",
    "type": "button",
    "seconds": 10
   },
@@ -281,7 +281,7 @@
   },
   {
    "action": "click",
-   "label": "Checking On Server, 186 photos left to check on NAS Home",
+   "label": "Checking On Server, 186 photos left to check on NAS Home › Shared",
    "type": "button"
   },
   {

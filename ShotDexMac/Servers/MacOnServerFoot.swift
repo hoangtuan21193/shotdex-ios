@@ -3,7 +3,8 @@ import SwiftUI
 
 /// How far the On Server check has come, for the sidebar foot (FS-19.07 §7,
 /// user 2026-11-08: "no progress anywhere"): the first server source's
-/// counts, read off the main actor once per batch of the check — not per
+/// counts, on the folder the smart albums ask about when they agree on one,
+/// read off the main actor once per batch of the check — not per
 /// frame. Shown while a pass runs, something waits, or photos are left.
 @MainActor
 @Observable
@@ -16,8 +17,9 @@ final class MacOnServerStatus {
     func refresh(check: OnServerCheck, database: AppDatabase) async {
         guard check.generation != readGeneration else { return }
         readGeneration = check.generation
-        let source = await Task.detached(priority: .utility) {
-            (try? SourceStore(database: database).sources())?.first(where: { $0.kind == "server" })
+        let (source, queries) = await Task.detached(priority: .utility) {
+            ((try? SourceStore(database: database).sources())?.first(where: { $0.kind == "server" }),
+             ((try? SmartAlbumStore(database: database).fetchAllOrdered()) ?? []).map(\.query))
         }.value
         guard let source else {
             line = nil
@@ -26,14 +28,16 @@ final class MacOnServerStatus {
             return
         }
         let sourceId = source.id
+        // The folder the smart albums ask about, so the count is the album's (FS-19.07 §7).
+        let folder = OnServerProgressLine.albumFolder(queries, sourceId: sourceId)
         // The same read a smart album over this source asks for: one at a time, shared.
-        guard let progress = await OnServerReadGate.shared.value("progress:\(sourceId):", database: database, {
-            try OnServerProgressQueries(database: database).progress(sourceId: sourceId, folder: nil)
+        guard let progress = await OnServerReadGate.shared.value("progress:\(sourceId):\(folder ?? "")", database: database, {
+            try OnServerProgressQueries(database: database).progress(sourceId: sourceId, folder: folder)
         }) else { return }
         let (id, name) = (source.id, source.name)
         let wait = check.waits[id] ?? (progress.checked < progress.total ? check.photosWait : nil)
         line = OnServerProgressLine.lines(.init(progress: progress, wait: wait, finishedAt: check.finishedAt,
-                                                sourceName: name, thisDevice: .mac)).first
+                                                sourceName: name, folder: folder, thisDevice: .mac)).first
         fraction = progress.total > 0 ? min(1, Double(progress.checked) / Double(progress.total)) : nil
         isIncomplete = progress.checked < progress.total
     }

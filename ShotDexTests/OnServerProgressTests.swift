@@ -56,6 +56,21 @@ struct OnServerProgressTests {
         #expect(done.first?.hasPrefix("Checked ") == true)
     }
 
+    /// The sidebar foot and Activity count on the folder the smart albums ask
+    /// about when they agree on one (user 2026-11-09: 38 in the album, 17,875
+    /// in the sidebar); albums that disagree, or none, mean the whole source.
+    @Test func albumFolderScope() {
+        func album(_ source: String, _ folder: String?) -> SmartAlbumQuery {
+            SmartAlbumQuery(rules: [SmartAlbumRule(field: .alsoOnServer, text: source, folder: folder)])
+        }
+        let camera = SmartAlbumQuery(rules: [SmartAlbumRule(field: .cameraBody, text: "R6")])
+        #expect(OnServerProgressLine.albumFolder([album("WIN", "Share"), camera, album("WIN", "/share/")], sourceId: "WIN") == "Share")
+        #expect(OnServerProgressLine.albumFolder([album("WIN", "Share"), album("WIN", "Tuan")], sourceId: "WIN") == nil)
+        #expect(OnServerProgressLine.albumFolder([album("WIN", "Share"), album("WIN", nil)], sourceId: "WIN") == nil)
+        #expect(OnServerProgressLine.albumFolder([album("NAS", "Share")], sourceId: "WIN") == nil)
+        #expect(OnServerProgressLine.albumFolder([camera], sourceId: "WIN") == nil)
+    }
+
     /// AC-153 (§12.4): a device caught wrong is named right under the
     /// progress, on each kind of device; one that sent no name is "another
     /// device"; with none caught there is no such line.

@@ -61,6 +61,21 @@ enum OnServerProgressLine {
                                 comment: "On-server check: photos with no answer yet, after the reason it waits, e.g. Waiting for Wi-Fi · 38 photos left"))
     }
 
+    /// The folder of a server source the smart albums ask about, when they
+    /// all ask about the same one — what the sidebar foot and Activity count
+    /// on, so they show the album's number (user 2026-11-09: "38 left" in the
+    /// album, "17,875 left" in the sidebar). Nil (the whole source) when no
+    /// album asks, or albums ask about different folders.
+    static func albumFolder(_ queries: [SmartAlbumQuery], sourceId: String) -> String? {
+        let rules = queries.flatMap { $0.cleaned.allRules }
+            .filter { ($0.field == .alsoOnServer || $0.field == .source) && $0.text == sourceId }
+        func key(_ folder: String?) -> String {
+            (folder ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/ ")).lowercased()
+        }
+        guard Set(rules.map { key($0.folder) }).count == 1, let first = rules.first, !key(first.folder).isEmpty else { return nil }
+        return first.folder
+    }
+
     /// `WIN` or `WIN › Photos › 2025`.
     static func scope(_ input: Input) -> String {
         let parts = (input.folder ?? "").split(separator: "/").map(String.init).filter { !$0.isEmpty }
