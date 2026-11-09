@@ -17,7 +17,7 @@ struct SmartAlbumRuleRow: View {
     /// sources change and the other choice sets do not.
     var sources: [(value: String, label: String)] = []
     /// Server sources, (id, name) — the Also on Server field's choices
-    /// (FS-19.07 §7). Empty hides the field.
+    /// (FS-19.07 §7). Empty keeps the field and says how to add one (AC-247).
     var servers: [(value: String, label: String)] = []
     /// Sources whose folder can be browsed for a narrower condition (FS-19.07 §7).
     var folderSources: Set<String> = []
@@ -135,6 +135,24 @@ struct SmartAlbumRuleRow: View {
     /// Also on Server: Yes / No, the server, its folder (FS-19.07 §7).
     @ViewBuilder
     private var serverEditor: some View {
+        if servers.isEmpty, rule.text.isEmpty {
+            // No server on this device: say where one comes from rather than
+            // offer an empty menu (AC-247). The condition stays incomplete.
+            Text(Self.noServerHint)
+                .font(.footnote)
+                .foregroundStyle(Self.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            serverChoices
+        }
+    }
+
+    static let noServerHint = String(
+        localized: "No server on this device yet. Add one under Sources, then this condition can ask which photos also have a copy there.",
+        comment: "Smart album Also on Server condition when no server source has been added")
+
+    @ViewBuilder
+    private var serverChoices: some View {
         Picker(RuleField.alsoOnServer.displayName, selection: $rule.boolValue) {
             Text(String(localized: "Yes", comment: "Smart album Also on Server condition: the photo has a copy there")).tag(true)
             Text(String(localized: "No", comment: "Smart album Also on Server condition: the photo is checked and missing a copy there")).tag(false)
@@ -146,10 +164,9 @@ struct SmartAlbumRuleRow: View {
         }
     }
 
-    /// Every selectable field, less Also on Server when there is no server.
-    private var fieldChoices: [RuleField] {
-        RuleField.selectableCases.filter { $0 != .alsoOnServer || !servers.isEmpty || rule.field == .alsoOnServer }
-    }
+    /// Every selectable field — Also on Server too when there is no server,
+    /// so the condition can be found before its server is added (AC-247).
+    private var fieldChoices: [RuleField] { RuleField.selectableCases }
 
     /// 0–5 as one segmented row: five stars and zero fit a 402pt phone.
     private var ratingEditor: some View {

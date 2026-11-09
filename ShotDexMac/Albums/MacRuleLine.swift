@@ -44,7 +44,7 @@ struct MacRuleLine: View {
     private var fieldPopup: some View {
         Picker(String(localized: "Condition field", comment: "VoiceOver: the smart album condition's field popup"),
                selection: Binding(get: { rule.field }, set: { select($0) })) {
-            ForEach(options.fields(keeping: rule.field)) { field in
+            ForEach(options.fields) { field in
                 Text(field.displayName).tag(field)
             }
         }
@@ -126,7 +126,16 @@ struct MacRuleLine: View {
         case .text, .caption: textField(width: rule.field == .lens || rule.field == .cameraBody ? 200 : 170)
         case .keyword: if rule.op.needsValue { textField(width: 170) }
         case .choice: choicePopup
-        case .server: choicePopup
+        case .server:
+            if options.servers.isEmpty, rule.text.isEmpty {
+                // No server on this Mac: where one comes from, not an empty popup (AC-247).
+                Text("Add a server in Settings › Sources", comment: "Mac smart album Also on Server condition when no server source has been added")
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .help(String(localized: "No server on this Mac yet. Add one in Settings › Sources, then this condition can ask which photos also have a copy there.", comment: "Mac smart album Also on Server condition: tooltip when no server source has been added"))
+            } else {
+                choicePopup
+            }
         case .number: numberValue
         case .date: dateValue
         case .rating: MacRuleStars(rating: Binding(get: { Int((rule.number ?? 0).rounded()) }, set: { rule.number = Double($0) }))
@@ -415,10 +424,9 @@ struct MacRuleOptions {
     /// Sources whose folders can be browsed (servers).
     var folderSources: Set<String> = []
 
-    /// Every selectable field, less Also on Server when there is no server.
-    func fields(keeping current: RuleField) -> [RuleField] {
-        RuleField.selectableCases.filter { $0 != .alsoOnServer || !servers.isEmpty || current == .alsoOnServer }
-    }
+    /// Every selectable field — Also on Server too when there is no server,
+    /// so the condition can be found before its server is added (AC-247).
+    var fields: [RuleField] { RuleField.selectableCases }
 
     func choices(for field: RuleField) -> [(value: String, label: String)] {
         switch field {
