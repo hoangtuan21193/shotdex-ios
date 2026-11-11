@@ -374,15 +374,15 @@ struct PhotoDetailScreen: View {
                 openEditor(for: currentAsset)
             }
         }
-        .sheet(isPresented: $isMetadataPresented) {
+        .formSheet(isPresented: $isMetadataPresented) {
             MetadataPanel(
                 asset: currentAsset,
                 indexedMetadata: currentMetadata
             )
-                // The Duo's inner display is 669pt tall: the medium detent is
-                // 385pt there and shows the caption and the top of the map,
-                // never a single camera or exposure value.
-                .presentationDetents(isDuoInner ? [.large] : [.medium, .large])
+                // On the Duo's inner display this covers the screen in three
+                // columns (`formSheet`); elsewhere a sheet that opens at the
+                // medium detent.
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .unsupportedRAWAlert($unsupportedRAWMessage, shareOriginal: shareCurrentOriginal)
@@ -467,6 +467,9 @@ struct PhotoDetailScreen: View {
             handoffActivity?.invalidate()
             handoffActivity = nil
         }
+        // The viewer measures the Duo's inner display itself (it is a full-
+        // screen cover); Photo Info's `formSheet` and its Done read it here.
+        .environment(\.isDuoInner, isDuoInner)
     }
 
     /// Pages the viewer to the asset the editor just saved. Save Changes finds

@@ -21,10 +21,14 @@ struct BackupFormSheet: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            Form {
+            // Two columns where there is room — the Duo's inner display, where
+            // this covers the screen (`formSheet`): where from and where to on
+            // the left, what and when on the right (board `DI_BackupNew`).
+            AdaptiveFormColumns {
                 sourceSection
                 destinationSection
                 organizeSection
+            } trailing: {
                 contentSection
                 whenSection
             }

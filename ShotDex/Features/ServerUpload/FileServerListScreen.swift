@@ -53,7 +53,7 @@ struct FileServerListScreen: View {
                 .accessibilityLabel("Add Connection")
             }
         }
-        .sheet(item: $editing, onDismiss: reload) { draft in
+        .formSheet(item: $editing, onDismiss: reload) { draft in
             FileServerFormScreen(draft: draft)
         }
         .confirmationDialog(

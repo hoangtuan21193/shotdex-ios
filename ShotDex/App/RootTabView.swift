@@ -239,7 +239,7 @@ struct RootTabView: View {
         // `\.assetActions`, which is how the screens reach it.
         .assetActionHost(assetActions ?? dependencies.assetActions)
         .appBannerHost(dependencies.banner, bottomInset: 120)
-        .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
+        .formSheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
         .cullPresenter($navigation.cullRequest)
         .keepOnIPhonePresenter($navigation.keepRequest)
         .captionKeywordsPresenter($navigation.captionKeywordsRequest)
@@ -346,7 +346,7 @@ struct RootTabView: View {
             .keepScreenAwakeWhileIndexing(libraryModel: libraryModel)
             .assetActionHost(assetActions ?? dependencies.assetActions)
             .appBannerHost(dependencies.banner, bottomInset: 120)
-            .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
+            .formSheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
             .cullPresenter($navigation.cullRequest)
             .keepOnIPhonePresenter($navigation.keepRequest)
             .captionKeywordsPresenter($navigation.captionKeywordsRequest)

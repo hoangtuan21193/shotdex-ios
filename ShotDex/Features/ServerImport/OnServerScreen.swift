@@ -93,7 +93,7 @@ struct OnServerScreen: View {
                 .accessibilityLabel("Add Connection")
             }
         }
-        .sheet(item: $editing) { draft in
+        .formSheet(item: $editing) { draft in
             FileServerFormScreen(draft: draft)
         }
         .confirmationDialog(

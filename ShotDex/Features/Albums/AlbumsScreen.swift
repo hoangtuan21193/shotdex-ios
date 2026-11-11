@@ -189,7 +189,7 @@ struct AlbumsScreen: View {
         .sheet(isPresented: $isCustomizePresented) {
             CustomizeCollectionsSheet(store: dependencies.collectionsLayout)
         }
-        .sheet(isPresented: $isCreatingSmartAlbum) {
+        .formSheet(isPresented: $isCreatingSmartAlbum) {
             SmartAlbumEditorSheet(existing: nil, dependencies: dependencies) {
                 model.load()
             }
@@ -235,7 +235,7 @@ struct AlbumsScreen: View {
         } message: { album in
             Text("This deletes the smart album. The album “\(album.name)” stays in Photos.")
         }
-        .sheet(item: $editingSmartAlbum) { album in
+        .formSheet(item: $editingSmartAlbum) { album in
             SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {
                 model.load()
             }

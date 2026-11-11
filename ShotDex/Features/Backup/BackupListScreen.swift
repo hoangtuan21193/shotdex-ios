@@ -44,14 +44,14 @@ struct BackupListScreen: View {
                 .disabled(dependencies.fileServerCatalog.servers.isEmpty && coordinator.jobs.isEmpty)
             }
         }
-        .sheet(item: $form) { model in
+        .formSheet(item: $form) { model in
             BackupFormSheet(model: model) { job in
                 coordinator.jobsChanged(start: job.id)
                 selectedJobId = job.id
             }
             .modifier(BackupSheetSizing())
         }
-        .sheet(item: $editingServer) { server in
+        .formSheet(item: $editingServer) { server in
             NavigationStack { FileServerFormScreen(draft: FileServerDraft(server: server)) }
         }
         .confirmationDialog(

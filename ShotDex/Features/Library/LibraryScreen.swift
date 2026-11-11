@@ -180,7 +180,7 @@ struct LibraryScreen: View {
             // present over the iOS 26 search-role tab); open it on Library.
             isAdvancedSearchPresented = true
         }
-        .sheet(isPresented: $isAdvancedSearchPresented) {
+        .formSheet(isPresented: $isAdvancedSearchPresented) {
             if let model {
                 AdvancedSearchSheet(model: model, dependencies: dependencies, onApplied: {})
                     .presentationDetents([.large])

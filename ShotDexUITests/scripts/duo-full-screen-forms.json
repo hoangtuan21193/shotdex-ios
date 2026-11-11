@@ -1,0 +1,300 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Advanced Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "DI_AdvancedSearch"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Collections"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "New album or smart album, or customize this tab"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "New Smart Album"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "DI_SmartAlbumEditor"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Info"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "dump",
+   "name": "DI_Metadata"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Done"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Close",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Collections"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Settings"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Sources"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Connect to Server…"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "DI_ServerForm"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Done"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Utilities"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Backup"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "New Backup",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "DI_BackupNew"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 1
+  },
+  {
+   "action": "tap",
+   "label": "Photo, file type",
+   "type": "cell",
+   "index": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Upload to Server…"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "dump",
+   "name": "DI_ServerUpload"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
+  }
+ ]
+}

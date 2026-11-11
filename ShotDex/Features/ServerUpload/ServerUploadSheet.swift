@@ -42,7 +42,7 @@ struct ServerUploadSheet: View {
             await model.load()
             if model.servers.isEmpty || startsAddingConnection { isAddingServer = true }
         }
-        .sheet(isPresented: $isAddingServer) {
+        .formSheet(isPresented: $isAddingServer) {
             FileServerFormScreen(draft: FileServerDraft()) { saved in
                 model.reloadServers(select: saved.id)
             }

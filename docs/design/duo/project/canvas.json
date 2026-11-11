@@ -596,13 +596,6 @@
       "x": 13863,
       "y": 3387
     },
-    "DI15_InfoKeywords.dc.html": {
-      "h": 669,
-      "title": "Duo ngang · Photo Info — Caption + keyword (capsule ×, + Add Keyword) trên Location — đề xuất 2/10, code chưa có",
-      "w": 951,
-      "x": 14894,
-      "y": 3387
-    },
     "DI16_BulkKeywords.dc.html": {
       "h": 669,
       "title": "Duo ngang · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
@@ -1819,7 +1812,6 @@
     "DI14_Cull.dc.html",
     "DIP14_Cull.dc.html",
     "DC15_Cull.dc.html",
-    "DI15_InfoKeywords.dc.html",
     "DIP15_InfoKeywords.dc.html",
     "DC16_InfoKeywords.dc.html",
     "DI16_BulkKeywords.dc.html",

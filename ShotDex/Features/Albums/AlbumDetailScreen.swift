@@ -298,7 +298,7 @@ struct AlbumDetailScreen: View {
     /// Advanced Filter inside the album (FS-06.09 §4): Library's sheet, with
     /// Apply, the album's own count, and no Save as Smart Album.
     private func advancedFilterSheet(_ content: some View) -> some View {
-        content.sheet(isPresented: $isAdvancedFilterPresented) {
+        content.formSheet(isPresented: $isAdvancedFilterPresented) {
             if let model {
                 AdvancedSearchSheet(
                     initialQuery: filter.advancedQuery,

@@ -100,7 +100,7 @@ struct AdvancedSearchSheet: View {
                         .disabled(!canApply)
                 }
             }
-            .sheet(isPresented: $isSaveAsAlbumPresented) {
+            .formSheet(isPresented: $isSaveAsAlbumPresented) {
                 SmartAlbumEditorSheet(
                     existing: nil,
                     dependencies: dependencies,

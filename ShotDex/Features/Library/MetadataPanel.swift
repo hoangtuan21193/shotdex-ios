@@ -13,6 +13,8 @@ struct MetadataPanel: View {
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     @Environment(FileServerCatalog.self) private var catalog: FileServerCatalog?
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
+    @Environment(\.isDuoInner) private var isDuoInner
+    @Environment(\.dismiss) private var dismiss
     /// The photo's files on server sources (FS-19.07 §8).
     @State private var onServerLocations: [OnServerLocation] = []
 
@@ -48,6 +50,15 @@ struct MetadataPanel: View {
             }
             .navigationTitle("Photo Info")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // Full screen on the Duo's inner display, with no sheet to
+                // swipe away: Done takes the user back to the photo.
+                if isDuoInner {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+            }
         }
         .task(id: asset?.localIdentifier) {
             if let id = asset?.localIdentifier, let database = dependencies?.database {

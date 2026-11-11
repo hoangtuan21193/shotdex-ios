@@ -238,7 +238,7 @@ struct SmartAlbumDetailScreen: View {
     /// selection (FS-01.06 §2) — kept out of `body` so it type-checks.
     private func filterWiring(_ content: some View) -> some View {
         content
-            .sheet(isPresented: $isAdvancedFilterPresented) {
+            .formSheet(isPresented: $isAdvancedFilterPresented) {
                 if let model {
                     // Inside the album: Apply, the album's own count, no Save.
                     AdvancedSearchSheet(

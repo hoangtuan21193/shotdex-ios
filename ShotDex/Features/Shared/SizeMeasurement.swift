@@ -98,3 +98,57 @@ extension AdaptiveFormColumns where Closing == EmptyView {
         self.init(leadingWidth: leadingWidth, leading: leading, trailing: trailing, closing: { EmptyView() })
     }
 }
+
+/// How a long form opens (`DESIGN.md` §10.1c, DUO_LOOP 3b): as a sheet, except
+/// on the Duo's inner display, where it covers the screen.
+///
+/// There a sheet is a 653pt form sheet on a 669pt-tall screen — `.page`
+/// sizing measured the same — so `AdaptiveFormColumns` never reached its two
+/// columns and the end of every long form sat below the edge. Full screen
+/// gives it the 951pt it needs. The forms close with their own Cancel and
+/// Done; nothing else changes on a phone, an iPad or the Duo's cover.
+private struct FormPresentation<Item: Identifiable, Form: View>: ViewModifier {
+    @Environment(\.isDuoInner) private var isDuoInner
+    @Binding var item: Item?
+    var onDismiss: (() -> Void)?
+    @ViewBuilder var form: (Item) -> Form
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: isDuoInner ? .constant(nil) : $item, onDismiss: onDismiss, content: form)
+            .fullScreenCover(item: isDuoInner ? $item : .constant(nil), onDismiss: onDismiss, content: form)
+    }
+}
+
+private struct FormPresentationFlag<Form: View>: ViewModifier {
+    @Environment(\.isDuoInner) private var isDuoInner
+    @Binding var isPresented: Bool
+    var onDismiss: (() -> Void)?
+    @ViewBuilder var form: () -> Form
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: isDuoInner ? .constant(false) : $isPresented, onDismiss: onDismiss, content: form)
+            .fullScreenCover(isPresented: isDuoInner ? $isPresented : .constant(false), onDismiss: onDismiss, content: form)
+    }
+}
+
+extension View {
+    /// A sheet that covers the screen on the Duo's inner display — see
+    /// `FormPresentation`. For forms laid out with `AdaptiveFormColumns`.
+    func formSheet<Item: Identifiable, Form: View>(
+        item: Binding<Item?>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Item) -> Form
+    ) -> some View {
+        modifier(FormPresentation(item: item, onDismiss: onDismiss, form: content))
+    }
+
+    func formSheet<Form: View>(
+        isPresented: Binding<Bool>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping () -> Form
+    ) -> some View {
+        modifier(FormPresentationFlag(isPresented: isPresented, onDismiss: onDismiss, form: content))
+    }
+}
