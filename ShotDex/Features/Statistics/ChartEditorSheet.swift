@@ -101,7 +101,10 @@ struct ChartEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            // Two columns where there is room (the Duo's inner display, where
+            // this opens full screen): what the chart shows on the left, the
+            // live preview alone on the right so it stays in view while editing.
+            AdaptiveFormColumns {
                 typeSection
                 dataSection
                 if kind != .donut {
@@ -121,9 +124,9 @@ struct ChartEditorSheet: View {
                     matchCount: nil
                 )
                 dateRangeSection
+            } trailing: {
                 previewSection
             }
-            .listStyle(.insetGrouped)
             .navigationTitle(existing == nil ? "New Chart" : "Edit Chart")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isRangePickerPresented) {

@@ -84,7 +84,7 @@ struct StatisticsScreen: View {
             }
         }
         .environment(\.editMode, $editMode)
-        .sheet(item: $editorTarget) { target in
+        .formSheet(item: $editorTarget) { target in
             if let model {
                 ChartEditorSheet(
                     existing: target.existing,

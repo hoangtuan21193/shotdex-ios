@@ -1,21 +1,72 @@
 {
   "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "tap", "label": "Utilities" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "tap", "label": "Statistics", "type": "button" },
-    { "action": "wait", "seconds": 5 },
-    { "action": "dump", "name": "DI_Statistics" },
-    { "action": "wait", "seconds": 40 },
-    { "action": "tap", "label": "Add chart" },
-    { "action": "wait", "seconds": 4 },
-    { "action": "dump", "name": "DI_ChartEditor" },
-    { "action": "wait", "seconds": 40 },
-    { "action": "scrollTo", "label": "Custom Range…" },
-    { "action": "tap", "label": "Custom Range…" },
-    { "action": "wait", "seconds": 4 },
-    { "action": "dump", "name": "DI_DateRange" },
-    { "action": "wait", "seconds": 40 }
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Utilities"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Statistics",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "DI_Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "tap",
+      "label": "Add chart"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_ChartEditor"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "scrollTo",
+      "label": "Custom Range\u2026"
+    },
+    {
+      "action": "tap",
+      "label": "Custom Range\u2026"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_DateRange"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    }
   ]
 }
