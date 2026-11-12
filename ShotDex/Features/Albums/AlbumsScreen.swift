@@ -317,16 +317,27 @@ struct AlbumsScreen: View {
     }
 
     /// The top row: On This Day, full width, and nothing beside it.
+    ///
+    /// With nothing from previous years it is one line, and not a link
+    /// (DUO_LOOP 8b): a 180–260pt grey card that opened an empty page was
+    /// the first thing on the tab. Before the first load the count is also
+    /// zero, so the card keeps its place until the snapshot arrives.
+    @ViewBuilder
     private var heroRow: some View {
-        NavigationLink(value: OnThisDayDestination()) {
-            OnThisDayCard(
-                count: model.onThisDayCount,
-                coverAsset: model.onThisDayCover
-            )
+        if model.onThisDayCount == 0, model.hasLoadedOnThisDay {
+            OnThisDayEmptyRow()
+                .padding(.horizontal)
+        } else {
+            NavigationLink(value: OnThisDayDestination()) {
+                OnThisDayCard(
+                    count: model.onThisDayCount,
+                    coverAsset: model.onThisDayCover
+                )
+            }
+            .buttonStyle(.plain)
+            .frame(height: heroHeight)
+            .padding(.horizontal)
         }
-        .buttonStyle(.plain)
-        .frame(height: heroHeight)
-        .padding(.horizontal)
     }
 
     private var albumGrid: some View {
@@ -1097,8 +1108,47 @@ struct OnThisDayCard: View {
     }
 }
 
+/// On This Day when no photo matches today's date in an earlier year: one
+/// line in place of the hero, with nothing to open.
+struct OnThisDayEmptyRow: View {
+    @ScaledMetric(relativeTo: .body) private var height = CollectionsHeroMetrics.emptyRowHeight
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text("On This Day")
+                .font(.headline)
+            Spacer(minLength: AppTheme.Spacing.md)
+            Text(Self.detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(maxWidth: .infinity, minHeight: height)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private static var detail: String {
+        String(
+            localized: "No photos from previous years",
+            comment: "On This Day row when nothing matches today's date in an earlier year"
+        )
+    }
+}
+
 /// Geometry for the Collections tab's top row.
 enum CollectionsHeroMetrics {
+    /// The one-line row that replaces the hero when it would be empty.
+    static let emptyRowHeight: CGFloat = 56
+
     /// The hero's height. Taller on a wide window for the same reason the
     /// cover tiles are bigger there: the card is full width, so at 1032pt a
     /// 150pt hero is a letterbox strip rather than a picture. Scaled with

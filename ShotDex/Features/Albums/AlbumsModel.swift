@@ -91,6 +91,9 @@ final class AlbumsModel {
     /// Summary for the "On This Day" hero card (today's date, previous years).
     private(set) var onThisDayCount = 0
     private(set) var onThisDayCover: PHAsset?
+    /// Set once the first snapshot is in, so a count of zero means "nothing
+    /// today" rather than "not counted yet".
+    private(set) var hasLoadedOnThisDay = false
 
     /// User-created smart albums (saved filters), newest first.
     private(set) var smartQueryAlbums: [SmartAlbumTokenItem] = []
@@ -165,6 +168,7 @@ final class AlbumsModel {
             albums = snapshot.albums
             onThisDayCount = snapshot.onThisDayCount
             onThisDayCover = snapshot.onThisDayCover
+            hasLoadedOnThisDay = true
             if let deps {
                 await insertIndexedPanoramas(libraryQueries: deps.libraryQueries)
                 smartQueryAlbums = await Self.loadSmartAlbums(
