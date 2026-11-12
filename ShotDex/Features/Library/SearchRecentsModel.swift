@@ -16,13 +16,28 @@ struct RecentSearchCard: Identifiable, Equatable, Sendable {
 /// A recent search that returns nothing is worse than no recent search — it looks
 /// like the app forgot the photos — so a query is dropped from the strip rather
 /// than shown empty. That means every entry costs one `LIMIT 1` query, which is why
-/// this is capped at three cards and resolves with the parser only.
+/// this is capped at a handful of cards and resolves with the parser only.
 @MainActor
 @Observable
 final class SearchRecentsModel {
-    /// What Photos shows. Three cards is also what fits in one row without
-    /// scrolling on the narrowest phone.
-    static let maximumCards = 3
+    /// What Photos shows on a phone. Three cards is also what fits in one row
+    /// without scrolling on the narrowest phone.
+    static let minimumCards = 3
+    /// The most a wide screen shows (a 13" iPad at ~150pt a card). Loaded
+    /// whatever the width, so a rotation or a resize never waits on queries.
+    static let maximumCards = 8
+    /// About the size of a card where there is room for more than three: a
+    /// wider screen gets more recents, not three 295pt cards that the keyboard
+    /// cuts (DUO_LOOP 3c).
+    static let preferredCardWidth: CGFloat = 150
+
+    /// How many cards one row of `width` holds with `spacing` between them —
+    /// never fewer than three, never more than are loaded.
+    nonisolated static func cardCount(width: CGFloat, spacing: CGFloat) -> Int {
+        guard width > 0 else { return minimumCards }
+        let fits = Int(((width + spacing) / (preferredCardWidth + spacing)).rounded(.down))
+        return min(maximumCards, max(minimumCards, fits))
+    }
 
     private let store: RecentSearchStore
     private let service: SearchService

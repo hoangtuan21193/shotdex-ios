@@ -48,6 +48,8 @@ struct SearchSuggestionsScreen: View {
     /// per line left 650pt empty beside them. The window class, not the width
     /// alone, because the inner display's own insets leave it under 860.
     @State private var isWide = false
+    /// Width of the Recents row, for how many cards it shows.
+    @State private var recentsWidth: CGFloat = 0
 
     /// Field placeholder.
     static let prompt = "Search your library…"
@@ -190,22 +192,26 @@ struct SearchSuggestionsScreen: View {
                         .font(.subheadline)
                 }
 
-                // A three-column grid rather than an `HStack`: with one or two
-                // recents the cards keep their third of the row instead of
-                // stretching to fill it.
+                // A fixed-column grid rather than an `HStack`: with one or two
+                // recents the cards keep their share of the row instead of
+                // stretching to fill it. Three columns on a phone; more, at
+                // about 150pt each, where the row is wider.
+                let columns = SearchRecentsModel.cardCount(width: recentsWidth, spacing: 12)
                 LazyVGrid(
-                    columns: Array(
-                        repeating: GridItem(.flexible(), spacing: 12),
-                        count: SearchRecentsModel.maximumCards
-                    ),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: columns),
                     spacing: 12
                 ) {
-                    ForEach(recentsModel.cards) { card in
-                        RecentSearchCardView(card: card, photoLibrary: photoLibrary) {
+                    ForEach(recentsModel.cards.prefix(columns)) { card in
+                        RecentSearchCardView(
+                            card: card,
+                            photoLibrary: photoLibrary,
+                            aspectRatio: columns > SearchRecentsModel.minimumCards ? 3.0 / 2.0 : 1
+                        ) {
                             apply(card.query)
                         }
                     }
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { recentsWidth = $0 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 4)
@@ -329,6 +335,10 @@ struct SearchSuggestionsScreen: View {
 private struct RecentSearchCardView: View {
     let card: RecentSearchCard
     let photoLibrary: PhotoLibraryService
+    /// Width over height. Square on a phone; 3:2 once the row holds more
+    /// than three — on the Duo's inner display the field rides the keyboard
+    /// up to y 350, and square 156pt cards ran under it, captions and all.
+    var aspectRatio: CGFloat = 1
     var onTap: () -> Void
 
     /// Square, and as wide as a third of the row allows — a fixed side would have
@@ -352,7 +362,7 @@ private struct RecentSearchCardView: View {
                             .scaledToFill()
                     }
                 }
-                .aspectRatio(1, contentMode: .fit)
+                .aspectRatio(aspectRatio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
                 .overlay(alignment: .bottomLeading) {
