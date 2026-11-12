@@ -22,14 +22,14 @@ struct RecentSearchCard: Identifiable, Equatable, Sendable {
 final class SearchRecentsModel {
     /// What Photos shows on a phone. Three cards is also what fits in one row
     /// without scrolling on the narrowest phone.
-    static let minimumCards = 3
+    nonisolated static let minimumCards = 3
     /// The most a wide screen shows (a 13" iPad at ~150pt a card). Loaded
     /// whatever the width, so a rotation or a resize never waits on queries.
-    static let maximumCards = 8
+    nonisolated static let maximumCards = 8
     /// About the size of a card where there is room for more than three: a
     /// wider screen gets more recents, not three 295pt cards that the keyboard
     /// cuts (DUO_LOOP 3c).
-    static let preferredCardWidth: CGFloat = 150
+    nonisolated static let preferredCardWidth: CGFloat = 150
 
     /// How many cards one row of `width` holds with `spacing` between them —
     /// never fewer than three, never more than are loaded.
