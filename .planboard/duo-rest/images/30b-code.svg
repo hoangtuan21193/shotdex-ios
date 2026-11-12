@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Hai dòng như code (71pt)</text>
+<rect x="30" y="45" width="420" height="66" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="74.0" text-anchor="middle">Date_Camera</text>
+<text x="240.0" y="92.0" text-anchor="middle">2026-11-11_R6</text>
+<rect x="30" y="118" width="420" height="66" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="147.0" text-anchor="middle">Original</text>
+<text x="240.0" y="165.0" text-anchor="middle">IMG_8812</text>
+<rect x="30" y="191" width="420" height="66" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="220.0" text-anchor="middle">Custom…</text>
+<text x="240.0" y="238.0" text-anchor="middle"></text>
+<rect x="30" y="264" width="420" height="50" rx="8" fill="#f5c6c6" stroke="#666"/>
+<text x="240.0" y="294.0" text-anchor="middle">Ghi chú cuối phải cuộn</text>
+</svg>

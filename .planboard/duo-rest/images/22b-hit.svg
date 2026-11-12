@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Giữ nhìn nhỏ, vùng chạm 44pt</text>
+<rect x="60" y="90" width="90" height="30" rx="8" fill="#f6d9b8" stroke="#666"/>
+<text x="105.0" y="110.0" text-anchor="middle">Chip 30pt</text>
+<rect x="45" y="83" width="120" height="44" rx="8" fill="none" stroke="#666"/>
+<text x="105.0" y="110.0" text-anchor="middle"></text>
+<rect x="200" y="90" width="90" height="30" rx="8" fill="#f6d9b8" stroke="#666"/>
+<text x="245.0" y="110.0" text-anchor="middle">Chip</text>
+<rect x="185" y="83" width="120" height="44" rx="8" fill="none" stroke="#666"/>
+<text x="245.0" y="110.0" text-anchor="middle"></text>
+<rect x="60" y="170" width="360" height="60" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="196.0" text-anchor="middle">Nhìn như cũ, ngón tay</text>
+<text x="240.0" y="214.0" text-anchor="middle">chạm trúng dễ hơn</text>
+</svg>

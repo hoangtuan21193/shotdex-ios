@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Chuyển vào cột phải</text>
+<rect x="30" y="45" width="370" height="270" rx="8" fill="#dfe6f0" stroke="#666"/>
+<text x="215.0" y="185.0" text-anchor="middle">Lưới ảnh (cao hơn 58pt)</text>
+<rect x="410" y="45" width="45" height="270" rx="8" fill="#f6d9b8" stroke="#666"/>
+<text x="432.5" y="149.0" text-anchor="middle">Filter</text>
+<text x="432.5" y="167.0" text-anchor="middle">⋯</text>
+<text x="432.5" y="185.0" text-anchor="middle">×</text>
+<text x="432.5" y="203.0" text-anchor="middle">Share</text>
+<text x="432.5" y="221.0" text-anchor="middle">Delete</text>
+</svg>

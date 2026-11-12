@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Giữ như bây giờ</text>
+<rect x="60" y="45" width="360" height="40" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="70.0" text-anchor="middle">Định dạng: HEIC / JPEG</text>
+<rect x="60" y="95" width="360" height="60" rx="8" fill="#dfe6f0" stroke="#666"/>
+<text x="240.0" y="130.0" text-anchor="middle">Áp cho cả lô…</text>
+<rect x="60" y="165" width="360" height="45" rx="8" fill="#ffffff" stroke="#666"/>
+<text x="240.0" y="192.5" text-anchor="middle">Save as Copy</text>
+<rect x="60" y="220" width="360" height="45" rx="8" fill="#f5c6c6" stroke="#666"/>
+<text x="240.0" y="247.5" text-anchor="middle">Save Changes (hay bị khuất)</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Thu thành một dòng</text>
+<rect x="30" y="45" width="420" height="40" rx="8" fill="#f6d9b8" stroke="#666"/>
+<text x="240.0" y="70.0" text-anchor="middle">On This Day · không có ảnh năm cũ</text>
+<rect x="30" y="95" width="420" height="220" rx="8" fill="#dfe6f0" stroke="#666"/>
+<text x="240.0" y="210.0" text-anchor="middle">Albums, Smart Albums…</text>
+</svg>

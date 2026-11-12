@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Giữ thẻ lớn như bây giờ</text>
+<rect x="30" y="45" width="420" height="130" rx="8" fill="#f5c6c6" stroke="#666"/>
+<text x="240.0" y="106.0" text-anchor="middle">Thẻ xám 171pt</text>
+<text x="240.0" y="124.0" text-anchor="middle">No photos in previous years</text>
+<rect x="30" y="185" width="420" height="130" rx="8" fill="#dfe6f0" stroke="#666"/>
+<text x="240.0" y="255.0" text-anchor="middle">Albums, Smart Albums…</text>
+</svg>

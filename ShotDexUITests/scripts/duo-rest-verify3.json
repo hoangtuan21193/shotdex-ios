@@ -1,0 +1,57 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "dump",
+      "name": "DI1_Edit"
+    },
+    {
+      "action": "tap",
+      "label": "Crop & Geometry"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "DI3_Transform"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    }
+  ]
+}

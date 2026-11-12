@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="-apple-system,Helvetica" font-size="15">
+<rect width="480" height="340" fill="#f2f2f7"/>
+<rect x="10" y="30" width="460" height="300" rx="26" fill="#fff" stroke="#999"/>
+<text x="240" y="20" text-anchor="middle" font-size="16" font-weight="600">Ẩn hẳn</text>
+<rect x="30" y="45" width="420" height="270" rx="8" fill="#dfe6f0" stroke="#666"/>
+<text x="240.0" y="185.0" text-anchor="middle">Albums, Smart Albums… (lên sát trên)</text>
+</svg>

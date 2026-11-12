@@ -1,0 +1,461 @@
+{
+ "title": "Duo loop — các hàng còn chờ quyết định",
+ "context": "Loop màn trong của Duo đã làm hết những gì tự sửa được. Các hàng còn lại đều đổi cách một màn hoạt động (thường trên mọi máy, không chỉ Duo), nên cần bạn chốt.\nMỗi câu đã chọn sẵn phương án Claude thấy tốt nhất; đồng ý thì không cần bấm. Hình là board thiết kế hiện có hoặc sơ đồ trước/sau.\nPhần Claude tự làm được (không cần hỏi) ở trang cuối.",
+ "pages": [
+  {
+   "id": "library",
+   "title": "Thư viện, tìm kiếm, bộ sưu tập",
+   "intro": "Các màn duyệt ảnh.",
+   "decisions": [
+    {
+     "id": "Q2b",
+     "title": "Khi chọn nhiều ảnh trên màn trong của Duo, thanh Share · Show Selected · Delete nên ở đáy màn hay vào cột nút bên phải?",
+     "importance": "important",
+     "image": "DI_LibrarySelect.png",
+     "why": "Ở đáy: chiếm 58pt chiều cao của màn vốn đã thấp. Vào cột phải: lưới cao hơn, nhưng Delete nằm sát nút × thoát chọn — bấm nhầm là xoá ảnh.",
+     "proposal": "Giữ ở đáy. 58pt không đáng đổi lấy việc Delete nằm cạnh ×; hệ thống cũng để thanh này ở đáy vì nó là thanh riêng của app.",
+     "options": [
+      {
+       "id": "keep",
+       "label": "Giữ ở đáy",
+       "image": "2b-keep.svg",
+       "pros": [
+        "Delete xa nút ×",
+        "Giống iPhone và iPad",
+        "Không phải làm gì"
+       ],
+       "cons": [
+        "Mất 58pt chiều cao lưới"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "rail",
+       "label": "Chuyển vào cột phải",
+       "image": "2b-rail.svg",
+       "pros": [
+        "Lưới cao thêm 58pt",
+        "Đúng gợi ý của Apple cho Duo"
+       ],
+       "cons": [
+        "Delete cạnh ×, dễ bấm nhầm",
+        "Cột phải chỉ nhận biểu tượng, mất chữ"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tech": "SelectionBarViews.swift SelectionBottomBar là overlay tự vẽ; rail hệ thống chỉ nhận item biểu tượng (đo ở hàng 1a). DUO_LOOP hàng 2b.",
+     "tasks": [
+      "Nếu chọn cột phải: SelectionBarViews.swift — Share/Delete vào toolbar rail trên .duoInner; board DI_LibrarySelect"
+     ]
+    },
+    {
+     "id": "Q3c",
+     "title": "Ô \"Gần đây\" trong Tìm kiếm trên màn rộng: thẻ nhỏ hơn và nhiều hơn, hay giữ 3 thẻ to?",
+     "importance": "minor",
+     "image": "DI_Search.png",
+     "why": "Màn rộng 951pt chia cho 3 thẻ thì mỗi thẻ gần 300pt vuông — bàn phím che mất nửa dưới, thấy ít mà to.",
+     "proposal": "Thẻ khoảng 150pt, hiện nhiều thẻ hơn khi màn rộng (iPad, Duo). iPhone giữ 3.",
+     "options": [
+      {
+       "id": "more",
+       "label": "Thẻ ~150pt, nhiều hơn khi rộng",
+       "pros": [
+        "Thấy nhiều lần tìm gần đây",
+        "Không bị bàn phím che"
+       ],
+       "cons": [
+        "Thẻ nhỏ hơn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "keep",
+       "label": "Giữ 3 thẻ to",
+       "pros": [
+        "Không đổi gì"
+       ],
+       "cons": [
+        "Thẻ ~300pt bị bàn phím che"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "SearchRecentsModel.maximumCards = 3; dự đoán từ code, chưa chụp (DUO_LOOP 3c). Wide-screen rule: more content, not bigger.",
+     "tasks": [
+      "SearchRecentsModel — số thẻ theo bề rộng, thẻ ~150pt; board DI_Search/IP_Search"
+     ]
+    },
+    {
+     "id": "Q8b",
+     "title": "On This Day khi không có ảnh nào của các năm trước: hiện thế nào?",
+     "importance": "minor",
+     "image": "8b-keep.svg",
+     "why": "Bây giờ là một thẻ xám cao 171pt ghi \"No photos in previous years\", bấm vào vẫn mở một trang trống.",
+     "proposal": "Thu thành một dòng ~56pt, không bấm được khi bằng 0. Làm trên mọi máy.",
+     "options": [
+      {
+       "id": "row",
+       "label": "Thu thành một dòng",
+       "image": "8b-row.svg",
+       "pros": [
+        "Vẫn biết tính năng có đó",
+        "Trả lại ~115pt"
+       ],
+       "cons": [
+        "Vẫn còn một dòng trống"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "hide",
+       "label": "Ẩn hẳn",
+       "image": "8b-hide.svg",
+       "pros": [
+        "Gọn nhất"
+       ],
+       "cons": [
+        "Người mới không biết có On This Day"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "keep",
+       "label": "Giữ thẻ lớn",
+       "image": "8b-keep.svg",
+       "pros": [
+        "Không đổi"
+       ],
+       "cons": [
+        "171pt xám",
+        "Bấm vào trang trống"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "Collections hero; DUO_LOOP 8b. Dù chọn gì, số 0 không link tới trang trống.",
+     "tasks": [
+      "Collections hero — trạng thái 0 ảnh; board DI_/PH_/IP_Collections"
+     ]
+    },
+    {
+     "id": "Q10b",
+     "title": "Đang xem một Smart Album, sửa điều kiện của nó bằng cách nào?",
+     "importance": "important",
+     "image": "DI_SmartAlbum.png",
+     "why": "Bây giờ không có đường nào: hàng điều kiện chỉ để xem, nút Filter chỉ lọc tạm. Muốn sửa phải quay về tab Collections.",
+     "proposal": "Chạm vào hàng điều kiện để mở trình sửa. Mọi máy.",
+     "options": [
+      {
+       "id": "tap",
+       "label": "Chạm hàng điều kiện",
+       "pros": [
+        "Thấy là sửa được ngay",
+        "Không thêm nút"
+       ],
+       "cons": [
+        "Phải có dấu hiệu là chạm được"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "menu",
+       "label": "Thêm Edit vào menu ⋯",
+       "pros": [
+        "Quen thuộc"
+       ],
+       "cons": [
+        "Khó tìm"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "SmartAlbumDetailScreen chưa mở SmartAlbumEditorSheet (formSheet). DUO_LOOP 10b.",
+     "tasks": [
+      "SmartAlbumDetailScreen — mở SmartAlbumEditorSheet bằng .formSheet; board DI_SmartAlbum"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stats",
+   "title": "Statistics và màn chào",
+   "intro": "Không phải lỗi Duo — board và app khác nhau trên mọi máy.",
+   "decisions": [
+    {
+     "id": "Q13b",
+     "title": "Mỗi biểu đồ trong Statistics có công tắc Donut/Bars ngay trên thẻ không?",
+     "importance": "minor",
+     "image": "DI_Statistics.png",
+     "why": "Board của mọi máy vẽ công tắc này trên từng thẻ; app không có — đổi kiểu biểu đồ phải vào Edit trong menu ⋯.",
+     "proposal": "Làm công tắc theo board. App đã có kiểu donut, chỉ thiếu nút đổi nhanh.",
+     "options": [
+      {
+       "id": "build",
+       "label": "Làm công tắc trên thẻ",
+       "pros": [
+        "Đổi kiểu một chạm",
+        "Khớp board mọi máy"
+       ],
+       "cons": [
+        "Thêm một control trên mỗi thẻ"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "redraw",
+       "label": "Bỏ công tắc khỏi board",
+       "pros": [
+        "Thẻ gọn hơn"
+       ],
+       "cons": [
+        "Vẽ lại board 4 máy",
+        "Đổi kiểu vẫn phải vào Edit"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "ChartKind.donut có sẵn; board DI_/PH_/IP_/DC_Statistics, IP_ChartEditor. DUO_LOOP 13b.",
+     "tasks": [
+      "Thẻ Statistics — Picker Donut/Bars lưu vào chart; test StatisticsQueries/ChartStore"
+     ]
+    },
+    {
+     "id": "Q5",
+     "title": "Màn chào và thư viện trống kiểu mới (Continue không hỏi quyền ngay, 3 thẻ thêm nguồn) có làm bây giờ không?",
+     "importance": "important",
+     "image": "DI_EmptyLibrary.png",
+     "why": "Board vẽ theo spec FS-21 nhưng app vẫn chạy kiểu cũ: Continue bật hộp hỏi quyền Photos ngay, thư viện trống chỉ là chữ \"No Photos\". Đây là tính năng mới cho cả iPhone, iPad, Duo, không phải sửa bố cục.",
+     "proposal": "Để sau: mở /plan FS-21 riêng (cả ba máy cùng lúc). Loop Duo đóng hàng 5 là \"chờ FS-21\".",
+     "options": [
+      {
+       "id": "later",
+       "label": "Để sau, /plan FS-21 riêng",
+       "pros": [
+        "Đúng quy trình tính năng mới",
+        "Không kéo dài loop"
+       ],
+       "cons": [
+        "Board và app còn lệch ở 2 màn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "now",
+       "label": "Làm ngay sau loop",
+       "pros": [
+        "Board và app khớp sớm"
+       ],
+       "cons": [
+        "Việc lớn, đụng onboarding mọi máy"
+       ],
+       "effort": "L"
+      }
+     ],
+     "tech": "OnboardingScreen.swift:22 gọi requestAuthorization; LibraryScreen.swift:903 ContentUnavailableView. docs/02-functional-spec/FS-21-ipad-mac-style/02b-screens.md §3.",
+     "tasks": [
+      "Đóng DUO_LOOP hàng 5 là chờ FS-21; mở /plan FS-21 riêng"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "editor",
+   "title": "Trình sửa ảnh",
+   "intro": "Ba câu này đổi editor trên mọi máy, không chỉ Duo.",
+   "decisions": [
+    {
+     "id": "Q20b",
+     "title": "Trên màn trong của Duo, có thu gọn phần đầu panel sửa (bỏ chữ EDIT, histogram nhỏ hơn) để ảnh to hơn không?",
+     "importance": "minor",
+     "image": "DI1_Edit.png",
+     "why": "Màn chỉ cao 669pt; phần đầu panel ăn khoảng 45pt mà ảnh đang sửa thì nhỏ.",
+     "proposal": "Thu gọn phần đầu panel chỉ trên màn trong của Duo. Không chồng hàng lệnh lên panel (đụng bố cục iPad dùng chung).",
+     "options": [
+      {
+       "id": "trim",
+       "label": "Thu gọn đầu panel (chỉ Duo)",
+       "image": "20b-trim.svg",
+       "pros": [
+        "Ảnh cao thêm ~45pt",
+        "iPad không đổi"
+       ],
+       "cons": [
+        "Duo khác iPad một chút"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "keep",
+       "label": "Giữ như bây giờ",
+       "image": "20b-keep.svg",
+       "pros": [
+        "Giống iPad"
+       ],
+       "cons": [
+        "Ảnh nhỏ trên màn thấp"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "Phương án chồng command row lên panel (~36pt) bị loại vì đổi wide layout dùng chung với iPad. DUO_LOOP 20b.",
+     "tasks": [
+      "Editor panel header trên .duoInner; board DI1_Edit"
+     ]
+    },
+    {
+     "id": "Q22b",
+     "title": "Các chip/nút nhỏ 28–32pt trong editor: giữ kích thước nhìn và nới vùng chạm lên 44pt, hay làm to thật lên 44pt?",
+     "importance": "minor",
+     "image": "DI3_Transform.png",
+     "why": "Nút nhỏ hơn đầu ngón tay thì dễ chạm trượt. Tài liệu thiết kế đang nói hai điều ngược nhau.",
+     "proposal": "Giữ nhìn như cũ, nhưng vùng bấm to bằng đầu ngón tay (như đã làm cho tiêu đề bộ màu ở hàng 21). Một quy tắc cho cả trình sửa.",
+     "options": [
+      {
+       "id": "hit",
+       "label": "Nhìn nhỏ, vùng chạm 44pt",
+       "image": "22b-hit.svg",
+       "pros": [
+        "Giữ vẻ gọn của editor",
+        "Chạm trúng dễ"
+       ],
+       "cons": [
+        "Vùng chạm có thể chồng nhau khi chip sát"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "big",
+       "label": "Làm chip to 44pt",
+       "image": "22b-big.svg",
+       "pros": [
+        "Rõ ràng nhất"
+       ],
+       "cons": [
+        "Chiếm chỗ panel",
+        "Vẽ lại nhiều board"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tech": "Tier-D pills/chips; DESIGN.md mâu thuẫn; DUO_LOOP 22b.",
+     "tasks": [
+      "Tier-D chip/pill: contentShape 44pt; DESIGN.md một quy tắc"
+     ]
+    },
+    {
+     "id": "Q26b",
+     "title": "Trong Save Edit, đưa nút Save Changes lên ngay dưới chọn định dạng?",
+     "importance": "important",
+     "image": "26b-keep.svg",
+     "why": "Save Changes là cái hầu hết mọi người bấm, nhưng nằm cuối — trên iPhone, Split View và Duo nó hay bị khuất dưới mép.",
+     "proposal": "Thứ tự mới: Định dạng · Save Changes · áp cho cả lô · Save as Copy. Mọi máy.",
+     "options": [
+      {
+       "id": "move",
+       "label": "Save Changes lên trên",
+       "image": "26b-move.svg",
+       "pros": [
+        "Nút chính luôn thấy",
+        "Ít cuộn"
+       ],
+       "cons": [
+        "Người quen chỗ cũ phải làm quen"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "keep",
+       "label": "Giữ như bây giờ",
+       "image": "26b-keep.svg",
+       "pros": [
+        "Không đổi"
+       ],
+       "cons": [
+        "Nút chính hay bị khuất"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "DI12_Save; DUO_LOOP 26b.",
+     "tasks": [
+      "Save Edit sheet — đổi thứ tự; board DI12_Save + PH/IP"
+     ]
+    },
+    {
+     "id": "Q30b",
+     "title": "Danh sách mẫu tên file: làm gọn một dòng như board, hay vẽ lại board theo kiểu hai dòng của app?",
+     "importance": "minor",
+     "image": "DI19_FileName.png",
+     "why": "App vẽ mỗi mẫu hai dòng (71pt), board vẽ một dòng gọn (48pt). Trên Duo kiểu hai dòng đẩy ghi chú cuối xuống phải cuộn.",
+     "proposal": "Sửa app cho gọn như board (tên và ví dụ trên một dòng). Mọi máy.",
+     "options": [
+      {
+       "id": "tight",
+       "label": "App gọn như board",
+       "image": "30b-tight.svg",
+       "pros": [
+        "Trả lại ~65pt",
+        "Không phải cuộn trên Duo"
+       ],
+       "cons": [
+        "Ví dụ dài có thể bị cắt"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Board theo app",
+       "image": "30b-code.svg",
+       "pros": [
+        "Ví dụ hiện đủ"
+       ],
+       "cons": [
+        "Phải cuộn trên Duo",
+        "Vẽ lại board mọi máy"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "DI19_FileName; DUO_LOOP 30b.",
+     "tasks": [
+      "File Name rows một dòng; board DI19_FileName"
+     ]
+    }
+   ]
+  }
+ ],
+ "auto": [
+  {
+   "id": "A1",
+   "title": "Trình sửa biểu đồ (hàng 13) và bảng khoảng ngày (hàng 4)",
+   "choice": "Trình sửa biểu đồ là form dài nên mở toàn màn hai cột trên Duo như các form ở 3b; bảng chọn khoảng ngày mở trên nó vẫn là khung nhỏ. Chụp, so board, đóng hàng 4 và 13.",
+   "why": "Đã chốt ở D1/A2 của lần trước.",
+   "tech": "ChartEditorSheet → .formSheet; DateRangePickerSheet giữ .sheet."
+  },
+  {
+   "id": "A2",
+   "title": "Video Studio màn xem trước đen (hàng 38b)",
+   "choice": "Đây là lỗi, không cần chọn: tìm nguyên nhân; trong lúc chưa có khung hình đầu thì hiện ảnh của clip đầu (hoặc vòng xoay) thay vì màn đen với nút Play.",
+   "why": "Màn đen vài phút với nút Play bấm được là lỗi trên mọi máy.",
+   "tech": "VideoStudioScreen.swift:912 chỉ vẽ player khi model.player != nil; cần thử trên sim iPhone/iPad."
+  },
+  {
+   "id": "A3",
+   "title": "Burst frames (hàng 15)",
+   "choice": "Để blocked: sim không tạo được ảnh chụp liên tiếp. Cần một bộ burst xuất từ máy thật.",
+   "why": "Không có cách làm trên sim.",
+   "tech": "BurstFramesScreen không mở được không có burst."
+  }
+ ]
+}
