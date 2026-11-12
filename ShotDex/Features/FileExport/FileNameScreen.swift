@@ -19,7 +19,7 @@ struct FileNameScreen: View {
                         model.chooseTemplate(template)
                     } label: {
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 1) {
                                 Text(ExportCopy.templateTitle(template)).foregroundStyle(.primary)
                                 Text(verbatim: template.pattern)
                                     .font(.caption.monospaced())
@@ -30,6 +30,10 @@ struct FileNameScreen: View {
                                 Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
                             }
                         }
+                        // Tight two-line rows, as the boards draw them (~48pt,
+                        // DUO_LOOP 30b): the Form's own 11pt insets made each
+                        // 71pt and pushed Custom's chips below the fold.
+                        .padding(.vertical, -11)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
