@@ -3849,6 +3849,23 @@ private struct PhotoEditorSaveSheet: View {
                     Text("Full resolution at maximum quality. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you.")
                 }
 
+                Section {
+                    Button {
+                        guard let format else { return }
+                        Task {
+                            await controller.saveChanges(format: format)
+                            if controller.savedAssetID != nil { onFinished() }
+                        }
+                    } label: {
+                        Label("Save Changes", systemImage: "square.and.arrow.down")
+                    }
+                    .disabled(
+                        format == nil || controller.asset?.canPerform(.content) != true
+                    )
+                } footer: {
+                    Text("Save Changes keeps everything — the photo's date, location and metadata — and is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion.")
+                }
+
                 if pendingCount > 1, let saveAll {
                     Section {
                         Button {
@@ -3897,23 +3914,6 @@ private struct PhotoEditorSaveSheet: View {
                     Text("Save as Copy")
                 } footer: {
                     Text("A new still photo with the metadata you choose. No Location also leaves the copy's place empty in Photos; No Metadata dates it today.")
-                }
-
-                Section {
-                    Button {
-                        guard let format else { return }
-                        Task {
-                            await controller.saveChanges(format: format)
-                            if controller.savedAssetID != nil { onFinished() }
-                        }
-                    } label: {
-                        Label("Save Changes", systemImage: "square.and.arrow.down")
-                    }
-                    .disabled(
-                        format == nil || controller.asset?.canPerform(.content) != true
-                    )
-                } footer: {
-                    Text("Save Changes keeps everything — the photo's date, location and metadata — and is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion.")
                 }
             }
             .navigationTitle("Save Edit")
