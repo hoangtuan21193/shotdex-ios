@@ -829,7 +829,7 @@ struct EditorCropPanel: View {
             .padding(.horizontal, 10)
             .frame(height: 28)
             .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+            .minimumHitTarget(drawnHeight: 28)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -1009,7 +1009,7 @@ private struct EditorChipBody: View {
                 .frame(height: EditorStripLayout.chipHeight)
                 .background(isSelected ? EditorTheme.chipSelected : EditorTheme.chipIdle, in: shape)
                 .opacity(configuration.isPressed ? 0.7 : 1)
-                .contentShape(shape)
+                .minimumHitTarget(drawnHeight: EditorStripLayout.chipHeight)
         } else {
             configuration.label
                 .font(.system(size: 12, weight: .medium))
@@ -1022,7 +1022,7 @@ private struct EditorChipBody: View {
                         : EditorTheme.control.opacity(configuration.isPressed ? 0.6 : 1),
                     in: shape
                 )
-                .contentShape(shape)
+                .minimumHitTarget(drawnHeight: 28)
         }
     }
 }

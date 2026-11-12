@@ -299,5 +299,6 @@ struct EditorPillLabel: View {
                 in: Capsule()
             )
             .editorGlass(cornerRadius: AppTheme.Radius.lg)
+            .minimumHitTarget(drawnHeight: 28)
     }
 }

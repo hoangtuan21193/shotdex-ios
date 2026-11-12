@@ -188,10 +188,16 @@ enum EditorLayoutMetrics {
     /// glance — so the short column pays for it by making it smaller, not by
     /// handing it back to the command band.
     static let sidebarShortColumnHistogramHeight: CGFloat = 56
+    /// The Duo's inner display, the shortest column the editor gets (669pt
+    /// behind an 80pt band): the graph band alone, smaller again, and no mode
+    /// title under it — the rail already says which mode is open (DUO_LOOP
+    /// 20b). Together ~52pt back for the parameter cards.
+    static let sidebarDuoInnerHistogramHeight: CGFloat = 40
 
     /// The histogram block for a column of this height.
-    static func sidebarHistogramHeight(forColumnHeight height: CGFloat) -> CGFloat {
-        isShortColumn(height) ? sidebarShortColumnHistogramHeight : sidebarHistogramHeight
+    static func sidebarHistogramHeight(forColumnHeight height: CGFloat, isDuoInner: Bool = false) -> CGFloat {
+        if isDuoInner { return sidebarDuoInnerHistogramHeight }
+        return isShortColumn(height) ? sidebarShortColumnHistogramHeight : sidebarHistogramHeight
     }
 
     /// Gap between two section cards, and the padding inside one. 8 everywhere

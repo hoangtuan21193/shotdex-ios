@@ -426,7 +426,7 @@ struct EditorColorPalettePanel: View {
                         .frame(width: 18, height: 18)
                         .overlay { Circle().strokeBorder(Color.white.opacity(0.2), lineWidth: 1) }
                         .frame(width: 26, height: 32)
-                        .contentShape(Rectangle())
+                        .minimumHitTarget(drawnHeight: 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Recent color \(pair.offset + 1)")

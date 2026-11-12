@@ -35,7 +35,7 @@ struct EditorMaskListPanel: View {
                         .padding(.horizontal, 12)
                         .frame(height: 28)
                         .background(EditorTheme.accent, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-                        .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+                        .minimumHitTarget(drawnHeight: 28)
                 }
                 .buttonStyle(.plain)
             }

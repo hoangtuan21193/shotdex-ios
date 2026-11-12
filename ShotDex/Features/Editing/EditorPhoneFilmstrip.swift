@@ -132,7 +132,7 @@ struct EditorPhoneFilmstrip: View {
                 .padding(.horizontal, AppTheme.Spacing.md)
                 .frame(height: 32)
                 .background(Color.white.opacity(0.12), in: Capsule())
-                .contentShape(Capsule())
+                .minimumHitTarget(drawnHeight: 32)
             }
             .menuOrder(.fixed)
             .accessibilityLabel("Sync")

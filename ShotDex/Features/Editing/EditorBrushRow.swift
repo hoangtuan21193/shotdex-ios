@@ -233,7 +233,7 @@ struct EditorBrushPillButton: View {
             isHolding ? EditorTheme.chipSelected : EditorTheme.chipIdle,
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
         )
-        .contentShape(Rectangle())
+        .minimumHitTarget(drawnHeight: EditorStripLayout.chipHeight)
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in

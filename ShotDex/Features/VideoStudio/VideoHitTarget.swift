@@ -11,9 +11,6 @@ extension View {
     /// set a 44pt **width** directly, because a width that overlaps its
     /// neighbour's shape trades one missed tap for another.
     func videoHitTarget(drawnHeight: CGFloat) -> some View {
-        let grow = max(0, (AppTheme.Size.minTouch - drawnHeight) / 2)
-        return padding(.vertical, grow)
-            .contentShape(Rectangle())
-            .padding(.vertical, -grow)
+        minimumHitTarget(drawnHeight: drawnHeight)
     }
 }

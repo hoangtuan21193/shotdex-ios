@@ -517,6 +517,10 @@ struct EditorPanelLayoutTests {
 
         #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: duo) == 56)
         #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: iPad) == 92)
+        // The Duo's inner display drops the mode title and shrinks the graph
+        // again (DUO_LOOP 20b); an iPad that is merely short does not.
+        #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: duo, isDuoInner: true) == 40)
+        #expect(EditorLayoutMetrics.sidebarHistogramHeight(forColumnHeight: iPad, isDuoInner: false) == 92)
         #expect(EditorLayoutMetrics.sidebarCardSpacing(forColumnHeight: duo) == 6)
         #expect(EditorLayoutMetrics.sidebarCardSpacing(forColumnHeight: iPad) == 8)
 

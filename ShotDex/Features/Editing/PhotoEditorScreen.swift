@@ -1595,7 +1595,8 @@ struct PhotoEditorScreen: View {
                 .padding(isShortColumn ? AppTheme.Spacing.xs : AppTheme.Spacing.sm)
                 .frame(
                     height: EditorLayoutMetrics.sidebarHistogramHeight(
-                        forColumnHeight: canvasHeight
+                        forColumnHeight: canvasHeight,
+                        isDuoInner: isDuoInner
                     )
                 )
                 .background(
@@ -1609,7 +1610,12 @@ struct PhotoEditorScreen: View {
                 .accessibilityLabel("RGB histogram")
                 .accessibilityValue(histogramClippingSummary(controller))
 
-            sidebarModeHeader(controller)
+            // The mode title, except on the Duo's inner display, where the
+            // rail beside the panel already names it and the 40pt goes to the
+            // cards. History keeps it there too: it carries Done.
+            if !isDuoInner || chrome.showsHistoryPanel {
+                sidebarModeHeader(controller)
+            }
 
             ScrollViewReader { proxy in
             ScrollView(.vertical) {
@@ -1901,7 +1907,7 @@ struct PhotoEditorScreen: View {
                         height: EditorLayoutMetrics.editorPrimaryButtonHeight
                     )
                     .background(EditorTheme.control, in: Circle())
-                    .contentShape(Circle())
+                    .minimumHitTarget(drawnHeight: EditorLayoutMetrics.editorPrimaryButtonHeight)
             }
             .buttonStyle(.plain)
             .disabled(!stageModeHasWork(controller))
@@ -1919,7 +1925,7 @@ struct PhotoEditorScreen: View {
                     .foregroundStyle(.white.opacity(0.9))
                     .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
                     .padding(.horizontal, AppTheme.Spacing.sm)
-                    .contentShape(Rectangle())
+                    .minimumHitTarget(drawnHeight: EditorLayoutMetrics.editorPrimaryButtonHeight)
             }
             .buttonStyle(.plain)
             .hoverEffect(.highlight)
@@ -1934,6 +1940,7 @@ struct PhotoEditorScreen: View {
                     .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
                     .frame(maxWidth: EditorLayoutMetrics.editorPrimaryButtonMaxWidth)
                     .background(EditorTheme.accent, in: Capsule())
+                    .minimumHitTarget(drawnHeight: EditorLayoutMetrics.editorPrimaryButtonHeight)
             }
             .buttonStyle(.plain)
             .hoverEffect(.highlight)

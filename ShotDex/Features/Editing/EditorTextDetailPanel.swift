@@ -387,7 +387,7 @@ struct EditorTextDetailPanel: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 30)
                             .background(isSelected ? EditorTheme.chipSelected : .clear, in: Capsule())
-                            .contentShape(Capsule())
+                            .minimumHitTarget(drawnHeight: 30)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(alignment.accessibilityName)

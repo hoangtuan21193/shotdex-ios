@@ -150,7 +150,7 @@ struct EditorTextPanel: View {
         .frame(maxWidth: .infinity)
         .frame(height: 28)
         .background(EditorTheme.control, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
+        .minimumHitTarget(drawnHeight: 28)
     }
 
     private var header: some View {
