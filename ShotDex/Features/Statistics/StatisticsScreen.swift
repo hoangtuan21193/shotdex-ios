@@ -283,7 +283,10 @@ struct StatisticsScreen: View {
             onEdit: { editorTarget = .edit(spec) },
             onDuplicate: { model.addChart(duplicate(of: spec)) },
             onDelete: { model.deleteChart(id: spec.id) },
-            onDrill: { navigation.openLibrary(with: $0) }
+            onDrill: { navigation.openLibrary(with: $0) },
+            onSwitchKind: { kind in
+                if let switched = spec.switched(to: kind) { model.updateChart(switched) }
+            }
         )
     }
 

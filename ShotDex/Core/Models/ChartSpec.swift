@@ -89,6 +89,24 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
     /// Camera, Total Photos & Videos). An install seeded then gets the rest
     /// appended once — see `ChartStore.loadCharts(seededVersion:)`.
     static let firstSeedGenerationCount = 2
+
+    /// Whether the card offers its Donut · Bars switch (DUO_LOOP 13b): a
+    /// share of a categorical dimension, counted — the one data shape both
+    /// kinds draw. A bar of averages or of binned ISO has no donut.
+    var switchesBetweenDonutAndBars: Bool {
+        guard kind == .bar || kind == .donut, let dimension else { return false }
+        return ChartKind.donut.allowedDimensions.contains(dimension)
+            && ChartKind.donut.allowedAggregations.contains(metric.aggregation)
+    }
+
+    /// This chart drawn as `kind`, everything else kept; nil when the card
+    /// has no switch or `kind` is not one of its two.
+    func switched(to kind: ChartKind) -> ChartSpec? {
+        guard switchesBetweenDonutAndBars, kind == .bar || kind == .donut else { return nil }
+        var copy = self
+        copy.kind = kind
+        return copy
+    }
 }
 
 // MARK: - Chart kind

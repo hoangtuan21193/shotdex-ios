@@ -246,6 +246,8 @@ struct ChartCard: View {
     var onDuplicate: () -> Void
     var onDelete: () -> Void
     var onDrill: (FilterCriteria) -> Void
+    /// Redraws the chart as the other of Donut · Bars, saved with it.
+    var onSwitchKind: ((ChartKind) -> Void)?
 
     private var unknownCount: Int { data.first { $0.isUnknown }.map { Int($0.value) } ?? 0 }
 
@@ -275,6 +277,9 @@ struct ChartCard: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if spec.switchesBetweenDonutAndBars, let onSwitchKind {
+                kindSwitch(onSwitchKind)
+            }
             Menu {
                 Button("Edit", systemImage: "pencil", action: onEdit)
                 Button("Duplicate", systemImage: "plus.square.on.square", action: onDuplicate)
@@ -287,5 +292,23 @@ struct ChartCard: View {
             .tint(.primary)
             .accessibilityLabel("\(spec.title) options")
         }
+    }
+
+    /// Donut · Bars on the card itself, as the boards draw it: the same data
+    /// read as shares or as a ranking is a glance, not a trip to the editor.
+    private func kindSwitch(_ onSwitchKind: @escaping (ChartKind) -> Void) -> some View {
+        Picker(
+            "Chart style",
+            selection: Binding(get: { spec.kind }, set: { onSwitchKind($0) })
+        ) {
+            Label("Show as donut", systemImage: "chart.pie.fill")
+                .labelStyle(.iconOnly)
+                .tag(ChartKind.donut)
+            Label("Show as bars", systemImage: "chart.bar.fill")
+                .labelStyle(.iconOnly)
+                .tag(ChartKind.bar)
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
     }
 }
