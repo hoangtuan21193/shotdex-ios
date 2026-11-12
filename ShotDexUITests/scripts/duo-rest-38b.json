@@ -1,0 +1,79 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 0
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "dump",
+      "name": "DI1_Main"
+    },
+    {
+      "action": "tap",
+      "label": "Play",
+      "type": "button",
+      "index": 0
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    },
+    {
+      "action": "dump",
+      "name": "DI1_Main_playing"
+    }
+  ]
+}

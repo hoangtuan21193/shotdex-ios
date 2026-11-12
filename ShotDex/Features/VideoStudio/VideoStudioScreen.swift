@@ -912,6 +912,11 @@ struct VideoStudioScreen: View {
             if let player = model.player, model.compare?.drawsPair != true {
                 VideoPlayerLayerView(player: player)
             }
+            // Until the first preview item can play, the first clip's still
+            // rather than a black stage under a live Play button (DUO_LOOP 38b).
+            if !model.hasPreviewFrame, let first = model.recipe.clips.first {
+                VideoPreviewStill(assetID: first.assetID, serverFile: model.serverFileURL(for: first.assetID))
+            }
             // A library item under the pointer (FS-12.17b §6): its frame
             // over the project's, as it is in the source — no look yet.
             if let image = model.skimImage {
@@ -1555,6 +1560,46 @@ private struct VideoExportSheetSizing: ViewModifier {
             content
                 .frame(idealWidth: sheet.width, idealHeight: height)
                 .presentationCornerRadius(sheet.cornerRadius)
+        }
+    }
+}
+
+/// The first clip's still, shown on the stage until the preview has a frame.
+private struct VideoPreviewStill: View {
+    let assetID: String
+    let serverFile: URL?
+    @Environment(PhotoLibraryService.self) private var photoLibrary
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                ProgressView().tint(.white)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .task(id: assetID) { await load() }
+    }
+
+    private func load() async {
+        if let serverFile {
+            image = await PhotoOriginFile.loadImage(at: serverFile, maxPixelSize: 1024)
+            return
+        }
+        guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first else { return }
+        _ = photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: CGSize(width: 1024, height: 1024),
+            contentMode: .aspectFit,
+            allowNetwork: false
+        ) { result, _ in
+            if let result { image = result }
         }
     }
 }

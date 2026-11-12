@@ -1,4 +1,5 @@
 import AVFoundation
+import os
 import Photos
 import SwiftUI
 import ShotDexKit
@@ -160,6 +161,14 @@ final class VideoStudioModel {
 
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
+    /// The preview item's status. Without it an item that failed left a
+    /// black stage with a live Play button and no word why (DUO_LOOP 38b).
+    @ObservationIgnored private var itemStatusObservation: NSKeyValueObservation?
+    /// Whether any preview item has become ready to play. Until then the
+    /// stage shows the first clip's still instead of black; once true it
+    /// stays true across rebuilds, so an edit never flashes the still.
+    private(set) var hasPreviewFrame = false
+    private static let previewLog = Logger(subsystem: "com.hoangtuan.shotdex", category: "VideoPreview")
     /// Loop with an Out (FS-12.17b §5): the player turns back to In there.
     private var loopBoundaryObserver: Any?
     private var rebuildTask: Task<Void, Never>?
@@ -1784,6 +1793,7 @@ final class VideoStudioModel {
 
     func close() {
         isClosed = true
+        itemStatusObservation = nil
         trackingTask?.cancel()
         // A studio closed some other way than Back (its presenter went
         // away) still writes the change it was waiting to write. The task
@@ -4222,6 +4232,7 @@ final class VideoStudioModel {
             layout = build.layout
             totalDuration = build.layout.totalDuration
             playerItem = build.playerItem
+            observeStatus(of: build.playerItem)
             if let player {
                 player.replaceCurrentItem(with: build.playerItem)
             } else {
@@ -4247,6 +4258,33 @@ final class VideoStudioModel {
             return
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func observeStatus(of item: AVPlayerItem) {
+        if item.status == .readyToPlay { hasPreviewFrame = true }
+        itemStatusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            let status = item.status
+            let error = item.error as NSError?
+            Task { @MainActor [weak self] in
+                guard let self, item === self.playerItem else { return }
+                switch status {
+                case .readyToPlay:
+                    self.hasPreviewFrame = true
+                case .failed:
+                    let underlying = error?.userInfo[NSUnderlyingErrorKey] as? NSError
+                    let summary = "\(error?.domain ?? "-") \(error?.code ?? 0) \(error?.localizedDescription ?? "-") underlying \(underlying?.domain ?? "-") \(underlying?.code ?? 0)"
+                    Self.previewLog.error("Preview item failed: \(summary, privacy: .public)")
+                    // AVFoundation's own text here is "The operation could
+                    // not be completed"; the codes go to the log instead.
+                    self.errorMessage = String(
+                        localized: "The preview can't play this project. Your clips and edits are kept.",
+                        comment: "Video Studio: the preview player failed to load the project"
+                    )
+                default:
+                    break
+                }
+            }
         }
     }
 
