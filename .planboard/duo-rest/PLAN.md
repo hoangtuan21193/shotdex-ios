@@ -18,7 +18,7 @@
 - [x] **7 Q22b** — 38fa314f · tier-D chip/pill: contentShape 44pt; DESIGN.md một quy tắc
 - [x] **8 Q20b** — 38fa314f · editor panel header gọn trên .duoInner — board DI1_Edit
 - [x] **9 Q13b** — 3647b827 · Donut/Bars switch trên thẻ Statistics, lưu vào chart; test ChartStore
-- [ ] **10 A2** Video Studio preview đen: tìm nguyên nhân, placeholder clip đầu
+- [~] **10 A2** (báo lỗi + ảnh tĩnh xong; nguyên nhân gốc còn mở) · Video Studio preview đen: tìm nguyên nhân, placeholder clip đầu
 - [ ] **11 Q5** FS-21 §3 (onboarding + thư viện trống): /plan FS-21 rồi làm, cả ba máy
 - Kiểm tra mỗi bước: `/build`, `Tools/ui-drive` trên Compare Duo, `Tools/design-board compare`; test khi đổi Data/Domain.
 
