@@ -133,6 +133,14 @@ enum SearchIntentParser {
         "this year": "thisyear", "last year": "lastyear",
         "ngay qua": "daysago", "ngay gan day": "daysago", "days ago": "daysago",
         "thang qua": "monthsago", "months ago": "monthsago",
+        // Calendar facts (FS-01.03c §5)
+        "mua xuan": "spring", "mua he": "summer", "mua ha": "summer",
+        "mua thu": "autumn", "mua dong": "winter",
+        "cuoi tuan": "weekend", "ngay thuong": "weekday", "chu nhat": "sunday",
+        "thu hai": "monday", "thu ba": "tuesday", "thu tu": "wednesday",
+        "thu nam": "thursday", "thu sau": "friday", "thu bay": "saturday",
+        "thu 2": "monday", "thu 3": "tuesday", "thu 4": "wednesday",
+        "thu 5": "thursday", "thu 6": "friday", "thu 7": "saturday",
         // Sensor formats written as more than one word.
         "full frame": "fullframe", "micro four thirds": "mft",
         "medium format": "mediumformat", "1 inch": "1inch",
@@ -157,6 +165,16 @@ enum SearchIntentParser {
         "ngay": "day", "day": "day", "days": "day",
         "thang": "month", "month": "month", "months": "month",
         "tu": "from", "from": "from", "den": "to", "toi": "to", "to": "to", "and": "to",
+        "thg": "month",
+        // Calendar facts (FS-01.03c §5)
+        "spring": "spring", "summer": "summer", "autumn": "autumn", "fall": "autumn", "winter": "winter",
+        "monday": "monday", "tuesday": "tuesday", "wednesday": "wednesday", "thursday": "thursday",
+        "friday": "friday", "saturday": "saturday", "sunday": "sunday",
+        "weekend": "weekend", "weekends": "weekend", "weekday": "weekday", "weekdays": "weekday",
+        "january": "m1", "jan": "m1", "february": "m2", "feb": "m2", "march": "m3", "mar": "m3",
+        "april": "m4", "apr": "m4", "may": "m5", "june": "m6", "jun": "m6", "july": "m7", "jul": "m7",
+        "august": "m8", "aug": "m8", "september": "m9", "sep": "m9", "sept": "m9",
+        "october": "m10", "oct": "m10", "november": "m11", "nov": "m11", "december": "m12", "dec": "m12",
     ]
 
     /// Folds a query into scanner tokens.
@@ -238,6 +256,10 @@ enum SearchIntentParser {
         calendar: Calendar,
         into rules: inout [SmartAlbumRule]
     ) -> Int? {
+        if let (rule, consumed) = calendarRule(tokens, index, calendar) {
+            rules.append(rule)
+            return consumed
+        }
         if let (rule, consumed) = dateRule(tokens, index, now, calendar) {
             rules.append(rule)
             return consumed

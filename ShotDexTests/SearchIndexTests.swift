@@ -180,6 +180,29 @@ struct SearchIndexTests {
         #expect(try JSONDecoder().decode(SmartAlbumQuery.self, from: JSONEncoder().encode(saved)) == saved)
     }
 
+    @Test func parserCalendarWords() {
+        func rules(_ text: String) -> [SmartAlbumRule] {
+            SearchIntentParser.parse(text, readsKeywords: false).query.rules
+        }
+        #expect(rules("june").map(\.field) == [.monthOfYear])
+        #expect(rules("june").first?.text == "6")
+        #expect(rules("tháng 6").first?.text == "6")
+        #expect(rules("thg 12").first?.text == "12")
+        #expect(rules("june 2024").first?.op == .inMonth)
+        #expect(rules("tháng 6 2024").first?.op == .inMonth)
+        #expect(rules("tháng 6/2024").first?.op == .inMonth)
+        #expect(rules("mùa hè").first?.text == CaptureSeason.summer.rawValue)
+        #expect(rules("fall").first?.text == CaptureSeason.autumn.rawValue)
+        #expect(rules("cuối tuần").first?.text == CaptureWeekday.weekend.rawValue)
+        #expect(rules("thứ 2").first?.text == CaptureWeekday.monday.rawValue)
+        #expect(rules("chủ nhật").first?.text == CaptureWeekday.sunday.rawValue)
+        // Old shapes still read the same.
+        #expect(rules("last 3 months").first?.op == .inLastDays)
+        #expect(rules("tháng trước").first?.op == .inRange)
+        #expect(rules("năm 2023").first?.op == .inRange)
+        #expect(rules("85mm summer").map(\.field) == [.focalLength, .season])
+    }
+
     // MARK: AC-16, AC-17, ranking
 
     @Test func didYouMeanOnlyForNearNames() {
