@@ -119,6 +119,21 @@ enum SmartAlbumSQLBuilder {
                 case .isNot: return photoKindClause(kind, is: false)
                 default: return nil
                 }
+            case .monthOfYear, .season, .dayOfWeek:
+                // FS-01.03c §5: local-time calendar facts of the capture date.
+                // Undated photos match neither *is* nor *is not*.
+                let condition: (String, [Int])? = switch rule.field {
+                case .monthOfYear: CaptureMonthOfYear(value: rule.text)?.sql
+                case .season: CaptureSeason(rawValue: rule.text)?.sql
+                default: CaptureWeekday(rawValue: rule.text)?.sql
+                }
+                guard let (sql, values) = condition else { return nil }
+                let bound = values.map { $0 as DatabaseValueConvertible }
+                switch rule.op {
+                case .isExactly: return ("(creationDate IS NOT NULL AND \(sql))", bound)
+                case .isNot: return ("(creationDate IS NOT NULL AND NOT \(sql))", bound)
+                default: return nil
+                }
             case .original:
                 guard let value = OriginalPresence(rawValue: rule.text) else { return nil }
                 switch rule.op {

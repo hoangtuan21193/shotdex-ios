@@ -128,6 +128,11 @@ struct SmartAlbumRuleRow: View {
         if field.kind == .rating { rule.number = 4 }
         // The value a Photo condition is most often about.
         if field == .photoKind { rule.text = PhotoKind.favorite.rawValue }
+        // Calendar facts (FS-01.03c §5): start from the first value, so the
+        // condition is complete and the count shows at once.
+        if field == .monthOfYear || field == .season || field == .dayOfWeek {
+            rule.text = field.choiceValues.first?.value ?? ""
+        }
         // One server: it is the only answer, so the count shows at once (AC-248).
         if field == .alsoOnServer, servers.count == 1 { rule.text = servers[0].value }
         if field.kind == .date, rule.op == .on {

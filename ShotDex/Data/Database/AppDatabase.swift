@@ -714,6 +714,7 @@ final class AppDatabase: Sendable {
         registerCreatorRights(&migrator)
         registerDuplicateFeaturePrints(&migrator)
         registerPhotoKindFacts(&migrator)
+        registerSearchIndex(&migrator)
 
         return migrator
     }

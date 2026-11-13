@@ -766,6 +766,20 @@ final class LibraryModel {
         }
     }
 
+    /// Hands a search already built in the Search tab — tokens plus what the
+    /// parser read from the rest — to the grid: *Open in Library*
+    /// (FS-01.03c §4). Remembered as the words the user sees in the field.
+    func applySearchQuery(_ query: SmartAlbumQuery, remembering text: String, using service: SearchService) {
+        searchTask?.cancel()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { service.recentSearches.remember(trimmed) }
+        if query.isEmpty {
+            criteria.searchText = nil
+        } else {
+            advancedQuery = query
+        }
+    }
+
     // MARK: Places
 
     /// Photos with coordinates still waiting for an address, while the pass runs.

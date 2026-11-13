@@ -73,7 +73,7 @@ extension SmartAlbumRule {
             }
             // "Video" already names itself, the way a place name does — and
             // so does "Live Photo" or "edited".
-            if field == .mediaType || field == .photoKind {
+            if field == .mediaType || field == .photoKind || field == .monthOfYear || field == .season || field == .dayOfWeek {
                 return op == .isNot ? "≠ \(value)" : value
             }
             return op == .isNot
@@ -199,6 +199,9 @@ extension SmartAlbumRule {
         case .original: "original"
         case .alsoOnServer: "server"
         case .photoKind: "photo"
+        case .monthOfYear: "month"
+        case .season: "season"
+        case .dayOfWeek: "day"
         }
     }
 
@@ -236,6 +239,15 @@ extension SmartAlbumRule {
             }
             if field == .photoKind {
                 return PhotoKind(rawValue: text)?.label ?? text
+            }
+            if field == .monthOfYear {
+                return CaptureMonthOfYear(value: text)?.label ?? text
+            }
+            if field == .season {
+                return CaptureSeason(rawValue: text)?.label ?? text
+            }
+            if field == .dayOfWeek {
+                return CaptureWeekday(rawValue: text)?.label ?? text
             }
             return text // sensor-format rawValue is already its display name
         case .number:

@@ -83,6 +83,14 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// burst, screenshot… (`PhotoKind`), Photos' *Photo is …* condition
     /// (FS-06.08 §3c).
     case photoKind
+    /// The month of any year, local time (FS-01.03c §5): `text` is 1–12.
+    case monthOfYear
+    /// Spring / summer / autumn / winter by the hemisphere of the capture
+    /// location (FS-01.03c §5): `text` is a `CaptureSeason` raw value.
+    case season
+    /// A day of the week, or weekend / weekday (FS-01.03c §5): `text` is a
+    /// `CaptureWeekday` raw value.
+    case dayOfWeek
 
     var id: String { rawValue }
 
@@ -111,13 +119,16 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .alsoOnServer: String(localized: "Also on Server", comment: "Rule field: whether the photo in the library also has an identical copy on a server folder")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         case .photoKind: String(localized: "Photo", comment: "Rule field: what kind of item it is — edited, Live Photo, panorama, burst, screenshot…")
+        case .monthOfYear: String(localized: "Month of Year", comment: "Rule field: the calendar month of the capture date, any year")
+        case .season: String(localized: "Season", comment: "Rule field: the season of the capture date")
+        case .dayOfWeek: String(localized: "Day of Week", comment: "Rule field: the weekday of the capture date")
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
-        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind, .monthOfYear, .season, .dayOfWeek: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -152,6 +163,12 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             OriginalPresence.allCases.map { ($0.rawValue, $0.label) }
         case .photoKind:
             PhotoKind.allCases.map { ($0.rawValue, $0.label) }
+        case .monthOfYear:
+            CaptureMonthOfYear.allCases.map { ($0.value, $0.label) }
+        case .season:
+            CaptureSeason.allCases.map { ($0.rawValue, $0.label) }
+        case .dayOfWeek:
+            CaptureWeekday.allCases.map { ($0.rawValue, $0.label) }
         default:
             []
         }

@@ -36,7 +36,7 @@ struct SmartAlbumOperatorTests {
         switch field {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText:
             [.contains, .doesNotContain, .isExactly, .isNot]
-        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind:
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind, .monthOfYear, .season, .dayOfWeek:
             [.isExactly, .isNot]
         case .iso, .aperture, .shutter, .focalLength:
             [.equalTo, .greaterThan, .lessThan, .inRange]
