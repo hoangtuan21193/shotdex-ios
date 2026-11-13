@@ -87,33 +87,39 @@ struct MacRuleLine: View {
         }
     }
 
-    /// A field change resets the comparison and the now-meaningless values,
-    /// as the iOS row does.
+    /// A field change keeps what still fits — the comparison when the new
+    /// field has it, numbers between number fields, text between text fields
+    /// (FS-06.08 §3c A4) — and seeds the rest.
     private func select(_ field: RuleField) {
         guard field != rule.field else { return }
-        rule.field = field
-        rule.op = field.defaultOperator
-        rule.text = ""
-        rule.number = nil
-        rule.numberUpper = nil
-        rule.boolValue = true
-        rule.focalMode = .actual
-        rule.folder = nil
-        if field.kind == .rating { rule.number = 4 }
-        if field == .alsoOnServer, options.servers.count == 1 { rule.text = options.servers[0].value }
-        seedDate(for: rule.op)
+        var next = rule.changingField(to: field)
+        Self.seed(&next, options: options)
+        rule = next
+    }
+
+    private func seedDate(for op: RuleOperator) {
+        Self.seedDate(&rule)
+    }
+
+    /// What a fresh line on its field starts with: a rating of 4, the one
+    /// server when there is one, a complete date. Used by a field change and
+    /// by + (a new line on the same field).
+    static func seed(_ rule: inout SmartAlbumRule, options: MacRuleOptions) {
+        if rule.field.kind == .rating, rule.number == nil { rule.number = 4 }
+        if rule.field == .alsoOnServer, rule.text.isEmpty, options.servers.count == 1 { rule.text = options.servers[0].value }
+        seedDate(&rule)
     }
 
     /// A date comparison starts complete: the date shown is the one kept.
-    private func seedDate(for op: RuleOperator) {
+    static func seedDate(_ rule: inout SmartAlbumRule) {
         guard rule.field.kind == .date else { return }
         let today = Calendar.current.startOfDay(for: .now).timeIntervalSince1970
-        switch op {
+        switch rule.op {
         case .on, .before, .after, .inMonth: if rule.number == nil { rule.number = today }
         case .inRange:
             if rule.number == nil { rule.number = today }
             if rule.numberUpper == nil { rule.numberUpper = today }
-        case .inLastDays: if (rule.number ?? 0) <= 0 { rule.number = 30 }
+        case .inLastDays, .notInLast: if (rule.number ?? 0) <= 0 { rule.number = 30 }
         default: break
         }
     }
@@ -240,20 +246,28 @@ struct MacRuleLine: View {
             datePicker(\.numberUpper, label: String(localized: "To", comment: "Mac smart album editor: a range's upper value"))
         case .inMonth:
             monthValue
-        case .inLastDays:
+        case .inLastDays, .notInLast:
             TextField(String(localized: "Amount", comment: "Mac smart album editor: how many days back"), text: Binding(
                 get: { rule.number.map { String(Int($0.rounded())) } ?? "" },
                 set: { rule.number = Double($0.filter(\.isNumber)) }
             ))
             .labelsHidden()
-            .accessibilityLabel(String(localized: "Days", comment: "VoiceOver: how many days back in 'is in the last N days'"))
+            .accessibilityLabel(String(localized: "Amount", comment: "Mac smart album editor: how many days back"))
             .textFieldStyle(.roundedBorder)
             .multilineTextAlignment(.trailing)
             .frame(width: 54)
             Stepper(String(localized: "Amount", comment: "Mac smart album editor: how many days back"),
                     value: Binding(get: { Int(rule.number ?? 30) }, set: { rule.number = Double($0) }), in: 1...36500)
                 .labelsHidden()
-            Text("days", comment: "Mac smart album editor: after the number of days in 'is in the last N days'").foregroundStyle(.secondary)
+            // Days / weeks / months / years, as Photos (FS-06.08 §3c); days is stored as nil.
+            Picker(String(localized: "Unit", comment: "Smart album date condition: the days/weeks/months/years menu"),
+                   selection: Binding(get: { rule.unit ?? .days }, set: { rule.unit = $0 == .days ? nil : $0 })) {
+                ForEach(DateUnit.allCases) { unit in
+                    Text(unit.label).tag(unit)
+                }
+            }
+            .labelsHidden()
+            .frame(width: 96)
         default:
             EmptyView()
         }

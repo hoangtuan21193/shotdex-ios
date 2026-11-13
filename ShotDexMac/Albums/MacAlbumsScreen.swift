@@ -369,9 +369,8 @@ struct MacAlbumsScreen: View {
             }
             if tile.isSmart, case .smartAlbum(let id) = tile.target {
                 Divider()
-                Button(String(localized: "Edit Smart Album…", comment: "Mac Albums: tile menu")) {
-                    NotificationCenter.default.post(name: .macEditSmartAlbum, object: id)
-                }
+                // Edit, Rename, Duplicate, Delete (FS-06.08 §3c-Mac, AC-37).
+                MacSmartAlbumActions(albumId: id)
             }
         }
     }

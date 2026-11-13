@@ -21,6 +21,8 @@ struct MacSmartAlbumEditorSheet: View {
     /// Server sources by id → their connection, for the Folder line.
     @State private var serverConnections: [String: String] = [:]
     @State private var matchCount: Int?
+    /// A recount is running: the last number stays up, dimmed (FS-06.08 §3c A2).
+    @State private var isCounting = false
     @State private var takenNames: Set<String> = []
     @State private var folderPick: FolderPick?
     /// ⌥ is down: the top-level + adds a group (Finder's predicate editor).
@@ -102,13 +104,9 @@ struct MacSmartAlbumEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 15, weight: .semibold))
-                Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit()
-                    .lineLimit(1)
-                    .accessibilityIdentifier("smartAlbumCount")
-            }
-            .padding(.bottom, 16)
+            // The count moved to the button row (board, FS-06.08 §3c D3).
+            Text(title).font(.system(size: 15, weight: .semibold))
+                .padding(.bottom, 16)
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 12) {
                 if !isFilter {
                     GridRow {
@@ -140,7 +138,7 @@ struct MacSmartAlbumEditorSheet: View {
                         .fixedSize()
                         // Under Match any the kind is one more condition (as on iOS):
                         // said where the control is.
-                        if query.matchMode == .any, mediaKind.wrappedValue != nil {
+                        if query.matchMode == .any, mediaKind.wrappedValue != nil, query.conditionCount(excluding: []) > 1 {
                             Text("Counts as one condition under Match any.",
                                  comment: "Mac smart album editor: under Match any, the media type widens instead of narrowing")
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -149,6 +147,15 @@ struct MacSmartAlbumEditorSheet: View {
                     // On the column's edge with Name and Match, not centred in it.
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                // One condition has nothing to join (FS-06.08 §3c D1): no all / any.
+                // The media type counts — it is a condition in the SQL.
+                if query.conditionCount(excluding: []) <= 1 {
+                    GridRow {
+                        Color.clear.frame(width: 84, height: 1).gridColumnAlignment(.trailing)
+                        Text("Match the following condition:", comment: "Mac smart album sheet: one condition, nothing to match all or any of")
+                            .frame(height: 22)
+                    }
+                } else {
                 GridRow {
                     label(String(localized: "Match", comment: "Mac smart album sheet row: before all/any"))
                     HStack(spacing: 8) {
@@ -160,6 +167,7 @@ struct MacSmartAlbumEditorSheet: View {
                         .frame(width: 64)
                         Text("of the following conditions:", comment: "Mac smart album sheet: after Match all/any")
                     }
+                }
                 }
             }
             .padding(.bottom, 12)
@@ -174,8 +182,10 @@ struct MacSmartAlbumEditorSheet: View {
                 if let saveError {
                     Text("Couldn’t save: \(saveError)", comment: "Mac smart album editor: the album could not be written")
                         .font(.system(size: 11)).foregroundStyle(MacTheme.redText).lineLimit(2)
+                } else {
+                    countLine
                 }
-                Spacer()
+                Spacer(minLength: 8)
                 // 84 wide each (board): the width goes on the label, inside the chrome.
                 Button(role: .cancel) { dismiss() } label: {
                     Text("Cancel", comment: "Mac sheet: cancel").frame(minWidth: 68)
@@ -246,25 +256,45 @@ struct MacSmartAlbumEditorSheet: View {
                               : String(localized: "Save", comment: "Mac smart album sheet: save the edited album")
     }
 
-    /// "Matches 64 photos · Photos not checked yet aren’t counted."
-    private var subtitle: String {
-        guard let matchCount else {
-            return String(localized: "Add conditions to choose the photos.", comment: "Mac smart album editor: no condition complete yet")
+    /// "**1,284 photos match** · Photos not checked yet aren’t counted." by
+    /// the buttons, always in view (board, FS-06.08 §3c D3). No valid
+    /// condition counts the whole library; a recount keeps the last number,
+    /// dimmed (A2).
+    private var countLine: some View {
+        let count: Text = if let matchCount {
+            Text(matchCount == 1
+                 ? String(localized: "1 photo matches", comment: "Smart album sheet count bar, one photo")
+                 : String(localized: "\(matchCount.formatted()) photos match", comment: "Smart album sheet count bar, e.g. 1,284 photos match"))
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+        } else {
+            Text(String(localized: "Counting…", comment: "Smart album sheet count bar before the first count"))
         }
-        var parts = [String(AttributedString(localized: "Matches ^[\(matchCount) photo](inflect: true)",
-                                             comment: "Mac smart album editor: live count of matching photos").characters)]
-        // Unchecked photos match neither value (FS-06.10 §3): the count grows as the check goes on.
-        if uncheckedOriginals {
-            parts.append(String(localized: "Photos not checked yet aren’t counted.",
-                                comment: "Smart album editor: the originals check has photos left, which no Original condition matches yet"))
-        }
+        let notes = countNotes
+        return (notes.isEmpty ? count : count + Text(verbatim: " · " + notes.joined(separator: " ")))
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .lineLimit(2)
+            .opacity(isCounting && matchCount != nil ? 0.5 : 1)
+            .accessibilityIdentifier("smartAlbumCount")
+            .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var countNotes: [String] {
+        var notes: [String] = []
         // A half-typed line is left out of the count and of the album: say so.
         let incomplete = query.allRules.filter { $0.field != .mediaType && !$0.isValid }.count
         if incomplete > 0 {
-            parts.append(String(AttributedString(localized: "^[\(incomplete) incomplete condition](inflect: true) ignored",
-                                                 comment: "Mac smart album editor: blank or half-typed lines that Create leaves out").characters))
+            notes.append(incomplete == 1
+                ? String(localized: "1 incomplete condition won’t be saved.", comment: "Smart album count bar note")
+                : String(localized: "\(incomplete) incomplete conditions won’t be saved.", comment: "Smart album count bar note"))
         }
-        return parts.joined(separator: " · ")
+        // Unchecked photos match neither value (FS-06.10 §3): the count grows as the check goes on.
+        if uncheckedOriginals {
+            notes.append(String(localized: "Photos not checked yet aren’t counted.", comment: "Smart album count bar note: the Original check is still running"))
+        }
+        return notes
     }
 
     /// The bordered list of condition lines and groups (board: 590×314, r10).
@@ -337,14 +367,20 @@ struct MacSmartAlbumEditorSheet: View {
         }
     }
 
+    /// + puts a blank line right under its own, on the same field
+    /// (FS-06.08 §3c D2), seeded the way picking that field seeds it.
     private func addRule(after id: UUID?, inGroup group: UUID?) {
         if let group, let index = query.groups.firstIndex(where: { $0.id == group }) {
-            let at = query.groups[index].rules.firstIndex { $0.id == id }.map { $0 + 1 } ?? query.groups[index].rules.endIndex
-            query.groups[index].rules.insert(SmartAlbumRule(), at: at)
+            let rules = query.groups[index].rules
+            let row = rules.firstIndex { $0.id == id }
+            var rule = row.map { SmartAlbumRule(field: rules[$0].field) } ?? SmartAlbumRule()
+            MacRuleLine.seed(&rule, options: options)
+            query.groups[index].rules.insert(rule, at: row.map { $0 + 1 } ?? rules.endIndex)
             return
         }
-        let at = query.rules.firstIndex { $0.id == id }.map { $0 + 1 } ?? query.rules.endIndex
-        query.rules.insert(SmartAlbumRule(), at: at)
+        // An id not among the top-level lines appends at the end.
+        let newId = query.insertRule(after: id ?? UUID())
+        updateRule(newId) { MacRuleLine.seed(&$0, options: options) }
     }
 
     private func updateRule(_ id: UUID, _ change: (inout SmartAlbumRule) -> Void) {
@@ -437,16 +473,17 @@ struct MacSmartAlbumEditorSheet: View {
         hasLoaded = true
     }
 
+    /// No valid condition counts the whole library — what an album with no
+    /// condition would hold (FS-06.08 §3c D3); the last number stays up,
+    /// dimmed, until the new one lands (A2).
     private func recount(_ snapshot: SmartAlbumQuery) async {
-        guard !snapshot.isEmpty else {
-            matchCount = nil
-            return
-        }
+        isCounting = true
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = try? await dependencies.libraryQueries.count(matching: snapshot)
+        let count = try? await dependencies.libraryQueries.count(matching: snapshot.cleaned)
         guard !Task.isCancelled, query == snapshot else { return }
-        matchCount = count
+        if let count { matchCount = count }
+        isCounting = false
     }
 
     private func save() {

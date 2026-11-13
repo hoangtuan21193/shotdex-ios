@@ -127,6 +127,8 @@ struct MacSidebar: View {
                     Label { Text(album.name) } icon: { MacSidebar.icon(MacSidebarItem.smartAlbum(album.id).systemImage) }
                         .tag(MacSidebarItem.smartAlbum(album.id))
                         .listRowBackground(ground(.smartAlbum(album.id)))
+                        // The header's action pop-up items (board `MAC_SmartAlbum`).
+                        .contextMenu { MacSmartAlbumActions(albumId: album.id) }
                 }
                 if hiddenCount > 0 || selection == .hidden {
                     row(.hidden, count: hiddenCount)

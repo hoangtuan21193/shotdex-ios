@@ -28,7 +28,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Matches 56 photos",
+   "label": "56 photos match",
    "type": "staticText"
   },
   {
@@ -64,7 +64,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Matches 56 photos · 1 incomplete condition ignored",
+   "label": "56 photos match · 1 incomplete condition won’t be saved.",
    "type": "staticText",
    "seconds": 3
   },
@@ -233,7 +233,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Matches 56 photos",
+   "label": "56 photos match",
    "type": "staticText",
    "seconds": 3
   },
@@ -269,7 +269,7 @@
   },
   {
    "action": "assertExists",
-   "label": "Matches 56 photos",
+   "label": "56 photos match",
    "type": "staticText",
    "seconds": 3
   },

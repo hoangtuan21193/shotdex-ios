@@ -52,6 +52,18 @@ struct MacSmartAlbumHeader: View {
                 .font(.system(size: 13))
                 .frame(height: 24)
                 .help(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"))
+            // Edit, Rename, Duplicate, Delete beside it (board, FS-06.08 §3c-Mac).
+            Menu {
+                MacSmartAlbumActions(albumId: album.id)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(height: 24)
+            .accessibilityLabel(String(localized: "Smart Album Actions", comment: "Mac smart album header: the action pop-up"))
+            .help(String(localized: "Smart Album Actions", comment: "Mac smart album header: the action pop-up"))
             Spacer(minLength: 12)
             if !onServerLines.isEmpty || originalCheck != nil || photosLine != nil {
                 VStack(alignment: .trailing, spacing: 1) {
@@ -254,4 +266,51 @@ struct MacSmartAlbumHeader: View {
                 .accessibilityHidden(true)
         }
     }
+}
+
+/// A smart album's actions — the header's action pop-up, the Albums tile's
+/// and the sidebar row's context menu (board `MAC_SmartAlbum`, FS-06.08
+/// §3c-Mac): Edit Smart Album… · Rename… · Duplicate · Delete Smart Album.
+/// Each posts to the window, which owns the editor sheet, the rename and
+/// delete prompts, and the album list.
+struct MacSmartAlbumActions: View {
+    let albumId: String
+
+    var body: some View {
+        Button(String(localized: "Edit Smart Album…", comment: "Mac smart album menu")) { post(.macEditSmartAlbum) }
+        Button(String(localized: "Rename…", comment: "Mac smart album menu")) { post(.macRenameSmartAlbum) }
+        Button(String(localized: "Duplicate", comment: "Mac smart album menu")) { post(.macDuplicateSmartAlbum) }
+        Divider()
+        Button(String(localized: "Delete Smart Album", comment: "Mac smart album menu"), role: .destructive) { post(.macDeleteSmartAlbum) }
+    }
+
+    private func post(_ name: Notification.Name) {
+        NotificationCenter.default.post(name: name, object: albumId, userInfo: [Self.claimKey: Claim()])
+    }
+
+    /// Every Library window hears the request; the first takes it, so a
+    /// second window does not duplicate or delete again.
+    @MainActor
+    static func take(_ note: Notification) -> Bool {
+        guard let claim = note.userInfo?[claimKey] as? Claim else { return true }
+        guard !claim.isTaken else { return false }
+        claim.isTaken = true
+        return true
+    }
+
+    private static let claimKey = "claim"
+
+    @MainActor
+    private final class Claim {
+        var isTaken = false
+    }
+}
+
+extension Notification.Name {
+    /// Rename… on a smart album: the window asks for the name, the album's id as the object.
+    static let macRenameSmartAlbum = Notification.Name("macRenameSmartAlbum")
+    /// Duplicate on a smart album, the album's id as the object.
+    static let macDuplicateSmartAlbum = Notification.Name("macDuplicateSmartAlbum")
+    /// Delete Smart Album: the window asks first, the album's id as the object.
+    static let macDeleteSmartAlbum = Notification.Name("macDeleteSmartAlbum")
 }

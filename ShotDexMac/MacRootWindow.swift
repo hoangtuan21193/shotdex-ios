@@ -105,6 +105,15 @@ struct MacRootWindow: View {
     @State private var uploadRequest: MacUploadRequest?
     @State private var smartAlbumForm: MacSmartAlbumFormRequest?
     @State private var smartAlbums: [SmartAlbum] = []
+    /// Rename… / Delete Smart Album from a smart album's menu (FS-06.08 §3c-Mac).
+    @State private var renamingSmartAlbum: SmartAlbum?
+    @State private var smartAlbumNewName = ""
+    @State private var deletingSmartAlbum: SmartAlbum?
+    /// The album being deleted keeps an album in Photos: the prompt says it stays.
+    @State private var deletingKeptInPhotos = false
+    @State private var smartAlbumFailure: String?
+    /// When the open smart album last read again for a photo-table write (2 s throttle).
+    @State private var lastSmartAlbumLiveReload = Date.distantPast
     /// Photos with every file on some server folder: the smart album's tile glyph.
     @State private var onServerPhotoIds: Set<String> = []
     /// Why the sidebar's Add Folder… could not add (Settings shows its own).
@@ -250,7 +259,15 @@ struct MacRootWindow: View {
             if isAlbumOpen { library?.reload() }
         }
         // A smart album edited (or its list first read): the grid follows its rules.
-        .onChange(of: smartAlbums) { if isSmartAlbumOpen { library?.place = place(for: selection) } }
+        .onChange(of: smartAlbums) {
+            guard isSmartAlbumOpen, let selection else { return }
+            // Deleted here or on another device: not the whole library under its name.
+            if !isPlaceKnown(selection) {
+                self.selection = .albums
+                return
+            }
+            library?.place = place(for: selection)
+        }
         // The "on server" glyph on a smart album's tiles (FS-19.07 §11): again on each check pass.
         .task(id: isSmartAlbumOpen ? dependencies.onServerCheck.generation : -1) {
             guard isSmartAlbumOpen else { onServerPhotoIds = []; return }
@@ -359,7 +376,7 @@ struct MacRootWindow: View {
     /// The menu commands' and the app's requests to this window — split from
     /// `body` so the type checker can take it.
     fileprivate func requests(_ content: some View) -> some View {
-        alerts(content)
+        smartAlbumActions(alerts(content))
             .modifier(MacPhotoMenuHostIfReady(menu: photoMenu, library: library, selection: photoSelection))
             .modifier(MacToast())
             .background(MacMainWindowMarker())
@@ -415,6 +432,7 @@ struct MacRootWindow: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
             .onReceive(NotificationCenter.default.publisher(for: .macEditSmartAlbum)) { note in
+                guard MacSmartAlbumActions.take(note) else { return }
                 if let id = note.object as? String, let album = smartAlbums.first(where: { $0.id == id }) {
                     smartAlbumForm = MacSmartAlbumFormRequest(editing: album)
                 }
@@ -797,6 +815,123 @@ struct MacRootWindow: View {
             // (already on that source, `selection` alone would change nothing).
             commonPhotosRunId = nil
             selection = .source(sourceId)
+        }
+    }
+
+    // MARK: Smart album actions (FS-06.08 §3c-Mac)
+
+    /// Rename… / Duplicate / Delete Smart Album from the header's pop-up, an
+    /// Albums tile or a sidebar row, and the live list: an edit, rename,
+    /// duplicate or delete from anywhere (this window, another, the iPhone
+    /// through a shared index) reaches the sidebar, Albums and the open album.
+    private func smartAlbumActions(_ content: some View) -> some View {
+        content
+            .task {
+                for await _ in DatabaseChangeSignal.changes(in: dependencies.database, tables: ["smart_albums"]) {
+                    reloadSmartAlbums()
+                }
+            }
+            // The open album follows index batches and marks, at most one read
+            // every 2 s (as on iOS); its rules follow `smart_albums` above.
+            .task(id: openSmartAlbumId) {
+                guard openSmartAlbumId != nil else { return }
+                for await _ in DatabaseChangeSignal.changes(in: dependencies.database,
+                                                            tables: ["photo_metadata", "photo_flag", "pending_photo_rating"]) {
+                    let wait = 2 - Date().timeIntervalSince(lastSmartAlbumLiveReload)
+                    if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+                    guard !Task.isCancelled else { return }
+                    lastSmartAlbumLiveReload = Date()
+                    library?.reload()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macRenameSmartAlbum)) { note in
+                guard MacSmartAlbumActions.take(note), let album = smartAlbum(note) else { return }
+                smartAlbumNewName = album.name
+                renamingSmartAlbum = album
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macDuplicateSmartAlbum)) { note in
+                guard MacSmartAlbumActions.take(note), let album = smartAlbum(note) else { return }
+                duplicateSmartAlbum(album)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macDeleteSmartAlbum)) { note in
+                guard MacSmartAlbumActions.take(note), let album = smartAlbum(note) else { return }
+                // Kept in Photos with an album there: the prompt says that album stays (FS-06.12).
+                let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+                Task {
+                    let link = await Task.detached(priority: .userInitiated) { try? links.link(album.id) }.value
+                    deletingKeptInPhotos = link?.collectionLocalId != nil
+                    deletingSmartAlbum = album
+                }
+            }
+            .alert(String(localized: "Rename Smart Album", comment: "Alert title"),
+                   isPresented: Binding(get: { renamingSmartAlbum != nil }, set: { if !$0 { renamingSmartAlbum = nil } }),
+                   presenting: renamingSmartAlbum) { album in
+                TextField(String(localized: "Name", comment: "Rename smart album field"), text: $smartAlbumNewName)
+                Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+                Button(String(localized: "Rename", comment: "Rename smart album: confirm")) { renameSmartAlbum(album, to: smartAlbumNewName) }
+                    .disabled(smartAlbumNewName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .confirmationDialog(String(localized: "Delete “\(deletingSmartAlbum?.name ?? "")”?", comment: "Delete smart album prompt"),
+                                isPresented: Binding(get: { deletingSmartAlbum != nil }, set: { if !$0 { deletingSmartAlbum = nil } }),
+                                presenting: deletingSmartAlbum) { album in
+                Button(String(localized: "Delete Smart Album", comment: "Delete smart album: confirm"), role: .destructive) { deleteSmartAlbum(album) }
+                Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+            } message: { album in
+                Text(deletingKeptInPhotos
+                     ? String(localized: "This deletes the smart album. The album “\(album.name)” stays in Photos.", comment: "Delete smart album that is kept in Photos")
+                     : String(localized: "The photos stay in your library and in other albums.", comment: "Delete smart album prompt message"))
+            }
+            .alert(String(localized: "Couldn’t Change the Smart Album", comment: "Mac: rename, duplicate or delete of a smart album failed"),
+                   isPresented: Binding(get: { smartAlbumFailure != nil }, set: { if !$0 { smartAlbumFailure = nil } })) {
+                Button(String(localized: "OK", comment: "Mac alert: dismiss"), role: .cancel) {}
+            } message: {
+                Text(smartAlbumFailure ?? "")
+            }
+    }
+
+    private var openSmartAlbumId: String? {
+        if case .smartAlbum(let id) = selection { id } else { nil }
+    }
+
+    private func smartAlbum(_ note: Notification) -> SmartAlbum? {
+        guard let id = note.object as? String else { return nil }
+        return smartAlbums.first { $0.id == id }
+    }
+
+    /// Writes off the main actor (the writer may be busy with an index
+    /// batch); a failure is said after the prompt that asked has gone.
+    private func runSmartAlbumWrite(_ write: @escaping @Sendable () throws -> Void, then done: @escaping () -> Void = {}) {
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) { try write() }.value
+                done()
+                reloadSmartAlbums()
+            } catch {
+                try? await Task.sleep(for: .milliseconds(350))
+                smartAlbumFailure = error.localizedDescription
+            }
+        }
+    }
+
+    private func renameSmartAlbum(_ album: SmartAlbum, to name: String) {
+        let store = dependencies.smartAlbums
+        runSmartAlbumWrite({ _ = try store.rename(id: album.id, to: name) }) {
+            // The album in Photos takes the new name too.
+            dependencies.photosAlbumSync?.setNeedsSync()
+        }
+    }
+
+    /// "<name> copy", same conditions, Keep in Photos off (SmartAlbumStore.duplicate).
+    private func duplicateSmartAlbum(_ album: SmartAlbum) {
+        let store = dependencies.smartAlbums
+        runSmartAlbumWrite { _ = try store.duplicate(id: album.id) }
+    }
+
+    private func deleteSmartAlbum(_ album: SmartAlbum) {
+        let store = dependencies.smartAlbums
+        runSmartAlbumWrite({ try store.delete(id: album.id) }) {
+            // Its Keep in Photos link went with it: the sync lets go of the album in Photos.
+            dependencies.photosAlbumSync?.linksChanged()
         }
     }
 
