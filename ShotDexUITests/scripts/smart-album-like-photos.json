@@ -1,0 +1,175 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Collections"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "New album or smart album, or customize this tab"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "New Smart Album"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-editor-one-condition"
+  },
+  {
+   "action": "dump",
+   "name": "01-editor-one-condition"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.357
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Sony Fields"
+  },
+  {
+   "action": "tap",
+   "label": "ILCE-7M4",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Condition Below"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-editor-two-conditions"
+  },
+  {
+   "action": "dump",
+   "name": "02-editor-two-conditions"
+  },
+  {
+   "action": "tap",
+   "label": "Remove Condition",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Save"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Sony Fields",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-album"
+  },
+  {
+   "action": "dump",
+   "name": "03-album"
+  },
+  {
+   "action": "tap",
+   "label": "More"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-album-more-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Duplicate"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "More"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Edit Smart Album\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-edit-from-album"
+  },
+  {
+   "action": "tap",
+   "label": "Cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Back"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "06-collections-with-copy"
+  }
+ ]
+}

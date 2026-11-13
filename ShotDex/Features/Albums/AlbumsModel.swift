@@ -158,7 +158,13 @@ final class AlbumsModel {
     }
 
     func load() {
-        guard !isLoading else { return }
+        // A load asked for while one runs is not dropped: the running one may
+        // have read the tables before the change that asked (a smart album
+        // duplicated or renamed, FS-06.08 §3c A1). It runs once more after.
+        guard !isLoading else {
+            reloadsAfterCurrentLoad = true
+            return
+        }
         isLoading = true
         let deps = dependencies
         Task {
@@ -178,8 +184,15 @@ final class AlbumsModel {
                 await loadSubjects(libraryQueries: deps.libraryQueries)
             }
             isLoading = false
+            if reloadsAfterCurrentLoad {
+                reloadsAfterCurrentLoad = false
+                load()
+            }
         }
     }
+
+    /// Set when `load()` is called during a load (see there).
+    @ObservationIgnored private var reloadsAfterCurrentLoad = false
 
     /// Puts the Panoramas token back into the Media Types row, counted from
     /// ShotDex's index rather than from Photos' album of the same name.

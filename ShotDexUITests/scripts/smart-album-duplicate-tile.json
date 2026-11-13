@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {"action": "launch"},
+    {"action": "wait", "seconds": 8},
+    {"action": "tap", "label": "Collections"},
+    {"action": "wait", "seconds": 4},
+    {"action": "screenshot", "name": "10-collections"},
+    {"action": "longPress", "label": "Sony Fields, 6 photos", "type": "button"},
+    {"action": "wait", "seconds": 2},
+    {"action": "screenshot", "name": "11-tile-menu"},
+    {"action": "tap", "label": "Duplicate"},
+    {"action": "wait", "seconds": 4},
+    {"action": "screenshot", "name": "12-after-duplicate"},
+    {"action": "dump", "name": "12-after-duplicate"}
+  ]
+}
