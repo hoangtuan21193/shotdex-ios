@@ -1,0 +1,82 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "t1-empty-dark"
+  },
+  {
+   "action": "dump",
+   "name": "t1-empty-dark"
+  },
+  {
+   "action": "typeText",
+   "label": "",
+   "type": "searchField",
+   "index": 0,
+   "text": "iso"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "t2-typing-dark"
+  },
+  {
+   "action": "dump",
+   "name": "t2-typing-dark"
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.38
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "t3-viewer"
+  },
+  {
+   "action": "dump",
+   "name": "t3-viewer"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.4,
+   "direction": "down",
+   "distance": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "t4-back"
+  },
+  {
+   "action": "dump",
+   "name": "t4-back"
+  }
+ ]
+}

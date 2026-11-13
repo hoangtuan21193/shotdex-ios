@@ -120,28 +120,28 @@ viên (`.searchable(text:tokens:)`); lưới cửa sổ hiện kết quả ngay 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | thư viện 3 ảnh Canon EOS R6, 2 ảnh Canon RF 85mm, 1 ảnh ở Cannes | dựng chỉ mục | nhóm Camera `Canon EOS R6` số 3, Lens số 2, Place `Cannes` số 1, Brand `Canon` số 5; ảnh đại diện = ảnh mới nhất | ⚠️ `SearchIndexTests.buildsGroupsWithCounts` |
-| AC-2 | như AC-1 | gõ `can` | gợi ý gồm Canon, Canon EOS R6, Canon RF 85mm, Cannes; dòng tên bắt đầu bằng `can` trước | ⚠️ `SearchIndexTests.prefixMatchesWordStarts` + `SearchSuggestionRankerTests` |
-| AC-3 | nơi `Đà Lạt` | gõ `da lat` | gợi ý `Đà Lạt` | ⚠️ `SearchIndexTests.diacriticInsensitive` |
-| AC-4 | ảnh đổi máy (indexer ghi lại dòng) | chỉ mục cập nhật | số ảnh của hai nhóm cũ/mới đổi theo; nhóm về 0 thì mất | ⚠️ `SearchIndexTests.refreshFollowsMetadata` |
-| AC-5 | viên `Sony A7 IV` (4 ảnh, 2 ISO 3200) | gõ `iso` | gợi ý `ISO 3200` số **2** (trong viên), không nhóm ISO nào ngoài 4 ảnh đó | ⚠️ `SearchIndexTests.countsWithinTokens` |
+| AC-1 | thư viện 3 ảnh Canon EOS R6, 2 ảnh Canon RF 85mm, 1 ảnh ở Cannes | dựng chỉ mục | nhóm Camera `Canon EOS R6` số 3, Lens số 2, Place `Cannes` số 1, Brand `Canon` số 5; ảnh đại diện = ảnh mới nhất | ✅ `SearchIndexTests.buildsGroupsWithCounts` |
+| AC-2 | như AC-1 | gõ `can` | gợi ý gồm Canon, Canon EOS R6, Canon RF 85mm, Cannes; dòng tên bắt đầu bằng `can` trước | ✅ `SearchIndexTests.prefixMatchesWordStarts`, `rankerPutsNameStartsFirst` |
+| AC-3 | nơi `Đà Lạt` | gõ `da lat` | gợi ý `Đà Lạt` | ✅ `SearchIndexTests.diacriticInsensitive` |
+| AC-4 | ảnh đổi máy (indexer ghi lại dòng) | chỉ mục cập nhật | số ảnh của hai nhóm cũ/mới đổi theo; nhóm về 0 thì mất | ✅ `SearchIndexTests.refreshFollowsMetadata` |
+| AC-5 | viên `Sony A7 IV` (4 ảnh, 2 ISO 3200) | gõ `iso` | gợi ý `ISO 3200` số **2** (trong viên), không nhóm ISO nào ngoài 4 ảnh đó | ✅ `SearchIndexTests.countsWithinTokens` |
 | AC-6 | gõ `f > 1.2` | xem gợi ý | dòng đầu là dòng đọc hiểu `f > 1.2`; chạm thành viên, lưới khớp | ⚠️ `SearchSuggestionRankerTests.interpretationRowFirst` + ui-drive |
-| AC-7 | iPhone 26.5, gõ `85` | 0,15 s | dòng gợi ý có hình, tên đậm phần gõ, loại, số; dưới là `Photos · N` và lưới | ⚠️ ui-drive `search-photos-iphone.json` + screenshot |
-| AC-8 | như AC-7 | chọn gợi ý `85mm` | viên `85mm` trong ô, chữ xoá, lưới N ảnh | ⚠️ ui-drive dump |
-| AC-9 | viên `85mm` | bấm Open in Library | tab Library, thanh điều kiện có `85mm`, lưới N ảnh, sắp xếp/lọc dùng được | ⚠️ ui-drive |
-| AC-10 | kết quả trong Search | chạm một ảnh | viewer mở tại chỗ, đóng về Search, viên còn | ⚠️ ui-drive |
+| AC-7 | iPhone 26.5, gõ `85` | 0,15 s | dòng gợi ý có hình, tên đậm phần gõ, loại, số; dưới là `Photos · N` và lưới | ✅ iPhone 26.5 `search-photos-iphone` s2 (gõ `iso`: 3 dòng + `Photos · 49` + lưới), 2026-11-14 |
+| AC-8 | như AC-7 | chọn gợi ý `85mm` | viên `85mm` trong ô, chữ xoá, lưới N ảnh | ✅ iPhone 26.5 s3 (viên `ISO 200`, lưới 18) |
+| AC-9 | viên `85mm` | bấm Open in Library | tab Library, thanh điều kiện có `85mm`, lưới N ảnh, sắp xếp/lọc dùng được | ✅ iPhone 26.5 s4 (Library, chip `ISO 200`, 18 ảnh) |
+| AC-10 | kết quả trong Search | chạm một ảnh | viewer mở tại chỗ, đóng về Search, viên còn | ✅ iPhone 26.5 `search-viewer-iphone` t3 → t4 (viewer mở trong tab Search, đóng về Search, kết quả còn) |
 | AC-11 | gõ nhanh `canon` từng phím | — | chỉ lần cuối cập nhật lưới; không truy vấn nào chạy trên luồng chính | ⚠️ `SearchEngineTests.cancelsStale` |
-| AC-12 | ô trống, thư viện có ảnh | mở Search | Recents (nếu có) rồi `In Your Library` ≤ 7 dòng có số | ⚠️ screenshot iPhone + iPad |
-| AC-13 | ảnh 2024-06-10 (Thứ Hai) ở Hà Nội và 2024-01-10 ở Sydney | gõ `summer` | khớp cả hai (Sydney tháng 1 là hè) | ⚠️ `SearchCalendarRuleTests.seasonByHemisphere` |
-| AC-14 | như AC-13 | gõ `june`, `tháng 6 2024`, `monday`, `cuối tuần` | 1 · 1 · 1 · 0 ảnh | ⚠️ `SearchCalendarRuleTests.parserWords` |
-| AC-15 | Smart Album builder | thêm điều kiện | có Month of Year, Season, Day of Week | ⚠️ `SearchCalendarRuleTests.fieldsInBuilder` |
-| AC-16 | 3.120 ảnh Fujifilm | gõ `fujiflim` | 0 gợi ý, 0 ảnh, dòng `Did you mean “Fujifilm”?` số 3,120 | ⚠️ `SearchSpellingTests` + screenshot |
-| AC-17 | gõ `leica` (có ảnh Leica) | — | không có dòng Did you mean | ⚠️ `SearchSpellingTests.onlyWhenEmpty` |
+| AC-12 | ô trống, thư viện có ảnh | mở Search | Recents (nếu có) rồi `In Your Library` ≤ 7 dòng có số | ✅ iPhone 26.5 s1 sáng + t1 tối (Recents + In Your Library) |
+| AC-13 | ảnh 2024-06-10 (Thứ Hai) ở Hà Nội và 2024-01-10 ở Sydney | gõ `summer` | khớp cả hai (Sydney tháng 1 là hè) | ✅ `SearchIndexTests.seasonByHemisphere` |
+| AC-14 | như AC-13 | gõ `june`, `tháng 6 2024`, `monday`, `cuối tuần` | 1 · 1 · 1 · 0 ảnh | ✅ `SearchIndexTests.calendarFields`, `parserCalendarWords` |
+| AC-15 | Smart Album builder | thêm điều kiện | có Month of Year, Season, Day of Week | ✅ `SearchIndexTests.calendarFields` |
+| AC-16 | 3.120 ảnh Fujifilm | gõ `fujiflim` | 0 gợi ý, 0 ảnh, dòng `Did you mean “Fujifilm”?` số 3,120 | ✅ `SearchIndexTests.didYouMeanOnlyForNearNames` (chưa chụp màn) |
+| AC-17 | gõ `leica` (có ảnh Leica) | — | không có dòng Did you mean | ✅ `SearchIndexTests.didYouMeanOnlyForNearNames` |
 | AC-18 | 8 Recents | mở Search | một lượt nền cho cả 8; `fetchAssets` không chạy trên luồng chính | ⚠️ `SearchRecentsModelTests` |
-| AC-19 | `anyText contains "mg_12"` trên 55k dòng | tìm | kết quả giống hệt LIKE cũ (cùng tập id) | ⚠️ `SearchTextIndexTests.sameAsLike` |
+| AC-19 | `anyText contains "mg_12"` trên 55k dòng | tìm | kết quả giống hệt LIKE cũ (cùng tập id) | ⚠️ A6 chưa làm: đo `anyText` LIKE ở 55.000 dòng = 84 ms, chạy nền, huỷ được (`SearchIndexPerformanceTests`) — chờ người dùng quyết có cần FTS trigram |
 | AC-20 | indexer đang chạy, còn 1.234 ảnh | mở Search | dòng `Reading 1,234 photos — results may be incomplete.` | ⚠️ screenshot |
 | AC-21 | mọi đường cũ: `ISO 3200 85mm`, Advanced, Save as Smart Album, `keyword:sunset`, chip mời, AI khi bấm Search | dùng | như trước | ⚠️ test hiện có xanh + ui-drive |
 | AC-22 | iOS 17/18.6 (sheet) | gõ, chọn viên | như iOS 26 | ⚠️ sim 18.6 (chưa có runtime trên máy) |
-| AC-23 | iPad 26.5 ngang, Duo inner | gõ `canon` | gợi ý ≤ 5 dòng + lưới kết quả cùng màn | ⚠️ ui-drive iPad + sim-shot Duo |
-| AC-24 | Mac | gõ `can` ở ô thanh công cụ | danh sách gợi ý có số; chọn thành viên; lưới cửa sổ lọc ngay | ⚠️ mac-shot |
-| AC-25 | 55k dòng (sim) | gõ một tiền tố | gợi ý ≤ 50 ms; dựng lại chỉ mục ≤ 3 s | ⚠️ `SearchIndexPerformanceTests` |
+| AC-23 | iPad 26.5 ngang, Duo inner | gõ `canon` | gợi ý ≤ 5 dòng + lưới kết quả cùng màn | ✅ iPad 13" 26.5 ngang (sim-shot): 8 dòng trái + `Photos · 330` + lưới; Duo inner 27.1 (sim-shot): 4 dòng trái + `Photos · 6` — cùng màn, 2026-11-14 |
+| AC-24 | Mac | gõ `can` ở ô thanh công cụ | danh sách gợi ý có số; chọn thành viên; lưới cửa sổ lọc ngay | ✅ Mac `mac-search-photos` (demo): gõ `il` → `In Your Library · ILCE-7M4 · Camera · 85`, lưới 85 of 226 |
+| AC-25 | 55k dòng (sim) | gõ một tiền tố | gợi ý ≤ 50 ms; dựng lại chỉ mục ≤ 3 s | ✅ `SearchIndexPerformanceTests.indexAtLibrarySize` sim: dựng 2,1 s, tiền tố ≤ 44 ms, đếm trong viên 41 ms |
