@@ -95,7 +95,7 @@ Phần cũ chưa có AC — xem [README — Việc còn nợ](../../README.md#6-
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ⚠️ ui-drive dump + screenshot |
+| AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ✅ iPad 26.5 `viewer-chrome-toggle` v1→v2 (2026-11-14) |
 | AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ✅ iPad 26.5 v3→v4 |
 | AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ✅ iPad 26.5 v2→v3 |
 | AC-4 | ảnh | nhấn đúp | phóng ×2,5, chrome không bật lên giữa chừng | ⚠️ ui-drive |
