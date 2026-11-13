@@ -96,17 +96,17 @@ Phần cũ chưa có AC — xem [README — Việc còn nợ](../../README.md#6-
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ⚠️ ui-drive dump + screenshot |
-| AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ⚠️ ui-drive |
-| AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ⚠️ ui-drive |
+| AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ✅ iPad 26.5 v3→v4 |
+| AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ✅ iPad 26.5 v2→v3 |
 | AC-4 | ảnh | nhấn đúp | phóng ×2,5, chrome không bật lên giữa chừng | ⚠️ ui-drive |
 | AC-5 | video đang phát | chạm 1 lần | video vẫn phát; chrome đảo | ⚠️ ui-drive |
 | AC-6 | ảnh iCloud đang tải, chrome ẩn | nhìn góc | vòng tải vẫn hiện | ⚠️ screenshot |
-| AC-7 | giao diện sáng | mở viewer | nền trắng, nút kính đọc được; tối → nền đen | ⚠️ screenshot 2 chế độ |
+| AC-7 | giao diện sáng | mở viewer | nền trắng, nút kính đọc được; tối → nền đen | ✅ iPad 26.5 sáng + tối |
 | AC-8 | lưới, ô thứ 30 | chạm ô | ảnh phóng ra từ khung ô (iOS 18+) | ⚠️ screenshot burst |
 | AC-9 | mở ô 5, vuốt tới ảnh 40 (ngoài màn) | đóng | lưới cuộn để ô 40 thấy trọn, ảnh thu về ô 40 | ⚠️ ui-drive dump |
 | AC-10 | iOS 17/18.6 | mở/đóng | không crash, đóng vẫn cuộn tới ảnh | ⚠️ sim 18.6 |
-| AC-11 | `requestDetailImage` với `PHImageManagerMaximumSize` | xong | không có mục nào vào `detailImageCache` | ⚠️ unit test |
-| AC-12 | viewer ở ảnh n | — | ảnh n±1, n±2 đã được yêu cầu preheat cỡ màn hình | ⚠️ unit test trên hàm tính chỉ số |
+| AC-11 | `requestDetailImage` với `PHImageManagerMaximumSize` | xong | không có mục nào vào `detailImageCache` | ✅ `ViewerLoadingTests.maximumSizeIsNotACacheableDisplaySize` |
+| AC-12 | viewer ở ảnh n | — | ảnh n±1, n±2 đã được yêu cầu preheat cỡ màn hình | ✅ `ViewerLoadingTests.preheatsTwoEachSideNearestFirst` |
 | AC-13 | ảnh đã về sau khi request huỷ | mở lại ảnh đó | hiện từ cache, không request mới | ⚠️ unit test |
 | AC-14 | cache có ảnh | gửi memory warning | ba cache rỗng | ⚠️ unit test |
 | AC-15 | lưới cuộn xuống | — | ô sắp hiện được warm trước (prefetch UIKit có sẵn) | đã có — `prefetchItemsAt` |
