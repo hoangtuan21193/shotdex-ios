@@ -132,7 +132,7 @@ Thay các dòng §3 / §6 mâu thuẫn bên dưới; phần còn lại của §3
 
 - Thanh trên có nút **⋯** cạnh Select: *Edit Smart Album…* · *Rename…* · *Duplicate* · *Delete Smart Album* (đỏ).
   Filter / Sort giữ ở nút Filter, không gộp.
-- **Chạm thanh điều kiện** (chip hoặc dòng tóm tắt) mở *Edit Smart Album*; popover chỉ đọc cũ bỏ.
+- **Thanh điều kiện**: chạm vẫn mở popover điều kiện + trạng thái (giữ — nó là chỗ duy nhất đọc trọn trạng thái On Server / Original / Keep in Photos), popover có nút **Edit…** mở *Edit Smart Album* (thay cho ý "bỏ popover" lúc lập plan — bỏ thì mất chức năng).
 - **Lưu xong, lưới và số đếm đổi tại chỗ**, tiêu đề đổi theo tên mới; không phải ra vào lại (A1).
 - **Tự cập nhật** (A1): lưới, số đếm trên thanh và trên ô ở Collections đổi khi index ghi ảnh, khi kiểm NAS xong một
   đợt, khi ảnh bị xoá / thêm — gộp thay đổi trong 0,5 s, chạy ngoài luồng chính; đang cuộn thì không nhảy vị trí.
@@ -227,7 +227,7 @@ Phần cũ (§1, §2 trừ *is missing* / vị trí, §4–§5) **chưa có AC**
 | AC-26 | (§3c A2) như AC-24 | gõ thêm ký tự vào giá trị | số cũ vẫn hiện (mờ) trong lúc đếm, không lúc nào trống | ⚠️ chưa có — screenshot burst |
 | AC-27 | (§3c A3) database chỉ đọc (DEBUG) | bấm Save | alert *Couldn't Save Smart Album*; sheet còn mở, điều kiện còn nguyên | ⚠️ chưa có |
 | AC-28 | (§3c D4) album *Sony* đang mở, 40 ảnh | ⋯ → Edit Smart Album…, đổi *Sony* thành *Fujifilm* (12 ảnh), Save | sheet đóng, lưới 12 ảnh, thanh điều kiện mới, không rời màn | ⚠️ chưa có — ui-drive |
-| AC-29 | (§3c D4) như AC-28 | chạm chip trên thanh điều kiện | sheet Edit Smart Album mở với điều kiện của album | ⚠️ chưa có |
+| AC-29 | (§3c D4) như AC-28 | chạm thanh điều kiện, rồi *Edit…* trong popover | sheet Edit Smart Album mở với điều kiện của album | ⚠️ chưa có |
 | AC-30 | (§3c A1) album *Favorite* đang mở | đánh dấu favorite một ảnh khác trong Photos / viewer | ≤ 2 s sau lưới có thêm ảnh đó, số đếm +1 cả trên thanh lẫn trên ô ở Collections | ⚠️ chưa có |
 | AC-31 | (§3c D5) album *Night* | Duplicate (menu ô) hai lần | có *Night copy* và *Night copy 2*, cùng điều kiện; cả hai Keep in Photos tắt | ⚠️ chưa có — `SmartAlbumStore` test |
 | AC-32 | (§3c D5) album *Night* và *Day* | Rename *Night* thành *day* | bị chặn, báo trùng tên; Rename thành *Late* thì tiêu đề màn và ô đổi ngay | ⚠️ chưa có |
