@@ -35,6 +35,8 @@ struct SmartAlbumDetailScreen: View {
     /// Keep in Photos link, re-read after each sync pass (FS-06.12 §3).
     @State private var photosLink: SmartAlbumPhotosAlbum?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     /// Date of the photos under the top of the grid, shown under the title.
     @State private var visibleDate: String?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -164,7 +166,7 @@ struct SmartAlbumDetailScreen: View {
                                  isPaused: isSelecting) {
             await model?.load()
         }
-        .fullScreenCover(item: $viewerTarget) { target in
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
@@ -574,7 +576,8 @@ struct SmartAlbumDetailScreen: View {
             removal: model.lastRemoval,
             contextMenuProvider: { item in
                 tileMenu(assetId: item.assetId).makeMenu()
-            }
+            },
+            viewerLink: viewerLink
         )
         .ignoresSafeArea(edges: .bottom)
     }

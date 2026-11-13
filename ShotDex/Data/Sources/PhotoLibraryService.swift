@@ -779,7 +779,10 @@ final class PhotoLibraryService: NSObject {
         #if canImport(UIKit)
         let work = { deliver(image.preparingForDisplay() ?? image) }
         if Thread.isMainThread {
-            DispatchQueue.global(qos: .userInitiated).async(execute: work)
+            // The image and its continuation hop one queue and are touched
+            // there alone; the box says so to the checker.
+            let job = DecodeHopBox(work)
+            DispatchQueue.global(qos: .userInitiated).async { job.value() }
         } else {
             work()
         }
@@ -1491,4 +1494,11 @@ extension PhotoAuthorizationState {
         case .restricted: String(localized: "Restricted", comment: "Settings → Photo Library: photo access")
         }
     }
+}
+
+/// Carries a value across one queue hop the checker cannot prove safe — used
+/// where exactly one queue touches it after the hop.
+struct DecodeHopBox<Value>: @unchecked Sendable {
+    let value: Value
+    init(_ value: Value) { self.value = value }
 }

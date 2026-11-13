@@ -19,6 +19,8 @@ struct LibraryScreen: View {
     /// Persisted density (column count), shared with Album Detail.
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
 
     /// Multi-select mode: uncapped selection of asset ids kept in pick
     /// order (Compare panes follow it); ids survive grid reloads.
@@ -192,7 +194,7 @@ struct LibraryScreen: View {
                     .presentationDragIndicator(.visible)
             }
         }
-        .fullScreenCover(item: $viewerTarget) { target in
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
@@ -772,7 +774,8 @@ struct LibraryScreen: View {
             removal: model.lastRemoval,
             contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() },
             onPullToRefresh: { model.reload() },
-            scrubber: scrubberModel
+            scrubber: scrubberModel,
+            viewerLink: viewerLink
         )
         .overlay(alignment: .trailing) {
             if model.appliedSort.isDateOrdered {

@@ -107,6 +107,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// publishes its position and the date under the top of the viewport, and
     /// registers the jump closure the scrubber calls back.
     var scrubber: PhotoGridScrubberModel? = nil
+    /// The viewer this grid opens zooms out of and back into its tiles
+    /// (FS-02 §8 D5).
+    var viewerLink: PhotoViewerLink? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -205,6 +208,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         )
         let marksChanged = context.coordinator.updateMarks(photoMarks, version: photoMarks?.version ?? 0)
         context.coordinator.apply(self, isInitial: false)
+        context.coordinator.registerViewerLink()
         if uploadsChanged || unsupportedChanged || marksChanged { context.coordinator.refreshVisibleCells() }
     }
 
@@ -857,6 +861,42 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 }
                 .margins(.all, 0)
             }
+        }
+
+        // MARK: Viewer zoom (FS-02 §8 D5)
+
+        func registerViewerLink() {
+            guard let link = parent.viewerLink else { return }
+            link.frameProvider = { [weak self] id in self?.tileFrameInWindow(of: id) }
+            link.revealer = { [weak self] id in self?.revealTile(of: id) }
+        }
+
+        private func flatIndex(ofAsset id: String) -> Int? {
+            parent.photos.firstIndex { $0.assetId == id }
+        }
+
+        /// The tile's frame in window coordinates; nil when it is not laid out.
+        private func tileFrameInWindow(of assetId: String) -> CGRect? {
+            guard let collectionView, collectionView.window != nil,
+                  let flat = flatIndex(ofAsset: assetId),
+                  let indexPath = indexPath(forFlatIndex: flat),
+                  let attributes = collectionView.layoutAttributesForItem(at: indexPath)
+            else { return nil }
+            return collectionView.convert(attributes.frame, to: nil)
+        }
+
+        /// Scrolls the tile fully into view when it is not, without animation —
+        /// the viewer covers the grid while this runs.
+        private func revealTile(of assetId: String) {
+            guard let collectionView,
+                  let flat = flatIndex(ofAsset: assetId),
+                  let indexPath = indexPath(forFlatIndex: flat),
+                  let attributes = collectionView.layoutAttributesForItem(at: indexPath)
+            else { return }
+            let visible = collectionView.bounds.inset(by: collectionView.adjustedContentInset)
+            guard !visible.contains(attributes.frame) else { return }
+            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
+            collectionView.layoutIfNeeded()
         }
 
         private func flatIndex(for indexPath: IndexPath) -> Int? {

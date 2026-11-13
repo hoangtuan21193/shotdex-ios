@@ -17,6 +17,8 @@ struct AlbumDetailScreen: View {
 
     @State private var model: AlbumDetailModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     /// Date of the photos under the top of the grid, shown under the title.
     @State private var visibleDate: String?
 
@@ -49,7 +51,7 @@ struct AlbumDetailScreen: View {
 
     var body: some View {
         advancedFilterSheet(screenChrome(gridContent))
-        .fullScreenCover(item: $viewerTarget) { target in
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
@@ -246,7 +248,8 @@ struct AlbumDetailScreen: View {
             removal: model.lastRemoval,
             contextMenuProvider: { metadata in
                 tileMenu(model, assetId: metadata.assetId).makeMenu()
-            }
+            },
+            viewerLink: viewerLink
         )
         .ignoresSafeArea(edges: .bottom)
     }

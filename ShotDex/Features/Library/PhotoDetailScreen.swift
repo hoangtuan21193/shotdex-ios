@@ -35,6 +35,9 @@ private struct PhotoDetailActionTarget: Identifiable {
 /// zoom, swipe-down to dismiss, share, favorite, and the metadata panel.
 struct PhotoDetailScreen: View {
     @Environment(\.dismiss) private var dismiss
+    /// The grid this viewer came from: it follows the photo on screen so the
+    /// close zoom lands on the right tile (FS-02 §8 D5).
+    @Environment(\.photoViewerLink) private var viewerLink
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -152,6 +155,10 @@ struct PhotoDetailScreen: View {
     /// iCloud download state of the *current* page, bubbled up from the pages so
     /// the ring can live in the info panel (pages report their own index; only
     /// the visible page's updates are kept).
+    /// The person hid the chrome with a tap (FS-02 §8 D1): one flag for the
+    /// whole viewer, so it survives paging (D3) and only a tap brings the
+    /// chrome back. Zoom and video idle hide it on their own, without it.
+    @State private var isChromeHidden = false
     @State private var downloadProgress: Double = 0
     @State private var isDownloading = false
     /// True once a download has shown zero progress for a full stall window —
@@ -180,7 +187,12 @@ struct PhotoDetailScreen: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Chrome on: the page follows light / dark like the rest of the
+            // app; chrome off: only the photo, on black (FS-02 §8 D2). A clip
+            // plays on black either way — its transport is drawn for it.
+            (showsViewerChrome && !isCurrentVideo ? Color(.systemBackground) : Color.black)
+                .ignoresSafeArea()
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showsViewerChrome)
 
             // UIKit UIPageViewController — pages are created lazily via its
             // data source, so a library of any size stays cheap and paging is
@@ -198,7 +210,8 @@ struct PhotoDetailScreen: View {
                     + Self.videoActionBarClearance,
                 videoFullscreenEdgeInset: max(24, max(safeAreaTop, safeAreaBottom)),
                 isVideoFullscreen: isVideoFullscreen,
-                isVideoChromeVisible: isVideoChromeVisible,
+                // A tap-hidden chrome hides the clip's transport too (FS-02 §8).
+                isVideoChromeVisible: isVideoChromeVisible && !isChromeHidden,
                 isLiveTextActive: isLiveTextActive,
                 onVideoFullscreenChange: { fullscreen in
                     if reduceMotion {
@@ -214,7 +227,7 @@ struct PhotoDetailScreen: View {
                     handleVideoPlaybackChange(playing)
                 },
                 onVideoInteraction: showVideoChrome,
-                onVideoTap: toggleVideoChrome,
+                onVideoTap: handleContentTap,
                 onDragProgress: { translationY in
                     dragOffset = CGSize(width: 0, height: max(0, translationY))
                 },
@@ -257,7 +270,7 @@ struct PhotoDetailScreen: View {
                                 if filePhotoIsOffline, let note = fileReachability?.viewerNote {
                                     Text(note)
                                         .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.85))
+                                        .foregroundStyle(.secondary)
                                         .padding(.horizontal, AppTheme.Spacing.md)
                                 }
                             }
@@ -323,8 +336,20 @@ struct PhotoDetailScreen: View {
         .background { arrowKeys }
         .offset(y: max(0, dragOffset.height))
         .scaleEffect(dismissScale)
-        .preferredColorScheme(.dark)
         .statusBarHidden(shouldHideStatusBar)
+        .persistentSystemOverlays(showsViewerChrome ? .automatic : .hidden)
+        // Info opened by a swipe or a key brings the chrome back with it.
+        .onChange(of: currentIndex, initial: true) { _, index in
+            if let id = model.photoId(at: index) { viewerLink?.focus(on: id) }
+        }
+        .onChange(of: isMetadataPresented) { _, presented in
+            if presented { isChromeHidden = false }
+        }
+        // Esc closes, as the hardware keyboard rules say (FS-02.01b §2, §8 A6).
+        .onKeyPress(.escape) {
+            dismiss()
+            return .handled
+        }
         // The viewer is a fullScreenCover, so a sheet presented from the root
         // cannot reach over it — it hosts the shared action sheets itself.
         // Its own coordinator, not the root's: see `viewerAssetActions`.
@@ -660,7 +685,8 @@ struct PhotoDetailScreen: View {
     private var zoomedDownloadIndicator: ViewerDownloadIndicator {
         .placement(
             isChromeVisible: showsViewerChrome,
-            isZoomed: isZoomed,
+            // Chrome tapped away: the ring stays, alone in the corner (§8 D1).
+            isZoomed: isZoomed || isChromeHidden,
             isDownloading: isDownloading,
             isStalled: isDownloadStalled
         )
@@ -694,13 +720,28 @@ struct PhotoDetailScreen: View {
     private var chromeTopInset: CGFloat { isDuoInner ? CompareLayout.duoInnerTopInset : 8 }
 
     private var showsViewerChrome: Bool {
-        !isZoomed
+        !isChromeHidden
+            && !isZoomed
             && !isVideoFullscreen
             && (!isCurrentVideo || isVideoChromeVisible)
     }
 
+    /// The status bar goes with the chrome (FS-02 README *Chrome*, §8 D1).
     private var shouldHideStatusBar: Bool {
-        isVideoFullscreen || (isCurrentVideo && !isVideoChromeVisible)
+        !showsViewerChrome
+    }
+
+    /// One tap on the photo or the clip (FS-02 §8 D1, D4): hide every control
+    /// and leave the picture, or bring them back. A clip keeps playing; its
+    /// own idle timer still hides the transport while it runs.
+    private func handleContentTap() {
+        let hide = showsViewerChrome
+        let change = {
+            isChromeHidden = hide
+            if isCurrentVideo { isVideoChromeVisible = !hide }
+        }
+        if reduceMotion { change() } else { withAnimation(.easeInOut(duration: 0.2)) { change() } }
+        if !hide, isCurrentVideo { showVideoChrome() }
     }
 
     /// Photos-style three-zone action row: Share is isolated at the leading
@@ -832,6 +873,15 @@ struct PhotoDetailScreen: View {
                     actions.presentAddToCollection(ids: [id])
                 } label: {
                     Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
+                }
+                // Caption and keywords sit at the top of Info (FS-02.07); the
+                // menu row opens it there, iOS 27 only (FS-02 §8 A6).
+                if !isFilePhoto, ExtendedMetadataSupport.isAvailable {
+                    Button {
+                        isMetadataPresented = true
+                    } label: {
+                        PhotoCommand.captionKeywords.label
+                    }
                 }
                 if !isFilePhoto {
                     Button {
@@ -987,7 +1037,7 @@ struct PhotoDetailScreen: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(width: 48, height: 48)
                 .contentShape(Rectangle())
         }
@@ -1069,7 +1119,7 @@ struct PhotoDetailScreen: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 // 40pt is the dark action-bar icon size (DESIGN.md §6). The
                 // minimum lets the row give way on a narrow phone rather than
                 // pushing the capsule into Share and Delete.
@@ -2211,13 +2261,10 @@ private struct DetailVideoPlayer: View {
     /// tap outside it and nothing happened, with no way to know why.
     ///
     /// Paused, the tap falls through to the chrome toggle as before.
+    /// One tap shows or hides the chrome, playing or paused, as on a photo
+    /// (FS-02 §8 D4); the play / pause button in the middle pauses.
     private func handleSingleTap() {
-        if model.isPlaying {
-            onInteraction()
-            model.pause()
-        } else {
-            onContentTap()
-        }
+        onContentTap()
     }
 
     private func handleDoubleTap(
@@ -2440,7 +2487,9 @@ struct PhotoDetailPage: View {
                     showsFullHDR: showsFullHDR,
                     onHoldChange: hasEdits ? { holding in
                         if holding { showOriginal() } else { hideOriginal() }
-                    } : nil
+                    } : nil,
+                    // One tap hides / shows the chrome (FS-02 §8 D1).
+                    onSingleTap: { onVideoTap?() }
                 )
                 .overlay {
                     if let livePhoto {

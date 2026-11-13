@@ -20,6 +20,8 @@ struct OnThisDayScreen: View {
 
     @State private var model: OnThisDayModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     @State private var isDatePickerPresented = false
 
     /// Delete selection: asset ids in pick order, no count cap (unlike
@@ -90,7 +92,7 @@ struct OnThisDayScreen: View {
         .sheet(isPresented: $isDatePickerPresented) {
             datePickerSheet
         }
-        .fullScreenCover(item: $viewerTarget) { target in
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
@@ -192,7 +194,8 @@ struct OnThisDayScreen: View {
             removal: model.lastRemoval,
             contextMenuProvider: { metadata in
                 tileMenu(assetId: metadata.assetId).makeMenu()
-            }
+            },
+            viewerLink: viewerLink
         )
         .ignoresSafeArea(edges: .bottom)
     }

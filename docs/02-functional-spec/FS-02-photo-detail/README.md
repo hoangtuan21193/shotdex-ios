@@ -73,6 +73,7 @@ mâu thuẫn ở *Chrome* và *Cử chỉ* phía trên.
 - Thao tác cần chrome (vuốt lên mở Info, phím `i`, menu) vẫn chạy khi đang ẩn; mở Info thì chrome hiện lại.
 
 **Nền** (D2): chrome hiện → nền theo sáng/tối hệ thống (`systemBackground`); chrome ẩn → đen. Chuyển 0,25 s.
+Video phát trên nền đen ở cả hai trạng thái (transport của nó vẽ cho nền tối).
 Nút kính và bảng thông tin đọc được trên cả hai nền. Vuốt xuống đóng: nền mờ dần theo khoảng kéo.
 
 **Mở / đóng** (D5): mở từ lưới là ảnh **phóng ra từ ô**; đóng (X hoặc vuốt xuống) thì ảnh **thu về ô của ảnh đang xem**;
@@ -84,7 +85,7 @@ On This Day, Hidden, On This iPhone). iOS 17 dự phòng: chuyển cảnh mặc 
 - Ảnh gốc khi phóng to **không vào** cache ảnh màn hình.
 - Ảnh về sau khi request đã huỷ vẫn được giữ trong cache → vuốt lại hiện ngay.
 - iOS báo thiếu bộ nhớ → xoá ba cache ảnh (viewer, lưới, bìa album).
-- Lưới: preheat một vùng **một màn hình phía trước theo hướng cuộn**, cập nhật khi cuộn quá 1/3 màn.
+- Lưới: preheat phía trước theo hướng cuộn — **đã có** qua `UICollectionViewDataSourcePrefetching` của lưới (UIKit báo đúng các ô sắp hiện theo hướng cuộn, warm đúng kích thước ô); không thêm lớp thứ hai (2026-11-14, khi code A5).
 
 **Spec có mà code thiếu** (A6): Esc đóng viewer; *Caption & Keywords…* trong menu ⋯ (iOS 27).
 
@@ -108,5 +109,5 @@ Phần cũ chưa có AC — xem [README — Việc còn nợ](../../README.md#6-
 | AC-12 | viewer ở ảnh n | — | ảnh n±1, n±2 đã được yêu cầu preheat cỡ màn hình | ⚠️ unit test trên hàm tính chỉ số |
 | AC-13 | ảnh đã về sau khi request huỷ | mở lại ảnh đó | hiện từ cache, không request mới | ⚠️ unit test |
 | AC-14 | cache có ảnh | gửi memory warning | ba cache rỗng | ⚠️ unit test |
-| AC-15 | lưới cuộn xuống | offset đổi > 1/3 màn | vùng preheat dời xuống, phần rời bị stop | ⚠️ unit test trên hàm tính vùng |
+| AC-15 | lưới cuộn xuống | — | ô sắp hiện được warm trước (prefetch UIKit có sẵn) | đã có — `prefetchItemsAt` |
 | AC-16 | viewer, bàn phím | Esc | viewer đóng | ⚠️ ui-drive `key` |

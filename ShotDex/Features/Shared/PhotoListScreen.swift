@@ -26,6 +26,8 @@ struct PhotoListScreen: View {
 
     @State private var model: PhotoListModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     /// Date of the photos under the top of the grid, shown under the title.
     @State private var visibleDate: String?
     @State private var videoStudioPresentation: VideoStudioPresentation?
@@ -67,7 +69,7 @@ struct PhotoListScreen: View {
             }
             model?.load()
         }
-        .fullScreenCover(item: $viewerTarget) { target in
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
             if let model {
                 PhotoDetailScreen(
                     model: model,
@@ -136,7 +138,8 @@ struct PhotoListScreen: View {
             onUserScroll: {},
             onVisibleDateChange: { visibleDate = $0 },
             removal: model.lastRemoval,
-            contextMenuProvider: { item in tileMenu(model, assetId: item.assetId).makeMenu() }
+            contextMenuProvider: { item in tileMenu(model, assetId: item.assetId).makeMenu() },
+            viewerLink: viewerLink
         )
         .ignoresSafeArea(edges: .bottom)
     }

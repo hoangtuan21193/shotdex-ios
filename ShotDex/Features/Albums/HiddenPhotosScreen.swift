@@ -14,6 +14,8 @@ struct HiddenPhotosScreen: View {
 
     @State private var model: HiddenPhotosModel?
     @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
     @State private var swipeBaseline: [String] = []
@@ -61,7 +63,7 @@ struct HiddenPhotosScreen: View {
                     model = newModel
                 }
             }
-            .fullScreenCover(item: $viewerTarget, onDismiss: reload) { target in
+            .photoViewerCover(item: $viewerTarget, link: viewerLink, onDismiss: reload) { target in
                 if let model {
                     PhotoDetailScreen(model: model, currentIndex: target.startIndex)
                 }
@@ -180,7 +182,8 @@ struct HiddenPhotosScreen: View {
             onNearEnd: {},
             onUserScroll: {},
             trailingFooterText: footer(model),
-            removal: model.lastRemoval
+            removal: model.lastRemoval,
+            viewerLink: viewerLink
         )
         .ignoresSafeArea(edges: .bottom)
     }

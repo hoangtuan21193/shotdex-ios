@@ -1,0 +1,108 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "x": 0.1,
+   "y": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "v1-chrome"
+  },
+  {
+   "action": "dump",
+   "name": "v1-chrome"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "v2-hidden"
+  },
+  {
+   "action": "dump",
+   "name": "v2-hidden"
+  },
+  {
+   "action": "swipe",
+   "x": 0.8,
+   "y": 0.5,
+   "direction": "left",
+   "distance": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "v3-hidden-next"
+  },
+  {
+   "action": "dump",
+   "name": "v3-hidden-next"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "v4-shown"
+  },
+  {
+   "action": "dump",
+   "name": "v4-shown"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.4,
+   "direction": "down",
+   "distance": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "v5-closed"
+  },
+  {
+   "action": "dump",
+   "name": "v5-closed"
+  }
+ ]
+}
