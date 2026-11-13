@@ -396,9 +396,24 @@ enum SmartAlbumSQLBuilder {
         "normalizedCameraManufacturer", "originalFilename",
     ]
 
+    /// Shortest term the trigram index can answer; shorter ones scan.
+    static let trigramMinimumLength = 3
+
     static func anyTextCondition(term: String) -> (sql: String, values: [DatabaseValueConvertible]) {
         let like = "%\(term)%"
         let folded = "%\(KeywordInput.foldKey(term))%"
+        // Three characters or more: the trigram index (`photo_text_fts`,
+        // FS-01.03c §7) — a substring match like the LIKEs it replaces, case
+        // folded. Shorter terms have no trigram to look up and keep the scan.
+        if term.count >= trigramMinimumLength {
+            let phrase = "\"" + term.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+            let sql = "(" + [
+                "rowid IN (SELECT rowid FROM photo_text_fts WHERE photo_text_fts MATCH ?)",
+                "assetId IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)",
+                "assetId IN (SELECT assetId FROM (\(PhotoKeywordStore.everyKeywordSQL)) WHERE foldKey LIKE ?)",
+            ].joined(separator: " OR ") + ")"
+            return (sql, [phrase, folded, folded])
+        }
         let columns = anyTextColumns.map { "\($0) LIKE ? COLLATE NOCASE" }
         let sql = "(" + (columns + [
             "assetId IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)",

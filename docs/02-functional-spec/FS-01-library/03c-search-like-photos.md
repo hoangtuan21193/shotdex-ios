@@ -107,8 +107,10 @@ diện; gõ chữ khớp trên các dòng này, không quét ảnh.
   interrupt).
 - Từ vựng bộ phân tích dựng **một lần** mỗi khi catalog đổi (không mỗi phím).
 - Recents: số ảnh + ảnh bìa của mọi câu trong **một** lượt nền; ảnh bìa lấy `PHAsset` ngoài luồng chính.
-- Chữ tự do (`anyText`, tên file, caption, keyword) khớp qua FTS5 trigram `search_text_fts` khi từ ≥ 3 ký tự
-  (chứa, không hoa thường), ngắn hơn thì `LIKE` như cũ — kết quả giống hệt cách cũ.
+- Chữ tự do (`anyText`: máy, ống kính, tên file) khớp qua FTS5 trigram `photo_text_fts` (v66, external content,
+  trigger chỉ chạy khi chữ thật sự đổi) khi từ ≥ 3 ký tự — chứa, không hoa thường; ngắn hơn thì `LIKE` như cũ.
+  Caption và keyword vẫn `LIKE` trên bảng nhỏ của chúng. Kết quả giống hệt cách cũ (người dùng chọn 2026-11-14:
+  "làm cái nào cho trải nghiệm nhanh").
 - Đang index (`IndexPipeline` chưa xong): dòng đầu màn `Reading 1,234 photos — results may be incomplete.`
 
 ## 8. Mac (D7)
@@ -138,10 +140,10 @@ viên (`.searchable(text:tokens:)`); lưới cửa sổ hiện kết quả ngay 
 | AC-16 | 3.120 ảnh Fujifilm | gõ `fujiflim` | 0 gợi ý, 0 ảnh, dòng `Did you mean “Fujifilm”?` số 3,120 | ✅ `SearchIndexTests.didYouMeanOnlyForNearNames` (chưa chụp màn) |
 | AC-17 | gõ `leica` (có ảnh Leica) | — | không có dòng Did you mean | ✅ `SearchIndexTests.didYouMeanOnlyForNearNames` |
 | AC-18 | 8 Recents | mở Search | một lượt nền cho cả 8; `fetchAssets` không chạy trên luồng chính | ⚠️ `SearchRecentsModelTests` |
-| AC-19 | `anyText contains "mg_12"` trên 55k dòng | tìm | kết quả giống hệt LIKE cũ (cùng tập id) | ⚠️ A6 chưa làm: đo `anyText` LIKE ở 55.000 dòng = 84 ms, chạy nền, huỷ được (`SearchIndexPerformanceTests`) — chờ người dùng quyết có cần FTS trigram |
+| AC-19 | `anyText contains "mg_12"` trên 55k dòng | tìm | kết quả giống hệt LIKE cũ (cùng tập id) | ✅ `SearchIndexPerformanceTests.freeTextIndexMatchesLike` (cùng tập id, theo đổi tên/xoá, integrity-check) + `indexAtLibrarySize` (cùng 1.111 ảnh như LIKE); 55k: trigram 0,4–2 ms, quét LIKE 16–20 ms |
 | AC-20 | indexer đang chạy, còn 1.234 ảnh | mở Search | dòng `Reading 1,234 photos — results may be incomplete.` | ⚠️ screenshot |
 | AC-21 | mọi đường cũ: `ISO 3200 85mm`, Advanced, Save as Smart Album, `keyword:sunset`, chip mời, AI khi bấm Search | dùng | như trước | ⚠️ test hiện có xanh + ui-drive |
 | AC-22 | iOS 17/18.6 (sheet) | gõ, chọn viên | như iOS 26 | ⚠️ sim 18.6 (chưa có runtime trên máy) |
 | AC-23 | iPad 26.5 ngang, Duo inner | gõ `canon` | gợi ý ≤ 5 dòng + lưới kết quả cùng màn | ✅ iPad 13" 26.5 ngang (sim-shot): 8 dòng trái + `Photos · 330` + lưới; Duo inner 27.1 (sim-shot): 4 dòng trái + `Photos · 6` — cùng màn, 2026-11-14 |
 | AC-24 | Mac | gõ `can` ở ô thanh công cụ | danh sách gợi ý có số; chọn thành viên; lưới cửa sổ lọc ngay | ✅ Mac `mac-search-photos` (demo): gõ `il` → `In Your Library · ILCE-7M4 · Camera · 85`, lưới 85 of 226 |
-| AC-25 | 55k dòng (sim) | gõ một tiền tố | gợi ý ≤ 50 ms; dựng lại chỉ mục ≤ 3 s | ✅ `SearchIndexPerformanceTests.indexAtLibrarySize` sim: dựng 2,1 s, tiền tố ≤ 44 ms, đếm trong viên 41 ms |
+| AC-25 | 55k dòng (sim) | gõ một tiền tố | gợi ý ≤ 50 ms; dựng lại chỉ mục ≤ 3 s | ✅ `SearchIndexPerformanceTests.indexAtLibrarySize` sim: dựng 2,5 s, gợi ý ≤ 10 ms (lọc + xếp sơ bộ trong SQL, 60 dòng), đếm trong viên ≤ 60 ms |

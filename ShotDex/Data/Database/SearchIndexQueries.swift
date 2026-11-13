@@ -8,17 +8,23 @@ struct SearchIndexQueries: Sendable {
     let database: AppDatabase
 
     /// Groups whose folded name has every typed word as a word prefix
-    /// (`can r6` → `Canon EOS R6`), unranked.
-    func groups(matching text: String, limit: Int = 300) async throws -> [SearchGroup] {
+    /// (`can r6` → `Canon EOS R6`), roughly ranked in SQL — names that start
+    /// with the text first, then more photos — and capped, so a one-letter
+    /// query decodes a few dozen rows instead of hundreds. The final order is
+    /// `SearchSuggestionRanker`'s.
+    func groups(matching text: String, limit: Int = 60) async throws -> [SearchGroup] {
         guard let match = SearchFolding.ftsPrefixQuery(text) else { return [] }
+        let start = SearchFolding.fold(text).trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: "%", with: "").replacingOccurrences(of: "_", with: "") + "%"
         return try await database.reader.read { db in
             try Self.decode(Row.fetchAll(db, sql: """
                 SELECT g.id, g.category, g.name, g.count, g.keyAssetId, g.rule
                 FROM search_group_fts
                 JOIN search_group g ON g.id = search_group_fts.rowid
                 WHERE search_group_fts MATCH ?
+                ORDER BY CASE WHEN g.folded LIKE ? THEN 0 ELSE 1 END, g.count DESC
                 LIMIT ?
-                """, arguments: [match, limit]))
+                """, arguments: [match, start, limit]))
         }
     }
 
