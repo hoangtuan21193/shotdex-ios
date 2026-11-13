@@ -1,0 +1,357 @@
+{
+ "title": "Search giống Photos",
+ "context": "Bạn muốn Search của ShotDex dùng mượt như Photos, không bỏ chức năng nào, và tìm cách cho nó nhanh hơn.\nClaude đã đọc chuỗi trong thư viện hệ thống của Photos (PSIDatabase, PSISuggestionRanker, PXSearchToken, PXSearchSettings). Bằng chứng mạnh nhất: câu SQL tạo bảng nằm nguyên trong file — Photos tính sẵn mỗi giá trị tìm được (một máy ảnh, một nơi, một năm…) thành một dòng kèm danh sách ảnh, rồi khớp chữ gõ bằng chỉ mục tiền tố (gõ \"can\" ra \"Canon\"). Chi tiết: docs/_research/2026-11-14-photos-search-re.md.\nShotDex hiện: gõ chỉ thấy một viên \"đọc hiểu\" và Gần đây; gợi ý không có số ảnh hay hình; phải bấm Search, rồi nhảy sang tab Library mới thấy ảnh; mỗi lần tìm quét chữ trên mọi ảnh (55.000 ảnh) và mỗi phím gõ dựng lại cả bộ từ vựng trên luồng chính.\nGiữ nguyên: cú pháp ISO 3200 / 85mm / f/1.4, Advanced Search, Save as Smart Album, AI search, keyword:, chú thích, nơi chụp, khung giờ (night, golden hour…), Recents, chip mời \"không hiểu\", Mac.\nTrang cuối là phần kỹ thuật Claude tự quyết.",
+ "pages": [
+  {
+   "id": "typing",
+   "title": "Lúc đang gõ",
+   "intro": "Gõ vài chữ thì thấy gì, chọn gì.",
+   "decisions": [
+    {
+     "id": "D1",
+     "title": "Gõ chữ thì gợi ý trông thế nào?",
+     "image": "d1-suggest.svg",
+     "why": "Gợi ý không có số ảnh thì bạn không biết chọn \"Canon EOS R6\" sẽ ra 1.200 hay 3 tấm; không có hình thì khó nhận ra.",
+     "proposal": "Như Photos: mỗi gợi ý một dòng — ảnh đại diện, tên (phần đã gõ đậm), loại (Máy ảnh, Ống kính, Địa điểm, Năm…), số ảnh bên phải. Xếp theo: khớp đầu tên trước, nhiều ảnh trước. Tối đa 8 dòng, nhóm theo loại. Viên \"đọc hiểu\" (brand Sony · focal 85mm) vẫn còn, nằm trên cùng khi câu gõ có nhiều phần.",
+     "options": [
+      {
+       "id": "rows",
+       "label": "Dòng có hình, loại, số ảnh",
+       "pros": [
+        "Biết trước sẽ ra bao nhiêu ảnh",
+        "Dễ nhận ra bằng hình"
+       ],
+       "cons": [
+        "Chiếm chỗ hơn viên"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "capsules",
+       "label": "Giữ viên chữ như hiện nay, thêm số ảnh",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Không hình, không loại",
+        "Khác Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PHSearchQuerySuggestionPropertyAssetCount/KeyAssetUUIDs, PSISuggestionRanker (_percentOverlapWithCompletionText, _countBasedPriority, suggestionScoreForIndexCategory). ShotDex: SearchSuggestionsScreen.swift:223-305 capsules, LibraryModel.suggestions(for:) :813-824 linear scan.",
+     "tasks": [
+      "SearchSuggestionRow (thumb, highlight, category, count) — Features/Library",
+      "Ranker trong Domain/Search, test"
+     ]
+    },
+    {
+     "id": "D2",
+     "title": "Ảnh kết quả hiện ở đâu, lúc nào?",
+     "image": "d2-results.svg",
+     "why": "Hiện nay phải bấm Search rồi bị chuyển sang tab khác mới thấy ảnh; gõ sai phải quay lại tab Search gõ lại.",
+     "proposal": "Như Photos: ảnh khớp hiện ngay dưới gợi ý khi đang gõ (chờ ~0,15 s sau phím cuối), trong tab Search. Có nút \"Mở trong Library\" để sang lưới Library với thanh điều kiện, sắp xếp, lọc như hiện nay. Bấm Search trên bàn phím = ẩn bàn phím, giữ kết quả. Chạm ảnh mở viewer ngay trong Search.",
+     "options": [
+      {
+       "id": "live",
+       "label": "Kết quả ngay trong Search, có nút Mở trong Library",
+       "pros": [
+        "Sửa câu tìm thấy ảnh đổi liền",
+        "Không mất chỗ đang đứng"
+       ],
+       "cons": [
+        "Thêm một lưới nữa trong tab Search"
+       ],
+       "effort": "L",
+       "recommended": true
+      },
+      {
+       "id": "jump",
+       "label": "Giữ như cũ: bấm Search rồi sang Library",
+       "pros": [
+        "Ít việc"
+       ],
+       "cons": [
+        "Chậm, phải đổi tab",
+        "Khác Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PXSearchSettings enableBatchedSearchResults/batchedSearchResultInitialBatchSize. ShotDex: RootTabView SearchTab onSubmit :583-586 chuyển tab; pre-26 SearchSheet :616-672. Lưới dùng lại PhotoGridCollectionView + photoViewerCover.",
+     "tasks": [
+      "SearchResultsSection trong SearchSuggestionsScreen (cả iOS 26 tab và sheet trước 26)",
+      "Nút Mở trong Library dùng applySearch hiện có"
+     ]
+    },
+    {
+     "id": "D3",
+     "title": "Chọn một gợi ý thì sao?",
+     "image": "d3-tokens.svg",
+     "why": "Muốn \"Sony A7 IV\" rồi thêm \"ISO cao\" mà gợi ý chỉ thay chữ thì phải gõ lại cả câu.",
+     "proposal": "Như Photos: chọn gợi ý → nó thành một viên (chip) trong ô tìm, chữ gõ được xoá. Gõ tiếp thì gợi ý chỉ tính trong ảnh của các viên đã chọn (số ảnh cũng theo đó). Nhiều viên = phải khớp tất cả. Xoá lùi khi ô trống = gỡ viên cuối. Viên lưu được vào Recents và Save as Smart Album.",
+     "options": [
+      {
+       "id": "tokens",
+       "label": "Thành viên lọc, gõ tiếp để thu hẹp",
+       "pros": [
+        "Thu hẹp từng bước",
+        "Số ảnh luôn đúng"
+       ],
+       "cons": [
+        "iOS 17 không có viên trong ô tìm: viên nằm trên ô"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "text",
+       "label": "Thay chữ trong ô",
+       "pros": [
+        "Đơn giản"
+       ],
+       "cons": [
+        "Gõ lại cả câu khi muốn thêm"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PXSearchToken, PXSearchActiveSearch(searchText+searchTokens). SwiftUI .searchable(text:tokens:) iOS 16+; ActiveFilterToken.swift đã có chip. iOS 17 dùng hàng chip trên ô.",
+     "tasks": [
+      "SearchToken model + map sang FilterCriteria/SmartAlbumQuery",
+      "searchable(text:tokens:) cả hai đường"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "empty",
+   "title": "Trước khi gõ, ngày tháng, gõ sai",
+   "intro": "Ô tìm trống thì có gì; tìm theo ngày; gõ sai chính tả.",
+   "decisions": [
+    {
+     "id": "D4",
+     "title": "Ô tìm còn trống thì hiện gì?",
+     "image": "d4-empty.svg",
+     "why": "Màn Search trống trơn ngoài Gần đây thì không gợi ý được bạn có thể tìm gì.",
+     "proposal": "Gần đây giữ nguyên (thẻ có ảnh). Dưới đó \"Trong thư viện của bạn\": máy ảnh, ống kính, nơi chụp, năm dùng nhiều nhất — mỗi loại 1–2 dòng có hình và số ảnh, chạm là tìm. Thư viện chưa có gì thì vẫn dòng \"Thử: …\" như cũ.",
+     "options": [
+      {
+       "id": "library",
+       "label": "Gần đây + gợi ý từ thư viện",
+       "pros": [
+        "Khám phá thư viện ngay",
+        "Giống Photos"
+       ],
+       "cons": [
+        "Thêm một khối"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "recents",
+       "label": "Chỉ Gần đây",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Không gợi ý được gì khi chưa tìm lần nào"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "initial_suggestions(date_last_used, first_group_id…), PHSearchQuerySuggestion initialSearchQuerySuggestionsForPhotoLibrary:suggestionLimit:minimumResultCountPerSuggestion:. Đọc từ bảng nhóm (A1), không truy vấn thêm.",
+     "tasks": [
+      "Khối Trong thư viện — SearchSuggestionsScreen"
+     ]
+    },
+    {
+     "id": "D5",
+     "title": "Gõ ngày tháng thì hiểu tới đâu?",
+     "image": "d5-dates.svg",
+     "why": "Hiện hiểu \"before 2020\" và khung giờ (night, golden hour), nhưng gõ \"june\" hay \"2024\" chỉ tìm chữ trong tên file.",
+     "proposal": "Hiểu thêm: năm (2024), tháng (june, tháng 6, june 2024), mùa (summer, mùa hè — theo bán cầu nơi chụp, không toạ độ thì bán cầu Bắc), thứ (weekend, cuối tuần, monday), today / yesterday / this week. Mỗi cái là một gợi ý có số ảnh. Khung giờ cũ giữ nguyên.",
+     "options": [
+      {
+       "id": "full",
+       "label": "Năm, tháng, mùa, thứ, hôm nay/hôm qua",
+       "pros": [
+        "Tìm theo trí nhớ: \"mùa hè 2023\""
+       ],
+       "cons": [
+        "Mùa phụ thuộc bán cầu: có lúc sai với ảnh không toạ độ"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "ym",
+       "label": "Chỉ năm và tháng",
+       "pros": [
+        "Không bao giờ sai"
+       ],
+       "cons": [
+        "Ít hơn Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PLSearchIndexCategoryYear/Month/Season/DayOfWeek/PartOfWeek, PSIDateFilter. ShotDex SearchIntentParser: thêm luật ngày; nhóm ngày vào bảng nhóm (A1).",
+     "tasks": [
+      "Luật ngày trong SearchIntentParser + test 2 ngôn ngữ"
+     ]
+    },
+    {
+     "id": "D6",
+     "title": "Gõ sai chính tả thì sao?",
+     "image": "d6-typo.svg",
+     "why": "\"fujiflim\" ra 0 ảnh mà không nói gì thì tưởng thư viện không có ảnh Fujifilm.",
+     "proposal": "Gợi ý khi gõ chỉ khớp đúng đầu chữ (không dấu, không hoa thường). Khi không có gì khớp, hiện một dòng \"Có phải: Fujifilm (3.120 ảnh)?\" lấy từ tên gần nhất (sai 1–2 chữ cái, tên từ 5 chữ cái). Không tự sửa chữ bạn gõ.",
+     "options": [
+      {
+       "id": "ask",
+       "label": "Chỉ hỏi lại khi 0 kết quả",
+       "pros": [
+        "Không bao giờ tự đổi ý bạn",
+        "Vẫn cứu được lỗi gõ"
+       ],
+       "cons": [
+        "Phải chạm thêm một lần"
+       ],
+       "effort": "S",
+       "recommended": true,
+       "image": "d6-typo.svg"
+      },
+      {
+       "id": "none",
+       "label": "Không đoán",
+       "pros": [
+        "Đơn giản"
+       ],
+       "cons": [
+        "0 ảnh không lý do"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "auto",
+       "label": "Tự sửa ngay khi gõ",
+       "pros": [
+        "Nhanh nhất"
+       ],
+       "cons": [
+        "Có lúc sửa sai tên thật (\"Leica\" thành \"Lecia\"…)"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tech": "PXSearchSettings enableAutoCorrect. Damerau-Levenshtein ≤ 2 trên tên nhóm, chỉ chạy khi FTS ra 0.",
+     "tasks": [
+      "SearchSpelling trong Domain + test"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "Mac",
+   "intro": "App Mac có ô tìm riêng ở thanh công cụ.",
+   "decisions": [
+    {
+     "id": "D7",
+     "title": "Làm luôn cho Mac?",
+     "image": "d7-mac.svg",
+     "why": "Hai bản tìm khác nhau thì người dùng cả hai thấy kết quả không khớp.",
+     "proposal": "Có. Mac dùng chung chỉ mục và gợi ý: menu gợi ý dưới ô tìm có số ảnh, chọn thành viên lọc, kết quả ngay trong cửa sổ. Thanh phạm vi (scope bar) giữ nguyên.",
+     "options": [
+      {
+       "id": "now",
+       "label": "Làm cùng đợt",
+       "pros": [
+        "Hai bản khớp nhau"
+       ],
+       "cons": [
+        "Thêm việc"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "later",
+       "label": "Để đợt sau",
+       "pros": [
+        "Xong iOS nhanh hơn"
+       ],
+       "cons": [
+        "Mac tìm chậm và khác iOS một thời gian"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "ShotDexMac/MacRootWindow.swift:1150-1214, MacSearchScope.swift. Chỉ mục ở ShotDex/Data dùng chung target Mac.",
+     "tasks": [
+      "MacSearchSuggestions dùng ranker chung"
+     ]
+    }
+   ]
+  }
+ ],
+ "auto": [
+  {
+   "id": "A1",
+   "title": "Chỉ mục tìm kiếm kiểu Photos",
+   "choice": "Tính sẵn mỗi giá trị tìm được (máy, ống kính, tiêu cự, ISO, khẩu, nơi, năm, tháng, album, từ khoá, loại file, kiểu ảnh) thành một dòng có số ảnh và ảnh đại diện; gõ chữ khớp bằng chỉ mục tiền tố trên các dòng này (vài nghìn dòng) thay vì quét 55.000 ảnh.",
+   "tech": "Bảng search_group(category, name, normalized, count, keyAssetId) + search_group_asset + FTS5 prefix (content='search_group', tokenizer unicode61 remove_diacritics 2), như PSIDatabase groups/ga/prefix. Migration v65, dữ liệu suy ra, dựng lại được; cập nhật theo lô sau mỗi batch indexer và khi caption/keyword/album đổi."
+  },
+  {
+   "id": "A2",
+   "title": "Mỗi phím gõ chạy ngoài luồng chính, huỷ lần trước",
+   "choice": "Gợi ý và kết quả tính ở nền, chờ 0,15 s sau phím cuối; gõ tiếp thì huỷ lần cũ.",
+   "tech": "actor SearchEngine, Task cancel + sqlite3_interrupt qua GRDB; như _inqExecutePreparedStatement:withCancelableStatementBlock:. SearchService bỏ @MainActor ở phần parse."
+  },
+  {
+   "id": "A3",
+   "title": "Bộ từ vựng dựng một lần",
+   "choice": "Bảng tra tên máy/ống kính/nơi dựng một lần khi thư viện đổi, không dựng lại mỗi phím.",
+   "tech": "SearchIntentParser+Names nameRules index() hiện O(vocab) mỗi lần parse; cache theo catalog version."
+  },
+  {
+   "id": "A4",
+   "title": "Gần đây mở nhanh",
+   "choice": "Số ảnh và ảnh bìa của Gần đây lấy một lần, ngoài luồng chính; ảnh bìa tải không chặn.",
+   "tech": "SearchRecentsModel loop 10 query LIMIT 1 → một truy vấn gộp; fetchAssets đồng bộ trên main → async."
+  },
+  {
+   "id": "A5",
+   "title": "Kết quả hiện theo lô",
+   "choice": "Lưới kết quả vẽ 300 ảnh đầu ngay, phần còn lại nạp sau.",
+   "tech": "PXSearchSettings batchedSearchResultInitialBatchSize; LibraryQueries grid không LIMIT → trang đầu + phần còn lại."
+  },
+  {
+   "id": "A6",
+   "title": "Tìm chữ tự do dùng chỉ mục",
+   "choice": "Chữ không thành gợi ý (tên file, chú thích) vẫn tìm được như cũ, nhưng qua chỉ mục chữ thay vì quét LIKE từng ảnh.",
+   "tech": "FTS5 trên filename/caption/keywords (bảng riêng, chữ người gõ vẫn ở bảng của nó); LIKE '%x%' 6 cột + subquery → MATCH."
+  },
+  {
+   "id": "A7",
+   "title": "Báo khi chưa index xong",
+   "choice": "Đang đọc thư viện thì Search hiện dòng \"Đang đọc 1.234 ảnh — kết quả có thể thiếu\".",
+   "tech": "PXSearchSettings indexingBannerPercentageThreshold; IndexPipeline progress có sẵn."
+  },
+  {
+   "id": "A8",
+   "title": "Giữ mọi chức năng",
+   "choice": "Cú pháp ISO/f/mm, Advanced Search, Save as Smart Album, AI search (chỉ chạy khi bấm Search và bộ đọc không chắc), keyword:, chú thích, nơi, khung giờ, chip mời, Spotlight, Recents giữ nguyên.",
+   "tech": "SearchService resolve giữ thứ tự parser → model → free text."
+  },
+  {
+   "id": "A9",
+   "title": "Quy trình",
+   "choice": "Intent → spec FS-01.03 §10 có tiêu chí → board PH/IP/DI/DC/MAC_Search sáng + tối → code mỗi tiêu chí một commit → kiểm trên iPhone, iPad, Duo, Mac.",
+   "tech": "docs/PROCESS.md"
+  }
+ ]
+}

@@ -16,6 +16,7 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 02 | [Nav bar và thanh điều kiện](02-navigation-and-condition-bar.md) | chrome kính, lề trên của lưới, chip điều kiện |
 | 03 | [Tìm kiếm](03-search.md) | query DSL, parser câu tự nhiên, AI translator iOS 26, màn search |
 | 03b | [Khung giờ, từ không hiểu, Recents màn rộng](03b-time-of-day-and-acceptance.md) | night/golden/blue hour, chip mời tìm tên file, dòng Try:, Recents regular; AC của tìm kiếm |
+| 03c | [Search kiểu Photos](03c-search-like-photos.md) | chỉ mục giá trị + FTS5, dòng gợi ý có số ảnh, viên lọc, kết quả trong Search, ngày/mùa/thứ, Did you mean, Mac |
 | 04 | [Tìm theo địa điểm](04-place-search.md) | cột place, lưới geocode ~110m, pass riêng, giới hạn |
 | 05 | [Lọc và sắp xếp](05-filtering-and-sorting.md) | Advanced Search, media type, capture kind, các trục lọc, sort |
 | 05b | [Camera/Lens, dữ liệu thiếu, sheet](05b-gear-menu-missing-data-and-sheet.md) | menu Camera ▸ Lens ▸, is missing + Location, bố cục và nháp Advanced Search; AC |

@@ -66,6 +66,9 @@ gồm tên địa điểm).
 
 ## 5. Màn tìm kiếm
 
+> **Thay bởi [03c](03c-search-like-photos.md) (2026-11-14):** dòng gợi ý có số ảnh, viên lọc, kết quả ngay trong
+> Search. §5–§7 dưới đây là lịch sử; phần tiêu đề tự vẽ, ô tự mở bàn phím, xoá truy vấn khi rời tab vẫn đúng.
+
 **Chồng capsule nổi trên ô tìm kiếm, kiểu Photos** — **không phải một danh sách**. Danh sách trải hết bề
 ngang đọc ra như giao diện chính, làm ô tìm kiếm trông như đường vào thứ yếu; ở đây **ô tìm kiếm là giao diện**.
 
