@@ -114,8 +114,9 @@ final class PhotoLibraryService: NSObject {
     @ObservationIgnored
     private let detailImageCache: NSCache<NSString, PlatformImage> = {
         let cache = NSCache<NSString, PlatformImage>()
-        cache.countLimit = 12
-        cache.totalCostLimit = 160 * 1_024 * 1_024
+        // Five pages (current ± 2, FS-02 §8) of two tiers each, iPad-sized.
+        cache.countLimit = 16
+        cache.totalCostLimit = 220 * 1_024 * 1_024
         return cache
     }()
     /// Final (non-degraded) grid thumbnails, keyed by asset *and* requested
@@ -145,6 +146,9 @@ final class PhotoLibraryService: NSObject {
     }()
     @ObservationIgnored
     private var isObservingChanges = false
+    /// Decoded-neighbour requests in flight, by asset id (FS-02 §8 D6).
+    @ObservationIgnored
+    private var detailPrefetches: [String: PHImageRequestID] = [:]
     /// Trailing-edge debounce shared by both tokens: iCloud downloads during an
     /// index run fire `photoLibraryDidChange` per asset; bumping a token each
     /// time would trigger a full-library reload per photo.
@@ -189,6 +193,25 @@ final class PhotoLibraryService: NSObject {
         if authorizationState.canReadLibrary {
             startObservingChanges()
         }
+        #if canImport(UIKit)
+        // iOS asks for memory back: the decoded caches go first, before the
+        // system kills the app (FS-02 §8 A4). They refill from PhotoKit.
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.clearDecodedImageCaches() }
+        }
+        #endif
+    }
+
+    /// Drops every decoded image this service holds and the decoded-neighbour
+    /// prefetches in flight (FS-02 §8 A4).
+    func clearDecodedImageCaches() {
+        detailImageCache.removeAllObjects()
+        gridThumbnailCache.removeAllObjects()
+        albumCoverImageCache.removeAllObjects()
+        for id in detailPrefetches.values { imageManager.cancelImageRequest(id) }
+        detailPrefetches.removeAll()
     }
 
     deinit {
@@ -681,16 +704,18 @@ final class PhotoLibraryService: NSObject {
             let hasDisplayPixels = image.map {
                 Self.hasDisplayResolution($0, for: asset, targetSize: targetSize)
             } ?? false
-            if let image, !degraded, hasDisplayPixels, let cacheKey {
-                let pixelWidth = Int(image.size.width * image.scale)
-                let pixelHeight = Int(image.size.height * image.scale)
-                self.detailImageCache.setObject(
-                    image,
-                    forKey: cacheKey,
-                    cost: pixelWidth * pixelHeight * 4
-                )
+            guard let image, !degraded else {
+                Task { @MainActor in completion(image, degraded) }
+                return
             }
-            Task { @MainActor in completion(image, degraded) }
+            // The final is decoded before it reaches the view, never at draw
+            // time on the main thread (FS-02 §8 A2).
+            Self.decodedForDisplay(image) { decoded in
+                if hasDisplayPixels, let cacheKey {
+                    self.detailImageCache.setObject(decoded, forKey: cacheKey, cost: Self.decodedCost(decoded))
+                }
+                Task { @MainActor in completion(decoded, false) }
+            }
         }
     }
 
@@ -715,6 +740,60 @@ final class PhotoLibraryService: NSObject {
             contentMode: .aspectFit,
             options: Self.detailCachingOptions
         )
+    }
+
+    /// Decoded neighbours (FS-02 §8 D6, A3): the best local rendition of each
+    /// asset, decoded off the main thread and kept in the detail cache under
+    /// the same key `requestBestLocalImage` reads — so a page swiped to paints
+    /// sharp on its first frame, and one swiped back to after its own request
+    /// was cancelled is still there. Assets no longer wanted are cancelled.
+    /// Network stays off: swiping never downloads originals.
+    func prefetchDecodedDetailImages(for assets: [PHAsset], targetSize: CGSize) {
+        let wanted = Set(assets.map(\.localIdentifier))
+        for (id, request) in detailPrefetches where !wanted.contains(id) {
+            imageManager.cancelImageRequest(request)
+            detailPrefetches[id] = nil
+        }
+        for asset in assets where detailPrefetches[asset.localIdentifier] == nil {
+            guard let key = detailCacheKey(for: asset, targetSize: targetSize, contentMode: .aspectFit, tier: .local),
+                  detailImageCache.object(forKey: key) == nil
+            else { continue }
+            let id = asset.localIdentifier
+            let options = Self.detailCachingOptions
+            detailPrefetches[id] = imageManager.requestImage(
+                for: asset, targetSize: targetSize, contentMode: .aspectFit, options: options
+            ) { image, info in
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                guard let image, !degraded else { return }
+                Self.decodedForDisplay(image) { decoded in
+                    self.detailImageCache.setObject(decoded, forKey: key, cost: Self.decodedCost(decoded))
+                    Task { @MainActor in self.detailPrefetches[id] = nil }
+                }
+            }
+        }
+    }
+
+    /// Decodes `image` so drawing it costs nothing: on its own queue when
+    /// called on the main thread, in place otherwise (PhotoKit's queues).
+    nonisolated static func decodedForDisplay(_ image: PlatformImage, then deliver: @escaping (PlatformImage) -> Void) {
+        #if canImport(UIKit)
+        let work = { deliver(image.preparingForDisplay() ?? image) }
+        if Thread.isMainThread {
+            DispatchQueue.global(qos: .userInitiated).async(execute: work)
+        } else {
+            work()
+        }
+        #else
+        deliver(image)
+        #endif
+    }
+
+    nonisolated static func decodedCost(_ image: PlatformImage) -> Int {
+        #if canImport(UIKit)
+        Int(image.size.width * image.scale) * Int(image.size.height * image.scale) * 4
+        #else
+        Int(image.size.width) * Int(image.size.height) * 4
+        #endif
     }
 
     /// Sharpest LOCAL rendition, no network — the device-sized derivative
@@ -750,16 +829,16 @@ final class PhotoLibraryService: NSObject {
             options: options
         ) { image, info in
             let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-            if let image, !degraded, let cacheKey {
-                let pixelWidth = Int(image.size.width * image.scale)
-                let pixelHeight = Int(image.size.height * image.scale)
-                self.detailImageCache.setObject(
-                    image,
-                    forKey: cacheKey,
-                    cost: pixelWidth * pixelHeight * 4
-                )
+            guard let image, !degraded else {
+                Task { @MainActor in completion(image) }
+                return
             }
-            Task { @MainActor in completion(image) }
+            Self.decodedForDisplay(image) { decoded in
+                if let cacheKey {
+                    self.detailImageCache.setObject(decoded, forKey: cacheKey, cost: Self.decodedCost(decoded))
+                }
+                Task { @MainActor in completion(decoded) }
+            }
         }
     }
 
@@ -882,13 +961,21 @@ final class PhotoLibraryService: NSObject {
         contentMode: PHImageContentMode,
         tier: DetailCacheTier
     ) -> NSString? {
-        guard targetSize.width.isFinite, targetSize.height.isFinite,
-              targetSize.width < 100_000, targetSize.height < 100_000
-        else { return nil }
+        // `PHImageManagerMaximumSize` is (−1, −1): it must not pass as a
+        // finite display size, or a zoom's full original (hundreds of MB
+        // decoded) lands here and pushes every screen image out (FS-02 §8 A1).
+        guard Self.isCacheableDetailSize(targetSize) else { return nil }
         let width = Int(targetSize.width.rounded(.up))
         let height = Int(targetSize.height.rounded(.up))
         let mode = contentMode == .aspectFill ? "fill" : "fit"
         return "\(asset.localIdentifier)|\(width)x\(height)|\(mode)|\(tier.rawValue)" as NSString
+    }
+
+    /// A finite, positive display size — never `PHImageManagerMaximumSize`.
+    nonisolated static func isCacheableDetailSize(_ size: CGSize) -> Bool {
+        size.width.isFinite && size.height.isFinite
+            && size.width > 0 && size.height > 0
+            && size.width < 100_000 && size.height < 100_000
     }
 
     private nonisolated static func aspectFitMaxPixel(

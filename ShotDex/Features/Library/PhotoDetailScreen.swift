@@ -3213,7 +3213,9 @@ private struct PhotoPager: UIViewControllerRepresentable {
 
         func preheatDetailImages(around index: Int) {
             let targetSize = ActiveDisplay.pixelSize()
-            let newAssets = ((index - 1)...(index + 1)).compactMap { candidate -> PHAsset? in
+            // ± 2 pages, decoded ahead (FS-02 §8 D6) — a quick double swipe
+            // still lands on a sharp photo.
+            let newAssets = ViewerPreheat.indices(around: index, count: parent.source.photoCount).compactMap { candidate -> PHAsset? in
                 guard candidate >= 0, candidate < parent.source.photoCount,
                       let id = parent.source.photoId(at: candidate),
                       let asset = parent.source.asset(for: id),
@@ -3230,6 +3232,10 @@ private struct PhotoPager: UIViewControllerRepresentable {
             preheatedAssets = newAssets
             parent.photoLibrary.startCachingDetailImages(
                 for: newAssets,
+                targetSize: targetSize
+            )
+            parent.photoLibrary.prefetchDecodedDetailImages(
+                for: newAssets.filter { $0.localIdentifier != parent.source.photoId(at: index) },
                 targetSize: targetSize
             )
         }
