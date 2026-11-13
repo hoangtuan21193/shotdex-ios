@@ -15,7 +15,19 @@ struct SmartAlbumDetailScreen: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
 
-    let album: SmartAlbum
+    /// The album as saved — replaced in place when it is edited or renamed
+    /// from this screen or anywhere else (FS-06.08 §3c D4, A1).
+    @State var album: SmartAlbum
+    @Environment(\.dismiss) private var dismiss
+    /// ⋯ menu (FS-06.08 §3c D4/D5).
+    @State private var isEditingAlbum = false
+    @State private var isRenaming = false
+    @State private var renameText = ""
+    @State private var isConfirmingDelete = false
+    /// The album ShotDex keeps in Photos, if any — the delete prompt says it stays.
+    @State private var keptPhotosAlbum = false
+    /// When the database signal last reloaded the grid (throttle, §3c A1).
+    @State private var lastLiveReload = Date.distantPast
     /// When the original check last reloaded the grid (throttle, FS-06.10).
     @State private var lastOriginalReload = Date.distantPast
 
@@ -57,7 +69,7 @@ struct SmartAlbumDetailScreen: View {
     @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
     var body: some View {
-        filterWiring(content)
+        albumActions(filterWiring(content))
         // Empty while selecting, or the bar falls back to it once the
         // principal title below is cleared.
         .navigationTitle(isSelecting || titleInBar ? "" : album.name)
@@ -222,6 +234,135 @@ struct SmartAlbumDetailScreen: View {
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 
+    // MARK: Album actions (FS-06.08 §3c)
+
+    /// The ⋯ menu's sheets and prompts, and the live refresh — kept out of
+    /// `body` so it type-checks.
+    private func albumActions(_ content: some View) -> some View {
+        content
+            // Live (FS-06.08 §3c A1): an index batch, a mark, an edit or rename of
+            // this album from anywhere — the grid and the name follow without
+            // leaving. Bursts fold into one read, at most one every 2 s, and not
+            // while selecting (the selection must not shift under the finger).
+            .task(id: model != nil) {
+                guard let model else { return }
+                for await _ in DatabaseChangeSignal.changes(in: dependencies.database,
+                                                            tables: ["photo_metadata", "smart_albums", "photo_flag", "pending_photo_rating"]) {
+                    let wait = 2 - Date().timeIntervalSince(lastLiveReload)
+                    if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+                    guard !Task.isCancelled else { return }
+                    if isSelecting { continue }
+                    lastLiveReload = Date()
+                    await refreshFromStore(model)
+                }
+            }
+            .formSheet(isPresented: $isEditingAlbum) {
+                // Saving writes `smart_albums`; the live signal above brings the
+                // new conditions and name into this screen.
+                SmartAlbumEditorSheet(existing: album, dependencies: dependencies) {}
+            }
+            .alert(String(localized: "Rename Smart Album", comment: "Alert title"), isPresented: $isRenaming) {
+                TextField(String(localized: "Name", comment: "Rename smart album field"), text: $renameText)
+                Button("Cancel", role: .cancel) {}
+                Button(String(localized: "Rename", comment: "Rename smart album: confirm")) { rename() }
+            }
+            .confirmationDialog(
+                String(localized: "Delete “\(album.name)”?", comment: "Delete smart album prompt"),
+                isPresented: $isConfirmingDelete,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "Delete Smart Album", comment: "Delete smart album: confirm"), role: .destructive) { deleteAlbum() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(keptPhotosAlbum
+                    ? String(localized: "This deletes the smart album. The album “\(album.name)” stays in Photos.", comment: "Delete smart album that is kept in Photos")
+                    : String(localized: "The photos stay in your library and in other albums.", comment: "Delete smart album prompt message"))
+            }
+    }
+
+    /// Re-reads the album row and the grid after the database moved: a new
+    /// name or new conditions land in place; a deleted album closes.
+    private func refreshFromStore(_ model: SmartAlbumDetailModel) async {
+        let store = dependencies.smartAlbumStore
+        let id = album.id
+        let fresh = await Task.detached(priority: .userInitiated) { try? store.fetch(id: id) }.value
+        guard let fresh else {
+            dismiss()
+            return
+        }
+        if fresh != album { album = fresh }
+        if fresh.query != model.query {
+            await model.setQuery(fresh.query)
+        } else {
+            await model.load()
+        }
+    }
+
+    private var albumMenu: some View {
+        Menu {
+            Button {
+                isEditingAlbum = true
+            } label: {
+                Label(String(localized: "Edit Smart Album…", comment: "Smart album ⋯ menu"), systemImage: "slider.horizontal.3")
+            }
+            Button {
+                renameText = album.name
+                isRenaming = true
+            } label: {
+                Label(String(localized: "Rename…", comment: "Smart album ⋯ menu"), systemImage: "pencil")
+            }
+            Button {
+                duplicateAlbum()
+            } label: {
+                Label(String(localized: "Duplicate", comment: "Smart album ⋯ menu"), systemImage: "plus.square.on.square")
+            }
+            Divider()
+            Button(role: .destructive) {
+                let links = SmartAlbumPhotosAlbumStore(database: dependencies.database)
+                let id = album.id
+                Task {
+                    let link = await Task.detached { try? links.link(id) }.value
+                    keptPhotosAlbum = link?.collectionLocalId != nil
+                    isConfirmingDelete = true
+                }
+            } label: {
+                Label(String(localized: "Delete Smart Album", comment: "Smart album ⋯ menu"), systemImage: "trash")
+            }
+        } label: {
+            Label(String(localized: "More", comment: "Smart album ⋯ button"), systemImage: "ellipsis")
+        }
+        .accessibilityLabel(String(localized: "More", comment: "Smart album ⋯ button"))
+    }
+
+    private func rename() {
+        do {
+            if let renamed = try dependencies.smartAlbumStore.rename(id: album.id, to: renameText) {
+                album = renamed
+                dependencies.photosAlbumSync.setNeedsSync()
+            }
+        } catch {
+            actionErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func duplicateAlbum() {
+        do {
+            try dependencies.smartAlbumStore.duplicate(id: album.id)
+        } catch {
+            actionErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteAlbum() {
+        do {
+            try dependencies.smartAlbumStore.delete(id: album.id)
+            dependencies.photosAlbumSync.linksChanged()
+            dismiss()
+        } catch {
+            actionErrorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: Grid
 
     @ViewBuilder
@@ -310,6 +451,7 @@ struct SmartAlbumDetailScreen: View {
                     photosAlbumLine: photosAlbumLine,
                     title: titleInBar && !isSelecting ? album.name : nil,
                     subtitle: titleInBar ? visibleDate : nil,
+                    onEditConditions: { isEditingAlbum = true },
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )
@@ -717,6 +859,10 @@ struct SmartAlbumDetailScreen: View {
             SelectionToolbarItems(model: selectionModel)
         }
         if !isSelecting {
+            // Filter · ⋯ · Select (board PH_SmartAlbum, FS-06.08 §3c D4).
+            ToolbarItem(placement: .topBarTrailing) {
+                albumMenu
+            }
             if #available(iOS 26.0, *) {
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
             }

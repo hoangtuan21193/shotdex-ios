@@ -174,4 +174,38 @@ struct SmartAlbumPhotosParityTests {
         query.groups = [SmartAlbumRuleGroup()]
         #expect(query.conditionCount() == 2)
     }
+
+    // MARK: Rename / Duplicate (AC-31, AC-32)
+
+    @Test func duplicateNamesCopiesAndKeepsInPhotosOff() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = SmartAlbumStore(database: database)
+        let query = SmartAlbumQuery(rules: [SmartAlbumRule(field: .iso, op: .greaterThan, number: 3200)],
+                                    groups: [SmartAlbumRuleGroup(matchMode: .any, rules: [SmartAlbumRule(field: .lens, op: .contains, text: "85")])])
+        try store.upsert(SmartAlbum(id: "night", name: "Night", query: query, createdAt: 1))
+        let first = try #require(try store.duplicate(id: "night"))
+        let second = try #require(try store.duplicate(id: "night"))
+        #expect(first.name == "Night copy")
+        #expect(second.name == "Night copy 2")
+        #expect(first.query == query && second.query == query)
+        let links = SmartAlbumPhotosAlbumStore(database: database)
+        // The default-on pass must not turn the copies on.
+        try links.addDefaultLinks()
+        #expect(try links.isEnabled(first.id) == false)
+        #expect(try links.isEnabled(second.id) == false)
+        #expect(try store.duplicate(id: "missing") == nil)
+    }
+
+    @Test func renameRefusesTakenAndEmptyNames() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = SmartAlbumStore(database: database)
+        try store.upsert(SmartAlbum(id: "n", name: "Night", query: .empty, createdAt: 1))
+        try store.upsert(SmartAlbum(id: "d", name: "Day", query: .empty, createdAt: 2))
+        #expect(throws: SmartAlbumStore.NameError.taken("day")) { try store.rename(id: "n", to: " day ") }
+        #expect(throws: SmartAlbumStore.NameError.empty) { try store.rename(id: "n", to: "  ") }
+        #expect(try store.rename(id: "n", to: "Late")?.name == "Late")
+        #expect(try store.fetch(id: "n")?.name == "Late")
+        // Its own name, other case, is not "taken".
+        #expect(try store.rename(id: "n", to: "LATE")?.name == "LATE")
+    }
 }

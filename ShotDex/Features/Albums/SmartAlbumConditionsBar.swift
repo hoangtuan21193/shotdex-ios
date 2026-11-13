@@ -41,6 +41,8 @@ struct SmartAlbumConditionsBar: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var countsLineLimit: Int? { dynamicTypeSize.isAccessibilitySize ? nil : 1 }
+    /// Opens the album's editor — the popover's Edit button (FS-06.08 §3c D4).
+    var onEditConditions: (() -> Void)?
     var onEditFilter: (() -> Void)?
     var onClearFilter: (() -> Void)?
 
@@ -216,6 +218,21 @@ struct SmartAlbumConditionsBar: View {
                             Text("Match \(query.matchMode.word)")
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(.secondary)
+                        }
+                        if let onEditConditions {
+                            // The saved conditions are one tap from their
+                            // editor, as in Photos (FS-06.08 §3c D4).
+                            Button {
+                                isShowingStatus = false
+                                onEditConditions()
+                            } label: {
+                                Text(String(localized: "Edit…", comment: "Smart album header popover: opens Edit Smart Album"))
+                                    .font(.footnote.weight(.semibold))
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel(String(localized: "Edit Smart Album", comment: "VoiceOver: the popover's Edit button"))
                         }
                     }
                     ForEach(Array(ruleSummaries.enumerated()), id: \.offset) { _, summary in

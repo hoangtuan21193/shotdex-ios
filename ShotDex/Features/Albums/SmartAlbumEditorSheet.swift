@@ -22,6 +22,10 @@ struct SmartAlbumEditorSheet: View {
     @State private var availableLenses: [String] = []
     /// Live count of photos the current rules match (nil until first compute).
     @State private var matchCount: Int?
+    /// A recount is under way: the last count stays, dimmed (FS-06.08 §3c A2).
+    @State private var isCounting = false
+    /// The last save failed; the alert offers to try again (§3c A3).
+    @State private var saveError: String?
     /// Lowercased names of the *other* smart albums, for the uniqueness check.
     @State private var takenNames: Set<String> = []
     /// Keep in Photos (FS-06.12): the switch as loaded, and as set now.
@@ -83,6 +87,7 @@ struct SmartAlbumEditorSheet: View {
             } closing: {
                 keepInPhotosSection
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) { countBar }
             .navigationTitle(existing == nil ? "New Smart Album" : "Edit Smart Album")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,6 +100,18 @@ struct SmartAlbumEditorSheet: View {
                         .disabled(!canSave)
                 }
             }
+        }
+        .alert(
+            String(localized: "Couldn’t Save Smart Album", comment: "Alert title: saving a smart album failed"),
+            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
+        ) {
+            Button(String(localized: "Try Again", comment: "Alert button: save the smart album again")) {
+                saveError = nil
+                save()
+            }
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
         }
         .sourceFolderPicker(folderPicker, query: $query)
         .task { await prepare() }
@@ -132,8 +149,70 @@ struct SmartAlbumEditorSheet: View {
             bodies: availableBodies,
             lenses: availableLenses,
             matchCount: matchCount,
+            showsMatchCountFooter: false,
             parts: parts
         )
+    }
+
+    /// Rows on screen without enough to compile — dropped on Save.
+    private var incompleteCount: Int {
+        query.rules.filter { $0.field != .mediaType && !$0.isValid }.count
+    }
+
+    /// An Original condition while the check has photos left.
+    private var uncheckedOriginals: Bool {
+        guard query.usesOriginal else { return false }
+        let check = dependencies.originalPresenceCheck
+        return check.progress.checked < check.progress.total
+    }
+
+    /// The count, always in view at the bottom of the sheet, as Photos keeps
+    /// "N items matched" by its OK button (FS-06.08 §3c D3). While a recount
+    /// runs the last number stays, dimmed — never blank.
+    private var countBar: some View {
+        VStack(spacing: 2) {
+            Group {
+                if let matchCount {
+                    Text(matchCount == 1
+                        ? String(localized: "1 photo matches", comment: "Smart album sheet count bar, one photo")
+                        : String(localized: "\(matchCount.formatted()) photos match", comment: "Smart album sheet count bar, e.g. 1,284 photos match"))
+                } else {
+                    Text(String(localized: "Counting…", comment: "Smart album sheet count bar before the first count"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+            .opacity(isCounting && matchCount != nil ? 0.5 : 1)
+            .contentTransition(.numericText())
+            ForEach(countNotes, id: \.self) { note in
+                Text(note)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(minHeight: 48)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var countNotes: [String] {
+        var notes: [String] = []
+        if incompleteCount > 0 {
+            notes.append(incompleteCount == 1
+                ? String(localized: "1 incomplete condition won’t be saved.", comment: "Smart album count bar note")
+                : String(localized: "\(incompleteCount) incomplete conditions won’t be saved.", comment: "Smart album count bar note"))
+        }
+        if uncheckedOriginals {
+            notes.append(String(localized: "Photos not checked yet aren’t counted.", comment: "Smart album count bar note: the Original check is still running"))
+        }
+        return notes
     }
 
     /// Loads autocomplete suggestion sources and the initial match count.
@@ -168,19 +247,20 @@ struct SmartAlbumEditorSheet: View {
     }
 
     /// Recomputes the live match count off the main thread; a `COUNT(*)` over
-    /// the compiled rules. Skips work when there is no valid condition yet.
+    /// the compiled rules, after 300ms of quiet, the previous run cancelled.
+    /// No valid condition yet counts the whole library — what an album with
+    /// no condition would show (FS-06.08 §3c D3). The old number stays up,
+    /// dimmed, until the new one lands (A2).
     @MainActor
     private func recomputeCount(for snapshot: SmartAlbumQuery) async {
-        guard !snapshot.isEmpty else {
-            matchCount = nil
-            return
-        }
+        isCounting = true
         let queries = dependencies.libraryQueries
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
-        let count = (try? await queries.count(matching: snapshot)) ?? 0
+        let count = try? await queries.count(matching: snapshot.cleaned)
         guard !Task.isCancelled, query == snapshot else { return }
-        matchCount = count
+        if let count { matchCount = count }
+        isCounting = false
     }
 
     private func save() {
@@ -196,6 +276,8 @@ struct SmartAlbumEditorSheet: View {
         do {
             try dependencies.smartAlbumStore.upsert(album)
         } catch {
+            // Say so and keep the sheet — the conditions are still here (§3c A3).
+            saveError = error.localizedDescription
             return
         }
         // Only after the album row exists: a link to no album is never cleaned up.

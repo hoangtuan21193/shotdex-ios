@@ -13,7 +13,9 @@ final class SmartAlbumDetailModel {
     private let metadataStore: MetadataStore
     private let photoLibrary: PhotoLibraryService
     private let pipeline: IndexPipeline
-    private let query: SmartAlbumQuery
+    /// The saved conditions — replaced in place when the album is edited from
+    /// this screen (FS-06.08 §3c D4).
+    private(set) var query: SmartAlbumQuery
     private let albumId: String
     private let sourceStore: SourceStore
     private let database: AppDatabase
@@ -150,6 +152,14 @@ final class SmartAlbumDetailModel {
         #else
         UIDevice.current.userInterfaceIdiom == .pad ? .iPad : .iPhone
         #endif
+    }
+
+    /// The album was edited here: new conditions, same grid, reloaded in
+    /// place — no leaving and coming back (FS-06.08 §3c D4).
+    func setQuery(_ newQuery: SmartAlbumQuery) async {
+        guard newQuery != query else { return }
+        query = newQuery
+        await load()
     }
 
     func setSortOrder(_ order: AlbumSortOrder) async {

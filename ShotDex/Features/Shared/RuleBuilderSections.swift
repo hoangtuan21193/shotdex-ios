@@ -13,6 +13,9 @@ struct RuleBuilderSections: View {
     var places: [String] = []
     /// Live count of matching photos; nil hides the footer.
     var matchCount: Int?
+    /// False when the host shows the count itself — the smart album sheet's
+    /// bottom bar (FS-06.08 §3c D3) — so the Conditions footer has none.
+    var showsMatchCountFooter = true
     /// Which sections to draw. A wide sheet puts the scope (media type and
     /// match mode) in one column and the conditions in the other.
     var parts: Parts = .all
@@ -110,16 +113,24 @@ struct RuleBuilderSections: View {
         }
 
         Section {
-            Picker("Match", selection: $query.matchMode) {
-                Text("All").tag(RuleMatchMode.all)
-                Text("Any").tag(RuleMatchMode.any)
+            // One condition has nothing to join: Photos says "Match the
+            // following condition" and offers no all / any (FS-06.08 §3c D1).
+            // The media type counts — it is a condition in the SQL.
+            if query.conditionCount(excluding: []) > 1 {
+                Picker("Match", selection: $query.matchMode) {
+                    Text("All").tag(RuleMatchMode.all)
+                    Text("Any").tag(RuleMatchMode.any)
+                }
+                .pickerStyle(.segmented)
+                Text(query.matchMode == .all
+                    ? "Photos must match every condition below."
+                    : "Photos must match at least one condition below.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Match the following condition")
+                    .accessibilityAddTraits(.isStaticText)
             }
-            .pickerStyle(.segmented)
-            Text(query.matchMode == .all
-                ? "Photos must match every condition below."
-                : "Photos must match at least one condition below.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -140,6 +151,7 @@ struct RuleBuilderSections: View {
                     servers: servers,
                     folderSources: folderPicker == nil ? [] : Set(serverConnections.keys),
                     onChooseFolder: { chooseFolder(for: rule) },
+                    onAddBelow: { query.insertRule(after: rule.id) },
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
@@ -173,7 +185,7 @@ struct RuleBuilderSections: View {
         } header: {
             Text("Conditions")
         } footer: {
-            if let matchCount {
+            if showsMatchCountFooter, let matchCount {
                 // Unchecked photos match neither value (FS-06.10 §3): the
                 // count grows as the check goes on. Two keys, so the count
                 // keeps its plural forms.

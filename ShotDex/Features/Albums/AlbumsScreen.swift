@@ -48,6 +48,10 @@ struct AlbumsScreen: View {
     @State private var isCreatingSmartAlbum = false
     @State private var isCustomizePresented = false
     @State private var editingSmartAlbum: SmartAlbum?
+    /// Rename… from the smart album tile's menu (FS-06.08 §3c D5).
+    @State private var renamingSmartAlbum: SmartAlbum?
+    @State private var smartAlbumName = ""
+    @State private var smartAlbumActionError: String?
     /// A smart album kept in Photos, waiting for the delete to be confirmed
     /// (FS-06.12 AC-9). Others delete at once, as before.
     @State private var deletingKeptSmartAlbum: SmartAlbum?
@@ -173,6 +177,41 @@ struct AlbumsScreen: View {
             model.load(forChangeTokens: photoLibrary.collectionsTabTokens)
         }
         .collectionsDestinations(model: model, isLibraryIndexing: isLibraryIndexing)
+        // A smart album created, edited, renamed, duplicated or deleted from
+        // any screen — its tile follows (FS-06.08 §3c A1). Only the table of
+        // albums: tile counts move with the asset token above.
+        .task {
+            for await _ in DatabaseChangeSignal.changes(in: dependencies.database, tables: ["smart_albums"]) {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled else { return }
+                if model.dependencies == nil { model.dependencies = dependencies }
+                model.load()
+            }
+        }
+        .alert(
+            String(localized: "Rename Smart Album", comment: "Alert title"),
+            isPresented: Binding(get: { renamingSmartAlbum != nil }, set: { if !$0 { renamingSmartAlbum = nil } }),
+            presenting: renamingSmartAlbum
+        ) { album in
+            TextField(String(localized: "Name", comment: "Rename smart album field"), text: $smartAlbumName)
+            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "Rename", comment: "Rename smart album: confirm")) {
+                do {
+                    try dependencies.smartAlbumStore.rename(id: album.id, to: smartAlbumName)
+                    dependencies.photosAlbumSync.setNeedsSync()
+                } catch {
+                    smartAlbumActionError = error.localizedDescription
+                }
+            }
+        }
+        .alert(
+            String(localized: "Couldn’t Change Smart Album", comment: "Alert title: rename or duplicate failed"),
+            isPresented: Binding(get: { smartAlbumActionError != nil }, set: { if !$0 { smartAlbumActionError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(smartAlbumActionError ?? "")
+        }
         .task {
             dependencies.fileServerCatalog.reload()
             dependencies.serverShortcuts.reload()
@@ -543,7 +582,22 @@ struct AlbumsScreen: View {
                             Button {
                                 editingSmartAlbum = item.album
                             } label: {
-                                Label("Edit", systemImage: "pencil")
+                                Label("Edit", systemImage: "slider.horizontal.3")
+                            }
+                            Button {
+                                smartAlbumName = item.album.name
+                                renamingSmartAlbum = item.album
+                            } label: {
+                                Label(String(localized: "Rename…", comment: "Smart album tile menu"), systemImage: "pencil")
+                            }
+                            Button {
+                                do {
+                                    try dependencies.smartAlbumStore.duplicate(id: item.album.id)
+                                } catch {
+                                    smartAlbumActionError = error.localizedDescription
+                                }
+                            } label: {
+                                Label(String(localized: "Duplicate", comment: "Smart album tile menu"), systemImage: "plus.square.on.square")
                             }
                             Button(role: .destructive) {
                                 let album = item.album

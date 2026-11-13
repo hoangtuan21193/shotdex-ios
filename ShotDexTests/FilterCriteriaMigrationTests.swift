@@ -102,9 +102,15 @@ struct FilterCriteriaMigrationTests {
 
     /// What has no rule is named, so the buttons can say why they are off.
     @Test func conditionsWithoutARuleAreNamed() {
+        // One capture kind saves as *Photo is …* (FS-06.08 §3c); two OR in the
+        // filter, and Unsupported RAW is a verdict with no rule.
         var subtypes = FilterCriteria()
-        subtypes.mediaSubtypes = [PhotoMediaSubtype.allCases[0]]
+        subtypes.mediaSubtypes = [.livePhoto, .hdr]
         #expect(SmartAlbumQuery.migrationGaps(subtypes) == ["Capture Kind"])
+        subtypes.mediaSubtypes = [.unsupportedRAW]
+        #expect(SmartAlbumQuery.migrationGaps(subtypes) == ["Capture Kind"])
+        subtypes.mediaSubtypes = [.livePhoto]
+        #expect(SmartAlbumQuery.migrationGaps(subtypes).isEmpty)
         var twoCameras = FilterCriteria()
         twoCameras.cameraBodies = ["A7 IV", "X-T5"]
         #expect(SmartAlbumQuery.migrationGaps(twoCameras) == ["several cameras"])

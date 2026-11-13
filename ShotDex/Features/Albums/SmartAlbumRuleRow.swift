@@ -23,6 +23,9 @@ struct SmartAlbumRuleRow: View {
     var folderSources: Set<String> = []
     /// Opens the folder browser for the rule's source.
     var onChooseFolder: (() -> Void)?
+    /// Inserts a blank condition right below this one (Photos' **+**,
+    /// FS-06.08 §3c). Nil hides the button.
+    var onAddBelow: (() -> Void)? = nil
     /// Removes this condition from the parent list.
     var onDelete: () -> Void
 
@@ -34,7 +37,7 @@ struct SmartAlbumRuleRow: View {
                     operatorMenu
                 }
                 Spacer(minLength: 0)
-                deleteButton
+                rowButtons
             }
             valueEditor
         }
@@ -63,16 +66,36 @@ struct SmartAlbumRuleRow: View {
         }
     }
 
-    /// Trailing "−" button that removes this whole condition (replaces the old
-    /// swipe-only delete and the value field's suggestion chevron).
-    private var deleteButton: some View {
-        Button(role: .destructive, action: onDelete) {
-            Image(systemName: "minus.circle.fill")
-                .font(.title3)
-                .foregroundStyle(.red)
+    /// Trailing − and +, as on a Photos condition row (FS-06.08 §3c D2): −
+    /// removes this condition, + inserts a blank one right below it. Each
+    /// glyph sits in a 44pt target; the targets touch, the glyphs are 16pt
+    /// apart.
+    private var rowButtons: some View {
+        HStack(spacing: 0) {
+            Button(role: .destructive, action: onDelete) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title2)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .red)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(String(localized: "Remove Condition", comment: "Smart album condition row: the − button"))
+            if let onAddBelow {
+                Button(action: onAddBelow) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .green)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(String(localized: "Add Condition Below", comment: "Smart album condition row: the + button, inserts a condition under this one"))
+            }
         }
-        .buttonStyle(.borderless)
-        .accessibilityLabel("Delete condition")
+        .padding(.trailing, -10)
     }
 
     private func menuToken(_ text: String, emphasized: Bool) -> some View {
@@ -90,23 +113,21 @@ struct SmartAlbumRuleRow: View {
         .foregroundStyle(Color.primary)
     }
 
-    /// Switching field resets the operator to that field's default and clears
-    /// the now-meaningless operands.
+    /// Switching field keeps what still fits — the operator, a number range
+    /// between number fields, text between text fields (FS-06.08 §3c A4) —
+    /// and clears the rest.
     private func selectField(_ field: RuleField) {
         guard field != rule.field else { return }
-        rule.field = field
-        rule.op = field.defaultOperator
-        rule.text = ""
-        rule.number = nil
-        rule.numberUpper = nil
-        rule.boolValue = true
-        rule.focalMode = .actual
-        rule.folder = nil
+        let kept = rule.changingField(to: field)
+        rule = kept
+        guard kept.number == nil, kept.text.isEmpty else { return }
         // "is on" is the default date operator; seed today so the DatePicker's
         // shown date is the committed value (rule valid, Save enabled) instead
         // of a displayed-but-nil date the user must tap to activate.
         // A rating condition is complete from the start, like a date one.
         if field.kind == .rating { rule.number = 4 }
+        // The value a Photo condition is most often about.
+        if field == .photoKind { rule.text = PhotoKind.favorite.rawValue }
         // One server: it is the only answer, so the count shows at once (AC-248).
         if field == .alsoOnServer, servers.count == 1 { rule.text = servers[0].value }
         if field.kind == .date, rule.op == .on {
@@ -305,11 +326,19 @@ struct SmartAlbumRuleRow: View {
     @ViewBuilder
     private var dateEditor: some View {
         switch rule.op {
-        case .inLastDays:
+        case .inLastDays, .notInLast:
+            // N and a unit, as Photos' "is in the last [2] [weeks]" (FS-06.08 §3c).
             HStack(spacing: 8) {
                 numberField("30", text: daysText)
                     .frame(maxWidth: 100)
-                Text("days").foregroundStyle(.secondary)
+                Picker(String(localized: "Unit", comment: "Smart album date condition: the days/weeks/months/years menu"),
+                       selection: Binding(get: { rule.unit ?? .days }, set: { rule.unit = $0 == .days ? nil : $0 })) {
+                    ForEach(DateUnit.allCases) { unit in
+                        Text(unit.label).tag(unit)
+                    }
+                }
+                .pickerStyle(.menu)
+                .fixedSize()
                 Spacer()
             }
         case .on, .before, .after:
