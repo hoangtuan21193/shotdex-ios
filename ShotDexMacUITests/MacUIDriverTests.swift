@@ -249,7 +249,10 @@ final class MacUIDriverTests: XCTestCase {
             }
         }
         guard let frame else { throw DriverError.notFound("\(step.type ?? "any") \(step.label ?? "")") }
-        let window = app.windows.firstMatch
+        // The largest window, not the first: a token field's suggestion
+        // window is a window too, and it is gone by the time the click lands.
+        let window = app.windows.allElementsBoundByIndex.max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
+            ?? app.windows.firstMatch
         let origin = window.frame.origin
         return window.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - origin.x, dy: frame.midY - origin.y))

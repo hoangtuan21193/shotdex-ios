@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// A named set of what every imported photo carries (FS-20 §6): written to
 /// a `.xmp` beside each copy, never into the photo.
@@ -35,6 +36,10 @@ struct IngestSettings: Codable, Equatable, Sendable {
     var backupFolder: ExportFolder?
     var nameTemplate = IngestSettings.dateAndNumber.pattern
     var metadata = IngestMetadataPreset()
+    /// Metadata the user saved under a name, for the Mac inspector's preset
+    /// popup (board `MAC_Ingest`): picking one fills Creator, Copyright and
+    /// Keywords.
+    var metadataPresets: [IngestMetadataPreset] = []
     var ejectsAfterImport = true
 
     /// The default (plan Q6): `{date}_{originalNumber}`.
@@ -54,8 +59,23 @@ struct IngestSettings: Codable, Equatable, Sendable {
         backupFolder = try? container.decodeIfPresent(ExportFolder.self, forKey: .backupFolder)
         nameTemplate = (try? container.decode(String.self, forKey: .nameTemplate)) ?? defaults.nameTemplate
         metadata = (try? container.decode(IngestMetadataPreset.self, forKey: .metadata)) ?? defaults.metadata
+        // One unreadable preset must not take the others with it.
+        // A blank or repeated name could not be told apart in the popup: dropped.
+        var names: Set<String> = []
+        metadataPresets = ((try? container.decode(LossyArray<IngestMetadataPreset>.self, forKey: .metadataPresets))?.elements ?? [])
+            .filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty && names.insert($0.name).inserted }
         ejectsAfterImport = (try? container.decode(Bool.self, forKey: .ejectsAfterImport)) ?? defaults.ejectsAfterImport
     }
 
     var template: FileNameTemplate { FileNameTemplate(nameTemplate) }
+
+    /// The saved preset whose fields are the ones in use, if any.
+    /// The one picked by name first, so two presets with the same fields
+    /// stay two.
+    var matchingMetadataPreset: IngestMetadataPreset? {
+        func same(_ preset: IngestMetadataPreset) -> Bool {
+            preset.creator == metadata.creator && preset.copyright == metadata.copyright && preset.keywords == metadata.keywords
+        }
+        return metadataPresets.first { $0.name == metadata.name && same($0) } ?? metadataPresets.first(where: same)
+    }
 }

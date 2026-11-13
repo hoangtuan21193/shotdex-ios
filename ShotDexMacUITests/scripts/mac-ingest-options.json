@@ -1,0 +1,675 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "ingest",
+    "-ShotDexSlowIngest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "23 new photos",
+   "type": "staticText",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "File Name Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Date and Number",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "None"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-inspector"
+  },
+  {
+   "action": "dump",
+   "name": "01-inspector"
+  },
+  {
+   "action": "assertExists",
+   "label": "Example: 2026-09-27_5880.HIF",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "File Name Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Original Name",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Example: IMG_5880.HIF",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Insert Time",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Example: IMG_5880090000.HIF",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "File Name Template",
+   "type": "textField"
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "_Kyoto"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Example: IMG_5880090000_Kyoto.HIF",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "File Name Preset",
+   "text": "Custom"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-custom-name"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "File Name Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Date and Number",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Example: 2026-09-27_5880.HIF",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "typeText",
+   "label": "Creator",
+   "text": "Linh Pham"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Add Keyword",
+   "text": "Kyoto"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "Add Keyword",
+   "text": "autumn,"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Keyword Kyoto",
+   "type": "button"
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Keyword autumn",
+   "type": "button"
+  },
+  {
+   "action": "assertValue",
+   "label": "Metadata Preset",
+   "text": "Custom"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Save as Preset…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "waitFor",
+   "label": "Save Metadata Preset",
+   "seconds": 5
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Linh"
+  },
+  {
+   "action": "click",
+   "label": "action-button-1",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Metadata Preset",
+   "text": "Linh"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-metadata"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "None"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Keyword Kyoto",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Linh",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Remove Keyword Kyoto",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "Remove Keyword autumn",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "Remove Keyword autumn",
+   "type": "button"
+  },
+  {
+   "action": "assertValue",
+   "label": "Metadata Preset",
+   "text": "Custom"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Linh",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Delete “Linh”",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Metadata Preset",
+   "text": "Custom"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata Preset",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "None"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Also copy to a backup drive",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Back Up Here",
+   "type": "button",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "04-backup-panel"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "Also copy to a backup drive",
+   "text": "0"
+  },
+  {
+   "action": "click",
+   "label": "Also copy to a backup drive",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Back Up Here",
+   "type": "button",
+   "seconds": 5
+  },
+  {
+   "action": "key",
+   "text": "g",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "/private/tmp/claude-501/-Users-hoangtuan-Project-shotdex-ios/3cb42d2b-000e-46ff-bc8a-0e80aae0bf34/scratchpad/ingest-backup"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertValue",
+   "label": "Also copy to a backup drive",
+   "text": "1"
+  },
+  {
+   "action": "assertExists",
+   "label": "23 photos · 74.3 MB",
+   "type": "staticText",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "04c-backup-chosen"
+  },
+  {
+   "action": "click",
+   "label": "Also copy to a backup drive",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Metadata",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Destination",
+   "type": "popUpButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "New Folder…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Import Here",
+   "type": "button",
+   "seconds": 5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04b-after-new-folder-cancel"
+  },
+  {
+   "action": "click",
+   "label": "List"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-list"
+  },
+  {
+   "action": "dump",
+   "name": "05-list"
+  },
+  {
+   "action": "click",
+   "label": "IMG_5881.HIF",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Import 22 Photos",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "IMG_5881.HIF",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Grid"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-grid"
+  }
+ ]
+}

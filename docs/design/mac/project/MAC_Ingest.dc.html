@@ -46,7 +46,7 @@ input{font-family:inherit}
 <span style="font-size:15px;font-weight:600;color:{{s.color}}">{{s.title}}</span><span style="font-size:13px;color:{{t.label2}}">{{s.place}}</span></div>
 <span style="font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.count}}</span>
 </div>
-<sc-if value="{{s.open}}" hint-placeholder-val="{{true}}"><div style="display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:2px">
+<sc-if value="{{s.openGrid}}" hint-placeholder-val="{{true}}"><div style="display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:2px">
 <sc-for list="{{s.tiles}}" as="p" hint-placeholder-count="12"><div aria-label="{{p.label}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
 <div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
 <div style="position:absolute;right:6px;top:6px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:10px;font-weight:600;line-height:16px">{{p.ft}}</div>
@@ -56,6 +56,16 @@ input{font-family:inherit}
 <sc-if value="{{p.done}}" hint-placeholder-val="{{false}}"><span style="flex:none;height:16px;padding:0 6px 0 4px;border-radius:8px;background:rgba(0,0,0,0.6);display:flex;align-items:center;gap:3px;line-height:16px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Imported</span></sc-if>
 <sc-if value="{{p.new}}" hint-placeholder-val="{{true}}"><span style="flex:1;min-width:0;text-align:right;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{p.name}}</span></sc-if>
 </div>
+</div></sc-for>
+</div></sc-if>
+<sc-if value="{{s.openList}}" hint-placeholder-val="{{false}}"><div role="list" style="display:flex;flex-direction:column">
+<sc-for list="{{s.tiles}}" as="p" hint-placeholder-count="12"><div role="listitem" aria-label="{{p.label}}" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 8px;border-bottom:1px solid {{t.sep}};font-size:12px;font-variant-numeric:tabular-nums;color:{{p.rowFg}}">
+<span style="width:18px;display:flex;justify-content:center"><sc-if value="{{p.new}}" hint-placeholder-val="{{true}}"><label style="display:flex"><input type="checkbox" checked="{{p.on}}" aria-label="Import {{p.name}}" style="position:absolute;opacity:0;width:1px;height:1px;margin:0"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;background:{{p.rowCbBg}};border:{{p.rowCbBorder}};color:{{t.onAccentFill}};display:flex;align-items:center;justify-content:center"><sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span></label></sc-if><sc-if value="{{p.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+<span aria-hidden="true" style="width:32px;height:32px;border-radius:4px;background:{{p.bg}};opacity:{{p.op}};flex:none"></span>
+<span style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.name}}</span>
+<span style="width:70px;text-align:right">{{p.time}}</span>
+<span style="width:44px">{{p.ft}}</span>
+<span style="width:80px;text-align:right">{{p.size}}</span>
 </div></sc-for>
 </div></sc-if>
 </div>
@@ -116,7 +126,7 @@ input{font-family:inherit}
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Back" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><button aria-label="Forward" disabled style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></div>
 <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">Import from Card</div><div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">EOS_DIGITAL · Canon EOS R6 Mark II · 1,046 items</div></div>
 <div style="flex:1"></div>
-<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Grid" aria-pressed="true" style="width:36px;height:32px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="false" style="width:36px;height:32px;border-radius:15px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button></div>
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Grid" aria-pressed="{{gridOn}}" style="width:36px;height:32px;border-radius:15px;border:none;background:{{gridBg}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="{{listOn}}" style="width:36px;height:32px;border-radius:15px;border:none;background:{{listBg}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button></div>
 <div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Hide Inspector" aria-pressed="true" style="width:36px;height:32px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div>
 <button aria-label="Import 811 Photos" style="height:36px;border-radius:18px;background:{{t.accentFill}};border:1px solid {{t.accentFill}};box-shadow:{{t.glassShadow}};display:flex;align-items:center;gap:6px;padding:0 14px;color:{{t.onAccentFill}};font-size:13px;font-weight:600;white-space:nowrap;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11 M8 11l4 4 4-4 M5 14v6h14v-6"></path></svg>Import 811 Photos</button>
 </div>
@@ -157,7 +167,7 @@ input{font-family:inherit}
 </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"list":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -366,12 +376,17 @@ class Component extends DCLogic {
       for (let i = 0; i < n; i++) {
         const num = start + i; const ft = (i % 5) === 3 ? 'HIF' : 'CR3'; const name = 'IMG_' + num + '.' + ft;
         const done = !!o.done; const on = !done && (o.off || []).indexOf(i) < 0;
-        out.push({ name, ft, bg: tile((seed + i) * 5 + 3), op: done ? '0.45' : '1', done, new: !done, on,
+        const mins = (start * 3 + i * 3) % 600; const time = (9 + Math.floor(mins / 60)) + ':' + String(mins % 60).padStart(2, '0');
+        const size = ft === 'CR3' ? (24 + (i * 7) % 9) + '.' + (i % 10) + ' MB' : (6 + (i * 3) % 4) + '.' + ((i * 7) % 10) + ' MB';
+        out.push({ name, ft, bg: tile((seed + i) * 5 + 3), op: done ? '0.45' : '1', done, new: !done, on, time, size: done ? 'Imported' : size,
+          rowFg: done ? t.label2 : t.label, rowCbBg: on ? t.accentFill : 'transparent', rowCbBorder: on ? 'none' : '1px solid ' + t.checkboxStroke,
           cbBg: on ? t.accentFill : 'rgba(0,0,0,0.30)', cbBorder: on ? 'none' : '1.5px solid #FFFFFF',
           label: name + (done ? ', already imported, skipped' : (on ? ', will be imported' : ', will not be imported')) });
       }
       return out; };
+    const list = !!this.props.list;
     const sec = (title, place, count, tl, o) => { o = o || {}; return { title, place, count, tiles: tl, open: !o.collapsed,
+      openGrid: !o.collapsed && !list, openList: !o.collapsed && list,
       collapsed: !!o.collapsed, color: o.collapsed ? t.label2 : t.label }; };
     const sections = [
       sec('Sunday, September 27', 'Nara', '228 already imported', [], {collapsed:true}),
@@ -381,6 +396,7 @@ class Component extends DCLogic {
     ];
     const e = edges(dark);
     return { t, S: k.S, groups, foot: IDLE_FOOT, sections, edge: e.edge, edgeClear: e.edgeClear,
+      gridOn: String(!list), listOn: String(list), gridBg: list ? 'none' : t.pressed, listBg: list ? t.pressed : 'none',
       inserts: ['Original Name', 'Original Number', 'Date', 'Time', 'Camera', 'Lens', 'Sequence', 'Text'],
       keywords: ['Kyoto', 'autumn'] };
   }

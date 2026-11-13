@@ -47,12 +47,24 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
     /// `{sequence}` is three digits, four from a batch of 1,000, and so on.
     static func sequenceWidth(count: Int) -> Int { max(3, String(max(0, count)).count) }
 
-    private enum Segment: Equatable {
+    /// A run of the user's own text, or a token: what a token field shows
+    /// as plain text and chips (the Mac import inspector, FS-20 §6).
+    enum Segment: Equatable, Sendable {
         case literal(String)
         case token(Token)
     }
 
-    private var segments: [Segment] {
+    /// The template from its segments, as a token field hands them back.
+    init(segments: [Segment]) {
+        self.pattern = segments.map { segment in
+            switch segment {
+            case .literal(let text): text
+            case .token(let token): token.placeholder
+            }
+        }.joined()
+    }
+
+    var segments: [Segment] {
         var result: [Segment] = []
         var literal = ""
         var rest = Substring(pattern)

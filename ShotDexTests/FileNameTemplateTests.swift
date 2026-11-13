@@ -14,6 +14,29 @@ import Testing
         FileNameTemplate(pattern).baseName(for: values, sequence: sequence, sequenceWidth: width, timeZone: Self.utc)
     }
 
+    /// The Mac import inspector's token field (FS-20 AC-32): a pattern
+    /// comes apart into chips and text and goes back together unchanged,
+    /// and a token typed in braces is a chip.
+    @Test func segmentsRoundTrip() {
+        let template = FileNameTemplate("{date}_Kyoto_{originalNumber}{time}")
+        #expect(template.segments == [.token(.date), .literal("_Kyoto_"), .token(.originalNumber), .token(.time)])
+        #expect(FileNameTemplate(segments: template.segments) == template)
+        #expect(FileNameTemplate(segments: [.literal("_"), .literal("Kyoto")]).pattern == "_Kyoto")
+        #expect(FileNameTemplate("{nope}_{date").segments == [.literal("{nope}_{date")])
+    }
+
+    /// Saved metadata presets decode one by one (FS-20 §11): one that will
+    /// not decode is dropped, the rest survive.
+    @Test func metadataPresetsDecodeLossily() throws {
+        let json = #"{"metadataPresets":[{"name":"Linh","creator":"Linh Pham","copyright":"","keywords":["Kyoto"]},{"name":7}],"backsUp":true}"#
+        let settings = try JSONDecoder().decode(IngestSettings.self, from: Data(json.utf8))
+        #expect(settings.metadataPresets.map(\.name) == ["Linh"])
+        #expect(settings.backsUp)
+        var picked = settings
+        picked.metadata = settings.metadataPresets[0]
+        #expect(picked.matchingMetadataPreset?.name == "Linh")
+    }
+
     @Test func everyToken() {
         #expect(name("{original}") == "DSCF1000")
         #expect(name("{date}") == "2026-09-20")

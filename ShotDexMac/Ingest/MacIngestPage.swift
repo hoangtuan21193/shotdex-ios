@@ -50,6 +50,8 @@ private struct MacIngestContent: View {
     @State private var asksStop = false
     /// The scroll view's width, measured: tiles get a fixed side from it.
     @State private var rowWidth: CGFloat = 0
+    /// Grid or List (board `MAC_Ingest`'s toolbar), kept for next time.
+    @AppStorage("macIngestShowsList") private var showsList = false
 
     var body: some View {
         content
@@ -169,7 +171,7 @@ private struct MacIngestContent: View {
             // that grow and shrink as days fold sent the scroll view's
             // layout round in a loop.
             LazyVStack(alignment: .leading, spacing: 1) {
-                ForEach(MacIngestRow.rows(days, opened: openedDays)) { row in
+                ForEach(MacIngestRow.rows(days, opened: openedDays, asList: showsList)) { row in
                     switch row {
                     case .folded(let day):
                         MacIngestFoldedDay(day: day) { openedDays.insert(day.date) }
@@ -179,6 +181,11 @@ private struct MacIngestContent: View {
                         }
                     case .tiles(_, let items):
                         MacIngestTileRow(model: model, items: items, side: tileSide)
+                    case .line(let item):
+                        MacIngestListRow(item: item, root: model.root,
+                                         isImported: model.imported.contains(item.id),
+                                         isChecked: model.selection.checked.contains(item.id),
+                                         isLocked: model.isRunning) { model.toggle(item) }
                     }
                 }
             }
@@ -198,6 +205,13 @@ private struct MacIngestContent: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        // Two icon buttons in one capsule, the shown one pressed (board `MAC_Ingest`).
+        ToolbarItemGroup(placement: .primaryAction) {
+            viewButton(String(localized: "Grid", comment: "Mac Import from Card: show the card's photos as tiles"),
+                       symbol: "square.grid.2x2", isList: false)
+            viewButton(String(localized: "List", comment: "Mac Import from Card: show the card's photos as rows"),
+                       symbol: "list.bullet", isList: true)
+        }
         ToolbarItem(placement: .primaryAction) {
             Button { showsInspector.toggle() } label: {
                 Label(showsInspector ? String(localized: "Hide Inspector", comment: "Mac toolbar")
@@ -206,7 +220,11 @@ private struct MacIngestContent: View {
             }
         }
         ToolbarItem(placement: .primaryAction) {
-            Button(action: model.startImport) {
+            Button {
+                // A keyword typed but not yet added goes with this run.
+                NotificationCenter.default.post(name: .macIngestCommitFields, object: nil)
+                model.startImport()
+            } label: {
                 Label(IngestCopy.importButton(count: model.checkedCount), systemImage: "square.and.arrow.down")
                     .labelStyle(.titleAndIcon)
             }
@@ -217,9 +235,26 @@ private struct MacIngestContent: View {
         }
     }
 
+    private func viewButton(_ title: String, symbol: String, isList: Bool) -> some View {
+        Button { showsList = isList } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 14))
+                .frame(width: 36, height: 28)
+                .background(showsList == isList ? MacTheme.pressed : Color.clear, in: RoundedRectangle(cornerRadius: 14))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(title)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(isList ? "ingest.list" : "ingest.grid")
+        .accessibilityAddTraits(showsList == isList ? .isSelected : [])
+    }
+
     private var subtitle: String {
         var parts = [model.card.name]
         parts.append(String(localized: "\(model.items.count) items", comment: "Mac Import from Card subtitle: photos and videos on the card"))
+        // With the inspector closed, why Import is off is said here.
+        if !showsInspector, !model.isRunning, let reason = readiness?.footer { parts.append(reason) }
         return parts.joined(separator: " · ")
     }
 
@@ -241,6 +276,8 @@ private struct MacIngestContent: View {
         let bytes: Int64
         let destination: String?
         let backsUp: Bool
+        /// The backup folder chosen after the box was ticked: Import may now go.
+        let backupFolder: UUID?
         let phase: Bool
         let isDestinationConnected: Bool
 
@@ -251,9 +288,15 @@ private struct MacIngestContent: View {
             bytes = model.checkedBytes
             destination = model.settings.destinationSourceId
             backsUp = model.settings.backsUp
+            backupFolder = model.settings.backupFolder?.id
             phase = model.isRunning
         }
     }
+}
+
+extension Notification.Name {
+    /// Import is about to start: fields typed but not committed are taken.
+    static let macIngestCommitFields = Notification.Name("ShotDexMacIngestCommitFields")
 }
 
 extension MacIngestPage {
@@ -395,8 +438,12 @@ enum MacIngestRow: Identifiable {
     case folded(IngestStatus.Day)
     case header(IngestStatus.Day)
     case tiles(id: String, [CardItem])
+    /// One photo in List.
+    case line(CardItem)
 
     static let columns = 6
+    /// A List row's height: fixed, like every row here.
+    static let lineHeight: CGFloat = 40
     /// A day's title line, from the row above to its baseline area.
     static let headerHeight: CGFloat = 40
 
@@ -405,10 +452,11 @@ enum MacIngestRow: Identifiable {
         case .folded(let day): "folded-\(day.date.timeIntervalSince1970)"
         case .header(let day): "header-\(day.date.timeIntervalSince1970)"
         case .tiles(let id, _): id
+        case .line(let item): "line-" + item.id
         }
     }
 
-    static func rows(_ days: [IngestStatus.Day], opened: Set<Date>) -> [MacIngestRow] {
+    static func rows(_ days: [IngestStatus.Day], opened: Set<Date>, asList: Bool = false) -> [MacIngestRow] {
         var rows: [MacIngestRow] = []
         for day in days {
             if day.isFullyImported, !opened.contains(day.date) {
@@ -416,6 +464,10 @@ enum MacIngestRow: Identifiable {
                 continue
             }
             rows.append(.header(day))
+            if asList {
+                rows += day.items.map(MacIngestRow.line)
+                continue
+            }
             var start = 0
             while start < day.items.count {
                 let slice = Array(day.items[start..<min(start + columns, day.items.count)])
@@ -446,6 +498,93 @@ private struct MacIngestTileRow: View {
                 Color.clear.frame(width: side, height: side)
             }
         }
+    }
+}
+
+/// A photo in List: tick, preview, name (and its RAW+JPEG or WAV
+/// partner), time, type and size — or Imported.
+private struct MacIngestListRow: View {
+    let item: CardItem
+    let root: URL
+    let isImported: Bool
+    let isChecked: Bool
+    let isLocked: Bool
+    let toggle: () -> Void
+    @State private var image: CGImage?
+
+    var body: some View {
+        Button { if !isImported && !isLocked { toggle() } } label: {
+            HStack(spacing: 10) {
+                Group {
+                    if isImported {
+                        Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                    } else {
+                        MacIngestCheckbox(isChecked: isChecked, onPhoto: false)
+                    }
+                }
+                .frame(width: 18)
+                Color.clear
+                    .frame(width: 32, height: 32)
+                    .overlay {
+                        if let image { Image(decorative: image, scale: 2).resizable().scaledToFill() } else { MacTheme.fill }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                Text(names)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(item.date.map { $0.formatted(date: .omitted, time: .shortened) } ?? "")
+                    .frame(width: 70, alignment: .trailing)
+                Text(item.primary.pathExtension.uppercased())
+                    .frame(width: 44, alignment: .leading)
+                Text(isImported ? String(localized: "Imported", comment: "Mac Import from Card: a tile already imported")
+                                : IngestCopy.bytes(item.byteCount))
+                    .frame(width: 80, alignment: .trailing)
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(isImported ? Color.secondary : Color.primary)
+            .monospacedDigit()
+            .padding(.horizontal, 8)
+            .frame(height: MacIngestRow.lineHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) { Divider().padding(.leading, 70) }
+        .accessibilityLabel(item.primary.name)
+        .accessibilityValue(isImported ? String(localized: "Imported", comment: "Mac Import from Card: a tile already imported")
+                            : isChecked ? String(localized: "Checked", comment: "Mac Import from Card: a ticked tile")
+                            : String(localized: "Not checked", comment: "Mac Import from Card: an unticked tile"))
+        .task(id: item.id) {
+            image = await MacCardThumbnails.shared.image(for: item.primary.path, on: root)
+        }
+    }
+
+    /// `IMG_5884.CR3 + JPG`.
+    private var names: String {
+        let partners = item.files.dropFirst().map { $0.pathExtension.uppercased() }
+        return partners.isEmpty ? item.primary.name : item.primary.name + " + " + partners.joined(separator: ", ")
+    }
+}
+
+/// The tick on a tile and on a List row: the accent box when checked; on
+/// a photo an outlined box over a scrim, on a row a plain outline.
+private struct MacIngestCheckbox: View {
+    let isChecked: Bool
+    let onPhoto: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isChecked ? MacTheme.accent : (onPhoto ? Color.black.opacity(0.2) : Color.clear))
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(isChecked ? Color.clear : (onPhoto ? Color.white : MacTheme.checkboxStroke), lineWidth: onPhoto ? 1.5 : 1)
+            if isChecked {
+                Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+            }
+        }
+        .frame(width: onPhoto ? 18 : 14, height: onPhoto ? 18 : 14)
+        .accessibilityHidden(true)
     }
 }
 
@@ -507,18 +646,7 @@ private struct MacIngestTile: View {
 
     @ViewBuilder
     private var mark: some View {
-        if !isImported {
-            ZStack {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isChecked ? MacTheme.accent : Color.black.opacity(0.2))
-                RoundedRectangle(cornerRadius: 4)
-                    .strokeBorder(isChecked ? Color.clear : Color.white, lineWidth: 1.5)
-                if isChecked {
-                    Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
-                }
-            }
-            .frame(width: 18, height: 18)
-        }
+        if !isImported { MacIngestCheckbox(isChecked: isChecked, onPhoto: true) }
     }
 
     /// `CR3`, `HIF`: the primary file's type; a RAW + JPEG pair says the RAW.

@@ -117,7 +117,7 @@ final class ExportFolderStore {
 
     /// The row's words for a picked URL: a drive by its volume name, a
     /// provider by its service, as the cloud folders name them (FS-17.05).
-    static func folder(for url: URL) throws -> ExportFolder {
+    nonisolated static func folder(for url: URL) throws -> ExportFolder {
         let bookmark = try url.bookmarkData()
         let keys: Set<URLResourceKey> = [.volumeNameKey, .volumeUUIDStringKey, .volumeIsInternalKey, .volumeIsRemovableKey]
         let values = try? url.resourceValues(forKeys: keys)

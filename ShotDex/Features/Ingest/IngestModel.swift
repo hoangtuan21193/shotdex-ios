@@ -43,8 +43,27 @@ final class IngestModel {
     private(set) var imported: Set<String> = []
     var selection = IngestSelection(items: [], imported: [])
     var segment: Segment = .new
+    /// Saved a moment after the last change, not on every keystroke in the
+    /// name and metadata fields; a run saves what it starts with at once.
     var settings: IngestSettings {
-        didSet { IngestSettingsStore.save(settings) }
+        didSet { scheduleSave() }
+    }
+    @ObservationIgnored private var saveTask: Task<Void, Never>?
+
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, let self else { return }
+            IngestSettingsStore.save(self.settings)
+        }
+    }
+
+    /// Writes the settings now (FS-20 §6: remembered for next time).
+    func saveSettings() {
+        saveTask?.cancel()
+        saveTask = nil
+        IngestSettingsStore.save(settings)
     }
     private(set) var progress = IngestProgress()
     private(set) var isPaused = false
@@ -191,7 +210,8 @@ final class IngestModel {
     var backupRoot: URL? {
         guard settings.backsUp, let folder = settings.backupFolder else { return nil }
         var isStale = false
-        guard let url = try? URL(resolvingBookmarkData: folder.bookmark, bookmarkDataIsStale: &isStale) else { return nil }
+        // Security-scoped on the Mac: a plain bookmark resolves after a relaunch but cannot be written to.
+        guard let url = try? SourceBookmark.resolve(folder.bookmark, isStale: &isStale) else { return nil }
         _ = url.startAccessingSecurityScopedResource()
         return (try? url.checkResourceIsReachable()) == true ? url : nil
     }
@@ -201,7 +221,8 @@ final class IngestModel {
             IngestReadiness.Drive(name: source.name, isConnected: destinationRoot != nil,
                                   freeBytes: destinationRoot.flatMap { DiskSpace.availableBytes(for: $0) })
         }
-        let backupDrive: IngestReadiness.Drive? = settings.backsUp ? {
+        // Ticked with no folder yet (its panel is open): nothing to check until one is chosen.
+        let backupDrive: IngestReadiness.Drive? = settings.backsUp && settings.backupFolder != nil ? {
             let root = backupRoot
             return .init(name: settings.backupFolder?.place.isEmpty == false ? settings.backupFolder!.place : (settings.backupFolder?.name ?? ""),
                          isConnected: root != nil, freeBytes: root.flatMap { DiskSpace.availableBytes(for: $0) })
@@ -227,6 +248,7 @@ final class IngestModel {
 
     /// Import N Photos (FS-20 §7).
     func startImport() {
+        saveSettings()
         let ids = selection.checked
         guard readiness.canImport, !ids.isEmpty else { return }
         run(ids: ids, freshPlan: true)

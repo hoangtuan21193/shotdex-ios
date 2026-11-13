@@ -159,7 +159,25 @@ Màn `MAC_Ingest` là một trang trong cửa sổ chính (không mở cửa s�
 - **Eject sau import** chạy ở `MacIngestCards` (cả khi người dùng đã rời trang), chỉ khi mọi bản đã kiểm; dừng hash nền
   trước; không eject khi bất kỳ mẻ nào đang đọc. Toast “Imported N photos. X ejected.” hoặc lỗi eject.
 - Hàng thẻ trong sidebar: % khi chạy, nút ⏏ khi eject được.
-- Chưa làm (26b): Backup, File Names, Metadata, Grid/List, New Folder… trong Destination. Tiến độ đầy đủ: hàng 27.
+- **Inspector, phần còn lại (row 26b, 2026-11-13)** — theo board, từ trên xuống:
+  - **Destination** popup có mục cuối **New Folder…**: bảng chọn thư mục (tạo được thư mục mới, nút *Import Here*);
+    thư mục chọn thành nguồn mới (FS-19, đọc như Add Folder) và thành đích. Thư mục trùng/chồng nguồn có sẵn: toast lý
+    do, đích không đổi.
+  - **Backup**: ô **Also copy to a backup drive**; bật khi chưa có thư mục → mở bảng chọn ngay (huỷ → ô tắt lại). Popup
+    đích backup (`LaCie Backup › Card Backups`, mục **Choose Folder…**). Dòng phụ *Copied and verified the same way. Not
+    added to the library.*; ổ backup rút → dòng đỏ *X isn't connected. Connect it or turn off the backup.* và Import mờ (§6).
+  - **File Names**: popup preset (Date and Number · Original Name · Date + Original; **Custom** khi mẫu tự gõ) + ô mẫu
+    kiểu token field: token là chip, chữ tự gõ là chữ thường giữa chip; xoá chip bằng Delete. Dưới ô: 8 chip của AC-25,
+    bấm = thêm token vào cuối (Text thêm `_Text`). `Example: 2026-10-03_Kyoto_6123.CR3` theo ảnh tick đầu tiên.
+  - **Metadata**: popup preset (**None** xoá ba ô · các preset đã lưu · **Save as Preset…** hỏi tên · **Delete “X”** khi
+    ba ô đang đúng một preset · **Custom** khi ba ô có chữ mà không khớp preset nào). Creator, Copyright (ô chữ), Keywords
+    (chip có ×, gõ rồi Return hoặc dấu phẩy để thêm, không thêm trùng). Dòng phụ về `.xmp` (ShotDex không sửa nội dung file).
+  - **Grid / List** trên toolbar: List là một dòng 40pt mỗi ảnh — ô tick (Imported: dấu ✓ xám, không tick được), ảnh nhỏ,
+    tên (`IMG_5884.CR3 + JPG` khi có cặp), giờ chụp, loại, dung lượng hoặc *Imported*; ngày và ngày gập như Grid. Nhớ
+    lựa chọn sang lần sau.
+  - Mọi lựa chọn trên (trừ Grid/List, lưu riêng) nằm trong `IngestSettings`, nhớ sang lần sau như §6; preset metadata đã
+    lưu đọc lỏng (một preset hỏng không làm mất các preset khác).
+- Tiến độ đầy đủ: hàng 27.
 
 Kiểm: `ShotDexMacUITests/scripts/mac-ingest.json` (demo `-ShotDexSection ingest -ShotDexSlowIngest`: thẻ giả 23 ảnh
 HIF trong thư mục tạm, nguồn đích “T7 RAW Archive”).
