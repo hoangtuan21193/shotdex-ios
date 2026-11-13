@@ -1,0 +1,79 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "s1-empty"
+  },
+  {
+   "action": "dump",
+   "name": "s1-empty"
+  },
+  {
+   "action": "typeText",
+   "label": "",
+   "type": "searchField",
+   "index": 0,
+   "text": "iso"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "s2-typing"
+  },
+  {
+   "action": "dump",
+   "name": "s2-typing"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.1
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "s3-token"
+  },
+  {
+   "action": "dump",
+   "name": "s3-token"
+  },
+  {
+   "action": "tap",
+   "label": "Open in Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "s4-library"
+  },
+  {
+   "action": "dump",
+   "name": "s4-library"
+  }
+ ]
+}

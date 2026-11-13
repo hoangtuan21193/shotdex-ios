@@ -210,7 +210,7 @@ struct RootTabView: View {
                     if let libraryModel {
                         SearchTab(
                             model: libraryModel,
-                            service: dependencies.searchService,
+                            dependencies: dependencies,
                             onApply: { navigation.selectedTab = .library },
                             onAdvanced: { navigation.openAdvancedSearch() }
                         )
@@ -407,7 +407,7 @@ struct RootTabView: View {
                 if let libraryModel {
                     SearchSheet(
                         model: libraryModel,
-                        service: dependencies.searchService
+                        dependencies: dependencies
                     ) {
                         isSearchPresented = false
                         navigation.openAdvancedSearch()
@@ -533,21 +533,21 @@ private struct SearchFieldFocus: ViewModifier {
 }
 
 /// iOS 26 search tab content: the `.search`-role tab anchors the search
-/// field to the bottom edge (Music-app style). Applying a query jumps to
-/// the Library tab with the search criteria set.
+/// field to the bottom edge (Music-app style). Results show here, under the
+/// suggestions, as the user types (FS-01.03c §4); *Open in Library* jumps to
+/// the Library tab with the search applied.
 @available(iOS 26.0, *)
 struct SearchTab: View {
     @Environment(AppNavigation.self) private var navigation
 
     let model: LibraryModel
-    let service: SearchService
     var onApply: () -> Void
     /// Opens the advanced-search sheet. Presented by the root tab view (not here):
     /// a `.sheet` attached inside a `.search`-role tab's searchable scope is
     /// swallowed and never appears.
     var onAdvanced: () -> Void
 
-    @State private var query = ""
+    @State private var session: SearchSession
     /// Presents the field. Without it the tab opens with the field idle and the
     /// first tap does nothing but focus it — the search screen appears not to work.
     @State private var isFieldActive = false
@@ -555,11 +555,22 @@ struct SearchTab: View {
     /// keyboard, which is the same complaint from the user's side.
     @FocusState private var isFieldFocused: Bool
 
+    init(model: LibraryModel, dependencies: AppDependencies, onApply: @escaping () -> Void, onAdvanced: @escaping () -> Void) {
+        self.model = model
+        self.onApply = onApply
+        self.onAdvanced = onAdvanced
+        _session = State(initialValue: SearchSession(
+            index: dependencies.searchIndex,
+            library: dependencies.libraryQueries,
+            service: dependencies.searchService
+        ))
+    }
+
     var body: some View {
+        @Bindable var session = session
         SearchSuggestionsScreen(
-            query: $query,
+            session: session,
             model: model,
-            service: service,
             onApplied: onApply,
             // Advanced Search sits inside the search field, so the title row does not
             // repeat it. On this tier that costs a ghost copy of the icon in the
@@ -574,15 +585,21 @@ struct SearchTab: View {
         // Attached beside `.searchable`, not inside the content: the keyboard's
         // Search key is delivered to the view that owns the search field, and a
         // submit that reaches nothing is how a search box comes to feel broken.
+        // Tokens: a chosen suggestion sits in the field (FS-01.03c §3).
         .searchable(
-            text: $query,
+            text: $session.text,
+            tokens: $session.tokens,
             isPresented: $isFieldActive,
             prompt: SearchSuggestionsScreen.prompt
-        )
+        ) { token in
+            Label(token.name, systemImage: token.symbol)
+        }
         .searchFocused($isFieldFocused)
+        // The Search key keeps the results on screen and puts the keyboard away;
+        // it no longer leaves the tab (FS-01.03c §4).
         .onSubmit(of: .search) {
-            model.applySearch(query, using: service)
-            onApply()
+            isFieldFocused = false
+            Task { await session.submit() }
         }
         // No toolbar item for Advanced Search here, and no `navigationTitle`: the
         // `.search`-role tab owns the whole bottom row — the slot left of the field
@@ -600,8 +617,8 @@ struct SearchTab: View {
         .onChange(of: navigation.selectedTab) { _, tab in
             guard tab == .search else { return }
             // Leaving the tab empties the field on screen without writing the
-            // binding, so the old text would still be what the Search key submits.
-            query = ""
+            // binding, so the old search would still be what the screen shows.
+            session.reset()
             if isFieldActive {
                 isFieldFocused = true
             } else {
@@ -611,26 +628,35 @@ struct SearchTab: View {
     }
 }
 
-/// Search sheet: query DSL search over the indexed metadata with
-/// autosuggest from known camera and lens names.
+/// Search sheet (before iOS 26): the same search screen as the tab, in a
+/// sheet. *Open in Library* dismisses it with the search applied.
 struct SearchSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let model: LibraryModel
-    let service: SearchService
     /// Dismisses this sheet and opens advanced search on the Library tab.
     var onAdvanced: () -> Void
-    @State private var query = ""
+    @State private var session: SearchSession
     /// Opens the field — and the keyboard — as the sheet appears.
     @State private var isFieldActive = false
     @FocusState private var isFieldFocused: Bool
 
+    init(model: LibraryModel, dependencies: AppDependencies, onAdvanced: @escaping () -> Void) {
+        self.model = model
+        self.onAdvanced = onAdvanced
+        _session = State(initialValue: SearchSession(
+            index: dependencies.searchIndex,
+            library: dependencies.libraryQueries,
+            service: dependencies.searchService
+        ))
+    }
+
     var body: some View {
+        @Bindable var session = session
         NavigationStack {
             SearchSuggestionsScreen(
-                query: $query,
+                session: session,
                 model: model,
-                service: service,
                 onApplied: { dismiss() },
                 onAdvanced: nil
             )
@@ -640,14 +666,17 @@ struct SearchSheet: View {
                 action: onAdvanced
             )
             .searchable(
-                text: $query,
+                text: $session.text,
+                tokens: $session.tokens,
                 isPresented: $isFieldActive,
                 prompt: SearchSuggestionsScreen.prompt
-            )
+            ) { token in
+                Label(token.name, systemImage: token.symbol)
+            }
             .modifier(SearchFieldFocus(isFocused: $isFieldFocused))
             .onSubmit(of: .search) {
-                model.applySearch(query, using: service)
-                dismiss()
+                SearchSuggestionsScreen.dismissKeyboard()
+                Task { await session.submit() }
             }
             // No title, and no Advanced Search item: an active search field takes
             // over this whole bar on this tier, so anything put here is gone exactly

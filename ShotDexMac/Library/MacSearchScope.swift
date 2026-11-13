@@ -85,10 +85,9 @@ struct MacSearchScopeBar: View {
 /// searches, recent ones, and Advanced Search….
 struct MacSearchSuggestions: View {
     let text: String
-    /// Cameras and lenses matching the word being typed, worked out off the
-    /// view when the text changes (`MacSearchSuggestions.matches`).
-    let cameras: [String]
-    let lenses: [String]
+    /// Library values matching what is typed, ranked, with photo counts
+    /// (FS-01.03c §8) — cameras, lenses, places, dates, kinds.
+    let groups: [SearchGroup]
     let smartAlbums: [SmartAlbum]
     let recents: [String]
     /// How the parser reads the text: "Camera Canon EOS R6 · Focal 85mm".
@@ -96,6 +95,8 @@ struct MacSearchSuggestions: View {
     let openSmartAlbum: (SmartAlbum) -> Void
     /// Runs the search for this text (a suggestion is a search, not just a fill).
     let search: (String) -> Void
+    /// A value picked: it becomes a token in the field.
+    let choose: (SearchGroup) -> Void
     let advancedSearch: () -> Void
 
     var body: some View {
@@ -112,17 +113,19 @@ struct MacSearchSuggestions: View {
                 } icon: { Image(systemName: "magnifyingglass") }
             }
         }
-        if !lenses.isEmpty {
-            Section(String(localized: "Lenses", comment: "Mac search suggestions: section")) {
-                ForEach(lenses, id: \.self) { lens in
-                    Button { search(Self.completing(trimmed, with: lens)) } label: { Label(lens, systemImage: "camera.aperture") }
-                }
-            }
-        }
-        if !cameras.isEmpty {
-            Section(String(localized: "Cameras", comment: "Mac search suggestions: section")) {
-                ForEach(cameras, id: \.self) { camera in
-                    Button { search(Self.completing(trimmed, with: camera)) } label: { Label(camera, systemImage: "camera") }
+        if !groups.isEmpty {
+            Section(String(localized: "In Your Library", comment: "Mac search suggestions: library values matching the text")) {
+                ForEach(groups) { group in
+                    Button { choose(group) } label: {
+                        Label {
+                            HStack {
+                                Text(group.name)
+                                Text(group.category.label).foregroundStyle(.secondary)
+                                Spacer()
+                                Text(group.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
+                            }
+                        } icon: { Image(systemName: group.category.symbol) }
+                    }
                 }
             }
         }

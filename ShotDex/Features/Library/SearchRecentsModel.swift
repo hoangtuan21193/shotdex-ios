@@ -65,18 +65,27 @@ final class SearchRecentsModel {
         loadTask?.cancel()
     }
 
+    /// Every stored query at once, on the reader pool (FS-01.03c §7, A4): one
+    /// after another, ten `LIMIT 1` reads were the Search screen's opening
+    /// pause. Order is kept; queries with no results are skipped, so a full
+    /// strip may sit behind a few dead ones.
     private func load() async {
-        var result: [RecentSearchCard] = []
-        // Walks more entries than it shows: the ones with no results are skipped,
-        // so a full strip may sit behind a few dead queries.
-        for entry in store.queries {
-            if result.count == Self.maximumCards { break }
-            if Task.isCancelled { return }
-            guard let assetId = await firstMatch(for: entry) else { continue }
-            result.append(RecentSearchCard(query: entry, assetId: assetId))
+        let entries = store.queries
+        let matches = await withTaskGroup(of: (Int, String?).self) { group in
+            for (offset, entry) in entries.enumerated() {
+                group.addTask { [weak self] in (offset, await self?.firstMatch(for: entry)) }
+            }
+            var found: [Int: String] = [:]
+            for await (offset, assetId) in group {
+                if let assetId { found[offset] = assetId }
+            }
+            return found
         }
         guard !Task.isCancelled else { return }
-        cards = result
+        cards = entries.enumerated()
+            .compactMap { offset, entry in matches[offset].map { RecentSearchCard(query: entry, assetId: $0) } }
+            .prefix(Self.maximumCards)
+            .map { $0 }
     }
 
     private func firstMatch(for text: String) async -> String? {

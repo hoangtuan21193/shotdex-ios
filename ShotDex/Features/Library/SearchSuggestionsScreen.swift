@@ -1,69 +1,48 @@
 import Photos
 import SwiftUI
 
-/// What the search screen shows, the way Photos does it: the screen title and the
-/// recent searches at the top, and a short stack of tappable suggestion capsules
-/// sitting directly above the search field.
+/// The search screen, the way Photos does it (FS-01.03c): with an empty field,
+/// the recent searches and what the library holds; while typing, suggestion
+/// rows with a picture, a kind and a photo count, and the matching photos
+/// right under them. Picking a suggestion makes it a token in the field;
+/// typing more narrows inside it.
 ///
-/// Deliberately not a `List`. A full-width table of rows filled the screen and
-/// read as the primary interface, so the search field looked like a secondary way
-/// in. Here the field is the interface; the capsules hug it from above, at most
-/// five, and each is a complete query. Tapping one searches immediately — so does
-/// the keyboard's Search key, and so does a recent row — and none of them is a step
-/// the others can skip.
+/// One screen for the iOS 26 search tab and the pre-26 sheet. The state lives
+/// in `SearchSession`, which both surfaces bind the field to.
 struct SearchSuggestionsScreen: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @AppStorage(SettingsKeys.gridColumns) private var storedColumns = 3
 
-    @Binding var query: String
+    let session: SearchSession
     let model: LibraryModel
-    let service: SearchService
-    /// Called once a query has been handed to the grid (dismiss, switch tab).
+    /// Called once the search has been taken to Library (switch tab, dismiss).
     var onApplied: () -> Void
     /// Opens advanced search from the title row. Nil where the surface has a free
     /// navigation bar to put it in instead (the pre-26 sheet).
     var onAdvanced: (() -> Void)?
 
-    /// How the parser reads what is typed, as one capsule, together with the query
-    /// it was computed for. Nil when the parser made nothing of it.
-    ///
-    /// The query is kept alongside because the capsule outlives it otherwise: a
-    /// cancelled preview never assigns, and leaving the tab clears the field without
-    /// the screen being rebuilt, so the last query's capsule was still sitting over
-    /// an empty field. Comparing before use makes a stale value harmless.
-    @State private var interpretation: (query: String, capsule: String)?
-
     /// Built on first appearance, because the dependencies come from the
     /// environment and are not available at init.
     @State private var recentsModel: SearchRecentsModel?
-
-    /// What the title row and the Recents strip actually need, and how much
-    /// screen there is once the keyboard has taken its share. Together they say
-    /// how many capsules there is room for — see `suggestionLimit`.
-    @State private var headerBlockHeight: CGFloat = 0
-    @State private var availableHeight: CGFloat = 0
+    @State private var results: SearchResultsModel?
+    @State private var viewerTarget: PhotoViewerTarget?
+    /// Zoom from and back to the tapped tile (FS-02 §8 D5).
+    @State private var viewerLink = PhotoViewerLink()
     /// The Duo's inner display, or anything at least `WideLayout.minimumWidth`
-    /// across: the capsules run in rows instead of a column there — five one
-    /// per line left 650pt empty beside them. The window class, not the width
-    /// alone, because the inner display's own insets leave it under 860.
+    /// across: suggestions in a column beside the results instead of above.
     @State private var isWide = false
     /// Width of the Recents row, for how many cards it shows.
     @State private var recentsWidth: CGFloat = 0
 
     /// Field placeholder.
     static let prompt = "Search your library…"
-
-    /// Photos shows a handful and stops. More than this and the stack starts
-    /// competing with the keyboard for the screen.
-    private static let maximumSuggestions = 5
-
-    /// One capsule plus the gap under it: `.body` text with 11pt of padding above
-    /// and below, and 8pt of `VStack` spacing.
-    private static let capsuleRowHeight: CGFloat = 52
-    /// What `capsuleStack` reserves around itself — its own top padding plus the
-    /// clearance for the floating field drawn over the content.
-    private static let capsuleStackChrome: CGFloat = 76
+    /// Suggestion rows above the results on a phone: the keyboard takes half
+    /// the screen, and the photos are what the search is for (board PH_Search).
+    private static let compactRowsWithResults = 3
+    /// Width of the suggestion column on a wide screen (board DI_Search).
+    private static let wideColumnWidth: CGFloat = 400
 
     var body: some View {
         content
@@ -79,76 +58,68 @@ struct SearchSuggestionsScreen: View {
             return proxy.size.width >= WideLayout.minimumWidth
                 || VideoStudioWindowClass.resolve(window: window, trailingInset: insets.trailing) == .duoInner
         } action: { isWide = $0 }
-        .task(id: query) {
-            interpretation = await interpretationCapsule()
-        }
         .onAppear {
-            query = model.criteria.searchText ?? ""
             model.refreshFilterOptions()
-            service.prepare()
+            session.service.prepare()
             if recentsModel == nil {
                 recentsModel = SearchRecentsModel(
-                    store: service.recentSearches,
-                    service: service,
+                    store: session.service.recentSearches,
+                    service: session.service,
                     libraryQueries: dependencies.libraryQueries
                 )
             }
+            if results == nil { results = SearchResultsModel(dependencies: dependencies) }
             recentsModel?.reload()
         }
+        .task { await session.loadHighlights() }
         // The screen is not rebuilt between visits, so this is what picks up a query
         // that was just run — and drops one whose photos are gone.
-        .onChange(of: service.recentSearches.queries) {
+        .onChange(of: session.service.recentSearches.queries) {
             recentsModel?.reload()
+        }
+        .onChange(of: session.results) { _, rows in
+            results?.update(rows)
+        }
+        .photoViewerCover(item: $viewerTarget, link: viewerLink) { target in
+            if let results {
+                PhotoDetailScreen(
+                    model: results,
+                    currentIndex: results.index(of: target.id) ?? target.startIndex
+                )
+            }
         }
     }
 
-    /// Where the capsules go relative to the rest: they belong against the field,
-    /// which is at the bottom on iOS 26 and at the top before it.
     @ViewBuilder
     private var content: some View {
-        if isFieldAtTop {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                    capsuleStack
-                    recents
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollDismissesKeyboard(.never)
+        if session.hasInput {
+            typingContent
         } else {
-            GeometryReader { proxy in
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        header
-                        recents
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, AppTheme.Spacing.xs)
-                    .measureHeight(into: $headerBlockHeight)
-                    .frame(maxHeight: .infinity, alignment: .top)
-
-                    capsuleStack
-                }
-                .onAppear { availableHeight = proxy.size.height }
-                .onChange(of: proxy.size.height) { _, height in
-                    availableHeight = height
-                }
-            }
+            emptyContent
         }
+    }
+
+    // MARK: Empty field (FS-01.03c §5)
+
+    private var emptyContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                indexingBanner
+                recents
+                libraryHighlights
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, isFieldAtTop ? 4 : AppTheme.Spacing.xs)
+            .padding(.bottom, isFieldAtTop ? 16 : 72)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.never)
     }
 
     /// Drawn here rather than left to `navigationTitle` because both tiers hide the
     /// navigation bar's contents while the search field is active — iOS 26 drops the
-    /// title, and before it the whole bar collapses into the field. The screen lost
-    /// its name, and Advanced Search became unreachable, the moment the user tapped
-    /// in.
-    ///
-    /// Advanced Search rides on this row for the same reason: on iOS 26 the slot
-    /// left of the field belongs to the system (see SearchTab), and before 26 the bar
-    /// it used to live in is gone while searching.
+    /// title, and before it the whole bar collapses into the field.
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Search")
@@ -162,20 +133,33 @@ struct SearchSuggestionsScreen: View {
         .padding(.bottom, 10)
     }
 
-    /// Pre-iOS 26 the field lives in the navigation bar, so the capsules belong
-    /// right under it; on iOS 26 the `.search`-role tab anchors it to the bottom
-    /// edge and the capsules hug it from above.
-    ///
-    /// Except on iPad, where iOS 26 puts the field back in the toolbar at the
-    /// top: bottom-anchoring there left the title alone at the top of a 1376pt
-    /// screen, a 700pt hole, and the capsules floating above the keyboard with
-    /// nothing to hug. The rule is "the capsules go where the field is", so it
-    /// has to read the size class rather than the OS version alone.
+    /// iOS 26 puts the field at the bottom on a phone and draws it over the
+    /// content; elsewhere it sits at the top.
     private var isFieldAtTop: Bool {
         if #available(iOS 26.0, *) { horizontalSizeClass == .regular } else { true }
     }
 
-    // MARK: Recents
+    /// While the library is still being read, results can be missing photos —
+    /// say so rather than let the search look wrong (FS-01.03c §7, A7).
+    @ViewBuilder
+    private var indexingBanner: some View {
+        if let remaining = Self.remainingToIndex(model.indexProgress), remaining > 0 {
+            Label {
+                Text("Reading \(remaining.formatted()) photos — results may be incomplete.")
+            } icon: {
+                ProgressView().controlSize(.small)
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+    }
+
+    static func remainingToIndex(_ progress: IndexProgress?) -> Int? {
+        guard let progress, progress.total > 0 else { return nil }
+        return max(0, progress.total - progress.processed)
+    }
 
     /// Recent queries as picture cards, the way Photos does it: the query written
     /// over the newest photo it finds. A query that no longer finds anything is not
@@ -194,8 +178,7 @@ struct SearchSuggestionsScreen: View {
 
                 // A fixed-column grid rather than an `HStack`: with one or two
                 // recents the cards keep their share of the row instead of
-                // stretching to fill it. Three columns on a phone; more, at
-                // about 150pt each, where the row is wider.
+                // stretching to fill it.
                 let columns = SearchRecentsModel.cardCount(width: recentsWidth, spacing: 12)
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: columns),
@@ -207,126 +190,312 @@ struct SearchSuggestionsScreen: View {
                             photoLibrary: photoLibrary,
                             aspectRatio: columns > SearchRecentsModel.minimumCards ? 3.0 / 2.0 : 1
                         ) {
-                            apply(card.query)
+                            session.text = card.query
                         }
                     }
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { recentsWidth = $0 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 4)
+            .padding(.bottom, 16)
         }
     }
 
-    // MARK: Suggestions
-
-    private var capsuleStack: some View {
-        let layout = isWide
-            ? AnyLayout(KeywordFlowLayout(spacing: 8))
-            : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-        return layout {
-            ForEach(suggestions, id: \.self) { suggestion in
-                capsule(suggestion) { apply(suggestion) }
-            }
-            if suggestions.isEmpty, query.isEmpty, recentsModel?.isEmpty != false {
-                // Nothing indexed yet, so there is no real vocabulary to offer;
-                // examples at least say what the field accepts.
+    /// The biggest cameras, lenses and places and the newest year, as rows
+    /// (board PH_Search, state empty). An empty library gets the example line.
+    @ViewBuilder
+    private var libraryHighlights: some View {
+        if session.highlights.isEmpty {
+            if recentsModel?.isEmpty != false {
                 Text("Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 20)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("In Your Library")
+                    .font(.title3.weight(.semibold))
+                    .padding(.horizontal, 20)
+                let columns = isWide ? 2 : 1
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 24, alignment: .leading), count: columns),
+                    alignment: .leading,
+                    spacing: 0
+                ) {
+                    ForEach(session.highlights) { group in
+                        SearchSuggestionRow(suggestion: .group(group), typed: "", photoLibrary: photoLibrary) {
+                            session.choose(group)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        // Clears the floating search field, which is drawn *over* the content on
-        // iOS 26 rather than inside the safe area — without this the last capsule
-        // sits behind it. The keyboard is already handled: its own safe area lifts
-        // this whole stack, so the capsules ride up with the field like Photos'.
-        .padding(.bottom, isFieldAtTop ? 16 : 64)
     }
 
-    /// Up to five complete queries.
-    ///
-    /// While typing: what the parser understood first — that is the one the user is
-    /// about to run — then names from the library that match. With an empty field:
-    /// the places and cameras the library actually contains, because a suggestion
-    /// that returns nothing is worse than no suggestion.
-    private var suggestions: [String] {
-        var result: [String] = []
-        if let interpretationCapsuleText { result.append(interpretationCapsuleText) }
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            result.append(contentsOf: model.availablePlaces.prefix(3))
-            result.append(contentsOf: model.availableBodies.prefix(2))
+    // MARK: Typing (FS-01.03c §2–§4)
+
+    @ViewBuilder
+    private var typingContent: some View {
+        if isWide {
+            HStack(alignment: .top, spacing: 24) {
+                ScrollView {
+                    suggestionRows(limit: SearchSession.suggestionLimit)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(width: Self.wideColumnWidth)
+                resultsSection
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 20)
+            .padding(.top, 8)
         } else {
-            result.append(contentsOf: model.suggestions(for: trimmed))
+            VStack(alignment: .leading, spacing: 0) {
+                let limit = session.resultCount > 0 ? Self.compactRowsWithResults : SearchSession.suggestionLimit
+                suggestionRows(limit: limit)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                resultsSection
+            }
         }
-        var seen = Set<String>()
-        return result
-            .filter { seen.insert($0.lowercased()).inserted }
-            .prefix(suggestionLimit)
-            .map { $0 }
     }
 
-    /// How many capsules fit under the title and Recents without pushing into
-    /// them.
-    ///
-    /// Five capsules, a Recents card and a keyboard do not all fit on a phone.
-    /// Something has to give, and it is not the Recents card: that card is a
-    /// query the user has already run and is most likely reaching for, and half
-    /// a card reads as a layout bug. Suggestions are the cheap thing to drop —
-    /// each one is a complete query on its own, so four of them work exactly
-    /// like five. Never fewer than one: an empty stack over the field looks like
-    /// the screen failed to load.
-    private var suggestionLimit: Int {
-        // In rows, five capsules take two lines at most: the column's height
-        // arithmetic does not apply.
-        if isWide { return Self.maximumSuggestions }
-        guard availableHeight > 0, headerBlockHeight > 0 else {
-            return Self.maximumSuggestions
+    private func suggestionRows(limit: Int) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(session.suggestions.prefix(limit)) { suggestion in
+                SearchSuggestionRow(suggestion: suggestion, typed: session.trimmedText, photoLibrary: photoLibrary) {
+                    session.choose(suggestion)
+                }
+            }
         }
-        let room = availableHeight - headerBlockHeight - Self.capsuleStackChrome
-        let fits = Int(room / Self.capsuleRowHeight)
-        return min(Self.maximumSuggestions, max(1, fits))
     }
 
-    private func capsule(_ label: String, onTap: @escaping () -> Void) -> some View {
+    @ViewBuilder
+    private var resultsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if session.hasResults, session.resultCount > 0 {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Photos")
+                        .font(.title3.weight(.semibold))
+                    + Text(" · \(session.resultCount.formatted())")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 12)
+                    Button("Open in Library") { openInLibrary() }
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, isWide ? 0 : 20)
+                .padding(.top, 8)
+                resultsGrid
+            } else if session.hasResults {
+                ContentUnavailableView.search(text: session.displayText)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var resultsGrid: some View {
+        if let results {
+            PhotoGridCollectionView(
+                photos: results.items,
+                assetProvider: { _, item in results.asset(for: item.assetId) },
+                sectionMode: .flat,
+                anchorsBottom: false,
+                contentVersion: results.contentGeneration,
+                contentRefreshVersion: results.contentGeneration,
+                jumpToNewestToken: 0,
+                columnCount: Binding(
+                    get: { GridDensity.clamped(storedColumns) + (isWide ? 1 : 0) },
+                    set: { storedColumns = $0 - (isWide ? 1 : 0) }
+                ),
+                isSelecting: false,
+                selectedIds: [],
+                // Clears the floating field iOS 26 draws over a phone's content.
+                bottomInset: isFieldAtTop ? 0 : 72,
+                photoLibrary: photoLibrary,
+                onTap: { flatIndex, item in
+                    session.remember()
+                    viewerTarget = PhotoViewerTarget(id: item.assetId, startIndex: flatIndex)
+                },
+                onLongPress: { _ in },
+                onSwipeEvent: { _ in },
+                onNearEnd: {},
+                onUserScroll: { Self.dismissKeyboard() },
+                removal: results.lastRemoval,
+                viewerLink: viewerLink
+            )
+            .ignoresSafeArea(edges: .bottom)
+        }
+    }
+
+    /// Takes the search to Library, where the condition bar, sort and filter
+    /// work on it as before (FS-01.03c §4).
+    private func openInLibrary() {
+        Task {
+            let query = await session.currentQuery()
+            model.applySearchQuery(query, remembering: session.displayText, using: session.service)
+            onApplied()
+        }
+    }
+
+    static func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+/// One suggestion: the value's newest photo (or a symbol), its name with the
+/// typed part bold, its kind, and how many photos (FS-01.03c §2, board PH_Search).
+struct SearchSuggestionRow: View {
+    let suggestion: SearchSuggestion
+    let typed: String
+    let photoLibrary: PhotoLibraryService
+    var onTap: () -> Void
+
+    private static let thumbnailSide: CGFloat = 40
+    private static let thumbnailPixels: CGFloat = 120
+
+    @State private var image: UIImage?
+    @State private var requestId: PHImageRequestID?
+
+    var body: some View {
         Button(action: onTap) {
-            Text(label)
-                .font(.body)
-                .lineLimit(1)
-                .foregroundStyle(Color(.label))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 11)
-                .background(Color(.secondarySystemFill), in: Capsule())
+            HStack(spacing: 12) {
+                thumbnail
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.body)
+                        .lineLimit(1)
+                        .foregroundStyle(Color(.label))
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if let count {
+                    Text(count.formatted())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
+            .frame(minHeight: 52)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityText)
+        .task(id: keyAssetId) { await load() }
+        .onDisappear(perform: cancel)
     }
 
-    /// The interpretation capsule, but only while it still belongs to what is in the
-    /// field.
-    private var interpretationCapsuleText: String? {
-        guard let interpretation, interpretation.query == query else { return nil }
-        return interpretation.capsule
+    private var group: SearchGroup? {
+        switch suggestion {
+        case .group(let group), .didYouMean(let group): group
+        case .interpretation: nil
+        }
     }
 
-    private func interpretationCapsule() async -> (query: String, capsule: String)? {
-        let asked = query
-        let fragments = await service.preview(asked)
-        guard !fragments.isEmpty else { return nil }
-        // One capsule, not one per fragment: the whole query is what a tap runs, so
-        // several capsules that all do the same thing would only be confusing.
-        return (asked, fragments.joined(separator: " · "))
+    private var keyAssetId: String? { group?.keyAssetId }
+    private var count: Int? { group?.count }
+
+    private var title: AttributedString {
+        switch suggestion {
+        case .interpretation(let text, _):
+            return AttributedString(text)
+        case .didYouMean(let group):
+            return AttributedString(String(localized: "Did you mean \u{201C}\(group.name)\u{201D}?",
+                                           comment: "Search: the nearest library name when nothing matched"))
+        case .group(let group):
+            return Self.highlighted(group.name, typed: typed)
+        }
     }
 
-    private func apply(_ text: String) {
-        // A tapped interpretation capsule reads back as "f > 1.2", which is not
-        // what the user typed — run the query itself.
-        let queryToRun = text == interpretationCapsuleText ? query : text
-        query = queryToRun
-        model.applySearch(queryToRun, using: service)
-        onApplied()
+    private var subtitle: String {
+        switch suggestion {
+        case .interpretation: String(localized: "Search for these conditions", comment: "Search: the row that runs what the parser read")
+        case .group(let group), .didYouMean(let group): group.category.label
+        }
+    }
+
+    private var accessibilityText: String {
+        let name = String(title.characters)
+        guard let count else { return name }
+        return "\(name), \(subtitle), \(count.formatted()) photos"
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(Color(.secondarySystemFill))
+            .frame(width: Self.thumbnailSide, height: Self.thumbnailSide)
+            .overlay {
+                if let image {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var symbol: String {
+        switch suggestion {
+        case .interpretation: "text.magnifyingglass"
+        case .group(let group), .didYouMean(let group): group.category.symbol
+        }
+    }
+
+    /// Bolds the start of every word the typed words begin, the way Photos
+    /// marks what matched.
+    static func highlighted(_ name: String, typed: String) -> AttributedString {
+        var result = AttributedString(name)
+        let typedWords = SearchFolding.words(typed)
+        guard !typedWords.isEmpty else { return result }
+        var searchStart = name.startIndex
+        while searchStart < name.endIndex {
+            guard let wordStart = name[searchStart...].firstIndex(where: { $0.isLetter || $0.isNumber }) else { break }
+            let wordEnd = name[wordStart...].firstIndex(where: { !($0.isLetter || $0.isNumber) }) ?? name.endIndex
+            let word = SearchFolding.fold(String(name[wordStart..<wordEnd]))
+            if let match = typedWords.first(where: { word.hasPrefix($0) }) {
+                let boldEnd = name.index(wordStart, offsetBy: min(match.count, name.distance(from: wordStart, to: wordEnd)))
+                if let lower = AttributedString.Index(wordStart, within: result),
+                   let upper = AttributedString.Index(boldEnd, within: result) {
+                    result[lower..<upper].font = .body.weight(.semibold)
+                }
+            }
+            searchStart = wordEnd
+        }
+        return result
+    }
+
+    private func load() async {
+        cancel()
+        image = nil
+        guard let keyAssetId else { return }
+        let asset = await Task.detached(priority: .userInitiated) {
+            PhotoLibraryService.fetchAssets(ids: [keyAssetId]).first
+        }.value
+        guard let asset, !Task.isCancelled else { return }
+        requestId = photoLibrary.requestThumbnail(
+            for: asset,
+            targetSize: CGSize(width: Self.thumbnailPixels, height: Self.thumbnailPixels),
+            allowNetwork: false
+        ) { result in
+            if let result { image = result }
+        }
+    }
+
+    private func cancel() {
+        if let requestId { photoLibrary.cancelThumbnailRequest(requestId) }
+        requestId = nil
     }
 }
 
@@ -379,15 +548,20 @@ private struct RecentSearchCardView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Search again for \(card.query)")
-        .onAppear(perform: load)
-        .onChange(of: card.assetId) { load() }
+        .task(id: card.assetId) { await load() }
         .onDisappear(perform: cancel)
     }
 
-    private func load() {
+    /// The PhotoKit fetch runs off the main actor (FS-01.03c §7, A4): eight
+    /// cards each fetching on the main thread was a visible hitch on open.
+    private func load() async {
         cancel()
         image = nil
-        guard let asset = PhotoLibraryService.fetchAssets(ids: [card.assetId]).first else { return }
+        let assetId = card.assetId
+        let asset = await Task.detached(priority: .userInitiated) {
+            PhotoLibraryService.fetchAssets(ids: [assetId]).first
+        }.value
+        guard let asset, !Task.isCancelled else { return }
         requestId = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: Self.thumbnailPixels, height: Self.thumbnailPixels),

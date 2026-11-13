@@ -16,8 +16,11 @@ struct MacRootWindow: View {
     /// The scope bar's choice; the library holds its condition, rebuilt when
     /// the sources change.
     @State private var searchScope = MacSearchScope.all
-    @State private var searchCameras: [String] = []
-    @State private var searchLenses: [String] = []
+    /// Library values matching what is typed, with counts inside the tokens
+    /// (FS-01.03c §8).
+    @State private var searchGroups: [SearchGroup] = []
+    /// Suggestions picked into the field.
+    @State private var searchTokens: [SearchToken] = []
     @FocusState private var isSearchFocused: Bool
     /// The grid's rules came from the search field (they share the slot
     /// with Advanced Filter): emptying the field takes them away again.
@@ -1147,10 +1150,12 @@ struct MacRootWindow: View {
                 }                .navigationTitle(placeTitle)
                 .navigationSubtitle(subtitle)
                 .toolbar { toolbar }
-                .searchable(text: $searchText, placement: .toolbar,
+                .searchable(text: $searchText, tokens: $searchTokens, placement: .toolbar,
                             prompt: isLibraryEmpty ? Text("Search", comment: "Mac search field placeholder before any photo")
                                   : isAlbumOpen || isSmartAlbumOpen ? Text("Search Album", comment: "Mac search field placeholder in an album")
-                                                   : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
+                                                   : Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query")) { token in
+                    Label(token.name, systemImage: token.symbol)
+                }
                 // The album's header carries its name (board): no title in the toolbar.
                 .toolbar(removing: isAlbumOpen ? .title : nil)
                 .modifier(MacViewerChrome(isViewing: viewerId != nil, zoom: $viewerZoom))
@@ -1172,21 +1177,30 @@ struct MacRootWindow: View {
                 }
                 .searchFocused($isSearchFocused)
                 .searchSuggestions { searchSuggestions }
-                // The suggestions, a beat after typing stops: the parser's
-                // reading, and the cameras and lenses matching the word being
-                // typed (matched off the main actor; the vocabulary is cached).
-                .task(id: searchText) {
+                // A beat after typing stops (FS-01.03c §8): the parser's reading,
+                // the library values that match — counted inside the tokens —
+                // and the grid searched as it goes, like the iOS search screen.
+                .task(id: MacSearchInput(text: searchText, tokens: searchTokens.map(\.id))) {
                     try? await Task.sleep(for: .milliseconds(150))
                     guard !Task.isCancelled else { return }
-                    let text = searchText
+                    let text = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let tokens = searchTokens
                     let reading = await dependencies.search.preview(text)
-                    let catalog = await dependencies.filterSuggestions.load()
-                    let tails = MacSearchSuggestions.tail(text.trimmingCharacters(in: .newlines))
-                    let (cameras, lenses) = await Task.detached(priority: .userInitiated) {
-                        (MacSearchSuggestions.matches(tails, in: catalog.bodies), MacSearchSuggestions.matches(tails, in: catalog.lenses))
-                    }.value
-                    guard !Task.isCancelled, text == searchText else { return }
-                    (searchReading, searchCameras, searchLenses) = (reading, cameras, lenses)
+                    var groups = text.isEmpty ? [] : ((try? await dependencies.searchIndex.groups(matching: text)) ?? [])
+                    let chosen = Set(tokens.flatMap(\.rules).map { "\($0.field.rawValue)|\($0.text)|\($0.number ?? -1)" })
+                    groups.removeAll { chosen.contains("\($0.rule.field.rawValue)|\($0.rule.text)|\($0.rule.number ?? -1)") }
+                    if !tokens.isEmpty, !groups.isEmpty,
+                       let counts = try? await dependencies.searchIndex.counts(of: groups, within: SmartAlbumQuery(rules: tokens.flatMap(\.rules))) {
+                        groups = groups.map { var scoped = $0; scoped.count = counts[$0.id] ?? 0; return scoped }
+                    }
+                    let ranked = SearchSuggestionRanker.rank(groups, typed: text, limit: 8)
+                    guard !Task.isCancelled else { return }
+                    (searchReading, searchGroups) = (reading, ranked)
+                    guard let library, !text.isEmpty || !tokens.isEmpty else { return }
+                    let query = await dependencies.search.query(tokens: tokens, text: text)
+                    guard !Task.isCancelled else { return }
+                    searchOwnsQuery = true
+                    library.applySearchQuery(query, remembering: "", using: dependencies.search)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .macFocusSearch)) { _ in isSearchFocused = true }
                 .onAppear {
@@ -1198,6 +1212,15 @@ struct MacRootWindow: View {
                 // grid again at once. Parsing runs off the main actor.
                 .onSubmit(of: .search) {
                     searchOwnsQuery = true
+                    guard searchTokens.isEmpty else {
+                        let tokens = searchTokens, text = searchText
+                        let words = (tokens.map(\.name) + [text]).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+                        Task {
+                            let query = await dependencies.search.query(tokens: tokens, text: text)
+                            library?.applySearchQuery(query, remembering: words, using: dependencies.search)
+                        }
+                        return
+                    }
                     library?.applySearch(searchText, using: dependencies.search)
                 }
                 // A Reset (filter bar, popover, empty state) that empties the
@@ -1208,8 +1231,8 @@ struct MacRootWindow: View {
                         searchText = ""
                     }
                 }
-                .onChange(of: searchText) {
-                    guard searchText.trimmingCharacters(in: .whitespaces).isEmpty, let library else { return }
+                .onChange(of: MacSearchInput(text: searchText, tokens: searchTokens.map(\.id))) {
+                    guard searchText.trimmingCharacters(in: .whitespaces).isEmpty, searchTokens.isEmpty, let library else { return }
                     library.applySearch("", using: dependencies.search)
                     // Clearing a search clears its scope too: back to the whole grid.
                     if searchOwnsQuery {
@@ -1661,7 +1684,7 @@ struct MacRootWindow: View {
     /// Save as Smart Album….
     /// The suggestions under the search field (board `MAC_Search`).
     private var searchSuggestions: some View {
-        MacSearchSuggestions(text: searchText, cameras: searchCameras, lenses: searchLenses, smartAlbums: smartAlbums,
+        MacSearchSuggestions(text: searchText, groups: searchGroups, smartAlbums: smartAlbums,
                              recents: dependencies.search.recentSearches.queries, reading: searchReading,
                              openSmartAlbum: { album in
                                  searchText = ""
@@ -1669,6 +1692,10 @@ struct MacRootWindow: View {
                                  selection = .smartAlbum(album.id)
                              },
                              search: { runSearch($0) },
+                             choose: { group in
+                                 searchTokens.append(SearchToken(group: group))
+                                 searchText = ""
+                             },
                              advancedSearch: { showsAdvancedFilter = true })
     }
 
@@ -2179,4 +2206,10 @@ private struct MacUploadAgainTaker: ViewModifier {
         dependencies.uploads.againRequest = nil
         uploadRequest = request
     }
+}
+
+/// What the Mac search field holds, as one value a task can key on.
+struct MacSearchInput: Equatable {
+    var text: String
+    var tokens: [UUID]
 }

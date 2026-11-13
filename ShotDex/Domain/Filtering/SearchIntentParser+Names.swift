@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 extension SearchIntentParser {
     /// Words that carry no condition — the glue of a sentence. Dropped rather than
@@ -35,11 +36,12 @@ extension SearchIntentParser {
         }
         guard !candidates.isEmpty else { return ([], []) }
 
-        let places = index(vocabulary.places)
-        let bodies = index(vocabulary.bodies)
-        let lenses = index(vocabulary.lenses)
-        let brands = index(vocabulary.brands)
-        let keywords = index(vocabulary.keywords.map(\.keyword))
+        let tables = nameTables(for: vocabulary)
+        let places = tables.places
+        let bodies = tables.bodies
+        let lenses = tables.lenses
+        let brands = tables.brands
+        let keywords = tables.keywords
 
         var rules: [SmartAlbumRule] = []
         var unmatched: [String] = []
@@ -72,6 +74,35 @@ extension SearchIntentParser {
             }
         }
         return (rules, unmatched)
+    }
+
+    /// The folded lookup tables of one catalog.
+    struct NameTables: Sendable {
+        var places: [String: String]
+        var bodies: [String: String]
+        var lenses: [String: String]
+        var brands: [String: String]
+        var keywords: [String: String]
+    }
+
+    /// The last catalog's tables. Folding every place, camera and lens name
+    /// was most of a keystroke's cost at 55,000 photos (FS-01.03c §7, A3);
+    /// the catalog changes after an index run, not between keystrokes.
+    private static let nameTableCache = OSAllocatedUnfairLock<(revision: UUID, tables: NameTables)?>(initialState: nil)
+
+    static func nameTables(for vocabulary: FilterSuggestionCatalog) -> NameTables {
+        if let cached = nameTableCache.withLock({ $0 }), cached.revision == vocabulary.revision {
+            return cached.tables
+        }
+        let tables = NameTables(
+            places: index(vocabulary.places),
+            bodies: index(vocabulary.bodies),
+            lenses: index(vocabulary.lenses),
+            brands: index(vocabulary.brands),
+            keywords: index(vocabulary.keywords.map(\.keyword))
+        )
+        nameTableCache.withLock { $0 = (vocabulary.revision, tables) }
+        return tables
     }
 
     /// Folded form → the spelling to put in the rule, so a chip shows "Fukuoka"

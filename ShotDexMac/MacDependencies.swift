@@ -17,6 +17,9 @@ final class MacDependencies: LibraryServices {
     /// Typed queries to grid state (FS-18.02 §4): the parser, then free
     /// text. AI search is a later version on the Mac (FS-18.04 §3).
     let search: SearchService
+    /// The value index the search field suggests from (FS-01.03c §8).
+    let searchIndex: SearchIndexQueries
+    let searchIndexer: SearchIndexer
     let indexPipeline: IndexPipeline
     let placeIndexPass: PlaceIndexPass
     /// Photos' captions and keywords mirrored into the index (FS-02.07 §8),
@@ -155,6 +158,10 @@ final class MacDependencies: LibraryServices {
         self.libraryQueries = libraryQueries
         filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
         search = SearchService(filterSuggestions: filterSuggestions, recentSearches: RecentSearchStore())
+        searchIndex = SearchIndexQueries(database: database)
+        let searchIndexer = SearchIndexer(database: database)
+        searchIndexer.start()
+        self.searchIndexer = searchIndexer
         let placeStore = PlaceStore(database: database)
         placeIndexPass = PlaceIndexPass(store: placeStore, geocoder: PlaceGeocodingService(store: placeStore))
         unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))

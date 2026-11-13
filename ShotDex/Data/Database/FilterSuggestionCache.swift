@@ -4,17 +4,22 @@ import Foundation
 /// The DISTINCT scans run on this actor once, then every input surface reuses
 /// the immutable catalog until an index run explicitly refreshes it.
 struct FilterSuggestionCatalog: Sendable {
-    var brands: [String]
-    var bodies: [String]
-    var lenses: [String]
+    /// Changes whenever any list does, so the search parser can build its
+    /// lookup tables once per catalog instead of on every keystroke
+    /// (FS-01.03c §7, A3).
+    private(set) var revision = UUID()
+
+    var brands: [String] { didSet { revision = UUID() } }
+    var bodies: [String] { didSet { revision = UUID() } }
+    var lenses: [String] { didSet { revision = UUID() } }
     /// Reverse-geocoded place names present in the library, most-photographed
     /// first. Also the vocabulary that lets the search parser recognise "fukuoka"
     /// as a place without guessing from the shape of the word.
-    var places: [String]
+    var places: [String] { didSet { revision = UUID() } }
     /// Photos keywords on indexed photos, most photos first (iOS 27; empty
     /// below). Add Keyword suggestions, the Keyword rule's field and the
     /// search parser's keyword vocabulary (FS-02.07 §4, §7).
-    var keywords: [KeywordCount]
+    var keywords: [KeywordCount] { didSet { revision = UUID() } }
 
     init(
         brands: [String] = [], bodies: [String] = [], lenses: [String] = [], places: [String] = [],

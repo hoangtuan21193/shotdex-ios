@@ -92,6 +92,15 @@ final class SearchService {
             .map(\.compactDisplaySummary)
     }
 
+    /// The rules the parser reads in a query, for the suggestion list's
+    /// interpretation row (FS-01.03c §2). Parser only, like `preview`.
+    func interpretationRules(_ rawQuery: String, now: Date = Date()) async -> [SmartAlbumRule] {
+        let trimmed = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 1 else { return [] }
+        let vocabulary = await filterSuggestions.load()
+        return SearchIntentParser.parse(trimmed, vocabulary: vocabulary, now: now).query.validRules
+    }
+
     /// Resolves a query with the parser alone.
     ///
     /// For callers that must not pay for the model: the recents strip resolves
@@ -106,6 +115,24 @@ final class SearchService {
         var query = parsed.query
         query.rules.append(contentsOf: Self.leftoverRules(parsed.leftoverText))
         return Resolution(query: query, searchText: nil)
+    }
+
+    /// The tokens in the field and what the parser reads in the rest, as one
+    /// rule query (FS-01.03c §3) — parser only, so it can run on every
+    /// keystroke. Words nothing understood search like free text, each its own
+    /// `anyText` rule.
+    func query(tokens: [SearchToken], text rawText: String) async -> SmartAlbumQuery {
+        var query = SmartAlbumQuery(matchMode: .all, rules: tokens.flatMap(\.rules))
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return query }
+        let resolution = await resolveLocally(text)
+        if resolution.hasRules {
+            query.rules += resolution.query.rules
+            query.groups += resolution.query.groups
+        } else if let searchText = resolution.searchText {
+            query.rules += Self.leftoverRules(searchText)
+        }
+        return query
     }
 
     /// The words a partly understood search left over, one `anyText` rule

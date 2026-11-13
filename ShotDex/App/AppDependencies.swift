@@ -50,6 +50,10 @@ final class AppDependencies {
     let placeIndexPass: PlaceIndexPass
     let recentSearches: RecentSearchStore
     let searchService: SearchService
+    /// The value index search suggests from (FS-01.03c §1), and what keeps it
+    /// current.
+    let searchIndex: SearchIndexQueries
+    let searchIndexer: SearchIndexer
     let onThisDayNotifications: OnThisDayNotificationService
     let perceptualHashStore: PerceptualHashStore
     let duplicateScanPipeline: DuplicateScanPipeline
@@ -319,6 +323,10 @@ final class AppDependencies {
                 return SearchModelFactory.make(choice: choice, providers: providers, key: aiProviders.key(for:)) { appleSearch }
             }
         )
+        self.searchIndex = SearchIndexQueries(database: database)
+        let searchIndexer = SearchIndexer(database: database)
+        searchIndexer.start()
+        self.searchIndexer = searchIndexer
         self.compressionPresets = CompressionPresetStore()
         let overlayImages = OverlayImageStore()
         self.overlayImages = overlayImages
