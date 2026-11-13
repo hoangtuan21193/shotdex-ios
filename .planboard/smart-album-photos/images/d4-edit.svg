@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="330" fill="#fff"/>
+<text x="20" y="28" font-weight="700">Đề xuất: sửa ngay trong album đang mở</text>
+<rect x="20" y="44" width="380" height="60" rx="12" fill="#F2F2F7"/><text x="34" y="72" font-weight="700">On NAS · Shared</text><circle cx="318" cy="74" r="16" fill="#fff" stroke="#C6C6C8"/><text x="311" y="79">⋯</text><rect x="342" y="58" width="50" height="32" rx="16" fill="#fff" stroke="#C6C6C8"/><text x="348" y="79" font-size="13">Select</text>
+<rect x="220" y="110" width="220" height="180" rx="12" fill="#fff" stroke="#C6C6C8"/>
+<text x="236" y="138">Sửa Smart Album…</text><text x="236" y="166">Đổi tên</text><text x="236" y="194">Nhân bản</text><text x="236" y="222">Sắp xếp / Lọc</text><text x="236" y="266" fill="#FF3B30">Xoá Smart Album</text>
+<text x="470" y="80">Chạm thanh điều kiện</text><text x="470" y="100">"Camera is Sony · 3 điều kiện"</text><text x="470" y="120">→ mở luôn màn sửa</text>
+<text x="470" y="170">Lưu xong: lưới đổi ngay,</text><text x="470" y="190">không phải thoát ra vào lại</text>
+</svg>

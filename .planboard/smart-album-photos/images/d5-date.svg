@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="220" fill="#fff"/>
+<text x="20" y="28" font-weight="700">Hiện nay</text>
+<rect x="20" y="44" width="330" height="44" rx="10" fill="#F2F2F7"/><text x="34" y="72">Date Taken · in last · [30] days</text>
+<text x="410" y="28" font-weight="700">Đề xuất (như Photos)</text>
+<rect x="410" y="44" width="340" height="44" rx="10" fill="#F2F2F7"/><text x="424" y="72">Date Taken · is in the last · [2] [weeks ▾]</text>
+<rect x="410" y="100" width="340" height="44" rx="10" fill="#F2F2F7"/><text x="424" y="128">Date Taken · is not in the last · [1] [years ▾]</text>
+<text x="410" y="176" fill="#6C6C70" font-size="13">Đơn vị: days · weeks · months · years</text>
+</svg>

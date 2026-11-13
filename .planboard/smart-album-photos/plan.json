@@ -1,0 +1,146 @@
+{
+  "title": "Smart Album giống Photos",
+  "context": "Bạn muốn Smart Album của ShotDex dùng mượt như app Photos, không bỏ chức năng nào, chỉ đổi giao diện và logic bên trong.\nClaude đã mổ app Photos 12 trên Mac (nib, bảng chữ, tên class; bằng chứng ở docs/_research/2026-11-13-photos-smart-album-re.md) và đối chiếu với code ShotDex.\nShotDex đã có phần lớn (tên, All/Any, điều kiện, đếm khớp, Keep in Photos). Board này chỉ hỏi những chỗ còn lệch mà bạn sẽ thấy; phần kỹ thuật ở trang cuối.\nMọi thay đổi vẽ lên board 4 thiết bị trước, rồi mới code.",
+  "pages": [
+    {
+      "id": "editor",
+      "title": "Màn soạn điều kiện",
+      "intro": "Sheet tạo / sửa Smart Album trên iPhone, iPad, Duo.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Chỉ có một điều kiện thì có cần hiện chọn All / Any không?",
+          "image": "d1-match.svg",
+          "why": "Với một điều kiện, All hay Any cho cùng kết quả — nút chiếm chỗ và làm người dùng tưởng phải chọn gì đó.",
+          "proposal": "Như Photos: một điều kiện thì chỉ ghi \"Khớp điều kiện sau\"; từ hai điều kiện trở lên mới hiện chọn tất cả / bất kỳ.",
+          "options": [
+            { "id": "hide", "label": "Ẩn khi chỉ một điều kiện (như Photos)", "pros": ["Gọn hơn một hàng", "Không có lựa chọn vô nghĩa"], "cons": ["Nút xuất hiện khi thêm điều kiện thứ hai — hàng trên nhảy nhẹ"], "effort": "S", "recommended": true },
+            { "id": "keep", "label": "Giữ như hiện nay, luôn hiện", "pros": ["Không đổi gì"], "cons": ["Khác Photos", "Thừa một hàng"], "effort": "S" }
+          ],
+          "tech": "Photos: IPXSmartAlbumEditorView.nib có oneOrMoreTabView với hai biến thể \"Match the following condition:\" và \"Match [conjunctionPopUpButton] of the following conditions:\". ShotDex: RuleBuilderSections.swift:112-123 luôn hiện Picker segmented.",
+          "tasks": ["Ẩn Match khi 1 điều kiện — ShotDex/Features/Shared/RuleBuilderSections.swift", "Như vậy trên Mac — ShotDexMac/Albums/MacSmartAlbumEditorSheet.swift"]
+        },
+        {
+          "id": "D2",
+          "title": "Thêm điều kiện mới ở đâu — cuối danh sách hay ngay dưới dòng đang xem?",
+          "image": "d2-add.svg",
+          "why": "Album nhiều điều kiện: điều kiện mới luôn rơi xuống cuối thì phải cuộn tìm; Photos chèn ngay dưới dòng bạn bấm +.",
+          "proposal": "Giữ nút Add Condition cuối danh sách, thêm menu ⋯ trên mỗi dòng: Thêm bên dưới · Nhân đôi · Xoá. Không đặt hai nút −/+ sát nhau trên iPhone.",
+          "options": [
+            { "id": "menu", "label": "Nút cuối + menu ⋯ mỗi dòng", "image": "d2-add.svg", "pros": ["Chèn đúng chỗ như Photos", "Có thêm Nhân đôi (sửa nhanh một điều kiện tương tự)", "Không chiếm chỗ trên dòng hẹp"], "cons": ["Thêm bên dưới cần hai chạm"], "effort": "M", "recommended": true },
+            { "id": "plusminus", "label": "Nút − + trên mỗi dòng, y như Photos Mac", "pros": ["Giống Photos nhất", "Một chạm"], "cons": ["Hai nút 22pt sát nhau trên màn 402pt — dễ bấm nhầm Xoá", "Lặp nút trên mọi dòng"], "effort": "S" },
+            { "id": "end", "label": "Giữ như hiện nay, chỉ thêm ở cuối", "pros": ["Không đổi"], "cons": ["Khác Photos, phải cuộn"], "effort": "S" }
+          ],
+          "tech": "Photos: IPXSmartAlbumConditionRowView.nib có removeButton / addButton, delegate addNewConditionAfterConditionRowViewController:. ShotDex: RuleBuilderSections.swift:173 query.rules.append; SmartAlbumRuleRow.swift:68-76 nút xoá đỏ. Mac giữ −/+ (đã có chỗ, có chuột).",
+          "tasks": ["Menu ⋯ trên dòng, chèn sau / nhân đôi — ShotDex/Features/Albums/SmartAlbumRuleRow.swift", "Mac: nút + chèn sau dòng — ShotDexMac/Albums/MacRuleLine.swift"]
+        },
+        {
+          "id": "D3",
+          "title": "Số ảnh khớp có nên luôn nằm trong tầm mắt khi đang sửa không?",
+          "image": "d3-count.svg",
+          "why": "Hiện số đếm nằm dưới danh sách điều kiện: album 4–5 điều kiện là phải cuộn mới thấy, và chưa có điều kiện hợp lệ thì không có số. Photos đặt dòng \"N items matched\" cố định cạnh nút OK.",
+          "proposal": "Thanh mỏng ở đáy sheet, luôn thấy: \"1.284 ảnh khớp\". Khi đang đếm lại thì giữ số cũ mờ đi chứ không biến mất; chưa có điều kiện thì đếm cả thư viện.",
+          "options": [
+            { "id": "bar", "label": "Thanh đếm cố định ở đáy", "pros": ["Thấy ngay khi đổi điều kiện", "Số không nhấp nháy"], "cons": ["Mất ~44pt chiều cao (Duo 669pt đã thấp)"], "effort": "M", "recommended": true },
+            { "id": "footer", "label": "Giữ dưới danh sách, chỉ sửa cho không biến mất", "pros": ["Không tốn chiều cao"], "cons": ["Vẫn phải cuộn mới thấy"], "effort": "S" }
+          ],
+          "tech": "Photos: statusTextField + PXSmartAlbumResultsCountString \"%ld item(s) matched\", PXSmartAlbumQueryDelegate cập nhật. ShotDex: SmartAlbumEditorSheet.swift:172-184 debounce 300ms, matchCount = nil khi query rỗng. Dòng \"N incomplete condition won't be saved\" và \"Photos not checked yet aren't counted\" chuyển vào thanh này (giữ nguyên chữ).",
+          "tasks": ["Thanh đếm safeAreaInset(edge: .bottom) — ShotDex/Features/Albums/SmartAlbumEditorSheet.swift", "Footer → thanh — ShotDex/Features/Shared/RuleBuilderSections.swift"]
+        }
+      ]
+    },
+    {
+      "id": "album",
+      "title": "Album đang mở",
+      "intro": "Sửa, đổi tên, nhân bản, xoá — và album tự cập nhật.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "Có cho sửa điều kiện ngay trong album đang mở (không phải quay ra tab Albums) không?",
+          "importance": "critical",
+          "image": "d4-edit.svg",
+          "why": "Hiện muốn sửa phải thoát ra, nhấn giữ ô album, chọn Edit; xong vào lại mới thấy kết quả. Photos có Edit Smart Album ngay trong album, lưu xong lưới đổi luôn.",
+          "proposal": "Thêm nút ⋯ cạnh Select: Sửa Smart Album… · Đổi tên · Nhân bản · Xoá. Chạm thanh điều kiện cũng mở màn sửa. Lưu xong lưới và số đếm đổi ngay tại chỗ.",
+          "options": [
+            { "id": "menu", "label": "Nút ⋯ + chạm thanh điều kiện", "pros": ["Như Photos", "Sửa là thấy kết quả ngay"], "cons": ["Thêm một nút trên thanh trên (iPhone đã có Back, Filter, Select)"], "effort": "M", "recommended": true },
+            { "id": "bar", "label": "Chỉ chạm thanh điều kiện để sửa", "pros": ["Không thêm nút"], "cons": ["Khó đoán là bấm được", "Đổi tên / nhân bản / xoá vẫn phải ra ngoài"], "effort": "S" }
+          ],
+          "tech": "Photos: a_editSmartAlbum:, editSmartAlbum:inWindow:completionHandler:, IPXAlbumEditSmartAlbum. ShotDex: SmartAlbumDetailScreen.swift không có edit; SmartAlbumConditionsBar.swift:212-216 popover chỉ đọc; SmartAlbumDetailModel.query là let (:16). Bộ lọc tạm (Filter menu) vẫn ở nút Filter, không gộp vào ⋯.",
+          "tasks": ["Nút ⋯ + sheet sửa — ShotDex/Features/Albums/SmartAlbumDetailScreen.swift", "Thanh điều kiện mở editor — ShotDex/Features/Albums/SmartAlbumConditionsBar.swift", "query thành var, nạp lại khi album đổi — ShotDex/Features/Albums/SmartAlbumDetailModel.swift"]
+        },
+        {
+          "id": "D5",
+          "title": "Thêm Nhân bản và Đổi tên Smart Album (iPhone/iPad/Duo), và Xoá trên Mac?",
+          "image": "d4-edit.svg",
+          "why": "Photos có Duplicate, Rename, Delete cho smart album. ShotDex trên iPhone chỉ đổi tên được qua màn sửa, không nhân bản được; trên Mac không xoá được smart album.",
+          "proposal": "Thêm đủ cả ba. Nhân bản tạo \"<tên> copy\" với cùng điều kiện, Keep in Photos tắt ở bản sao để không đẻ thêm album trong Photos ngoài ý muốn. Xoá vẫn hỏi lại như hiện nay khi album đang giữ trong Photos.",
+          "options": [
+            { "id": "all", "label": "Đủ cả ba, cả ở menu nhấn giữ ô album", "pros": ["Như Photos", "Mac không còn thiếu Xoá"], "cons": ["Menu ô album dài thêm 2 dòng"], "effort": "M", "recommended": true },
+            { "id": "dup", "label": "Chỉ thêm Nhân bản và Xoá trên Mac, Đổi tên vẫn qua màn sửa", "pros": ["Menu gọn"], "cons": ["Đổi tên vẫn mất 3 bước"], "effort": "S" }
+          ],
+          "tech": "Photos: creationRequestForSmartAlbumCopyFromSmartAlbum:, IPXRenameSmartAlbumActionKey, IPXDeleteSmartAlbumsActionFormat. ShotDex: AlbumsScreen.swift:541-563 context menu Pin/Edit/Delete; MacAlbumsScreen.swift:370-375 chỉ Edit. Bản sao Keep in Photos: SmartAlbumPhotosAlbumStore.isOnByDefault = true — bản sao phải ghi đè thành tắt.",
+          "tasks": ["Duplicate/Rename trong AlbumsModel + context menu — ShotDex/Features/Albums/AlbumsModel.swift, AlbumsScreen.swift", "Delete/Duplicate/Rename trên Mac — ShotDexMac/Albums/MacAlbumsScreen.swift", "duplicate() — ShotDex/Data/Database/SmartAlbumStore.swift"]
+        }
+      ]
+    },
+    {
+      "id": "conditions",
+      "title": "Điều kiện",
+      "intro": "Ngày tháng, và có thêm loại điều kiện mới không.",
+      "decisions": [
+        {
+          "id": "D6",
+          "title": "Điều kiện ngày có nên chọn được tuần / tháng / năm và \"không trong … qua\" như Photos?",
+          "image": "d5-date.svg",
+          "why": "Hiện chỉ có \"in last N days\": muốn \"2 năm qua\" phải gõ 730; muốn ảnh cũ hơn 1 năm phải dùng before với một ngày cố định, ngày đó không trôi theo thời gian.",
+          "proposal": "Đổi \"in last N days\" thành \"is in the last N [days|weeks|months|years]\" và thêm \"is not in the last\". Album cũ đang dùng N ngày giữ nguyên nghĩa.",
+          "options": [
+            { "id": "units", "label": "Đơn vị + \"is not in the last\"", "pros": ["Như Photos", "Album \"ảnh cũ hơn 1 năm\" tự trôi"], "cons": ["Thêm một menu đơn vị trên dòng ngày"], "effort": "M", "recommended": true },
+            { "id": "keep", "label": "Giữ chỉ ngày", "pros": ["Không đổi"], "cons": ["Thiếu so với Photos"], "effort": "S" }
+          ],
+          "tech": "Photos: IPXSmartAlbumConditionDateView.nib tab 2 = numberOfUnitTextField + unitPopUp (Days/Weeks/Months/Years); PXSmartAlbumComparatorIsInTheLast / IsNotInTheLast. ShotDex: RuleOperator.inLastDays, SQL SmartAlbumSQLBuilder.swift:142-177. Thêm field unit vào SmartAlbumRule (decode thiếu = days), op notInLast; lịch dùng Calendar (tháng/năm theo lịch, không phải 30/365 ngày). App chưa release: đổi raw value thoải mái.",
+          "tasks": ["unit + notInLast — ShotDex/Core/Models/FilterCriteria.swift", "SQL — ShotDex/Data/Database/SmartAlbumSQLBuilder.swift", "Menu đơn vị — ShotDex/Features/Albums/SmartAlbumRuleRow.swift, ShotDexMac/Albums/MacRuleLine.swift", "Test — ShotDexTests/SmartAlbumOperatorTests.swift"]
+        },
+        {
+          "id": "D7",
+          "title": "Có thêm các loại \"Photo is …\" mà Photos có (edited, hidden, Live, panorama, HDR, screenshot…) trong đợt này không?",
+          "image": "d6-types.svg",
+          "why": "Bạn dặn chỉ đổi giao diện và logic, không phải thêm chức năng. Thêm loại điều kiện mới cần đọc thêm dữ liệu từ thư viện ảnh lúc index — đợt việc khác, dài hơn.",
+          "proposal": "Không làm trong đợt này. Ghi thành một intent riêng để làm sau.",
+          "options": [
+            { "id": "later", "label": "Để sau, ghi intent riêng", "pros": ["Đúng phạm vi bạn dặn", "Không đụng indexer 55.000 ảnh"], "cons": ["Còn thiếu so với Photos"], "effort": "S", "recommended": true },
+            { "id": "now", "label": "Làm luôn những loại thư viện ảnh cho đọc", "pros": ["Gần Photos hơn"], "cons": ["Phải index lại cả thư viện", "Đợt việc dài gấp đôi"], "effort": "L" }
+          ],
+          "tech": "Phần lớn đọc được từ PHAsset.mediaSubtypes / hasAdjustments / isHidden (hidden không đọc qua fetch thường — xem memory PhotoKit). Cần cột mới trong photo_metadata + migration + indexer pass."
+        }
+      ]
+    },
+    {
+      "id": "devices",
+      "title": "Thiết bị",
+      "intro": "Áp dụng ở đâu.",
+      "decisions": [
+        {
+          "id": "D8",
+          "title": "Mac có làm cùng đợt không?",
+          "image": "now-editor.png",
+          "why": "Mac đã có editor kiểu Photos (−/+ trên dòng, nhóm lồng) nhưng thiếu Xoá, Nhân bản, đơn vị ngày. Để Mac lại thì hai bản lệch nhau thêm.",
+          "proposal": "Có: Mac chỉ làm những chỗ còn thiếu (D1, D5, D6, cập nhật sống); giữ bố cục Mac như đang có.",
+          "options": [
+            { "id": "yes", "label": "iPhone, iPad, Duo và Mac", "pros": ["Bốn bản khớp nhau"], "cons": ["Thêm việc build + chụp Mac"], "effort": "M", "recommended": true },
+            { "id": "ios", "label": "Chỉ iPhone, iPad, Duo", "pros": ["Nhanh hơn"], "cons": ["Mac vẫn không xoá được smart album"], "effort": "S" }
+          ],
+          "tech": "Mac views: ShotDexMac/Albums/MacSmartAlbumEditorSheet.swift, MacRuleLine.swift, MacSmartAlbumScreen.swift, MacAlbumsScreen.swift. iPad/Duo dùng chung Swift với iPhone (AdaptiveFormColumns 320pt)."
+        }
+      ]
+    }
+  ],
+  "auto": [
+    { "id": "A1", "title": "Album đang mở tự cập nhật khi dữ liệu đổi", "choice": "Album và số đếm trên ô tự đổi khi ảnh được index, kiểm NAS xong, hay điều kiện vừa lưu — không phải thoát ra vào lại.", "why": "Đó là điều 'mượt như Photos' nghĩa là; không có lựa chọn nào bạn phải đánh đổi.", "tech": "GRDB ValueObservation trên smart_albums (album row) + photo_metadata region, removeDuplicates, throttle ~0.5 s, chạy off-main; thay các reload theo token ở SmartAlbumDetailScreen.swift:112-148 nơi có thể. Giữ loadToken chống kết quả cũ và giữ lưới khi đọc lỗi. AlbumsModel.loadSmartAlbums observe thay vì tính lại theo sự kiện. Đo 55k ảnh: COUNT ~3 s → giữ OnServerLineCache, observation chỉ phát khi bảng thật sự đổi." },
+    { "id": "A2", "title": "Đếm khớp không nhấp nháy", "choice": "Đổi điều kiện thì huỷ lần đếm cũ, giữ số cũ (mờ) tới khi có số mới.", "tech": "Giữ debounce 300 ms, Task huỷ được, matchCount không set nil giữa chừng; query rỗng → count toàn thư viện có PhotoVisibility." },
+    { "id": "A3", "title": "Lưu lỗi thì báo", "choice": "Lưu Smart Album thất bại sẽ hiện thông báo kèm thử lại, không âm thầm đóng sheet.", "tech": "SmartAlbumEditorSheet.swift:196-200 nuốt lỗi upsert; thêm alert." },
+    { "id": "A4", "title": "Đổi dòng điều kiện sang loại khác", "choice": "Đổi loại thì giữ giá trị nếu còn hợp (vd. ISO → Focal Length giữ số), chỉ xoá khi không hợp.", "tech": "SmartAlbumRuleRow.selectField (:95-115) đang reset hết; Photos cũng swap value editor theo type." },
+    { "id": "A5", "title": "Quy trình", "choice": "Viết intent + cập nhật FS-06.08, vẽ board trên 4 canvas (sáng/tối), rồi code mỗi tiêu chí một commit, build, chụp simulator.", "tech": "CLAUDE.md: spec + board có rồi thì code thẳng, /verify cuối. Boards: PH_/IP_/DI_/DC_/MAC_SmartAlbum(Editor)." },
+    { "id": "A6", "title": "Không mất chức năng", "choice": "Giữ nguyên mọi thứ hiện có: 22 loại điều kiện, nhóm lồng, Media Type, Keep in Photos, Also on Server, Original, bộ lọc trong album, sắp xếp, chọn nhiều + mọi thao tác, Save as Smart Album từ tìm kiếm, Spotlight, biểu đồ Thống kê, AI search.", "tech": "Danh sách đầy đủ trong báo cáo map code; test hiện có (SmartAlbum*Tests, AlsoOnServer*, PhotosAlbumSync*) phải xanh." }
+  ]
+}

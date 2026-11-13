@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="340" fill="#fff"/>
+<text x="20" y="28" font-weight="700">Hiện nay: số đếm nằm dưới danh sách</text>
+<rect x="20" y="40" width="330" height="290" rx="14" fill="#F2F2F7"/>
+<rect x="34" y="56" width="302" height="40" rx="8" fill="#fff"/><rect x="34" y="104" width="302" height="40" rx="8" fill="#fff"/><rect x="34" y="152" width="302" height="40" rx="8" fill="#fff"/>
+<text x="40" y="226" fill="#6C6C70" font-size="13">Matches 1,284 photos.  ← cuộn mới thấy;</text><text x="40" y="246" fill="#6C6C70" font-size="13">ẩn khi chưa có điều kiện hợp lệ</text>
+<text x="410" y="28" font-weight="700">Đề xuất: thanh đếm luôn thấy ở đáy</text>
+<rect x="410" y="40" width="330" height="290" rx="14" fill="#F2F2F7"/>
+<rect x="424" y="56" width="302" height="40" rx="8" fill="#fff"/><rect x="424" y="104" width="302" height="40" rx="8" fill="#fff"/><rect x="424" y="152" width="302" height="40" rx="8" fill="#fff"/>
+<rect x="410" y="282" width="330" height="48" fill="#fff" stroke="#C6C6C8"/><text x="426" y="312">1,284 ảnh khớp</text><text x="590" y="312" fill="#8E8E93" font-size="13">đang đếm… giữ số cũ mờ</text>
+</svg>

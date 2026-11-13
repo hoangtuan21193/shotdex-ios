@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="300" fill="#fff"/>
+<text x="20" y="28" font-weight="700">Hiện nay: 1 điều kiện vẫn có All / Any</text>
+<rect x="20" y="44" width="330" height="40" rx="10" fill="#E9E9EB"/><rect x="24" y="48" width="161" height="32" rx="8" fill="#fff"/><text x="90" y="70">All</text><text x="255" y="70">Any</text>
+<text x="20" y="108" fill="#6C6C70" font-size="13">Photos must match every condition below.</text>
+<rect x="20" y="122" width="330" height="44" rx="10" fill="#F2F2F7"/><text x="34" y="150">Camera Model · is · Sony α7 IV</text>
+<text x="410" y="28" font-weight="700">Đề xuất (như Photos)</text>
+<text x="410" y="70">Khớp điều kiện sau:</text>
+<rect x="410" y="122" width="330" height="44" rx="10" fill="#F2F2F7"/><text x="424" y="150">Camera Model · is · Sony α7 IV</text>
+<text x="410" y="200" fill="#C6730E">Thêm điều kiện thứ 2 →</text>
+<text x="410" y="228">Khớp [ tất cả ▾ ] các điều kiện sau:</text>
+<text x="410" y="262" fill="#6C6C70" font-size="13">(Photos: "Match the following condition:" /</text>
+<text x="410" y="282" fill="#6C6C70" font-size="13">"Match [all|any] of the following conditions:")</text>
+</svg>

@@ -107,6 +107,61 @@ tiêu đề kèm **số ảnh khớp** · ô **tên** · **một hàng** loại 
   - Không có thay đổi: vuốt và Cancel đóng ngay, không hỏi. Save không bao giờ hỏi.
   - Ra nền rồi vào lại: thay đổi còn nguyên. Duo inner (compact height): sheet toàn màn, không vuốt được, chỉ có Cancel.
 
+### 3c. Đợt giống Photos (2026-11-13)
+
+Nguồn: [intent](../../_intents/2026-11-13-smart-album-like-photos.md) · bằng chứng
+[Photos 12 RE](../../_research/2026-11-13-photos-smart-album-re.md) · quyết định `.planboard/smart-album-photos`.
+Thay các dòng §3 / §6 mâu thuẫn bên dưới; phần còn lại của §3 giữ nguyên.
+
+**Sheet soạn** (iPhone · iPad · Duo; Mac theo §3c-Mac):
+
+- **Một điều kiện → không có All / Any** (D1): hàng Match chỉ ghi *"Match the following condition"*; từ hai điều
+  kiện (dòng hoặc nhóm) mới có dải All / Any và câu chú thích. Dải loại media vẫn đứng nguyên chỗ.
+- **Mỗi dòng có − và +** (D2), như dòng của Photos: − xoá dòng (vuốt xoá vẫn được), + **chèn một dòng mới ngay dưới
+  dòng đó**, cùng trường với dòng đang bấm, giá trị trống. Hai nút 28pt trong vùng chạm 44pt, cách nhau ≥ 8pt.
+  Nút *Add Condition* cuối danh sách giữ nguyên (thêm vào cuối).
+- **Đổi trường của một dòng giữ giá trị khi còn hợp** (A4): cùng loại số → giữ số và khoảng; cùng loại chữ → giữ chữ;
+  khác loại → về trống. Phép so sánh giữ nếu loại mới có nó.
+- **Thanh đếm ở đáy sheet, luôn thấy** (D3, thay *"số ảnh khớp ngay dưới tiêu đề"* của §3): *"1,284 photos match"*
+  (số ít *"1 photo matches"*), cùng dòng phụ *"N incomplete condition won't be saved."* và *"Photos not checked yet
+  aren't counted."* khi có. Chưa có điều kiện hợp lệ → đếm **cả thư viện** (album rỗng khớp tất cả). Đang đếm lại →
+  **giữ số cũ, mờ 50%** tới khi có số mới (A2), không bao giờ trống. Chân mục Conditions không còn dòng đếm.
+- **Lưu lỗi thì báo** (A3): alert *"Couldn't Save Smart Album"* · *Try Again* · *OK*; sheet không đóng.
+
+**Album đang mở** (D4):
+
+- Thanh trên có nút **⋯** cạnh Select: *Edit Smart Album…* · *Rename…* · *Duplicate* · *Delete Smart Album* (đỏ).
+  Filter / Sort giữ ở nút Filter, không gộp.
+- **Chạm thanh điều kiện** (chip hoặc dòng tóm tắt) mở *Edit Smart Album*; popover chỉ đọc cũ bỏ.
+- **Lưu xong, lưới và số đếm đổi tại chỗ**, tiêu đề đổi theo tên mới; không phải ra vào lại (A1).
+- **Tự cập nhật** (A1): lưới, số đếm trên thanh và trên ô ở Collections đổi khi index ghi ảnh, khi kiểm NAS xong một
+  đợt, khi ảnh bị xoá / thêm — gộp thay đổi trong 0,5 s, chạy ngoài luồng chính; đang cuộn thì không nhảy vị trí.
+
+**Rename / Duplicate / Delete** (D5): cả ở ⋯ trong album lẫn menu nhấn giữ ô (Pin · Edit · Rename · Duplicate · Delete).
+
+- *Rename…* là alert một ô chữ, chặn tên trùng như sheet soạn.
+- *Duplicate* tạo *"<tên> copy"* (*"<tên> copy 2"*… nếu trùng), cùng điều kiện và nhóm, **Keep in Photos tắt** ở bản
+  sao; ô mới hiện ngay trong mục Smart Albums.
+- *Delete* giữ luật hỏi lại hiện có khi album đang giữ trong Photos (FS-06.12).
+
+**Điều kiện ngày** (D6): *is in the last* nhận **N + đơn vị** (days · weeks · months · years); thêm *is not in the
+last* (ảnh cũ hơn mốc đó, cộng ảnh không có ngày thì **không** khớp). Tháng / năm tính theo lịch địa phương
+(*3 months* = cùng ngày ba tháng trước). Album cũ *in the last N* (không có đơn vị) đọc là ngày.
+
+**Điều kiện "Photo"** (D7): trường mới *Photo* · *is* / *is not* · một giá trị:
+favorite · edited · tagged with GPS · RAW · video · Live Photo · burst · panorama · HDR · portrait · screenshot ·
+screen recording · slo-mo · time-lapse · Cinematic · Spatial · animated.
+
+- *edited* = Photos báo ảnh có chỉnh sửa (iOS 15+); *burst* = ảnh thuộc một burst; *tagged with GPS* = có toạ độ;
+  *RAW* dùng cùng bảng đuôi với định dạng RAW; *animated* = GIF; *panorama* gồm pano ShotDex ghép (FS-14 §7).
+- Không có: hidden (ShotDex không thấy ảnh ẩn), selfie, long exposure, ProRes, referenced, unable to upload.
+- Hai dữ liệu mới (*edited*, *burst*) đọc ở lượt nhanh, không đọc file; ảnh index trước bản này được điền dần ở lượt
+  index kế — trong lúc đó chúng không khớp *is* lẫn *is not* của hai giá trị ấy.
+
+**§3c-Mac** (D8): giữ bố cục Mac (−/+ đã có, ⌥ dựng nhóm). Thêm: một điều kiện → không có All / Any; + chèn ngay dưới;
+đơn vị ngày + *is not in the last*; trường *Photo*; *Delete Smart Album* và *Duplicate* trong menu ô và thanh header;
+album đang mở tự cập nhật như iOS.
+
 ## 4. Biên dịch sang truy vấn
 
 Mỗi điều kiện thành một mệnh đề, nối bằng VÀ (khớp tất cả) hoặc HOẶC (khớp bất kỳ). Cùng một bộ dịch được
@@ -132,7 +187,7 @@ chuyển sang điều kiện (chế độ khớp tất cả), để album lưu t
 - **Đóng viewer thì lưới đưa tới ảnh vừa xem** (Q7), cùng luật với Library và On This Day
   ([FS-06.07 §4](07-on-this-day.md)): ô của ảnh cuối cùng trong viewer không thấy trọn thì lưới cuộn, không hoạt
   ảnh, tới khi ô thấy trọn; ô đã thấy trọn thì lưới đứng yên.
-- Giữ lâu trên tile → menu Edit / Delete.
+- Giữ lâu trên tile → menu Pin / Edit / Rename / Duplicate / Delete (§3c).
 - Menu Filter / Sort trên thanh trên, lọc chồng lên điều kiện đã lưu: [FS-06.09](09-album-filter-menu.md). Menu
   này dùng chung với Library nên có cả mục kiểu chụp **Unsupported RAW** ([FS-01.05 §3](../FS-01-library/05-filtering-and-sorting.md)).
 
@@ -163,3 +218,21 @@ Phần cũ (§1, §2 trừ *is missing* / vị trí, §4–§5) **chưa có AC**
 | AC-17 | (C1) như AC-11, trên iPad 1376×1032 | chạm ra ngoài sheet | sheet không đóng; alert *Discard Changes?* hiện | ⚠️ chưa có |
 | AC-18 | (§2b) 5 ảnh sao 1–5, r1 r2 r5 được Pick | album *flag is Pick* + nhóm Any *(rating = 5, rating = 1)* | lưới và câu đếm ra đúng r1, r5; cùng các điều kiện để phẳng dưới All ra 0 | `SmartAlbumGroupTests.groupIsOneConditionOfTheAlbum` |
 | AC-19 | (§2b, §5) JSON có `groups` | giải mã / mã hoá lại; JSON cũ không có `groups`; một nhóm hỏng | khứ hồi bằng nhau; cũ ra 0 nhóm và mã hoá lại không có khoá `groups`; nhóm hỏng rơi một mình | `SmartAlbumGroupTests` (`groupsRoundTripAndOldJSONHasNone`, `unreadableGroupDropsAlone`, `cleanedDropsBlankLinesAndEmptyGroupsButKeepsGroups`, `albumOfOnlyAGroupIsNotEmpty`) |
+| AC-20 | (§3c D1) iPhone 402×874, sheet có 1 điều kiện | thêm điều kiện thứ 2 bằng +, rồi xoá nó bằng − | 1 điều kiện: không có dải All / Any, có chữ *Match the following condition*; 2 điều kiện: dải All / Any hiện; xoá về 1: dải ẩn lại | ⚠️ chưa có — `Tools/ui-drive` + dump |
+| AC-21 | (§3c D2) 3 dòng A, B, C | bấm + trên dòng A | dòng mới nằm giữa A và B, cùng trường với A, giá trị trống; Add Condition vẫn thêm vào cuối | ⚠️ chưa có — test thuần `SmartAlbumQuery.insertRule(after:)` + ui-drive |
+| AC-22 | (§3c D2) mọi thiết bị | dump dòng điều kiện | − và + mỗi cái có khung chạm ≥ 44pt, khoảng giữa ≥ 8pt | ⚠️ chưa có — ui-drive dump |
+| AC-23 | (§3c A4) dòng *ISO in range 100–6400* | đổi trường sang *Focal Length* | phép *is in range* và 100 / 6400 còn nguyên; đổi sang *Lens* thì giá trị trống | ⚠️ chưa có — test thuần |
+| AC-24 | (§3c D3) album 6 điều kiện, iPhone 402×874 và Duo inner 951×669 | mở sheet, cuộn tới cuối | thanh đếm nằm sát đáy, thấy được ở cả đầu và cuối danh sách; chân Conditions không có số | ⚠️ chưa có — ui-drive dump |
+| AC-25 | (§3c D3) sheet mới, chưa điền điều kiện; thư viện 100 ảnh | mở sheet | thanh ghi *100 photos match* | ⚠️ chưa có |
+| AC-26 | (§3c A2) như AC-24 | gõ thêm ký tự vào giá trị | số cũ vẫn hiện (mờ) trong lúc đếm, không lúc nào trống | ⚠️ chưa có — screenshot burst |
+| AC-27 | (§3c A3) database chỉ đọc (DEBUG) | bấm Save | alert *Couldn't Save Smart Album*; sheet còn mở, điều kiện còn nguyên | ⚠️ chưa có |
+| AC-28 | (§3c D4) album *Sony* đang mở, 40 ảnh | ⋯ → Edit Smart Album…, đổi *Sony* thành *Fujifilm* (12 ảnh), Save | sheet đóng, lưới 12 ảnh, thanh điều kiện mới, không rời màn | ⚠️ chưa có — ui-drive |
+| AC-29 | (§3c D4) như AC-28 | chạm chip trên thanh điều kiện | sheet Edit Smart Album mở với điều kiện của album | ⚠️ chưa có |
+| AC-30 | (§3c A1) album *Favorite* đang mở | đánh dấu favorite một ảnh khác trong Photos / viewer | ≤ 2 s sau lưới có thêm ảnh đó, số đếm +1 cả trên thanh lẫn trên ô ở Collections | ⚠️ chưa có |
+| AC-31 | (§3c D5) album *Night* | Duplicate (menu ô) hai lần | có *Night copy* và *Night copy 2*, cùng điều kiện; cả hai Keep in Photos tắt | ⚠️ chưa có — `SmartAlbumStore` test |
+| AC-32 | (§3c D5) album *Night* và *Day* | Rename *Night* thành *day* | bị chặn, báo trùng tên; Rename thành *Late* thì tiêu đề màn và ô đổi ngay | ⚠️ chưa có |
+| AC-33 | (§3c D6) ảnh chụp 10 ngày, 40 ngày, 400 ngày trước | *in the last 1 months*; *in the last 1 years*; *not in the last 1 years* | lần lượt 1 / 2 / 1 ảnh | ⚠️ chưa có — `SmartAlbumOperatorTests` |
+| AC-34 | (§3c D6) JSON cũ `inLastDays` 30, không có đơn vị | giải mã | đọc là 30 ngày; mã hoá lại khứ hồi | ⚠️ chưa có |
+| AC-35 | (§3c D7) mỗi giá trị của trường Photo | hàng mẫu có / không có thuộc tính đó | *is* khớp đúng hàng có, *is not* khớp đúng hàng không có; *edited* / *burst* của hàng chưa đọc (NULL) không khớp cả hai | ⚠️ chưa có — test lặp `allCases` |
+| AC-36 | (§3c D7) index một thư viện demo | xem cột mới | `hasAdjustments`, `burstIdentifier` được ghi ở lượt nhanh; hàng cũ được điền ở lượt kế | ⚠️ chưa có — `DatabaseTests` + IndexPipeline test |
+| AC-37 | (§3c-Mac) Mac | menu ô smart album | có Edit, Rename, Duplicate, Delete Smart Album; Delete hỏi lại khi giữ trong Photos | ⚠️ chưa có — `mac-smartalbum-*.json` |
