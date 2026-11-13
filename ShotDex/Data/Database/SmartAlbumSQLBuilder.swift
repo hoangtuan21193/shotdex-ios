@@ -8,6 +8,13 @@ import GRDB
 /// All column names come from closed `switch`es keyed by `RuleField` — never
 /// from user text — so string-built SQL here carries no injection surface.
 /// Only bound values (`?` placeholders) originate from user input.
+/// The `PHAssetMediaSubtype` bits `PhotoMediaSubtype` does not name, by value
+/// so the builder needs no Photos import.
+enum PHAssetMediaSubtypeBit: Int {
+    case spatial = 1024          // 1 << 10, PHAssetMediaSubtypeSpatialMedia
+    case screenRecording = 524_288 // 1 << 19, PHAssetMediaSubtypeVideoScreenRecording
+}
+
 enum SmartAlbumSQLBuilder {
     /// The rules joined by `AND` (match all) / `OR` (match any), **without** a
     /// leading `WHERE`. An `.any` join with more than one clause is wrapped in
@@ -105,6 +112,13 @@ enum SmartAlbumSQLBuilder {
             case .source:
                 guard !rule.text.isEmpty else { return nil }
                 return sourceClause(rule)
+            case .photoKind:
+                guard let kind = PhotoKind(rawValue: rule.text) else { return nil }
+                switch rule.op {
+                case .isExactly: return photoKindClause(kind, is: true)
+                case .isNot: return photoKindClause(kind, is: false)
+                default: return nil
+                }
             case .original:
                 guard let value = OriginalPresence(rawValue: rule.text) else { return nil }
                 switch rule.op {
@@ -158,10 +172,15 @@ enum SmartAlbumSQLBuilder {
                 let month = CaptureMonth(containing: Date(timeIntervalSince1970: epoch))
                 let (sql, bounds) = month.creationDateCondition()
                 return (sql, bounds.map { $0 as DatabaseValueConvertible })
-            case .inLastDays:
-                guard let days = rule.number, days > 0 else { return nil }
-                let seconds = Int(days.rounded()) * 86_400
-                return ("creationDate >= CAST(strftime('%s','now') AS INTEGER) - ?", [seconds])
+            case .inLastDays, .notInLast:
+                // Calendar units on the local calendar (FS-06.08 §3c): the
+                // cutoff is computed each time the query compiles, so the
+                // album keeps moving with the clock.
+                guard let count = rule.number, count > 0 else { return nil }
+                let cutoff = Int((rule.unit ?? .days).cutoff(count: Int(count.rounded())).timeIntervalSince1970)
+                return rule.op == .inLastDays
+                    ? ("creationDate >= ?", [cutoff])
+                    : ("creationDate < ?", [cutoff])
             case .before:
                 guard let epoch = rule.number else { return nil }
                 return ("creationDate < ?", [Int(epoch)])
@@ -216,6 +235,42 @@ enum SmartAlbumSQLBuilder {
                 : OnServerPresenceSQL.missing(sourceId: rule.text, folder: rule.folder)
             return ("(EXISTS (SELECT 1 FROM sources WHERE id = ? AND kind = 'server') AND \(presence))", [rule.text] + values)
         }
+    }
+
+    /// *Photo is / is not …* (FS-06.08 §3c). A fact not read yet (NULL) matches
+    /// neither answer, the way an unchecked photo matches neither Also on
+    /// Server answer: `NOT` over a NULL test stays NULL.
+    static func photoKindClause(_ kind: PhotoKind, is wanted: Bool) -> (sql: String, values: [DatabaseValueConvertible]) {
+        func bit(_ subtype: PHAssetMediaSubtypeBit) -> String { "(mediaSubtypes & \(subtype.rawValue)) != 0" }
+        let test: String
+        switch kind {
+        case .favorite: test = "isFavorite = 1"
+        case .edited: test = "hasAdjustments = 1"
+        case .burst: test = "isBurst = 1"
+        case .taggedWithGPS:
+            // Never NULL-unknown: no coordinate is a "no".
+            return (wanted ? "latitude IS NOT NULL" : "latitude IS NULL", [])
+        case .video:
+            return ("mediaType \(wanted ? "=" : "<>") ?", [MediaKind.video.storedValue])
+        case .raw, .animated:
+            let type: PhotoFileType = kind == .raw ? .raw : .gif
+            let patterns = type.extensions.map { "%.\($0)" as DatabaseValueConvertible }
+            if wanted {
+                return ("(" + patterns.map { _ in "originalFilename LIKE ? COLLATE NOCASE" }.joined(separator: " OR ") + ")", patterns)
+            }
+            return ("(" + patterns.map { _ in "COALESCE(originalFilename, '') NOT LIKE ? COLLATE NOCASE" }.joined(separator: " AND ") + ")", patterns)
+        case .livePhoto: test = PhotoMediaSubtype.livePhoto.sqlTest
+        case .panorama: test = PhotoMediaSubtype.panorama.sqlTest
+        case .hdr: test = PhotoMediaSubtype.hdr.sqlTest
+        case .portrait: test = PhotoMediaSubtype.portrait.sqlTest
+        case .screenshot: test = PhotoMediaSubtype.screenshot.sqlTest
+        case .slowMotion: test = PhotoMediaSubtype.slowMotion.sqlTest
+        case .timelapse: test = PhotoMediaSubtype.timelapse.sqlTest
+        case .cinematic: test = PhotoMediaSubtype.cinematic.sqlTest
+        case .screenRecording: test = bit(.screenRecording)
+        case .spatial: test = bit(.spatial)
+        }
+        return (wanted ? "(\(test))" : "NOT (\(test))", [])
     }
 
     /// `Source is …`, narrowed to a folder when the rule has one. A server

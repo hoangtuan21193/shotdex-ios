@@ -71,8 +71,9 @@ extension SmartAlbumRule {
                 let shown = op == .isNot ? (state == .onDevice ? OriginalPresence.iCloudOnly : .onDevice) : state
                 return shown.chipTitle
             }
-            // "Video" already names itself, the way a place name does.
-            if field == .mediaType {
+            // "Video" already names itself, the way a place name does — and
+            // so does "Live Photo" or "edited".
+            if field == .mediaType || field == .photoKind {
                 return op == .isNot ? "≠ \(value)" : value
             }
             return op == .isNot
@@ -160,7 +161,9 @@ extension SmartAlbumRule {
         case .on, .inMonth:
             return "date \(displayValue)"
         case .inLastDays:
-            return "last \(Int((number ?? 0).rounded()))d"
+            return "last \(Int((number ?? 0).rounded()))\((unit ?? .days).letter)"
+        case .notInLast:
+            return "older than \(Int((number ?? 0).rounded()))\((unit ?? .days).letter)"
         case .before:
             return "date < \(displayValue)"
         case .after:
@@ -195,6 +198,7 @@ extension SmartAlbumRule {
         case .source: "source"
         case .original: "original"
         case .alsoOnServer: "server"
+        case .photoKind: "photo"
         }
     }
 
@@ -230,6 +234,9 @@ extension SmartAlbumRule {
             if field == .original {
                 return OriginalPresence(rawValue: text)?.label ?? text
             }
+            if field == .photoKind {
+                return PhotoKind(rawValue: text)?.label ?? text
+            }
             return text // sensor-format rawValue is already its display name
         case .number:
             if op.needsUpperBound, let lower = number, let upper = numberUpper {
@@ -238,8 +245,8 @@ extension SmartAlbumRule {
             return number.map(formatNumber) ?? ""
         case .date:
             switch op {
-            case .inLastDays:
-                return "\(Int((number ?? 0).rounded())) days"
+            case .inLastDays, .notInLast:
+                return "\(Int((number ?? 0).rounded())) \((unit ?? .days).label)"
             case .on, .before, .after:
                 return number.map { Self.dateFormatter.string(from: Date(timeIntervalSince1970: $0)) } ?? ""
             case .inMonth:

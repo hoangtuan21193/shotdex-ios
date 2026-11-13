@@ -742,6 +742,30 @@ final class AppDependencies {
         }.value
     }
 
+    /// Fills *edited* and *burst* (FS-06.08 §3c) for rows written before
+    /// those columns existed — off the assets in memory, no files, no EXIF,
+    /// same batches as `backfillMediaSubtypes`.
+    func backfillPhotoKindFacts() async {
+        let store = metadataStore
+        await Task.detached(priority: .utility) {
+            while true {
+                guard let ids = try? store.assetIdsMissingPhotoKindFacts(limit: 2_000),
+                      !ids.isEmpty
+                else { return }
+                var facts: [String: (hasAdjustments: Bool, isBurst: Bool)] = [:]
+                for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+                    facts[asset.localIdentifier] = (asset.hasAdjustments, asset.burstIdentifier != nil)
+                }
+                // Ids PhotoKit no longer knows would be re-selected for ever.
+                for id in ids where facts[id] == nil {
+                    facts[id] = (false, false)
+                }
+                try? store.fillPhotoKindFacts(facts)
+                if ids.count < 2_000 { return }
+            }
+        }.value
+    }
+
     /// Favorite and Photos rating straight off the assets, for the ids that
     /// still exist.
     nonisolated static func liveAssetFacts(_ ids: [String]) -> [String: AssetFacts] {

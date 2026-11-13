@@ -713,6 +713,7 @@ final class AppDatabase: Sendable {
         registerPhotosAlbumSync(&migrator)
         registerCreatorRights(&migrator)
         registerDuplicateFeaturePrints(&migrator)
+        registerPhotoKindFacts(&migrator)
 
         return migrator
     }

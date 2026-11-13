@@ -84,6 +84,15 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     /// wins over it (FS-01.12 §4).
     var rating: Int? = nil
 
+    /// Whether Photos holds an edit for the asset (`PHAsset.hasAdjustments`):
+    /// the smart album's *Photo is edited* (FS-06.08 §3c). Nil = not read yet
+    /// (a row from before the column, until `backfillPhotoKindFacts` reaches
+    /// it) — matches neither *is* nor *is not*.
+    var hasAdjustments: Bool? = nil
+    /// Whether the asset is a frame of a burst (`PHAsset.burstIdentifier` set):
+    /// *Photo is burst*. Nil = not read yet, as above.
+    var isBurst: Bool? = nil
+
     var id: String { assetId }
 
     /// Bump whenever a new build extracts data that older rows lack (a new

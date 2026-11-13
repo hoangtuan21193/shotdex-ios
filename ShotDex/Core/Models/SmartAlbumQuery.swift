@@ -79,6 +79,10 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// id, `folder` narrows it, `boolValue` is Yes / No. An item not checked
     /// yet matches neither answer.
     case alsoOnServer
+    /// What kind of item it is — favorite, edited, Live Photo, panorama,
+    /// burst, screenshot… (`PhotoKind`), Photos' *Photo is …* condition
+    /// (FS-06.08 §3c).
+    case photoKind
 
     var id: String { rawValue }
 
@@ -106,13 +110,14 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .original: String(localized: "Original", comment: "Rule field: whether the photo's original files are on this device or only in iCloud")
         case .alsoOnServer: String(localized: "Also on Server", comment: "Rule field: whether the photo in the library also has an identical copy on a server folder")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
+        case .photoKind: String(localized: "Photo", comment: "Rule field: what kind of item it is — edited, Live Photo, panorama, burst, screenshot…")
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
-        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -145,6 +150,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             SmartAlbumFlagValue.allCases.map { ($0.rawValue, $0.label) }
         case .original:
             OriginalPresence.allCases.map { ($0.rawValue, $0.label) }
+        case .photoKind:
+            PhotoKind.allCases.map { ($0.rawValue, $0.label) }
         default:
             []
         }
@@ -178,7 +185,7 @@ extension RuleFieldKind {
         case .text: [.contains, .doesNotContain, .isExactly, .isNot]
         case .choice: [.isExactly, .isNot]
         case .number: [.equalTo, .greaterThan, .lessThan, .inRange]
-        case .date: [.on, .inMonth, .inLastDays, .before, .after, .inRange]
+        case .date: [.on, .inMonth, .inLastDays, .notInLast, .before, .after, .inRange]
         case .favorite, .server: []
         case .rating: [.atLeast, .equalTo, .atMost]
         case .keyword: [.hasKeyword, .lacksKeyword, .hasAnyKeyword, .hasNoKeywords]
@@ -222,7 +229,12 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
     /// The calendar month of the capture date. `number` holds
     /// `CaptureMonth.anchorDate` (the 15th at noon) of that month.
     case inMonth
+    /// Within the last `number` `unit`s (days when the rule has no unit —
+    /// the raw value is from when days were the only unit).
     case inLastDays
+    /// Older than the last `number` `unit`s (FS-06.08 §3c); undated photos
+    /// do not match.
+    case notInLast
     case before
     case after
     // Rating
@@ -250,6 +262,7 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
         case .on: "is on"
         case .inMonth: "is in"
         case .inLastDays: "is in the last"
+        case .notInLast: "is not in the last"
         case .before: "is before"
         case .after: "is after"
         case .atLeast: "is at least"
@@ -326,6 +339,9 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
     var boolValue: Bool
     /// Which focal-length column `.focalLength` compares against.
     var focalMode: FocalLengthMode
+    /// The unit of `inLastDays` / `notInLast` (FS-06.08 §3c). Nil = days, so
+    /// albums saved before units read the way they were written.
+    var unit: DateUnit?
     /// `.source` on a folder or server source: the folder under the source's
     /// root it is narrowed to, any depth (FS-19.07 §7). Nil or empty = the
     /// whole source.
@@ -340,7 +356,8 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
         numberUpper: Double? = nil,
         boolValue: Bool = true,
         focalMode: FocalLengthMode = .actual,
-        folder: String? = nil
+        folder: String? = nil,
+        unit: DateUnit? = nil
     ) {
         self.id = id
         self.field = field
@@ -351,6 +368,7 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
         self.boolValue = boolValue
         self.focalMode = focalMode
         self.folder = folder
+        self.unit = unit
     }
 
     /// Whether this rule carries enough input to produce a SQL condition.
@@ -365,7 +383,7 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
         case .date:
             switch op {
             case .on, .inMonth: return number != nil
-            case .inLastDays: return (number ?? 0) > 0
+            case .inLastDays, .notInLast: return (number ?? 0) > 0
             case .before, .after: return number != nil
             case .inRange: return number != nil && numberUpper != nil
             default: return false
@@ -527,6 +545,12 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
             rules.append(SmartAlbumRule(field: .mediaType, op: .isExactly, text: kind.rawValue))
         }
 
+        // One capture kind is a *Photo is …* rule (FS-06.08 §3c); several OR
+        // in the filter and stay a gap (`migrationGaps`).
+        if criteria.mediaSubtypes.count == 1, let kind = criteria.mediaSubtypes.first.flatMap(PhotoKind.init(subtype:)) {
+            rules.append(SmartAlbumRule(field: .photoKind, op: .isExactly, text: kind.rawValue))
+        }
+
         if criteria.favoritesOnly {
             rules.append(SmartAlbumRule(field: .favorite, boolValue: true))
         }
@@ -604,7 +628,8 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
     /// than save an album that quietly matches more.
     static func migrationGaps(_ criteria: FilterCriteria) -> [String] {
         var gaps: [String] = []
-        if !criteria.mediaSubtypes.isEmpty {
+        if criteria.mediaSubtypes.count > 1
+            || criteria.mediaSubtypes.contains(where: { PhotoKind(subtype: $0) == nil }) {
             gaps.append(String(localized: "Capture Kind", comment: "A filter condition a smart album cannot save"))
         }
         // Several values OR together in the filter; rules under All would AND them.
@@ -658,4 +683,161 @@ extension SmartAlbumQuery {
     /// Whether a condition reads the original-on-device check (FS-06.10):
     /// a screen showing it keeps the check going while it is open.
     var usesOriginal: Bool { allRules.contains { $0.field == .original } }
+}
+
+
+// MARK: - Units, kinds and row edits (FS-06.08 §3c)
+
+/// The unit of a *is (not) in the last N …* date condition — Photos' Days /
+/// Weeks / Months / Years.
+enum DateUnit: String, Codable, CaseIterable, Identifiable, Sendable {
+    case days, weeks, months, years
+
+    var id: String { rawValue }
+
+    /// Plural label for the unit pop-up ("weeks"), Photos' wording.
+    var label: String {
+        switch self {
+        case .days: String(localized: "days", comment: "Date rule unit: is in the last N days")
+        case .weeks: String(localized: "weeks", comment: "Date rule unit: is in the last N weeks")
+        case .months: String(localized: "months", comment: "Date rule unit: is in the last N months")
+        case .years: String(localized: "years", comment: "Date rule unit: is in the last N years")
+        }
+    }
+
+    /// Chip letter: `last 2w`.
+    var letter: String {
+        switch self {
+        case .days: "d"
+        case .weeks: "w"
+        case .months: "mo"
+        case .years: "y"
+        }
+    }
+
+    /// The instant `count` units before `now`, on the local calendar — three
+    /// months back is the same day three months ago, not 90 days.
+    func cutoff(count: Int, from now: Date = Date(), calendar: Calendar = .current) -> Date {
+        let component: Calendar.Component = switch self {
+        case .days: .day
+        case .weeks: .weekOfYear
+        case .months: .month
+        case .years: .year
+        }
+        return calendar.date(byAdding: component, value: -count, to: now)
+            ?? now.addingTimeInterval(-Double(count) * 86_400)
+    }
+}
+
+/// The values of the *Photo* condition: what PhotoKit can tell about an item,
+/// in Photos' order. Hidden, selfie, long exposure, ProRes, referenced and
+/// "unable to upload" are not here — ShotDex cannot read them (FS-06.08 §3c).
+enum PhotoKind: String, Codable, CaseIterable, Identifiable, Sendable {
+    case favorite
+    case edited
+    case taggedWithGPS
+    case raw
+    case video
+    case livePhoto
+    case burst
+    case panorama
+    case hdr
+    case portrait
+    case screenshot
+    case screenRecording
+    case slowMotion
+    case timelapse
+    case cinematic
+    case spatial
+    case animated
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .favorite: String(localized: "favorite", comment: "Photo rule value: Photo is favorite")
+        case .edited: String(localized: "edited", comment: "Photo rule value: Photo is edited in Photos")
+        case .taggedWithGPS: String(localized: "tagged with GPS", comment: "Photo rule value: Photo has a location")
+        case .raw: "RAW"
+        case .video: String(localized: "video", comment: "Photo rule value: the item is a video")
+        case .livePhoto: String(localized: "Live Photo", comment: "Photo rule value")
+        case .burst: String(localized: "burst", comment: "Photo rule value: a frame of a burst")
+        case .panorama: String(localized: "panorama", comment: "Photo rule value")
+        case .hdr: "HDR"
+        case .portrait: String(localized: "portrait", comment: "Photo rule value: a Portrait mode photo")
+        case .screenshot: String(localized: "screenshot", comment: "Photo rule value")
+        case .screenRecording: String(localized: "screen recording", comment: "Photo rule value")
+        case .slowMotion: String(localized: "slo-mo", comment: "Photo rule value")
+        case .timelapse: String(localized: "time-lapse", comment: "Photo rule value")
+        case .cinematic: String(localized: "Cinematic", comment: "Photo rule value: a Cinematic mode video")
+        case .spatial: String(localized: "Spatial", comment: "Photo rule value: spatial photo or video")
+        case .animated: String(localized: "animated", comment: "Photo rule value: an animated image (GIF)")
+        }
+    }
+}
+
+extension SmartAlbumRule {
+    /// The rule with its field changed, keeping what still fits (FS-06.08 §3c
+    /// A4): the operator when the new field offers it, numbers and ranges
+    /// between number fields, text between text fields. Anything else starts
+    /// blank, as a new row would.
+    func changingField(to newField: RuleField) -> SmartAlbumRule {
+        guard newField != field else { return self }
+        var next = SmartAlbumRule(id: id, field: newField)
+        let sameKind = newField.kind == field.kind
+        if newField.kind.allowedOperators.contains(op) { next.op = op }
+        guard sameKind else { return next }
+        switch newField.kind {
+        case .number, .date, .rating:
+            next.number = number
+            next.numberUpper = numberUpper
+            next.unit = unit
+        case .text, .caption:
+            next.text = text
+        default:
+            break // a choice value belongs to its own field's value set
+        }
+        return next
+    }
+}
+
+extension SmartAlbumQuery {
+    /// Inserts a blank condition right after `id` (Photos' **+** on a row,
+    /// FS-06.08 §3c D2), on the same field as that row; at the end when `id`
+    /// is not a top-level rule. Returns the new rule's id.
+    @discardableResult
+    mutating func insertRule(after id: SmartAlbumRule.ID) -> SmartAlbumRule.ID {
+        guard let index = rules.firstIndex(where: { $0.id == id }) else {
+            let rule = SmartAlbumRule()
+            rules.append(rule)
+            return rule.id
+        }
+        let rule = SmartAlbumRule(field: rules[index].field)
+        rules.insert(rule, at: index + 1)
+        return rule.id
+    }
+
+    /// How many conditions the match mode would join — rows and groups. One
+    /// or none hides All / Any (FS-06.08 §3c D1).
+    func conditionCount(excluding hidden: Set<RuleField> = [.mediaType]) -> Int {
+        rules.filter { !hidden.contains($0.field) }.count + groups.count
+    }
+}
+
+extension PhotoKind {
+    /// The *Photo is …* value a Filter-menu capture kind saves as; nil for
+    /// Unsupported RAW, which is a verdict, not a kind Photos has.
+    init?(subtype: PhotoMediaSubtype) {
+        switch subtype {
+        case .screenshot: self = .screenshot
+        case .livePhoto: self = .livePhoto
+        case .portrait: self = .portrait
+        case .panorama: self = .panorama
+        case .hdr: self = .hdr
+        case .timelapse: self = .timelapse
+        case .slowMotion: self = .slowMotion
+        case .cinematic: self = .cinematic
+        case .unsupportedRAW: return nil
+        }
+    }
 }

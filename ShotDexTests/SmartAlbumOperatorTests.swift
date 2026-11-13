@@ -36,12 +36,12 @@ struct SmartAlbumOperatorTests {
         switch field {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText:
             [.contains, .doesNotContain, .isExactly, .isNot]
-        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original:
+        case .sensorFormat, .fileType, .mediaType, .flag, .source, .original, .photoKind:
             [.isExactly, .isNot]
         case .iso, .aperture, .shutter, .focalLength:
             [.equalTo, .greaterThan, .lessThan, .inRange]
         case .dateTaken:
-            [.on, .inMonth, .inLastDays, .before, .after, .inRange]
+            [.on, .inMonth, .inLastDays, .notInLast, .before, .after, .inRange]
         case .favorite, .alsoOnServer:
             []
         case .rating:

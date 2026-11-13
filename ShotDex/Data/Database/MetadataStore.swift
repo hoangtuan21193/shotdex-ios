@@ -101,7 +101,9 @@ struct MetadataStore: Sendable {
                     width = ?, height = ?, fileSize = ?,
                     originalFilename = COALESCE(?, originalFilename),
                     latitude = ?, longitude = ?, isFavorite = ?,
-                    rating = COALESCE(?, rating)
+                    rating = COALESCE(?, rating),
+                    hasAdjustments = COALESCE(?, hasAdjustments),
+                    isBurst = COALESCE(?, isBurst)
                 WHERE assetId = ?
                 """,
             arguments: [
@@ -111,7 +113,7 @@ struct MetadataStore: Sendable {
                 record.width, record.height, record.fileSize,
                 record.originalFilename,
                 record.latitude, record.longitude, record.isFavorite,
-                record.rating,
+                record.rating, record.hasAdjustments, record.isBurst,
                 record.assetId,
             ]
         )
@@ -359,6 +361,32 @@ struct MetadataStore: Sendable {
                 try db.execute(
                     sql: "UPDATE photo_metadata SET mediaSubtypes = ? WHERE assetId = ?",
                     arguments: [subtypes, assetId]
+                )
+            }
+        }
+    }
+
+    /// Asset ids whose *edited* / *burst* facts have never been read — rows
+    /// written before those columns existed (FS-06.08 §3c).
+    func assetIdsMissingPhotoKindFacts(limit: Int) throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(
+                db,
+                sql: "SELECT assetId FROM photo_metadata WHERE hasAdjustments IS NULL OR isBurst IS NULL LIMIT ?",
+                arguments: [limit]
+            )
+        }
+    }
+
+    /// Fills both facts read straight off `PHAsset` — memory only, like
+    /// `fillMediaSubtypes`.
+    func fillPhotoKindFacts(_ factsById: [String: (hasAdjustments: Bool, isBurst: Bool)]) throws {
+        guard !factsById.isEmpty else { return }
+        try database.writer.write { db in
+            for (assetId, facts) in factsById {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET hasAdjustments = ?, isBurst = ? WHERE assetId = ?",
+                    arguments: [facts.hasAdjustments, facts.isBurst, assetId]
                 )
             }
         }

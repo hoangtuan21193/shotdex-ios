@@ -1363,7 +1363,9 @@ actor IndexPipeline {
             longitude: asset.location?.coordinate.longitude,
             isFavorite: asset.isFavorite,
             originalFilename: originalFilename,
-            rating: asset.photosStarRating
+            rating: asset.photosStarRating,
+            hasAdjustments: asset.hasAdjustments,
+            isBurst: asset.burstIdentifier != nil
         )
     }
 

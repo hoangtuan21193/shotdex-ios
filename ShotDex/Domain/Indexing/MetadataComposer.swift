@@ -87,6 +87,10 @@ struct AssetInfo: Equatable, Sendable {
     /// Photos' star rating (`PHAsset.rating`), iOS 27 and later; nil below
     /// (FS-01.12 §4).
     var rating: Int? = nil
+    /// `PHAsset.hasAdjustments` (FS-06.08 §3c, *Photo is edited*).
+    var hasAdjustments: Bool? = nil
+    /// `PHAsset.burstIdentifier != nil` (*Photo is burst*).
+    var isBurst: Bool? = nil
 }
 
 /// Combines PhotoKit asset info + raw EXIF + domain logic into one
@@ -147,7 +151,9 @@ struct MetadataComposer: Sendable {
             isFavorite: asset.isFavorite,
             indexedAt: Int(now.timeIntervalSince1970),
             exifStatus: (exifStatus == .indexed && exif.isEmpty ? ExifStatus.noExif : exifStatus).rawValue,
-            rating: asset.rating
+            rating: asset.rating,
+            hasAdjustments: asset.hasAdjustments,
+            isBurst: asset.isBurst
         )
     }
 }

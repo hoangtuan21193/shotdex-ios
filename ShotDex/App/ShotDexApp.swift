@@ -141,6 +141,8 @@ struct ShotDexApp: App {
                     await dependencies.lookInbox.drain()
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()
+                    // Edited / burst for the smart album's Photo condition (FS-06.08 §3c).
+                    await dependencies.backfillPhotoKindFacts()
                     // iOS 27: Photos' star ratings into the filter column.
                     await dependencies.backfillRatings()
                     // …and the stars set below iOS 27 move into Photos, once.
