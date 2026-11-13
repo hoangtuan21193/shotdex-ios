@@ -1,0 +1,86 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.76
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Pause"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "r1-paused-shown"
+  },
+  {
+   "action": "dump",
+   "name": "r1-paused-shown"
+  },
+  {
+   "action": "tap",
+   "x": 0.3,
+   "y": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "r2-paused-hidden"
+  },
+  {
+   "action": "dump",
+   "name": "r2-paused-hidden"
+  },
+  {
+   "action": "tap",
+   "x": 0.3,
+   "y": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "r3-paused-shown"
+  },
+  {
+   "action": "dump",
+   "name": "r3-paused-shown"
+  }
+ ]
+}

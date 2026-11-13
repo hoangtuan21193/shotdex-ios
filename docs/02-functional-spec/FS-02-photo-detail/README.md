@@ -95,11 +95,11 @@ Phần cũ chưa có AC — xem [README — Việc còn nợ](../../README.md#6-
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ✅ iPad 26.5 `viewer-chrome-toggle` v1→v2 (2026-11-14) |
-| AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ✅ iPad 26.5 v3→v4 |
-| AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ✅ iPad 26.5 v2→v3 |
+| AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ✅ iPad 26.5 `viewer-chrome-toggle` v1→v2 (2026-11-14); iPhone 26.5 `viewer-chrome-iphone` p1→p2 |
+| AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ✅ iPad 26.5 v3→v4; iPhone p3→p4 |
+| AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ✅ iPad 26.5 v2→v3; iPhone p2→p3 |
 | AC-4 | ảnh | nhấn đúp | phóng ×2,5, chrome không bật lên giữa chừng | ⚠️ ui-drive |
-| AC-5 | video đang phát | chạm 1 lần | video vẫn phát; chrome đảo | ⚠️ ui-drive |
+| AC-5 | video đang phát | chạm 1 lần | video vẫn phát; chrome đảo | ⚠️ một nửa: iPhone 26.5 log cho thấy chạm vào clip đang phát tới `handleContentTap` và hiện lại nút (video vẫn phát); chạm lúc nút đang hiện không đo được bằng XCUITest (đợi app rảnh ~60 s, nút đã tự ẩn) |
 | AC-6 | ảnh iCloud đang tải, chrome ẩn | nhìn góc | vòng tải vẫn hiện | ⚠️ screenshot |
 | AC-7 | giao diện sáng | mở viewer | nền trắng, nút kính đọc được; tối → nền đen | ✅ iPad 26.5 sáng + tối |
 | AC-8 | lưới, ô thứ 30 | chạm ô | ảnh phóng ra từ khung ô (iOS 18+) | ⚠️ screenshot burst |

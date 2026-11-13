@@ -1,0 +1,167 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.48
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "p1-chrome"
+  },
+  {
+   "action": "dump",
+   "name": "p1-chrome"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "p2-hidden"
+  },
+  {
+   "action": "dump",
+   "name": "p2-hidden"
+  },
+  {
+   "action": "swipe",
+   "x": 0.8,
+   "y": 0.5,
+   "direction": "left",
+   "distance": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "p3-hidden-next"
+  },
+  {
+   "action": "dump",
+   "name": "p3-hidden-next"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "p4-shown"
+  },
+  {
+   "action": "dump",
+   "name": "p4-shown"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.4,
+   "direction": "down",
+   "distance": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "p5-closed"
+  },
+  {
+   "action": "dump",
+   "name": "p5-closed"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.76
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "p6-video"
+  },
+  {
+   "action": "dump",
+   "name": "p6-video"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "p7-video-hidden"
+  },
+  {
+   "action": "dump",
+   "name": "p7-video-hidden"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "p8-video-shown"
+  },
+  {
+   "action": "dump",
+   "name": "p8-video-shown"
+  }
+ ]
+}
