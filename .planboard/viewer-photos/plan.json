@@ -1,0 +1,300 @@
+{
+ "title": "Viewer và tải ảnh giống Photos",
+ "context": "Bạn muốn màn xem ảnh và việc tải ảnh của ShotDex mượt như Photos, không bỏ chức năng nào: ví dụ chạm một lần ẩn hết nút chỉ còn ảnh, chạm lần nữa hiện lại; và tìm cách tải ảnh nhanh hơn.\nClaude đã đọc chuỗi trong thư viện hệ thống của Photos (viewer PUBrowsingViewModel / PUOneUpSettings, PXImageRequester, lưới PUPhotosGridViewController). Bằng chứng: docs/_research/2026-11-13-photos-viewer-loading-re.md.\nShotDex hiện: chạm vào ảnh không làm gì (chỉ video), nền luôn đen, mở ảnh bằng trượt từ dưới lên, đóng không đưa lưới về ảnh vừa xem, và có một lỗi làm cache ảnh màn hình bị đẩy ra khi phóng to.\nBoard trang cuối là phần kỹ thuật Claude tự quyết.",
+ "pages": [
+  {
+   "id": "chrome",
+   "title": "Chạm để ẩn nút",
+   "intro": "Ẩn / hiện nút khi chạm vào ảnh.",
+   "decisions": [
+    {
+     "id": "D1",
+     "title": "Khi ẩn nút, ẩn những gì?",
+     "image": "d1-tap.svg",
+     "why": "Ẩn thiếu một thứ (thanh trạng thái, ô thông tin trên cùng, vòng tải iCloud) thì vẫn không phải \"chỉ còn ảnh\".",
+     "proposal": "Như Photos: chạm 1 lần ẩn hết — nút X, ô thông tin, thanh dưới, thanh trạng thái, vạch home — nền chuyển đen. Chạm lần nữa hiện lại. Vòng tải iCloud vẫn hiện nhỏ ở góc khi đang tải (không thì tưởng ảnh treo). Nhấn đúp vẫn phóng to, nên chạm 1 lần chờ ~0,25 s để phân biệt.",
+     "options": [
+      {
+       "id": "all",
+       "label": "Ẩn hết, chỉ giữ vòng tải iCloud khi đang tải",
+       "pros": [
+        "Đúng \"chỉ còn ảnh\"",
+        "Vẫn biết ảnh đang tải"
+       ],
+       "cons": [
+        "Chạm 1 lần trễ ~0,25 s (để chờ nhấn đúp)"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "strict",
+       "label": "Ẩn hết, kể cả vòng tải",
+       "pros": [
+        "Sạch hoàn toàn"
+       ],
+       "cons": [
+        "Ảnh iCloud mờ mà không biết đang tải"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tech": "PUOneUpSettings allowChromeHiding, hideFloatingInfoPanelWhenHidingChrome, allowStatusBar. ShotDex: ZoomableImageView có singleTapRecognizer nhưng PhotoDetailPage không truyền onSingleTap (ZIV:163); showsViewerChrome VIEWER:696-700; statusBarHidden VIEWER:702-704. require(toFail: doubleTap) đã có trong ZIV.",
+     "tasks": [
+      "Cờ chromeHidden một chỗ cho cả viewer — PhotoDetailScreen.swift",
+      "onSingleTap cho ảnh — PhotoDetailPage, ZoomableImageView.swift",
+      "Status bar + persistentSystemOverlays theo cờ"
+     ]
+    },
+    {
+     "id": "D2",
+     "title": "Lúc đang hiện nút, nền viewer màu gì?",
+     "image": "d2-bg.svg",
+     "why": "Board PH_Viewer vẽ nền trắng (theo giao diện sáng), code luôn đen — hai bên đang lệch. Photos dùng nền theo sáng/tối khi hiện nút, đen khi ẩn.",
+     "proposal": "Như Photos: hiện nút thì nền theo sáng/tối của máy, ẩn nút thì đen, chuyển màu mượt.",
+     "options": [
+      {
+       "id": "system",
+       "label": "Theo sáng/tối, ẩn nút thì đen (như Photos, như board)",
+       "pros": [
+        "Khớp board",
+        "Giống Photos"
+       ],
+       "cons": [
+        "Ảnh tối trên nền trắng khó nhìn hơn khi đang hiện nút"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "black",
+       "label": "Luôn đen (như code hiện nay), sửa board",
+       "pros": [
+        "Ảnh luôn nổi trên nền đen",
+        "Ít đổi"
+       ],
+       "cons": [
+        "Khác Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PUFlatWhiteInterfaceTheme / PUBlackOneUpInterfaceTheme photoBrowserChromeVisibleBackgroundColor; chromeBackgroundAnimationType. ShotDex VIEWER:183 Color.black, :326 preferredColorScheme(.dark) — nút kính đang thiết kế cho nền tối, nếu nền sáng phải kiểm lại glass trên cả hai.",
+     "tasks": [
+      "Nền theo cờ chrome — PhotoDetailScreen.swift; kiểm glass button trên nền sáng"
+     ]
+    },
+    {
+     "id": "D3",
+     "title": "Đã ẩn nút rồi vuốt sang ảnh kế: ảnh kế vẫn ẩn nút?",
+     "image": "d3-persist.svg",
+     "why": "Đang xem lướt cả loạt ảnh mà mỗi ảnh lại bật nút lên thì phải chạm lại liên tục.",
+     "proposal": "Như Photos: vẫn ẩn cho tới khi bạn chạm lại hoặc đóng viewer. Mở viewer lần sau thì hiện nút.",
+     "options": [
+      {
+       "id": "persist",
+       "label": "Vẫn ẩn (như Photos)",
+       "pros": [
+        "Xem lướt liền mạch"
+       ],
+       "cons": [],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "reset",
+       "label": "Mỗi ảnh hiện lại nút",
+       "pros": [
+        "Luôn thấy nút"
+       ],
+       "cons": [
+        "Phải chạm lại mỗi ảnh"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PUOneUpSettings persistChromeVisibility; PUBrowsingViewModel giữ cờ ở cấp trình duyệt, không ở cấp trang.",
+     "tasks": [
+      "Cờ ở cấp viewer, không ở trang — PhotoDetailScreen.swift"
+     ]
+    },
+    {
+     "id": "D4",
+     "title": "Chạm vào video đang phát thì làm gì?",
+     "image": "d5-video.svg",
+     "why": "Hiện nay chạm vào video đang phát là dừng video — khác với ảnh (chạm = ẩn/hiện nút). Hai cử chỉ giống nhau làm hai việc khác nhau thì dễ nhầm.",
+     "proposal": "Như Photos: chạm = ẩn/hiện nút cho cả ảnh lẫn video; dừng / phát bằng nút ⏸ ▶ ở giữa; nút tự ẩn sau 3 s khi đang phát như hiện nay.",
+     "options": [
+      {
+       "id": "toggle",
+       "label": "Chạm = ẩn/hiện nút (như Photos)",
+       "pros": [
+        "Một cử chỉ, một nghĩa"
+       ],
+       "cons": [
+        "Dừng video cần hai chạm khi nút đang ẩn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "pause",
+       "label": "Giữ như hiện nay: chạm = dừng",
+       "pros": [
+        "Dừng nhanh"
+       ],
+       "cons": [
+        "Khác ảnh, khác Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PUOneUpSettings chromeAutoHideBehaviorOnPlayButton, chromeAutoHideDelay. ShotDex handleSingleTap VIEWER:2214-2221; nhấn đúp tua ±10 s giữ nguyên (ZVV:163-168).",
+     "tasks": [
+      "handleSingleTap → toggle chrome — DetailVideoPlayer trong PhotoDetailScreen.swift"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "title": "Mở và đóng ảnh",
+   "intro": "Chuyển cảnh giữa lưới và viewer.",
+   "decisions": [
+    {
+     "id": "D5",
+     "title": "Mở ảnh từ lưới: ảnh phóng ra từ chính ô đó (như Photos) hay trượt từ dưới lên như hiện nay?",
+     "importance": "important",
+     "image": "d4-zoom.svg",
+     "why": "Trượt từ dưới lên làm mất cảm giác \"đang phóng ảnh này\"; đóng xong lưới cũng không đưa về ảnh vừa xem nếu đã vuốt sang ảnh khác (spec FS-02.01b §1 yêu cầu nhưng code chưa làm).",
+     "proposal": "Phóng từ ô khi mở, vuốt xuống thì ảnh thu nhỏ bay về đúng ô của ảnh đang xem; lưới cuộn tới ô đó nếu nó ngoài màn. Áp cho Library và mọi album dùng cùng lưới.",
+     "options": [
+      {
+       "id": "zoom",
+       "label": "Phóng từ ô + thu về đúng ô",
+       "pros": [
+        "Giống Photos nhất",
+        "Không lạc chỗ khi đóng"
+       ],
+       "cons": [
+        "Việc lớn nhất của đợt này; phải giữ mọi cover khác (editor, video studio…) chạy như cũ"
+       ],
+       "effort": "L",
+       "recommended": true
+      },
+      {
+       "id": "reveal",
+       "label": "Giữ trượt lên, chỉ thêm: đóng thì lưới cuộn tới ảnh vừa xem",
+       "pros": [
+        "Ít rủi ro"
+       ],
+       "cons": [
+        "Vẫn khác Photos"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "Lưới là UICollectionView (PhotoGridCollectionView), viewer là fullScreenCover → cần UIKit custom transition (UIViewControllerTransitioningDelegate) lấy frame ô qua cellFrame(for assetId), hoặc iOS 18 .navigationTransition(.zoom) trên cover với nguồn bọc UIKit. Pre-iOS 18 (deployment 17): fallback trượt như cũ. Reveal: scrollToItem khi đóng (FS-02.01b §1).",
+     "tasks": [
+      "Transition UIKit / zoom iOS 18 — PhotoGridCollectionView.swift, LibraryScreen.swift + các màn album",
+      "scrollToItem khi đóng"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "speed",
+   "title": "Tốc độ tải ảnh",
+   "intro": "Một chỗ bạn cần đánh đổi: bộ nhớ.",
+   "decisions": [
+    {
+     "id": "D6",
+     "title": "Chuẩn bị sẵn bao nhiêu ảnh hai bên ảnh đang xem?",
+     "why": "Nhiều hơn thì vuốt nhanh không thấy ảnh mờ, nhưng tốn bộ nhớ (mỗi ảnh cỡ màn hình đã giải mã ~10–25 MB); máy bị hệ thống giết app khi xem lâu nếu quá tay.",
+     "proposal": "2 ảnh mỗi bên, đã giải mã sẵn (không giải mã lúc vuốt); bỏ ngay khi máy báo thiếu bộ nhớ.",
+     "options": [
+      {
+       "id": "two",
+       "label": "2 mỗi bên, giải mã sẵn",
+       "pros": [
+        "Vuốt nhanh vẫn nét",
+        "Không giật khi vuốt"
+       ],
+       "cons": [
+        "Thêm ~50–100 MB lúc xem"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "one",
+       "label": "1 mỗi bên (như hiện nay) nhưng giải mã sẵn",
+       "pros": [
+        "Ít bộ nhớ"
+       ],
+       "cons": [
+        "Vuốt nhanh 2 ảnh liền vẫn thấy mờ"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PXGAssetImageCache cacheCGImage:isDegraded:retainPastCancellation, PXMediaProvider preheatQueue. ShotDex preheatDetailImages ±1 (VIEWER:3214-3235); final ảnh không được prepareForDisplay → UIKit giải mã trên main lúc vẽ.",
+     "tasks": [
+      "preheat ±2 + giải mã sẵn — PhotoDetailScreen.swift preheatDetailImages, PhotoLibraryService.swift"
+     ],
+     "image": "d6-preheat.svg"
+    }
+   ]
+  }
+ ],
+ "auto": [
+  {
+   "id": "A1",
+   "title": "Sửa lỗi cache khi phóng to",
+   "choice": "Ảnh gốc khi phóng to không còn bị nhét vào bộ nhớ đệm ảnh màn hình (nó đẩy các ảnh khác ra, nên quay lại ảnh trước phải tải lại).",
+   "tech": "PHImageManagerMaximumSize = (−1,−1) lọt guard trong detailCacheKey (PhotoLibraryService.swift:879-892) → bản gốc ~190 MB đã giải mã vào detailImageCache (limit 160 MB). Thêm guard > 0."
+  },
+  {
+   "id": "A2",
+   "title": "Giải mã ảnh ngoài luồng chính",
+   "choice": "Ảnh màn hình và ảnh nhỏ được giải mã trước khi hiện, không giải mã lúc vẽ.",
+   "tech": "UIImage.byPreparingForDisplay() / prepareForDisplay trong callback PhotoKit trước khi hop MainActor; giống Photos cache CGImage đã giải mã."
+  },
+  {
+   "id": "A3",
+   "title": "Giữ ảnh vừa xem khi lỡ huỷ",
+   "choice": "Vuốt qua rồi vuốt lại ngay: ảnh hiện tức thì, không tải lại.",
+   "tech": "Kết quả đã về vẫn vào cache dù request bị huỷ (retainPastCancellation); cache key không phụ thuộc request."
+  },
+  {
+   "id": "A4",
+   "title": "Máy thiếu bộ nhớ thì dọn cache",
+   "choice": "Khi iOS báo thiếu bộ nhớ, ShotDex xoá cache ảnh viewer/lưới/bìa album thay vì để app bị tắt.",
+   "tech": "UIApplication.didReceiveMemoryWarningNotification → removeAllObjects ba NSCache trong PhotoLibraryService; hiện chỉ LibraryModel.assetCache được dọn."
+  },
+  {
+   "id": "A5",
+   "title": "Lưới chuẩn bị trước theo hướng cuộn",
+   "choice": "Lưới tải sẵn một khoảng hàng phía trước theo hướng cuộn, như Photos, thay vì chỉ nhờ UIKit báo.",
+   "tech": "PUPhotosGridViewController preheatAssets / indexPathsForPreheatingInRect / _maximumNumberOfRowsToPreheat. Rect = visible mở rộng 1 màn theo hướng cuộn, cập nhật khi offset đổi > 1/3 màn; startCaching phần mới, stopCaching phần rời. Đo trước/sau bằng perf-profiler, không chạy full suite."
+  },
+  {
+   "id": "A6",
+   "title": "Thêm vài chỗ spec đã có mà code thiếu",
+   "choice": "Phím Esc đóng viewer; Caption & Keywords trong menu ⋯ (iOS 27).",
+   "tech": "FS-02 README + 01b §2; FS-02.07. Phát hiện khi map code."
+  },
+  {
+   "id": "A7",
+   "title": "Quy trình",
+   "choice": "Intent + spec FS-02 cập nhật, board PH/IP/DI/DC_Viewer (sáng/tối, trạng thái ẩn nút) trên 4 canvas, rồi code mỗi tiêu chí một commit, build, kiểm trên simulator.",
+   "tech": "CLAUDE.md."
+  },
+  {
+   "id": "A8",
+   "title": "Không mất chức năng",
+   "choice": "Giữ mọi nút và thao tác hiện có của viewer: chia sẻ, yêu thích, info, sửa, ⋯ (sao/cờ, cull, thêm vào bộ sưu tập, nhân bản, copy, Live Text, lưu Live thành video, cắt video, resize, export, chỉnh ngày/vị trí, giữ trên iPhone, bản đồ, xem panorama, burst, slideshow, ẩn), xoá, phím tắt, giữ để xem bản gốc, Live Photo, toàn bộ điều khiển video.",
+   "tech": "Danh sách đầy đủ trong báo cáo map code (VIEWER:715-995, 1569-2297)."
+  }
+ ]
+}

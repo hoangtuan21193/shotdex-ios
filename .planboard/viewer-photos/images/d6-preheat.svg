@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="200" fill="#fff"/>
+<text x="20" y="26" font-weight="700">Ảnh chuẩn bị sẵn quanh ảnh đang xem</text>
+<g><rect x="60" y="60" width="90" height="90" fill="#cfd8e3"/><rect x="170" y="60" width="90" height="90" fill="#9fb6cc"/><rect x="280" y="50" width="130" height="110" fill="#6B8BAA" stroke="#C6730E" stroke-width="3"/><rect x="430" y="60" width="90" height="90" fill="#9fb6cc"/><rect x="540" y="60" width="90" height="90" fill="#cfd8e3"/></g>
+<text x="300" y="185">đang xem</text><text x="170" y="185">±1 (hiện nay)</text><text x="60" y="185">±2 (đề xuất)</text></svg>

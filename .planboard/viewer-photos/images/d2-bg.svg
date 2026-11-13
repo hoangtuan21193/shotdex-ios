@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="380" fill="#fff"/><text x="20" y="26" font-weight="700">Nền khi đang hiện nút</text>
+<rect x="40" y="40" width="150" height="300" rx="18" fill="#fff" stroke="#999"/><rect x="40" y="140" width="150" height="100" fill="#6B8BAA"/><path d="M40 220 l40 -30 l30 20 l40 -25 l40 35 v20 h-150z" fill="#3A4A3A"/>
+<circle cx="60" cy="62" r="10" fill="#ccc"/><rect x="76" y="52" width="104" height="20" rx="10" fill="#ddd"/><rect x="70" y="305" width="90" height="22" rx="11" fill="#ddd"/><circle cx="54" cy="316" r="9" fill="#ddd"/><circle cx="176" cy="316" r="9" fill="#ddd"/>
+<text x="40" y="362">A. Theo sáng/tối (như Photos)</text>
+<rect x="300" y="40" width="150" height="300" rx="18" fill="#000" stroke="#999"/><rect x="300" y="140" width="150" height="100" fill="#6B8BAA"/><path d="M300 220 l40 -30 l30 20 l40 -25 l40 35 v20 h-150z" fill="#3A4A3A"/>
+<circle cx="320" cy="62" r="10" fill="#ccc"/><rect x="336" y="52" width="104" height="20" rx="10" fill="#ddd"/><rect x="330" y="305" width="90" height="22" rx="11" fill="#ddd"/><circle cx="314" cy="316" r="9" fill="#ddd"/><circle cx="436" cy="316" r="9" fill="#ddd"/>
+<text x="300" y="362">B. Luôn đen (như hiện nay)</text>
+<text x="520" y="120">Ẩn nút: cả hai đều nền đen.</text><text x="520" y="150">Board PH_Viewer đang vẽ nền</text><text x="520" y="172">trắng; code đang luôn đen.</text></svg>

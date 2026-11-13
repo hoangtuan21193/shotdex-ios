@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="200" fill="#fff"/>
+<text x="20" y="26" font-weight="700">Chạm vào video đang phát</text>
+<text x="20" y="70">Hiện nay: chạm = tạm dừng; đang dừng thì chạm = ẩn/hiện nút</text>
+<text x="20" y="110">Photos: chạm = ẩn/hiện nút; dừng bằng nút ⏸ (nút tự ẩn sau vài giây khi phát)</text>
+<text x="20" y="150" fill="#6C6C70" font-size="13">Nhấn đúp nửa trái/phải vẫn tua ±10 s như hiện nay.</text></svg>

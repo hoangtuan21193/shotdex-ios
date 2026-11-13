@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" font-family="-apple-system,Helvetica" font-size="15"><rect width="760" height="380" fill="#fff"/><text x="20" y="26" font-weight="700">Đã ẩn nút rồi vuốt sang ảnh kế</text>
+<rect x="40" y="40" width="150" height="300" rx="18" fill="#000" stroke="#999"/><rect x="40" y="140" width="150" height="100" fill="#6B8BAA"/><path d="M40 220 l40 -30 l30 20 l40 -25 l40 35 v20 h-150z" fill="#3A4A3A"/>
+<text x="40" y="362">Ảnh 1 (đã ẩn)</text>
+<text x="205" y="200" font-size="22">vuốt →</text>
+<rect x="290" y="40" width="150" height="300" rx="18" fill="#000" stroke="#999"/><rect x="290" y="140" width="150" height="100" fill="#6B8BAA"/><path d="M290 220 l40 -30 l30 20 l40 -25 l40 35 v20 h-150z" fill="#3A4A3A"/>
+<text x="290" y="362">A. Ảnh 2 vẫn ẩn (Photos)</text>
+<rect x="540" y="40" width="150" height="300" rx="18" fill="#fff" stroke="#999"/><rect x="540" y="140" width="150" height="100" fill="#6B8BAA"/><path d="M540 220 l40 -30 l30 20 l40 -25 l40 35 v20 h-150z" fill="#3A4A3A"/>
+<circle cx="560" cy="62" r="10" fill="#ccc"/><rect x="576" y="52" width="104" height="20" rx="10" fill="#ddd"/><rect x="570" y="305" width="90" height="22" rx="11" fill="#ddd"/><circle cx="554" cy="316" r="9" fill="#ddd"/><circle cx="676" cy="316" r="9" fill="#ddd"/>
+<text x="540" y="362">B. Ảnh 2 hiện lại nút</text>
+</svg>

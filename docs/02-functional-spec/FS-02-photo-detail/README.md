@@ -39,7 +39,7 @@
 | Đáy | ba vùng kiểu Photos: **Share** tròn trái · viên kính giữa · **Delete** tròn phải |
 | Viên kính giữa | Favorite · Info · (ảnh: Edit) · ⋯ — video ẩn Edit và Resize |
 
-- Toàn bộ chrome ẩn khi: đang phóng, video đang xem toàn màn, hoặc video đang phát và đã 3 giây không chạm.
+- Toàn bộ chrome ẩn khi: **chạm 1 lần** (§8), đang phóng, video đang xem toàn màn, hoặc video đang phát và đã 3 giây không chạm.
 - **Một hàng ngang, không phải viên kính căn giữa bằng cách xếp chồng**: viên kính nở theo số hành động của
   tấm ảnh; xếp chồng thì nó đè lên Share và Delete — bảy control đòi 288pt trong khe 234pt của máy 402pt.
 - Icon trong viên kính **40×40, padding 4**, kèm bề rộng tối thiểu để máy hẹp bóp lại thay vì tràn.
@@ -57,6 +57,56 @@
 | Vuốt lên | mở Photo Info, giống bấm nút Info — sheet, hoặc cột bên phải ở cửa sổ ngang ≥ 700pt ([03b](03b-info-inspector.md)) |
 | Giữ tay (ảnh đã chỉnh) | hiện **bản gốc** + nhãn "Original" ([04](04-actions-and-extras.md)) |
 
+## 8. Đợt giống Photos (2026-11-13)
+
+Nguồn: [intent](../../_intents/2026-11-13-viewer-like-photos.md) · bằng chứng
+[Photos RE](../../_research/2026-11-13-photos-viewer-loading-re.md) · quyết định `.planboard/viewer-photos`. Thay các dòng
+mâu thuẫn ở *Chrome* và *Cử chỉ* phía trên.
+
+**Chạm để ẩn chrome** (D1, D3, D4):
+- **Một cờ `chromeHidden` cho cả viewer.** Chạm 1 lần (ảnh hoặc video) đảo cờ. Ẩn: nút X, bảng thông tin, thanh đáy,
+  transport video, nhãn Live/Original, status bar, vạch home. **Giữ** vòng tải iCloud nhỏ ở góc khi đang tải.
+- Chạm 1 lần đợi nhấn đúp hỏng (≈0,25 s) — nhấn đúp vẫn phóng (ảnh) / tua ±10 s (video).
+- Cờ **giữ khi vuốt sang ảnh khác**; mở viewer lần sau thì hiện chrome.
+- Phóng to vẫn ẩn chrome như cũ; về 1× thì chrome theo lại cờ.
+- Video: chạm **không còn dừng video**; dừng/phát bằng nút ở giữa; đang phát thì chrome tự ẩn sau 3 s như cũ (đặt cờ).
+- Thao tác cần chrome (vuốt lên mở Info, phím `i`, menu) vẫn chạy khi đang ẩn; mở Info thì chrome hiện lại.
+
+**Nền** (D2): chrome hiện → nền theo sáng/tối hệ thống (`systemBackground`); chrome ẩn → đen. Chuyển 0,25 s.
+Nút kính và bảng thông tin đọc được trên cả hai nền. Vuốt xuống đóng: nền mờ dần theo khoảng kéo.
+
+**Mở / đóng** (D5): mở từ lưới là ảnh **phóng ra từ ô**; đóng (X hoặc vuốt xuống) thì ảnh **thu về ô của ảnh đang xem**;
+ô đó ngoài màn thì lưới cuộn tới trước khi thu (FS-02.01b §1). Mọi màn dùng lưới chung (Library, album, smart album,
+On This Day, Hidden, On This iPhone). iOS 17 dự phòng: chuyển cảnh mặc định, vẫn cuộn tới ảnh.
+
+**Tốc độ** (D6, A1–A5):
+- Chuẩn bị sẵn **±2** ảnh quanh ảnh đang xem, cỡ màn hình, **đã giải mã** (không giải mã lúc vẽ).
+- Ảnh gốc khi phóng to **không vào** cache ảnh màn hình.
+- Ảnh về sau khi request đã huỷ vẫn được giữ trong cache → vuốt lại hiện ngay.
+- iOS báo thiếu bộ nhớ → xoá ba cache ảnh (viewer, lưới, bìa album).
+- Lưới: preheat một vùng **một màn hình phía trước theo hướng cuộn**, cập nhật khi cuộn quá 1/3 màn.
+
+**Spec có mà code thiếu** (A6): Esc đóng viewer; *Caption & Keywords…* trong menu ⋯ (iOS 27).
+
 ## Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Phần cũ chưa có AC — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Đợt §8:
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | ảnh bất kỳ, chrome hiện | chạm 1 lần giữa ảnh | sau ≤ 0,4 s không còn X, bảng thông tin, thanh đáy, status bar; nền đen | ⚠️ ui-drive dump + screenshot |
+| AC-2 | như AC-1, chrome ẩn | chạm 1 lần | mọi control hiện lại; nền theo sáng/tối | ⚠️ ui-drive |
+| AC-3 | chrome ẩn | vuốt sang ảnh kế | ảnh kế vẫn ẩn chrome | ⚠️ ui-drive |
+| AC-4 | ảnh | nhấn đúp | phóng ×2,5, chrome không bật lên giữa chừng | ⚠️ ui-drive |
+| AC-5 | video đang phát | chạm 1 lần | video vẫn phát; chrome đảo | ⚠️ ui-drive |
+| AC-6 | ảnh iCloud đang tải, chrome ẩn | nhìn góc | vòng tải vẫn hiện | ⚠️ screenshot |
+| AC-7 | giao diện sáng | mở viewer | nền trắng, nút kính đọc được; tối → nền đen | ⚠️ screenshot 2 chế độ |
+| AC-8 | lưới, ô thứ 30 | chạm ô | ảnh phóng ra từ khung ô (iOS 18+) | ⚠️ screenshot burst |
+| AC-9 | mở ô 5, vuốt tới ảnh 40 (ngoài màn) | đóng | lưới cuộn để ô 40 thấy trọn, ảnh thu về ô 40 | ⚠️ ui-drive dump |
+| AC-10 | iOS 17/18.6 | mở/đóng | không crash, đóng vẫn cuộn tới ảnh | ⚠️ sim 18.6 |
+| AC-11 | `requestDetailImage` với `PHImageManagerMaximumSize` | xong | không có mục nào vào `detailImageCache` | ⚠️ unit test |
+| AC-12 | viewer ở ảnh n | — | ảnh n±1, n±2 đã được yêu cầu preheat cỡ màn hình | ⚠️ unit test trên hàm tính chỉ số |
+| AC-13 | ảnh đã về sau khi request huỷ | mở lại ảnh đó | hiện từ cache, không request mới | ⚠️ unit test |
+| AC-14 | cache có ảnh | gửi memory warning | ba cache rỗng | ⚠️ unit test |
+| AC-15 | lưới cuộn xuống | offset đổi > 1/3 màn | vùng preheat dời xuống, phần rời bị stop | ⚠️ unit test trên hàm tính vùng |
+| AC-16 | viewer, bàn phím | Esc | viewer đóng | ⚠️ ui-drive `key` |
