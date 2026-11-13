@@ -73,6 +73,11 @@ struct LibraryScreen: View {
         dependencies.sources.rows.contains { $0.text.kind != .photos }
     }
 
+    /// No Photos access asked yet and no other source: the welcome cards.
+    private var isShowingEmptyLibrary: Bool {
+        photoLibrary.authorizationState == .notDetermined && !hasSourcesBeyondPhotos
+    }
+
     var body: some View {
         Group {
             // Folders, drives and servers need no Photos access: with one of
@@ -83,7 +88,7 @@ struct LibraryScreen: View {
             } else {
             switch photoLibrary.authorizationState {
             case .notDetermined:
-                requestAccessState
+                EmptyLibraryView()
             case .denied:
                 PermissionEmptyState(
                     title: "No Access to Photos",
@@ -1161,7 +1166,11 @@ struct LibraryScreen: View {
             // Under a size order neighbouring photos are years apart, so a
             // date here would only flicker; the order's name says what the
             // grid is instead (FS-01.05 §5.1).
-            if let model, !model.appliedSort.isDateOrdered, !isSelecting || isDuoInner {
+            if isShowingEmptyLibrary, !isDuoInner {
+                Text("No photos yet", comment: "Library title before any source is added")
+                    .font(.headline)
+                    .lineLimit(1)
+            } else if let model, !model.appliedSort.isDateOrdered, !isSelecting || isDuoInner {
                 Text(model.appliedSort.displayName)
                     .font(.headline)
                     .lineLimit(1)
@@ -1254,17 +1263,6 @@ struct LibraryScreen: View {
     }
 
     // MARK: Permission states
-
-    private var requestAccessState: some View {
-        PermissionEmptyState(
-            title: "Explore Your Photo Metadata",
-            message: "Browse your library by camera, lens and exposure settings. Photos and metadata stay on your device.",
-            actionTitle: "Allow Photo Access",
-            action: {
-                Task { await photoLibrary.requestAuthorization() }
-            }
-        )
-    }
 
     private func openAppSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }

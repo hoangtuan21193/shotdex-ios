@@ -1,0 +1,15 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 45 },
+    { "action": "launch" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "Onboarding", "text": "snapshot" },
+    { "action": "tap", "label": "Continue" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "EmptyLibrary", "text": "snapshot" },
+    { "action": "tap", "label": "Add Folder or Drive…" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "AddSource", "text": "snapshot" }
+  ]
+}

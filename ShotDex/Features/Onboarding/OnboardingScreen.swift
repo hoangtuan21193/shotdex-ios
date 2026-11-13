@@ -1,10 +1,15 @@
 import SwiftUI
 
-/// Short pre-permission onboarding: explain value, then trigger the
-/// photo library prompt.
+/// The welcome card shown once (FS-21 §3, boards `*_Onboarding`): what
+/// ShotDex does, then Continue — which does **not** ask for Photos access.
+/// It goes to the empty library, where Add Photos Library asks (AC-42).
 struct OnboardingScreen: View {
-    @Environment(PhotoLibraryService.self) private var photoLibrary
+    /// Set by Continue; `RootTabView` shows the app from then on.
+    static let hasContinuedKey = "onboarding.hasContinued"
+
+    @AppStorage(OnboardingScreen.hasContinuedKey) private var hasContinued = false
     @Environment(\.appAccent) private var accent
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,19 +23,36 @@ struct OnboardingScreen: View {
             }
             .scrollBounceBehavior(.basedOnSize)
 
+            if sizeClass == .compact { nextLine.padding(.bottom, AppTheme.Spacing.lg) }
             Button {
-                Task { await photoLibrary.requestAuthorization() }
+                hasContinued = true
             } label: {
                 Text("Continue")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 7) // 50pt tall (FS-21 AC-60)
             }
             .buttonStyle(.borderedProminent)
+            .frame(maxWidth: continueWidth)
             .padding(.horizontal, 28)
-            .padding(.bottom, 40)
+            .padding(.bottom, sizeClass == .compact ? 40 : AppTheme.Spacing.sm)
+            if sizeClass != .compact { nextLine.padding(.bottom, AppTheme.Spacing.xl) }
         }
         .background(Color(.systemBackground))
+    }
+
+    /// 320 on iPad (FS-21 §3), at most 480 elsewhere (FS-09).
+    private var continueWidth: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 320 : 480
+    }
+
+    private var nextLine: some View {
+        Text("Next: add your Photos Library, a folder or drive, or a server",
+             comment: "Onboarding: under or above Continue")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 28)
     }
 
     private var pitch: some View {
@@ -64,10 +86,13 @@ struct OnboardingScreen: View {
                 )
                 onboardingRow(
                     icon: "lock.shield",
-                    title: "Your photos stay on your device",
-                    detail: "Your photos and metadata stay on this device. They leave it only when you upload them to a server you set up."
+                    title: "Your photos stay where they are",
+                    detail: "Nothing is copied or moved, and ShotDex never edits file contents. Photos leave this \(UIDevice.current.model) only when you upload them to a server you set up."
                 )
             }
+            // One readable column on a wide screen (DI board: ~560pt), not
+            // rows across the Duo's 951pt or an iPad's 1376pt.
+            .frame(maxWidth: 560, alignment: .leading)
             .padding(.horizontal, 28)
 
             Spacer(minLength: 24)
@@ -95,5 +120,4 @@ struct OnboardingScreen: View {
 
 #Preview {
     OnboardingScreen()
-        .environment(AppDependencies.preview().photoLibrary)
 }

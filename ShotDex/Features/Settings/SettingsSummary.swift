@@ -39,7 +39,7 @@ enum SettingsSummary {
         case .limited: String(localized: "only the photos you picked", comment: "Settings → Access row, after Limited Access")
         case .denied: String(localized: "ShotDex can't read your photos", comment: "Settings → Access row, after Denied")
         case .restricted: String(localized: "access is blocked on this device", comment: "Settings → Access row, after Restricted")
-        case .notDetermined: String(localized: "ShotDex asks the first time it opens", comment: "Settings → Access row, after Not Requested")
+        case .notDetermined: String(localized: "ShotDex asks when you add Photos Library", comment: "Settings → Access row, after Not Requested")
         }
         return joined(accessTitle(access), detail)
     }

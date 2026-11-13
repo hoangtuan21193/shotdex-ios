@@ -1,0 +1,17 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 45 },
+    { "action": "launch" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "dump", "name": "Onboarding", "text": "snapshot" },
+    { "action": "tap", "label": "Continue" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "EmptyLibrary", "text": "snapshot" },
+    { "action": "tap", "label": "Add Photos Library…" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 14 },
+    { "action": "dump", "name": "AfterAllow", "text": "snapshot" }
+  ]
+}

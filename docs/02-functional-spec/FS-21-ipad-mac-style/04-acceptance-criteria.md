@@ -78,7 +78,7 @@ album "Iceland 2026" 212 ảnh, smart album "Night ISO 3200+" 2,411 ảnh; ảnh
 | AC-39 | Resize 8 ảnh, Delete Originals tắt | gạt Delete Originals | nút toolbar đổi ngay "Resize 8 Photos" → "Resize 8 Photos and Delete Originals", thấy không cuộn | ⚠️ chưa có — `IP_Compress` |
 | AC-40 | Xuất collage ngang | mở Export | Share… và Save to Photos trên toolbar; không nút nào ghim đáy; inspector 360 | ⚠️ chưa có — `IP_CollageExport` |
 | AC-41 | Advanced Search có nháp 1 điều kiện | chạm ngoài form sheet | sheet vẫn mở, hiện Discard Changes? | ⚠️ chưa có |
-| AC-42 | cài mới, quyền Photos chưa hỏi | chạm Continue; rồi Add Photos Library; chọn Limited | sau Continue: thư viện trống 3 thẻ, chưa có hộp quyền; sau Add: hộp quyền; sau Limited: banner Limited Access + Manage | ⚠️ chưa có — `IP_Onboarding`, `IP_EmptyLibrary` |
+| AC-42 | cài mới, quyền Photos chưa hỏi | chạm Continue; rồi Add Photos Library; chọn Limited | sau Continue: thư viện trống 3 thẻ, chưa có hộp quyền; sau Add: hộp quyền; sau Limited: banner Limited Access + Manage | ✅ 2026-11-13 — `EmptyLibraryView.swift`, `OnboardingScreen.swift`; Duo inner + iPhone 26.5 + iPad: Continue không hỏi quyền, 3 thẻ, hộp quyền chỉ khi Add Photos Library (`ShotDexUITests/scripts/fs21-onboarding*.json`); nhánh Limited dùng banner sẵn có, chưa chụp lại |
 | AC-43 | Statistics ngang, 7 biểu đồ | mở | 3 cột rộng 328 ±1; Insights rộng 1016 | ⚠️ chưa có — `IP_Statistics` |
 
 ## 7. Từ các quyết định 2026-10-04
@@ -101,7 +101,7 @@ album "Iceland 2026" 212 ảnh, smart album "Night ISO 3200+" 2,411 ảnh; ảnh
 | AC-57 | Collage ngang, 6 ảnh, 4 ô | mở; giữ Before and After 1 s; mở ⋯ | panel trái có 2 ảnh chưa đặt; khi giữ thấy bản gốc, thả về; ⋯ có Discard. 0 ảnh chưa đặt → không panel trái | ⚠️ chưa có — `design-parity` `IP_Collage` |
 | AC-58 | Resize 8 ảnh, dọc 1032×1376 | mở | inspector là cột 360 ±1 bên phải, không sheet; "Resize 8 Photos" trên toolbar | ⚠️ chưa có — `IPP23_Compress` (chưa vẽ) |
 | AC-59 | dọc 1032×1376, Editor và Viewer | dump toolbar | mọi nút toolbar ≥ 44×44 | ⚠️ chưa có — `design-parity` `IPP1_Edit` |
-| AC-60 | cài mới, iPad và iPhone 17 | mở app | thẻ chào có "Your photos stay where they are"; iPad: Continue rộng 320 ±1, cao 50 | ⚠️ chưa có — `IP_Onboarding` |
+| AC-60 | cài mới, iPad và iPhone 17 | mở app | thẻ chào có "Your photos stay where they are"; iPad: Continue rộng 320 ±1, cao 50 | ✅ 2026-11-13 — iPad dump: Continue 320 rộng; cao 48→50 (padding 7) sau lần đo, chưa đo lại |
 
 **Chưa chứng minh được:** AC-1…AC-60 (kể cả AC-21b, AC-27b) — chưa có code. AC-12…AC-16, AC-17…AC-19, AC-20, AC-22,
 AC-44…AC-46 cần năng lực driver chưa có (phím, phím bổ trợ, kéo-thả, Split View, đổi cỡ cửa sổ) hoặc kiểm tay.

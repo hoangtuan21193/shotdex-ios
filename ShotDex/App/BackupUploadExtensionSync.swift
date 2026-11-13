@@ -52,7 +52,13 @@ enum BackupUploadExtensionSync {
             let header = server.username.isEmpty ? nil : "Basic " + Data("\(server.username):\(password)".utf8).base64EncodedString()
             BackupUploadShared.setAuthorization(header, account: job.account)
         }
-        let enable = shouldEnable(config, status: PHPhotoLibrary.authorizationStatus(for: .readWrite))
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        // Before Photos access is asked, reading `uploadJobExtensionEnabled`
+        // opens the system prompt (measured on iOS 26.5): it would cover the
+        // welcome screen, which must ask nothing (FS-21 §3). There is nothing
+        // to turn on without access anyway.
+        guard status != .notDetermined else { return }
+        let enable = shouldEnable(config, status: status)
         let library = PHPhotoLibrary.shared()
         if #available(iOS 27.0, *) {
             if enable, !library.uploadJobExtensionEnabled {

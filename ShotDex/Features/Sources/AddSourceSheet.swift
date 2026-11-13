@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// Choose Folder…. Photos stay where they are; nothing is copied or moved.
 struct AddSourceSheet: View {
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isDuoInner) private var isDuoInner
     @State private var includesSubfolders = true
@@ -31,12 +32,28 @@ struct AddSourceSheet: View {
                         option(title: String(localized: "Photos Library", comment: "Add a Source: the Photos library"),
                                detail: String(localized: "The Photos library on this iPhone, iCloud Photos included.", comment: "Add a Source: Photos Library option"),
                                systemImage: "photo.on.rectangle") {
-                            Text("Added", comment: "Add a Source: the Photos library is already a source")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(.secondaryLabel))
-                                .padding(.horizontal, AppTheme.Spacing.sm)
-                                .padding(.vertical, 3)
-                                .background(Color(.tertiarySystemFill), in: Capsule())
+                            // Before Photos access is asked (FS-21 §3) it is
+                            // not a source yet: Add asks, here as on the
+                            // empty library's card.
+                            if photoLibrary.authorizationState == .notDetermined {
+                                Button(String(localized: "Add", comment: "Add a Source: asks for Photos access")) {
+                                    Task {
+                                        await photoLibrary.requestAuthorization()
+                                        dismiss()
+                                    }
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .buttonStyle(.bordered)
+                                .buttonBorderShape(.capsule)
+                                .controlSize(.small)
+                            } else {
+                                Text("Added", comment: "Add a Source: the Photos library is already a source")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color(.secondaryLabel))
+                                    .padding(.horizontal, AppTheme.Spacing.sm)
+                                    .padding(.vertical, 3)
+                                    .background(Color(.tertiarySystemFill), in: Capsule())
+                            }
                         }
                     }
                     // The Duo's inner display gives a 661pt sheet: one card

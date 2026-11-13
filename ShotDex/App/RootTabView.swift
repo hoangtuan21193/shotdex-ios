@@ -143,8 +143,12 @@ struct RootTabView: View {
         navigation.pendingOnThisDayDate = nil
     }
 
+    @AppStorage(OnboardingScreen.hasContinuedKey) private var hasContinuedOnboarding = false
+
     var body: some View {
-        if photoLibrary.authorizationState == .notDetermined {
+        // Once only: Continue goes to the empty library and asks nothing
+        // (FS-21 §3). A source added since keeps it away for good.
+        if photoLibrary.authorizationState == .notDetermined, !hasContinuedOnboarding {
             OnboardingScreen()
         } else if #available(iOS 26.0, *) {
             withSceneRestoration(nativeTabView)
