@@ -1,0 +1,9 @@
+{
+  "id": "045-spec-and-design-means-code",
+  "description": "đã có FS kèm tiêu chí và board thiết kế thì code luôn, không hỏi có chạy /plan không",
+  "prompt": "FS-21 §3 đã có tiêu chí nghiệm thu và board trên cả bốn canvas. Làm phần đó đi. Chỉ trả lời: bước đầu tiên bạn làm là gì, có hỏi tôi duyệt /plan trước không?",
+  "checks": [
+    { "none_of": ["có muốn chạy /plan", "start /plan", "duyệt plan trước"], "why": "spec + design đã có thì không hỏi /plan" },
+    { "any_of": ["code", "AC", "tiêu chí"], "why": "phải đi thẳng vào làm từng AC" }
+  ]
+}

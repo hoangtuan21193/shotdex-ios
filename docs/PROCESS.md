@@ -85,6 +85,7 @@ làm AC-1 → làm AC-2 → …   mỗi cái một commit kèm test
 | Sửa bug | bỏ `/intent` và `/spec`. **Viết test đỏ trước**, bật `SHOTDEX_FREEZE_TESTS=1`, sửa code, rồi thêm bug đó thành một tiêu chí trong FS |
 | Đổi hành vi đã có | bắt đầu từ `/spec` |
 | Refactor không đổi hành vi | test hiện có chính là lưới an toàn |
+| Đã có FS (có tiêu chí nghiệm thu) **và** board trên canvas | bỏ `/plan`, không hỏi có bắt đầu không: code luôn, một AC một commit, rồi `/verify` (người dùng 2026-11-13) |
 | Tính năng mới, hoặc việc lớn không rõ | đi đủ bốn hiện vật |
 
 **Càng không chắc thì càng nên đi đủ vòng.** Vòng đầy đủ tốn thêm ~30 phút giấy tờ, rẻ hơn nhiều so với
