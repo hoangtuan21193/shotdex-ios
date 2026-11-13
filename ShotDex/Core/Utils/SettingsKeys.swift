@@ -39,6 +39,10 @@ enum SettingsKeys {
     /// Keep the display awake — and auto-dim via a black overlay after an idle
     /// period — while indexing runs. Defaults to false.
     static let keepScreenAwake = "index.keepScreenAwake"
+    /// `KeepScreenAwake` raw value: off, while indexing or the on-server
+    /// check runs, or the whole time ShotDex is open (user 2026-11-11).
+    /// Unset: the old Boolean above decides between off and while working.
+    static let keepScreenAwakeMode = "index.keepScreenAwakeMode"
 
     /// Reverse-geocode photo coordinates into place names after an index run, so
     /// searching for a city works. Defaults to **true** (read through an
@@ -227,5 +231,40 @@ extension MetadataLevel {
             defaults.set(MetadataLevel.noLocation.rawValue, forKey: SettingsKeys.shareMetadataLevel)
         }
         defaults.removeObject(forKey: SettingsKeys.legacyShareIncludesLocation)
+    }
+}
+
+/// When ShotDex keeps the screen from locking (FS-08.02 §3).
+enum KeepScreenAwake: String, CaseIterable, Identifiable, Sendable {
+    case off
+    /// While indexing or the on-server check runs.
+    case whileWorking
+    /// The whole time ShotDex is on screen.
+    case always
+
+    var id: String { rawValue }
+
+    /// The stored choice; before it existed, the old switch's Boolean.
+    static var stored: KeepScreenAwake {
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: SettingsKeys.keepScreenAwakeMode), let mode = KeepScreenAwake(rawValue: raw) { return mode }
+        return defaults.bool(forKey: SettingsKeys.keepScreenAwake) ? .whileWorking : .off
+    }
+
+    var title: String {
+        switch self {
+        case .off: String(localized: "Off", comment: "Settings, Keep Screen Awake: the screen locks as usual")
+        case .whileWorking: String(localized: "While Working", comment: "Settings, Keep Screen Awake: while indexing or the on-server check runs")
+        case .always: String(localized: "While ShotDex Is Open", comment: "Settings, Keep Screen Awake: the whole time the app is on screen")
+        }
+    }
+
+    /// The value line under the row.
+    var detail: String {
+        switch self {
+        case .off: String(localized: "The screen locks as usual", comment: "Settings, Keep Screen Awake value line when off")
+        case .whileWorking: String(localized: "While indexing or checking the server", comment: "Settings, Keep Screen Awake value line, while working")
+        case .always: String(localized: "The screen stays on while ShotDex is open", comment: "Settings, Keep Screen Awake value line, always")
+        }
     }
 }

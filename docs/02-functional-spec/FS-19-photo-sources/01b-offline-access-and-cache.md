@@ -47,6 +47,9 @@ file chỉ có trên cloud không bị tải ngầm; preview có chỗ và có t
 
 ## 3. Bookmark hết hạn, quyền bị thu
 
+- **Remove Source… trên iPhone/iPad/Duo** (2026-11-11; trước đó chỉ Mac có): Settings › Sources, vuốt hàng → **Remove**,
+  hoặc menu ngữ cảnh → **Remove Source…**; hộp alert cùng câu như trên. Hàng Photos Library không gỡ được. Nguồn server
+  gỡ ở đây thì connection còn nguyên (vẫn upload/backup được); xoá connection thì nguồn đi theo (FS-15.01 §2).
 - Bookmark không mở được (thư mục đổi tên khi app tắt, ổ format lại, iPad/iPhone/Duo: app cung cấp file thu quyền) →
   Needs access.
 - Câu trên hàng: "Choose the folder again in Files to let ShotDex read it." (iPad, iPhone, Duo) / "ShotDex needs permission to read this

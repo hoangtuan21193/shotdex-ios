@@ -1,0 +1,157 @@
+{
+  "title": "Form dài trên màn trong của Duo",
+  "context": "Trên màn trong của iPhone Duo (951×669, rộng nhưng thấp nhất trong các máy ShotDex chạy), mọi form đang mở thành một khung giữa màn rộng 653pt, cao gần hết màn. Board thiết kế thì vẽ chúng toàn màn, hai cột — app chưa bao giờ hiện như vậy, nên board và app đang lệch nhau ở 6 màn.\nBoard này hỏi 2 điều bạn sẽ thấy; phần kỹ thuật Claude tự chọn ở trang cuối.\nHình \"hiện tại\" vẽ lại theo số đo của loop (sim Duo đang tắt, bật lại thì máy gập và không mở màn trong bằng lệnh được); hình \"toàn màn\" là board đã có.",
+  "pages": [
+    {
+      "id": "forms",
+      "title": "Các form dài",
+      "intro": "New Backup, Add Connection, Upload to Server, Advanced Search, sửa Smart Album trên Duo mở thế nào.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Trên màn trong của Duo, các form dài nên mở toàn màn hai cột, hay giữ khung giữa màn như bây giờ?",
+          "importance": "critical",
+          "image": "d1-sheet.svg",
+          "why": "Giữ khung giữa màn: màn chỉ cao 669pt nên phần cuối form luôn nằm dưới mép — New Backup giấu Wi-Fi only và Only While Charging, Upload to Server giấu dòng ghi chú cuối, sửa Smart Album đẩy nút Add Condition xuống đáy, hai bên khung là khoảng trống. Toàn màn: thấy hết một lần, nhưng che hẳn màn phía sau và không vuốt xuống để đóng.",
+          "proposal": "Toàn màn, hai cột, chỉ trên màn trong của Duo. Form vừa một màn không phải cuộn, board đã vẽ đúng kiểu này, và bố cục hai cột đã có sẵn trong app — chỉ đổi cách mở. iPhone và iPad giữ nguyên.",
+          "options": [
+            {
+              "id": "full",
+              "label": "Toàn màn, hai cột (chỉ Duo màn trong)",
+              "image": "d1-full.png",
+              "pros": [
+                "Thấy hết form, không phải cuộn",
+                "Dùng được chiều ngang thừa của màn 951pt",
+                "Board đã vẽ sẵn, không phải vẽ lại",
+                "Code hai cột đã có, chỉ đổi cách mở"
+              ],
+              "cons": [
+                "Che hẳn màn phía sau",
+                "Không vuốt xuống để đóng — đóng bằng Cancel/Done",
+                "Khác cách iPad mở cùng form đó"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "sheet",
+              "label": "Giữ khung giữa màn như bây giờ",
+              "image": "d1-sheet.svg",
+              "pros": [
+                "Giống iPad và cách hệ thống làm",
+                "Vuốt xuống để đóng",
+                "Vẫn thấy màn phía sau"
+              ],
+              "cons": [
+                "Form dài luôn phải cuộn trên màn 669pt",
+                "Hai bên khung 150pt trống",
+                "Phải vẽ lại 5 board, sửa tài liệu thiết kế và bỏ phần hai cột trong app"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tech": "Hiện: .sheet trên .duoInner là form sheet 653×661 (đo x 149–802, y 8–669), nên AdaptiveFormColumns (WideLayout.minimumWidth 860) luôn một cột. Phương án full: một modifier dùng chung, trên .duoInner (VideoStudioWindowClass) đổi .sheet thành .fullScreenCover; AdaptiveFormColumns tự sang hai cột (rộng 951 ≥ 860). .presentationSizing(.page) chưa đo trên Duo — thử trước; nếu nó cho khung đủ rộng (≥ 860) mà vẫn vuốt xuống đóng được thì dùng nó thay fullScreenCover. HIG Sheets khuyên tránh sheet che gần hết cửa sổ, Designing for iPhone Duo khuyên tận dụng màn trong lớn hơn để hiện thêm một tầng — full theo câu thứ hai. Hàng ảnh hưởng: 3b, 4, 10 (editor), 40 (form + upload), 41 (New Backup) trong DUO_LOOP.",
+          "tasks": [
+            "Modifier mở toàn màn trên Duo màn trong — ShotDex/Features/Shared/SizeMeasurement.swift (hoặc file mới cạnh nó)",
+            "Advanced Search — ShotDex/Features/Library/LibraryScreen.swift (nơi trình bày AdvancedSearchSheet)",
+            "Sửa Smart Album — nơi trình bày SmartAlbumEditorSheet",
+            "Add Connection — ShotDex/Features/ServerUpload/FileServerListScreen.swift",
+            "Upload to Server — nơi trình bày ServerUploadSheet",
+            "New Backup — ShotDex/Features/Backup/BackupListScreen.swift:47",
+            "Chụp từng form trên Duo màn trong, so với board, ghi DUO_LOOP 3b/4/10/40/41"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "info",
+      "title": "Photo Info",
+      "intro": "Thông tin ảnh mở từ trình xem: hai board đang vẽ hai kiểu khác nhau.",
+      "decisions": [
+        {
+          "id": "D2",
+          "title": "Photo Info trên màn trong của Duo: ba cột toàn màn, hay khung giữa màn đè lên ảnh?",
+          "importance": "important",
+          "image": "d2-full.png",
+          "why": "Khung giữa màn: mở ra chỉ thấy chú thích, từ khoá và bản đồ — máy, ống kính, phơi sáng nằm dưới mép (đo: Camera & Lens bắt đầu ở y≈610 trên màn 669), phải cuộn mới thấy đúng thứ người chụp ảnh mở Info để xem. Ba cột: thấy hết một lần nhưng che ảnh.",
+          "proposal": "Ba cột toàn màn, giống D1 — chú thích và từ khoá đặt đầu cột trái để vẫn sửa được ngay. Đóng là về đúng ảnh đang xem.",
+          "options": [
+            {
+              "id": "full",
+              "label": "Ba cột toàn màn",
+              "image": "d2-full.png",
+              "pros": [
+                "Máy, ống kính, phơi sáng, file thấy ngay",
+                "Đúng tinh thần app cho người chụp ảnh",
+                "Board DI_Metadata đã vẽ"
+              ],
+              "cons": [
+                "Che ảnh khi đang xem thông tin",
+                "Phải thêm chú thích + từ khoá vào board ba cột"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "sheet",
+              "label": "Khung giữa màn đè lên ảnh",
+              "image": "d2-sheet.png",
+              "pros": [
+                "Vẫn thấy ảnh hai bên",
+                "Giống iPad"
+              ],
+              "cons": [
+                "Thông số chụp nằm dưới mép, phải cuộn",
+                "Hai bên khung trống phí chỗ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Hiện: Photo Info là .sheet (đo x 149–802), mở large-only trên .duoInner từ hàng 7. MetadataPanel đã có nhánh ba cột khi ≥ WideLayout.minimumWidth. Hai board lệch nhau: DI_Metadata (toàn màn ba cột) và DI15_InfoKeywords (sheet 540). Chọn full → giữ DI_Metadata, thêm chú thích/từ khoá vào đầu cột trái, bỏ DI15_InfoKeywords; chọn sheet → ngược lại.",
+          "tasks": [
+            "Photo Info mở toàn màn trên Duo màn trong — ShotDex/Features/Library/PhotoDetailScreen.swift",
+            "Chú thích + từ khoá ở đầu cột trái — ShotDex/Features/Library/MetadataPanel.swift",
+            "Board: DI_Metadata thêm chú thích/từ khoá, bỏ DI15_InfoKeywords — docs/design/duo/project/"
+          ]
+        }
+      ]
+    }
+  ],
+  "auto": [
+    {
+      "id": "A1",
+      "title": "Thiết bị nào đổi",
+      "choice": "Chỉ màn trong của Duo (và cửa sổ iPad thấp mà app đã coi là \"Duo màn trong\"). iPhone, iPad toàn màn, màn ngoài của Duo giữ nguyên.",
+      "why": "Vấn đề là chiều cao 669pt; máy khác không có.",
+      "tech": "Dựa vào \\.isDuoInner đã có ở RootTabView (resolvesDuoInner)."
+    },
+    {
+      "id": "A2",
+      "title": "Sheet nhỏ và sheet chồng lên sheet",
+      "choice": "Giữ là khung giữa màn: Add a Source, Caption & Keywords, Save Edit, bảng chọn khoảng ngày (mở từ trình sửa biểu đồ)…",
+      "why": "Chúng vừa khung 653pt; toàn màn chỉ làm mất màn phía sau.",
+      "tech": "Chỉ các màn dùng AdaptiveFormColumns / MetadataPanel đổi. DateRangePickerSheet (hàng 4) mở trên một sheet khác nên vẫn là sheet."
+    },
+    {
+      "id": "A3",
+      "title": "Cách đóng màn toàn màn",
+      "choice": "Cancel bên trái, nút chính (Save/Start/Upload/Done) bên phải trên thanh trên cùng, như bây giờ; giữ cách 32pt khỏi góc bo.",
+      "why": "Mọi form đã có hai nút này; chỉ mất cử chỉ vuốt xuống.",
+      "tech": "CompareLayout.duoInnerTopInset = 32 cho thanh trên cùng."
+    },
+    {
+      "id": "A4",
+      "title": "Nội dung chạy dưới thanh home",
+      "choice": "Sửa kèm: dòng cuối form không nằm dưới vạch home ở đáy màn.",
+      "why": "Lỗi hiển thị, không có lựa chọn.",
+      "tech": "Ghi ở hàng 3b: nội dung sheet chạy dưới home indicator; safe area đáy cho cột cuộn."
+    },
+    {
+      "id": "A5",
+      "title": "Board và tài liệu",
+      "choice": "Giữ các board toàn màn đã vẽ cho 6 màn này, so với ảnh chụp sau khi làm; ghi vào tài liệu thiết kế rằng trên màn trong của Duo các form hai cột mở toàn màn.",
+      "why": "Board đi theo quyết định ở D1/D2; nếu bạn chọn giữ khung thì Claude vẽ lại chúng thành khung 653pt.",
+      "tech": "Board: DI_AdvancedSearch, DI_SmartAlbumEditor, DI_ServerForm, DI_ServerUpload, DI_BackupNew, DI_Metadata. Tài liệu: DESIGN.md §10.1c."
+    }
+  ]
+}

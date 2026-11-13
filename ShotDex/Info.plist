@@ -10,6 +10,7 @@
 		<string>com.hoangtuan.shotdex.backup.continued</string>
 		<string>com.hoangtuan.shotdex.ingest.continued</string>
 		<string>com.hoangtuan.shotdex.onserver</string>
+		<string>com.hoangtuan.shotdex.onserver.continued</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

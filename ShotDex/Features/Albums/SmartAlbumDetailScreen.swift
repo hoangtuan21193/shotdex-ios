@@ -25,6 +25,10 @@ struct SmartAlbumDetailScreen: View {
     @State private var viewerTarget: PhotoViewerTarget?
     /// Date of the photos under the top of the grid, shown under the title.
     @State private var visibleDate: String?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// Regular width: the name and date sit at the right end of the
+    /// conditions bar, and the bar's own title row goes (user 2026-11-11).
+    private var titleInBar: Bool { horizontalSizeClass == .regular && !album.query.isEmpty }
 
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
@@ -56,7 +60,7 @@ struct SmartAlbumDetailScreen: View {
         filterWiring(content)
         // Empty while selecting, or the bar falls back to it once the
         // principal title below is cleared.
-        .navigationTitle(isSelecting ? "" : album.name)
+        .navigationTitle(isSelecting || titleInBar ? "" : album.name)
         .navigationBarTitleDisplayMode(.inline)
         // Title plus the date of what is on screen. The grid draws no date
         // headers any more, so this is where "when am I" lives.
@@ -65,7 +69,7 @@ struct SmartAlbumDetailScreen: View {
             // Compare / Edit / ⋯ / × need the width, and on the pre-26 bar the
             // title otherwise lands against Edit and reads as part of it.
             ToolbarItem(placement: .principal) {
-                if !isSelecting {
+                if !isSelecting, !titleInBar {
                     GridNavigationTitle(title: album.name, subtitle: visibleDate)
                 }
             }
@@ -124,7 +128,9 @@ struct SmartAlbumDetailScreen: View {
         .task(id: "\(dependencies.onServerCheck.generation)-\(model != nil)") {
             guard let model else { return }
             await model.refreshOnServer(dependencies.onServerCheck, isLimited: photoLibrary.authorizationState == .limited)
-            if !model.onServerLines.isEmpty, !isSelecting { await model.load() }
+            // Not tied to this task, for the same reason as below: the next
+            // batch re-keys it.
+            if !model.onServerLines.isEmpty, !isSelecting, !Task.isCancelled { Task { await model.load() } }
         }
         // Each batch of the original check can move photos in or out of an
         // `Original is …` album (FS-06.10 §3). At most one reload every 3 s:
@@ -299,8 +305,11 @@ struct SmartAlbumDetailScreen: View {
                     filterChips: filterChips,
                     sourceNames: model?.sourceNames ?? [:],
                     statusLines: model?.onServerLines ?? [],
+                    checkingFraction: model?.onServerFraction,
                     originalLine: originalLine,
                     photosAlbumLine: photosAlbumLine,
+                    title: titleInBar && !isSelecting ? album.name : nil,
+                    subtitle: titleInBar ? visibleDate : nil,
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )

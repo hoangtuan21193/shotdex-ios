@@ -140,8 +140,8 @@ struct DuplicateQualityStoreTests {
     }
 }
 
-/// FS-06.06 §3 step 5, AC-Q5 (logic half): only grouped photos, never
-/// screenshots, and a cancel keeps what was scored.
+/// FS-06.06 §3 step 5, AC-Q5 (logic half): only grouped photos —
+/// screenshots too, for their feature print — and a cancel keeps what was scored.
 struct DuplicateQualityPassTests {
     private struct Stub: DuplicateQualityReading {
         let seen: OSAllocatedUnfairLock<[String]>
@@ -149,7 +149,8 @@ struct DuplicateQualityPassTests {
         func measure(assetId: String, allowNetwork: Bool) async -> DuplicateQualityRecord? {
             try? await Task.sleep(for: delay)
             seen.withLock { $0.append(assetId) }
-            return DuplicateQualityRecord(assetId: assetId, modificationDate: 1, score: .init(sharpness: 10), scoredAt: 1)
+            return DuplicateQualityRecord(assetId: assetId, modificationDate: 1, score: .init(sharpness: 10), scoredAt: 1,
+                                         featurePrint: Data([1]))
         }
     }
 
@@ -170,17 +171,17 @@ struct DuplicateQualityPassTests {
                                                       isScreenshot: screenshots) }, kind: kind)
     }
 
-    @Test func scoresGroupedPhotosButNotScreenshots() async throws {
+    @Test func scoresGroupedPhotosScreenshotsIncluded() async throws {
         let database = try database(["a", "b", "s1", "s2"])
         let seen = OSAllocatedUnfairLock<[String]>(initialState: [])
         let pass = DuplicateQualityPass(store: DuplicateQualityStore(database: database),
                                         reader: Stub(seen: seen, delay: .zero), shouldPause: { false })
         try await pass.run(groups: [group(["a", "b"], .similar), group(["s1", "s2"], .similar, screenshots: true)],
                            allowNetwork: false) { _, _ in }
-        #expect(Set(seen.withLock { $0 }) == ["a", "b"])
+        #expect(Set(seen.withLock { $0 }) == ["a", "b", "s1", "s2"])
         // A second run has nothing left to do.
         try await pass.run(groups: [group(["a", "b"], .similar)], allowNetwork: false) { _, _ in }
-        #expect(seen.withLock { $0 }.count == 2)
+        #expect(seen.withLock { $0 }.count == 4)
     }
 
     @Test func cancelKeepsWhatWasScored() async throws {

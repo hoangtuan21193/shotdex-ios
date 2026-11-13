@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "scrollTo", "label": "Keep Screen Awake" },
+    { "action": "wait", "seconds": 25 },
+    { "action": "tap", "label": "Keep Screen Awake" },
+    { "action": "wait", "seconds": 25 }
+  ]
+}

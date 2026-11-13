@@ -214,6 +214,7 @@ struct CommonPhotosWatchStore: Sendable {
         case .charging: "charging"
         case .space: "space"
         case .openApp: "openApp"
+        case .iCloudRefusing: "iCloudRefusing"
         case .unreachable(let name): "unreachable:" + name
         }
     }
@@ -225,6 +226,7 @@ struct CommonPhotosWatchStore: Sendable {
         case "charging": .charging
         case "space": .space
         case "openApp": .openApp
+        case "iCloudRefusing": .iCloudRefusing
         default: nil
         }
     }

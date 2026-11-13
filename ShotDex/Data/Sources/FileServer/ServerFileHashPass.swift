@@ -54,16 +54,20 @@ struct ServerFileHashPass: Sendable {
         // The server is woken only for a file worth reading, or for
         // hashes this device owes its ledger once it has nothing left to read.
         var candidates = try store.serverCandidates(sourceId: sourceId, triedBefore: now, limit: limit, everything: hashesEverything)
+        OnServerTrace.log("  server: \(unhashed.count) file(s) without a hash · \(summary.seeded) filled from Backup/Common Photos · \(candidates.count) candidate(s) this batch")
         let owesLedger = try deviceId.map { try !self.unpublished(sourceId: sourceId, device: $0).isEmpty } ?? false
         guard !candidates.isEmpty || owesLedger else { return summary }
 
         let result: Result<Void, Error>
         do {
-            try await client.connect()
+            try await OnServerTrace.timed("  server connect") { try await client.connect() }
             // The ledger first: a file another device hashed is not read.
             if let deviceId, !candidates.isEmpty {
-                try await readLedger(sourceId: sourceId, folder: folder, device: deviceId, into: &summary, now: now)
+                try await OnServerTrace.timed("  read hash ledger on server") {
+                    try await readLedger(sourceId: sourceId, folder: folder, device: deviceId, into: &summary, now: now)
+                }
                 candidates = try store.serverCandidates(sourceId: sourceId, triedBefore: now, limit: limit, everything: hashesEverything)
+                OnServerTrace.log("  server: \(summary.fromLedger) hash(es) taken from the ledger · \(candidates.count) file(s) left to read this batch")
             }
             try await hash(candidates, folder: folder, into: &summary, now: now)
             // One segment when the source's reading is done, not one per
@@ -118,10 +122,12 @@ struct ServerFileHashPass: Sendable {
         } catch let error as RemoteFileError where error.stopsBatch {
             throw error
         } catch {
+            OnServerTrace.log("  ledger folder not listed: \(error.localizedDescription)")
             entries = []
         }
         let read = try store.ledgerSegments(sourceId: sourceId)
         let unread = entries.filter { !$0.isDirectory && BackupContentIndex.parseSegment($0.name) != nil && read[$0.name] != $0.size }
+        OnServerTrace.log("  ledger: \(entries.count) file(s) in the hash folder · \(unread.count) segment(s) to download · \(OnServerTrace.megabytes(unread.reduce(Int64(0)) { $0 + $1.size }))")
         if !unread.isEmpty { try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true) }
         for entry in unread.sorted(by: { $0.name < $1.name }) {
             try Task.checkCancellation()
@@ -224,7 +230,14 @@ struct ServerFileHashPass: Sendable {
                 do {
                     // Each protocol streams the read through SHA-256, or a
                     // temporary file it deletes — never the file in memory.
-                    let sha = try await client.sha256(of: ServerUploadPath.join(folder, file.relativePath), progress: { _ in })
+                    let clock = ContinuousClock()
+                    let began = clock.now
+                    OnServerActivity.shared.begin(.reading, fileName: (file.relativePath as NSString).lastPathComponent,
+                                                  bytesTotal: file.size)
+                    defer { OnServerActivity.shared.end() }
+                    let sha = try await client.sha256(of: ServerUploadPath.join(folder, file.relativePath),
+                                                      progress: { OnServerActivity.shared.progress($0) })
+                    OnServerTrace.log("  server file \(OnServerTrace.megabytes(file.size)) · read+hash \(OnServerTrace.seconds(began.duration(to: clock.now)))s")
                     try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
                     summary.hashed += 1
                 } catch let error as RemoteFileError where !error.stopsBatch {

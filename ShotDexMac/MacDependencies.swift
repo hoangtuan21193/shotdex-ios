@@ -1,4 +1,5 @@
 import Foundation
+import Photos
 import Observation
 
 /// The Mac's composition root (FS-18 T1): the shared data layer, built once
@@ -114,6 +115,23 @@ final class MacDependencies: LibraryServices {
     /// The Compare window's row and scan (FS-19.08 §6d), set by the sheet
     /// that opens it.
     var commonPhotosCompare: MacCommonPhotosCompareModel?
+    /// Duplicates (FS-06.06): the same scan, verification and marks as iOS.
+    let perceptualHashStore: PerceptualHashStore
+    let duplicateScanPipeline: DuplicateScanPipeline
+    let duplicateQualityPass: DuplicateQualityPass
+    let duplicateReview: DuplicateReviewSession
+    @ObservationIgnored private(set) lazy var bursts: any BurstLibrary = {
+        #if DEBUG
+        // The demo reads no Photos library — its bursts included: a burst
+        // from the user's real library would put their photos on a demo
+        // screenshot.
+        if MacDemoLibrary.isOn { return MacNoBursts() }
+        #endif
+        return PhotoKitBurstLibrary.makeForApp()
+    }()
+    /// The Duplicates screen's model, kept for the window's life so a check
+    /// and its marks survive moving to another sidebar place and back.
+    @ObservationIgnored private(set) lazy var duplicates = DuplicatesModel(dependencies: self)
 
     /// `originalCheck`: the demo library's stand-in for the PhotoKit probe;
     /// nil everywhere else.
@@ -140,6 +158,12 @@ final class MacDependencies: LibraryServices {
         let placeStore = PlaceStore(database: database)
         placeIndexPass = PlaceIndexPass(store: placeStore, geocoder: PlaceGeocodingService(store: placeStore))
         unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
+        let perceptualHashStore = PerceptualHashStore(database: database)
+        self.perceptualHashStore = perceptualHashStore
+        duplicateScanPipeline = DuplicateScanPipeline(store: perceptualHashStore, reader: PerceptualHashReader())
+        duplicateQualityPass = DuplicateQualityPass(store: DuplicateQualityStore(database: database),
+                                                    reader: DuplicateQualityReader(), shouldPause: { false })
+        duplicateReview = DuplicateReviewSession(store: DuplicateReviewStore(database: database))
         networkStatus = NetworkMonitor()
         powerStatus = PowerMonitor()
         sources = SourceStore(database: database)
@@ -453,4 +477,19 @@ final class MacIndexActivity: IndexRunAssertion {
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
         activity = nil
     }
+}
+
+extension MacDependencies: DuplicatesServices {
+    /// The Mac has no app banner: the Duplicates footer shows the model's
+    /// `lastDeleteSummary` instead.
+    func showDuplicatesDeleted(_ text: String) {}
+}
+
+/// No bursts at all: the demo library's stand-in for PhotoKit's.
+@MainActor
+final class MacNoBursts: BurstLibrary {
+    func bursts() async -> [BurstSummary] { [] }
+    func frames(ofBurst id: String) async -> [BurstFrame] { [] }
+    func burstId(of assetId: String) -> String? { nil }
+    func asset(for frameId: String) -> PHAsset? { nil }
 }

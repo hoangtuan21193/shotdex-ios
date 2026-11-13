@@ -35,6 +35,14 @@ struct FileServerListScreen: View {
                         .swipeActions {
                             Button("Delete", role: .destructive) { pendingDelete = server }
                         }
+                        // A pointer has no swipe: the same action on right-click.
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingDelete = server
+                            } label: {
+                                Label("Delete Connection", systemImage: "trash")
+                            }
+                        }
                     }
                 } footer: {
                     Text("Uploads send the original files to the folder under each name. Passwords are kept in the Keychain on this device.")
@@ -56,21 +64,7 @@ struct FileServerListScreen: View {
         .formSheet(item: $editing, onDismiss: reload) { draft in
             FileServerFormScreen(draft: draft)
         }
-        .confirmationDialog(
-            pendingDelete.map { "Delete \($0.name)?" } ?? "",
-            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            titleVisibility: .visible,
-            presenting: pendingDelete
-        ) { server in
-            Button("Delete Connection", role: .destructive) {
-                try? dependencies.fileServers.delete(id: server.id)
-                dependencies.fileServerCatalog.reload()
-                reload()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("The upload history is kept, and nothing on the server or in your library is deleted.")
-        }
+        .deleteConnectionAlert($pendingDelete, dependencies: dependencies, onDelete: reload)
         .task { reload() }
     }
 
@@ -108,5 +102,63 @@ struct FileServerRow: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Delete Connection, here and in Collections › Local Network: the
+/// connection's source goes first — its photos leave ShotDex — then the
+/// connection, as on the Mac (FS-18.04 §3 AC-77). Before 2026-11-11 only the
+/// connection went, and its source stayed in Settings › Sources with no way
+/// to remove it.
+extension View {
+    func deleteConnectionAlert(_ pending: Binding<FileServer?>, dependencies: AppDependencies,
+                               onDelete: @escaping () -> Void = {}) -> some View {
+        modifier(DeleteConnectionAlert(pending: pending, dependencies: dependencies, onDelete: onDelete))
+    }
+}
+
+private struct DeleteConnectionAlert: ViewModifier {
+    @Binding var pending: FileServer?
+    let dependencies: AppDependencies
+    let onDelete: () -> Void
+    @State private var failure: String?
+
+    private var deletion: ServerConnectionDeletion {
+        ServerConnectionDeletion(database: dependencies.database, servers: dependencies.fileServers)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            // `.alert`: on iOS 26 a confirmation dialog hides Cancel (DESIGN.md §10.5).
+            .alert(pending.map { String(localized: "Delete “\($0.name)”?", comment: "File Servers: delete connection alert title") } ?? "",
+                   isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }),
+                   presenting: pending) { server in
+                Button(String(localized: "Cancel", comment: "File Servers: keep the connection"), role: .cancel) {}
+                Button(String(localized: "Delete Connection", comment: "File Servers: confirm delete"), role: .destructive) { delete(server) }
+            } message: { server in
+                Text(ServerConnectionText.deleteMessage((try? deletion.impact(of: server.id))
+                                                        ?? .init(sourceId: nil, photoCount: 0, backupJobs: 0, shortcuts: 0)))
+            }
+            .alert(String(localized: "Couldn’t Delete the Connection", comment: "File Servers: delete failed"),
+                   isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+                Button(String(localized: "OK", comment: "File Servers: dismiss an error")) {}
+            } message: {
+                Text(failure ?? "")
+            }
+    }
+
+    private func delete(_ server: FileServer) {
+        do {
+            try deletion.delete(connectionId: server.id, readingSourceId: dependencies.sources.readingSourceId)
+        } catch ServerConnectionDeletion.Failure.sourceBusy {
+            failure = String(localized: "“\(server.name)” is being read. Delete it when the read finishes.",
+                             comment: "File Servers: delete while its source reads")
+        } catch {
+            failure = error.localizedDescription
+        }
+        dependencies.fileServerCatalog.reload()
+        dependencies.sources.load()
+        dependencies.onServerCheck.onBatch?()
+        onDelete()
     }
 }

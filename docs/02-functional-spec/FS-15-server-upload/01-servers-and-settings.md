@@ -25,7 +25,11 @@ chúng ở menu ⋯ (FS-15.02 §1).
 
 - Nút **+** trên toolbar thêm connection (nhãn VoiceOver "Add Connection").
 - Xoá connection (**Delete Connection**): **hộp alert hai nút** — **Delete** đỏ + **Cancel** — tiêu đề "Delete <tên>?",
-  câu "The upload history is kept, and nothing on the server or in your library is deleted." (Q6)
+  câu theo những gì đi cùng connection (`ServerConnectionText.deleteMessage`, như Mac FS-18.04 §3 AC-77): ảnh của nguồn
+  server rời ShotDex, backup và shortcut bị xoá theo, "Nothing on the server is deleted. Its password leaves your
+  Keychain." **Xoá connection gỡ luôn nguồn server của nó** (`ServerConnectionDeletion`; 2026-11-11 — trước đó iOS chỉ
+  xoá connection, nguồn mồ côi nằm lại Settings › Sources không cách nào gỡ). Nguồn đang được đọc → hộp báo chờ đọc
+  xong. Vuốt hàng, hoặc menu ngữ cảnh (chuột/trackpad trên iPad không vuốt được).
 - Không dùng hộp kiểu action sheet cho việc này. *Vì iOS 26 vẽ nó thành popover và ẩn nút Cancel, chỉ còn nút đỏ.*
   Cùng luật ở On Server và On Cloud (FS-17.01 §1).
 - Xoá hỏng (database báo lỗi) → hộp "Couldn't Delete Connection" + lý do; hàng còn nguyên.

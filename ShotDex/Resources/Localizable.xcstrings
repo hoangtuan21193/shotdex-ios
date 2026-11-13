@@ -34,6 +34,12 @@
     "“%@” is a file. Drop the folder that holds it." : {
       "comment" : "Sources: a file dropped"
     },
+    "“%@” is being read. Delete it when the read finishes." : {
+      "comment" : "File Servers: delete while its source reads"
+    },
+    "“%@” is being read. Remove it when the read finishes." : {
+      "comment" : "Settings › Sources: remove while the source is read"
+    },
     "“%@” is full — %lld of %lld exported." : {
       "comment" : "Export stopped: the destination is full",
       "localizations" : {
@@ -209,6 +215,17 @@
     "%@ · No photos in previous years" : {
       "comment" : "On This Day card subtitle when nothing matches today's date"
     },
+    "%@ · Updated %@" : {
+      "comment" : "Smart album kept in Photos: count line and when it was last updated; e.g. … · Updated 2 min ago",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · Updated %2$@"
+          }
+        }
+      }
+    },
     "%@ (hide)" : {
       "comment" : "Deletion checklist: a server copy, which is hidden rather than deleted"
     },
@@ -327,17 +344,6 @@
     "%@ donut chart" : {
 
     },
-    "%@ Edited — edit not on %@" : {
-      "comment" : "On-server check: items edited in Photos whose edit is not on the server",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ Edited — edit not on %2$@"
-          }
-        }
-      }
-    },
     "%@ ejected." : {
       "comment" : "Card import banner: the card was let go"
     },
@@ -346,9 +352,6 @@
     },
     "%@ failed" : {
       "comment" : "Activity: count"
-    },
-    "%@ found so far" : {
-      "comment" : "Duplicates header: groups already found while scanning"
     },
     "%@ free" : {
       "comment" : "Server browser footer: free space, total unknown"
@@ -461,7 +464,7 @@
       "comment" : "Activity: count"
     },
     "%@ of %@" : {
-      "comment" : "Activity: N of M photos\nActivity: bytes done of total\nActivity: photo N of M\nBackup card: files done of files to copy\nBackup detail: files done of files\nDownload from server: bytes received of total\nExport progress: bytes written of the total\nOn-server check: items checked of all items\nUpload to Server: bytes sent of total\nViewer: bytes of a cloud file downloaded so far, of its size",
+      "comment" : "Activity: N of M photos\nActivity: bytes done of total\nActivity: photo N of M\nBackup card: files done of files to copy\nBackup detail: files done of files\nDownload from server: bytes received of total\nExport progress: bytes written of the total\nUpload to Server: bytes sent of total\nViewer: bytes of a cloud file downloaded so far, of its size",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -494,12 +497,23 @@
       }
     },
     "%@ of %@ photos" : {
-      "comment" : "Mac toolbar subtitle while a filter is on: shown of all photos",
+      "comment" : "Duplicates header: check progress\nMac toolbar subtitle while a filter is on: shown of all photos",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ of %2$@ photos"
+          }
+        }
+      }
+    },
+    "%@ of %@ photos · list updates when done" : {
+      "comment" : "Duplicates header: comparing step progress",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ photos · list updates when done"
           }
         }
       }
@@ -650,9 +664,6 @@
     "%@ start" : {
       "comment" : "VoiceOver: a clip's leading edge handle on the Video Studio timeline (e.g. Clip 2 start); adjustable a frame at a time"
     },
-    "%@ to download" : {
-      "comment" : "On-server check: what is left to download from iCloud"
-    },
     "%@ to free" : {
       "comment" : "Duplicates folded row: size of the marked photos"
     },
@@ -661,6 +672,9 @@
     },
     "%@ videos" : {
       "comment" : "Mac index status: indexed videos\nMac toolbar subtitle"
+    },
+    "%@ was disconnected" : {
+      "comment" : "Source read banner: the drive went away mid-read"
     },
     "%@ was disconnected. %lld of %lld imported." : {
       "comment" : "Card import: the card was pulled out mid-batch; card name, then imported of total",
@@ -1096,6 +1110,9 @@
         }
       }
     },
+    "%lld incomplete condition won’t be saved." : {
+
+    },
     "%lld item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1300,6 +1317,17 @@
         }
       }
     },
+    "%lld of %lld photos read" : {
+      "comment" : "Source read banner: files read so far (plural)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld photos read"
+          }
+        }
+      }
+    },
     "%lld of %lld read" : {
       "comment" : "Sources: a read in progress",
       "localizations" : {
@@ -1337,7 +1365,7 @@
       }
     },
     "%lld per row" : {
-      "comment" : "Duplicates: HUD while pinching, copies per row on a card"
+      "comment" : "Duplicates: HUD while pinching, photos per row on a card"
     },
     "%lld percent" : {
       "comment" : "Video Studio compare: VoiceOver value of the Split handle — how much of the frame is Before"
@@ -1469,9 +1497,6 @@
     "%lld photos saved without the watermark" : {
       "comment" : "Resize summary: photos with nothing to stamp (plural)"
     },
-    "%lld photos to Recently Deleted" : {
-      "comment" : "Deletion banner: Photos items after files"
-    },
     "%lld Photos Weren't Deleted" : {
       "comment" : "Delete: photos kept because their server copy is gone or changed"
     },
@@ -1597,6 +1622,17 @@
     "%llds per photo" : {
 
     },
+    "^[%lld edited photo](inflect: true) without the edit on %@" : {
+      "comment" : "On-server check: photos edited in Photos whose original is on the server but whose edit is not, e.g. 136 edited photos without the edit on WIN",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld edited photo](inflect: true) without the edit on %2$@"
+          }
+        }
+      }
+    },
     "^[%lld file](inflect: true) not uploaded yet." : {
       "comment" : "Upload to Server result: files the stopped batch never reached"
     },
@@ -1648,6 +1684,20 @@
         }
       }
     },
+    "^[%lld photo](inflect: true) left" : {
+      "comment" : "On-server check: photos with no answer yet, after the reason it waits, e.g. Waiting for Wi-Fi · 38 photos left"
+    },
+    "^[%lld photo](inflect: true) left to check on %@" : {
+      "comment" : "On-server check: running; photos with no answer yet, and the server (› folder) counted on, e.g. 38 photos left to check on WIN › Photos",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld photo](inflect: true) left to check on %2$@"
+          }
+        }
+      }
+    },
     "^[%lld photo](inflect: true) not imported yet." : {
       "comment" : "Download from server result: photos the stopped batch never reached"
     },
@@ -1656,6 +1706,9 @@
     },
     "^[%lld photo](inflect: true) skipped — already in your library." : {
       "comment" : "Download from server result: photos skipped because they were already in the library"
+    },
+    "^[%lld photo](inflect: true) to Recently Deleted" : {
+      "comment" : "Deletion banner: Photos items after files"
     },
     "^[%lld photo](inflect: true) were being joined when ShotDex closed. Nothing was saved." : {
 
@@ -1706,6 +1759,9 @@
     },
     "1 goes to Recently Deleted" : {
       "comment" : "Deletion confirmation: one Photos item, first destination"
+    },
+    "1 is in an album · kept photo joins it" : {
+      "comment" : "Duplicates: floating bar, one marked photo is in an album"
     },
     "1 kept photo couldn't take its copies' albums or favorite" : {
       "comment" : "Duplicates: banner, inheritance could not be written for one kept photo"
@@ -1878,11 +1934,25 @@
     "about %@ left" : {
       "comment" : "Common photos: time left"
     },
+    "about %lld h %lld min left" : {
+      "comment" : "Source read: time left in hours and minutes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "about %1$lld h %2$lld min left"
+          }
+        }
+      }
+    },
+    "about %lld h left" : {
+      "comment" : "Source read: time left in whole hours"
+    },
     "About %lld min" : {
       "comment" : "Backup detail: time left"
     },
     "about %lld min left" : {
-      "comment" : "Backup card: time left estimate\nExport progress: time left in minutes"
+      "comment" : "Backup card: time left estimate\nExport progress: time left in minutes\nSource read: time left in minutes"
     },
     "Access" : {
 
@@ -2048,6 +2118,12 @@
     "Added to your ShotDex Collages album" : {
 
     },
+    "Adding “%@”" : {
+      "comment" : "Source read banner: the first read of a new source"
+    },
+    "Adding “%@” is paused" : {
+      "comment" : "Source read banner: paused"
+    },
     "Adding image…" : {
 
     },
@@ -2150,6 +2226,9 @@
     "All %@" : {
       "comment" : "Import from Card segment: every photo"
     },
+    "All %@ done · writing the log and reading the folders again…" : {
+      "comment" : "Activity: a common-photos run past its last photo"
+    },
     "All %lld spots come off the photo. Undo brings them back." : {
 
     },
@@ -2227,6 +2306,12 @@
     },
     "Also Copy to a Backup Drive" : {
       "comment" : "Import backup switch"
+    },
+    "Also on %@" : {
+      "comment" : "Smart album chip: photos that also have a copy on this server folder, e.g. Also on NAS Home › Shared"
+    },
+    "Also on Server" : {
+      "comment" : "Filter chip: an Also on Server condition whose server name is not at hand\nRule field: whether the photo in the library also has an identical copy on a server folder"
     },
     "Also sent: the ShotDex and iOS versions, the device model, your language, and roughly how many photos you have." : {
 
@@ -2771,7 +2856,7 @@
       "comment" : "Backup card: the server refused the password"
     },
     "Cancel" : {
-      "comment" : "AI provider form: keep editing\nAI provider form: keep it\nAI provider form: leave without saving\nAlert button\nBackup form: close without saving\nClose the bulk sheet without writing\nDelete: cancel\nDismiss the failed-write alert\nDuplicates Quick clean: close without marking\nDuplicates: stop the scan in progress\nExport sheet: close without exporting\nExport: do not replace\nExport: stop the run (asks first)\nSync sheet: close without syncing\nVideo Studio colour: dismisses the node rename prompt\nVideo Studio: leaves search\nViewer: stops downloading a cloud file"
+      "comment" : "AI provider form: keep editing\nAI provider form: keep it\nAI provider form: leave without saving\nAlert button\nBackup form: close without saving\nClose the bulk sheet without writing\nDelete: cancel\nDismiss the failed-write alert\nDuplicates Quick clean: close without marking\nDuplicates: stop the check in progress\nExport sheet: close without exporting\nExport: do not replace\nExport: stop the run (asks first)\nFile Servers: keep the connection\nSettings › Sources: keep the source\nSync sheet: close without syncing\nVideo Studio colour: dismisses the node rename prompt\nVideo Studio: leaves search\nViewer: stops downloading a cloud file"
     },
     "Cancel Export" : {
       "comment" : "Video Studio Export: stops the export in progress"
@@ -2896,9 +2981,6 @@
     "Checking" : {
       "comment" : "Backup detail: the copy is read back and compared\nDownload from server: checking the received file"
     },
-    "Checking · %@" : {
-      "comment" : "On-server check: running; e.g. Checking · 12,408 of 54,920"
-    },
     "Checking %@ · %@ files" : {
       "comment" : "Backup card: listing what the destination folder already holds, e.g. 'Checking NAS Home · 12,408 files'",
       "localizations" : {
@@ -2906,17 +2988,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Checking %1$@ · %2$@ files"
-          }
-        }
-      }
-    },
-    "Checking %@ of %@" : {
-      "comment" : "Duplicates header: check progress",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Checking %1$@ of %2$@"
           }
         }
       }
@@ -2935,14 +3006,11 @@
         }
       }
     },
-    "Checking sharpness…" : {
-      "comment" : "Duplicates: chip on the kept photo while the group is being scored"
-    },
     "checking the copies" : {
       "comment" : "Common photos undo: current step"
     },
     "Checking…" : {
-      "comment" : "Local Network Access: the answer is not in yet"
+      "comment" : "Duplicates: chip on the kept photo while the group is being compared\nLocal Network Access: the answer is not in yet"
     },
     "checksum mismatch" : {
       "comment" : "Common photos log reason: the copy read back did not match"
@@ -2997,6 +3065,9 @@
     },
     "Choose Photos" : {
       "comment" : "Alert button: pick the photos for a Combine Photos tool again"
+    },
+    "Choose Server" : {
+      "comment" : "Smart album Also on Server condition: no server picked yet"
     },
     "Choose the folder again in Files to let ShotDex read it." : {
       "comment" : "Sources: a folder whose permission was lost"
@@ -3210,6 +3281,9 @@
     "Connect a card reader or the camera over USB-C; the card shows under Sources." : {
       "comment" : "Add a Source: memory card hint"
     },
+    "connect it to read the rest" : {
+      "comment" : "Source read banner: the drive went away mid-read"
+    },
     "Connect to “%@”" : {
       "comment" : "Connect As screen title"
     },
@@ -3350,6 +3424,9 @@
     "Couldn't Delete Photos" : {
       "comment" : "Deletion through sources: a file stayed"
     },
+    "Couldn’t Delete the Connection" : {
+      "comment" : "File Servers: delete failed"
+    },
     "Couldn't delete the frames." : {
       "comment" : "Banner: the system deletion of burst frames failed; nothing was deleted"
     },
@@ -3389,13 +3466,13 @@
     "Couldn't load the selected items." : {
 
     },
-    "Couldn't move %lld files to %@: %@" : {
+    "Couldn't move ^[%lld file](inflect: true) to %@: %@" : {
       "comment" : "Deletion banner: some files stayed",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Couldn't move %1$lld files to %2$@: %3$@"
+            "value" : "Couldn't move ^[%1$lld file](inflect: true) to %2$@: %3$@"
           }
         }
       }
@@ -3471,6 +3548,9 @@
     },
     "Couldn't Update Photos" : {
       "comment" : "Alert title when the bulk write failed"
+    },
+    "Couldn’t update the album in Photos. Will try again." : {
+      "comment" : "Smart album: a Keep in Photos write failed; it retries"
     },
     "Counts as one of the conditions, so it widens the match rather than narrowing it." : {
 
@@ -3687,7 +3767,7 @@
       }
     },
     "Delete “%@”?" : {
-
+      "comment" : "File Servers: delete connection alert title"
     },
     "Delete %@" : {
 
@@ -3810,7 +3890,7 @@
 
     },
     "Delete Connection" : {
-
+      "comment" : "File Servers: confirm delete"
     },
     "Delete Draft" : {
       "comment" : "Video Projects: menu action that deletes a video draft — never the photos or videos it uses"
@@ -3860,7 +3940,7 @@
     "Delete window" : {
       "comment" : "Video Studio colour"
     },
-    "Deleted %lld files permanently." : {
+    "Deleted ^[%lld file](inflect: true) permanently." : {
       "comment" : "Deletion banner: files on a volume with no Trash"
     },
     "deleting %lld" : {
@@ -4276,7 +4356,7 @@
 
     },
     "Estimating time…" : {
-
+      "comment" : "Source read banner: no time estimate yet"
     },
     "Events Listed: %lld" : {
 
@@ -4293,6 +4373,9 @@
     "Every camera is known" : {
       "comment" : "Settings root, Camera Database value with no unknown camera"
     },
+    "Every copy decided" : {
+      "comment" : "Duplicates Quick clean band: nothing left for it"
+    },
     "Every cut moves to the nearest bar. One undo." : {
       "comment" : "Video Studio beats on the Duo cover: under Cut Clips to Beat — what it does, short"
     },
@@ -4307,6 +4390,9 @@
     },
     "every photo and video" : {
       "comment" : "Settings → Access row, after Full Access"
+    },
+    "Every photo checked" : {
+      "comment" : "Duplicates header: nothing left for a rescan"
     },
     "Every photo scanned" : {
       "comment" : "Settings root, People and Pets value once the scan is complete"
@@ -4485,7 +4571,7 @@
       "comment" : "Settings root, Display value: list item, lowercase mid-sentence"
     },
     "File Size" : {
-      "comment" : "Info panel row label\nSettings › Info on Thumbnails field"
+      "comment" : "Info panel row label\nMac Filter and Sort: sort by file size\nSettings › Info on Thumbnails field"
     },
     "File Size (Largest)" : {
       "comment" : "Sort By menu row; also the Library title under a non-date order"
@@ -4555,6 +4641,9 @@
     },
     "Finding overlaps…" : {
 
+    },
+    "Finding photos that look alike…" : {
+      "comment" : "Duplicates header: grouping step"
     },
     "Finding place name…" : {
 
@@ -4885,13 +4974,13 @@
     "HEVC is about 40% smaller; some older devices can’t play it." : {
       "comment" : "Video Studio Video Settings: under the codec choice"
     },
-    "Hid %lld photos on %@." : {
+    "Hid ^[%lld photo](inflect: true) on %@." : {
       "comment" : "Deletion banner: server photos hidden",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Hid %1$lld photos on %2$@."
+            "value" : "Hid ^[%1$lld photo](inflect: true) on %2$@."
           }
         }
       }
@@ -5140,6 +5229,12 @@
     "in pane %@" : {
       "comment" : "VoiceOver: which compare pane shows this photo"
     },
+    "In Photos · %lld photos" : {
+      "comment" : "Smart album kept in Photos: how many photos its album holds; e.g. In Photos · 8,412 photos"
+    },
+    "In Photos · No photos yet" : {
+      "comment" : "Smart album kept in Photos: its album holds nothing yet, e.g. while the NAS check runs"
+    },
     "In Point" : {
       "comment" : "Video Studio ruler: the In flag of the In–Out range (VoiceOver)"
     },
@@ -5204,6 +5299,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Indexing %1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "Indexing %lld of %lld" : {
+      "comment" : "Mac sidebar foot: a source being read (plural)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indexing %1$lld of %2$lld"
           }
         }
       }
@@ -5451,6 +5557,9 @@
     },
     "Keep Exporting" : {
       "comment" : "Export: do not stop the run"
+    },
+    "Keep in Photos" : {
+
     },
     "Keep just this one" : {
       "comment" : "Duplicates tile menu: keep this photo, mark the rest\nFrame picker: keep this frame and no other"
@@ -6138,22 +6247,22 @@
     "Moved" : {
       "comment" : "Common photos log status"
     },
-    "Moved %lld files to %@" : {
+    "Moved %lld star ratings to Photos." : {
+      "comment" : "Banner after the one-time move of stars into Photos on iOS 27 (plural)"
+    },
+    "Moved ^[%lld file](inflect: true) to %@" : {
       "comment" : "Deletion banner: files sent to the Trash",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Moved %1$lld files to %2$@"
+            "value" : "Moved ^[%1$lld file](inflect: true) to %2$@"
           }
         }
       }
     },
-    "Moved %lld photos to Recently Deleted" : {
+    "Moved ^[%lld photo](inflect: true) to Recently Deleted" : {
       "comment" : "Deletion banner: Photos items, first part"
-    },
-    "Moved %lld star ratings to Photos." : {
-      "comment" : "Banner after the one-time move of stars into Photos on iOS 27 (plural)"
     },
     "Moves every cut to the nearest bar. Photos stretch, videos trim. One undo." : {
       "comment" : "Video Studio beats: under Cut Clips to Beat — what it does"
@@ -6241,6 +6350,15 @@
     "Needs a Portrait photo taken on iPhone" : {
 
     },
+    "Needs Full Photos Access to keep the album in Photos." : {
+      "comment" : "Smart album: Keep in Photos is on but ShotDex has only limited Photos access"
+    },
+    "Needs Full Photos Access." : {
+
+    },
+    "Needs Full Photos Access. The album in Photos isn’t updating." : {
+
+    },
     "Network" : {
 
     },
@@ -6306,6 +6424,9 @@
     },
     "Next Photo" : {
       "comment" : "Keyboard shortcut in the culling pass"
+    },
+    "No" : {
+      "comment" : "Smart album Also on Server condition: the photo is checked and missing a copy there"
     },
     "No Access to Photos" : {
       "comment" : "Duplicates empty state when Photos access is denied\nVideo Studio Media panel: title when Photos access is denied"
@@ -6423,6 +6544,9 @@
     },
     "No presets yet" : {
 
+    },
+    "No server is a source on this device yet. In Settings › File Servers, open the server and turn on Add as Source — a connected server alone is not read." : {
+      "comment" : "Smart album Also on Server condition when no server source has been added"
     },
     "No servers found. Enter the address below." : {
 
@@ -6580,6 +6704,12 @@
     "Not Offered for Deletion" : {
 
     },
+    "Not on %@" : {
+      "comment" : "Smart album chip: checked photos missing a copy on this server folder, e.g. Not on NAS Home › Shared"
+    },
+    "Not on Server" : {
+      "comment" : "Filter chip: an Also on Server No condition whose server name is not at hand"
+    },
     "Not on this %@" : {
       "comment" : "Video Studio captions: under a language whose speech model is not on the device"
     },
@@ -6712,7 +6842,7 @@
       "comment" : "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later"
     },
     "OK" : {
-      "comment" : "Add a Source: dismiss the refusal\nDelete: dismiss\nDismiss alert\nExport: dismiss an alert"
+      "comment" : "Add a Source: dismiss the refusal\nDelete: dismiss\nDismiss alert\nExport: dismiss an alert\nFile Servers: dismiss an error\nSettings › Sources: dismiss an error"
     },
     "Oldest first" : {
       "comment" : "Duplicates sort order"
@@ -7118,6 +7248,17 @@
     },
     "Paused — waiting for Wi-Fi" : {
 
+    },
+    "Paused · %lld of %lld" : {
+      "comment" : "Mac sidebar foot: a source read paused (plural)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paused · %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Paused · %lld waiting" : {
       "comment" : "On This iPhone: downloads paused"
@@ -7641,6 +7782,9 @@
     "Read the Log" : {
 
     },
+    "Reading “%@”" : {
+      "comment" : "Source read banner: a source read again"
+    },
     "Reading %lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -7776,7 +7920,10 @@
       }
     },
     "Remove" : {
-      "comment" : "Duplicates tile menu: mark for removal\nVoiceOver action on a tile\nVoiceOver action: remove this keyword from the photo\nVoiceOver: the ring on a tile"
+      "comment" : "Duplicates tile menu: mark for removal\nSettings › Sources: confirm Remove Source\nSettings › Sources: swipe to remove a source\nVoiceOver action on a tile\nVoiceOver action: remove this keyword from the photo\nVoiceOver: the ring on a tile"
+    },
+    "Remove “%@”?" : {
+      "comment" : "Settings › Sources: Remove Source alert title"
     },
     "Remove %@" : {
       "comment" : "VoiceOver: drop a keyword waiting to be added"
@@ -7851,6 +7998,9 @@
     },
     "Remove rating filter, unrated" : {
       "comment" : "VoiceOver: remove the rating chip"
+    },
+    "Remove Source…" : {
+      "comment" : "Settings › Sources: remove a source"
     },
     "Remove your vote" : {
 
@@ -8423,10 +8573,13 @@
 
     },
     "Server" : {
-      "comment" : "Add a Source: a NAS share\nBackup: a connection whose name is unknown\nSources: badge of a server source"
+      "comment" : "Add a Source: a NAS share\nBackup: a connection whose name is unknown\nSmart album Also on Server condition: the server row\nSources: badge of a server source"
     },
     "server error" : {
       "comment" : "Common photos log reason"
+    },
+    "Server Removed" : {
+      "comment" : "Smart album Also on Server condition: its server is no longer a source"
     },
     "Servers Found on This Network" : {
 
@@ -8641,6 +8794,9 @@
     "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
 
     },
+    "ShotDex keeps an album in Photos with exactly these photos." : {
+
+    },
     "ShotDex keeps it in this device's Keychain and never shows it again." : {
       "comment" : "AI provider form: where the key goes"
     },
@@ -8799,6 +8955,9 @@
     },
     "Shows details about shutter count availability" : {
 
+    },
+    "Shows each status in full" : {
+      "comment" : "Smart album header: the status line opens its details"
     },
     "Shows every group to jump to" : {
 
@@ -9082,6 +9241,15 @@
     "Status" : {
 
     },
+    "Step 1 of 3 · Reading photos" : {
+      "comment" : "Duplicates header: first step of the check"
+    },
+    "Step 2 of 3 · Grouping" : {
+      "comment" : "Duplicates header: second step of the check"
+    },
+    "Step 3 of 3 · Comparing matches" : {
+      "comment" : "Duplicates header: third step, Vision confirms each group"
+    },
     "Sticker" : {
       "comment" : "Video Studio: a picture laid over the video"
     },
@@ -9289,6 +9457,9 @@
     "the %lld photos keep their length" : {
       "comment" : "Video Studio multi-select: under Speed, the stills it leaves alone — the 2 photos keep their length (plural)"
     },
+    "The album was deleted in Photos. Keep in Photos is off." : {
+      "comment" : "Smart album: the album ShotDex kept in Photos was deleted there"
+    },
     "The caption and keywords are unchanged." : {
       "comment" : "Alert message when a caption or keyword write failed"
     },
@@ -9443,9 +9614,6 @@
     "The typical crop factor of the chosen format is used for full-frame equivalent focal lengths." : {
 
     },
-    "The upload history is kept, and nothing on the server or in your library is deleted." : {
-
-    },
     "The username or password was rejected." : {
       "comment" : "File server error"
     },
@@ -9524,6 +9692,9 @@
       "comment" : "Video Studio Look panel: a tapped look goes to the clip under the playhead (or the selected clip)"
     },
     "This computer doesn't share any folders with this account." : {
+
+    },
+    "This deletes the smart album. The album “%@” stays in Photos." : {
 
     },
     "This device can't write HEIC, so the photo is saved as JPEG." : {
@@ -9633,6 +9804,9 @@
     },
     "to %@" : {
       "comment" : "Export step detail: the file being written"
+    },
+    "To share these, open the album in Photos and choose Move to Shared Library." : {
+      "comment" : "Smart album kept in Photos: how to move its photos to the iCloud Shared Library"
     },
     "Today" : {
 
@@ -9927,6 +10101,20 @@
     },
     "Updating %lld photos…" : {
       "comment" : "Modal while a large Caption & Keywords write runs (plural)"
+    },
+    "Updating album in Photos…" : {
+      "comment" : "Smart album: Keep in Photos about to write"
+    },
+    "Updating album in Photos… %@ of %@" : {
+      "comment" : "Smart album: Keep in Photos writing; e.g. Updating album in Photos… 3,200 of 8,412",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Updating album in Photos… %1$@ of %2$@"
+          }
+        }
+      }
     },
     "Updating as your library is indexed." : {
       "comment" : "Insights footer while the index is still running"
@@ -10465,6 +10653,9 @@
     },
     "Yellow" : {
       "comment" : "Video Studio iPad text inspector: the yellow caption colour"
+    },
+    "Yes" : {
+      "comment" : "Smart album Also on Server condition: the photo has a copy there"
     },
     "Yesterday" : {
 

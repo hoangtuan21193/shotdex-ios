@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {"action": "launch"},
+    {"action": "wait", "seconds": 8},
+    {"action": "tap", "label": "Collections"},
+    {"action": "wait", "seconds": 3},
+    {"action": "tap", "label": "On NAS · Shared", "type": "button"},
+    {"action": "wait", "seconds": 30},
+    {"action": "tap", "x": 0.15, "y": 0.105},
+    {"action": "wait", "seconds": 30}
+  ]
+}

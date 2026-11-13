@@ -87,12 +87,27 @@ enum DuplicateKind: String, CaseIterable, Sendable, Identifiable {
 /// Exact and similar groups are ordered best first by the keeper rule; a
 /// burst in the order it was shot.
 struct DuplicateGroup: Identifiable, Equatable, Sendable {
-    /// Stable across regroups as long as the same member leads the group.
-    var id: String { members[0].assetId }
-    var members: [HashedPhoto]
+    /// The smallest member id: stable across regroups and re-orderings
+    /// as long as that photo stays in the group — a card keeps its identity
+    /// (and its place on screen) when a score changes who leads.
+    private(set) var id: String
+    var members: [HashedPhoto] {
+        didSet { id = Self.id(of: members) }
+    }
     var kind: DuplicateKind
     /// A bracket or focus stack: material for a merge, not junk (§5).
     var sourceSet: DuplicateSourceSet? = nil
+
+    init(members: [HashedPhoto], kind: DuplicateKind, sourceSet: DuplicateSourceSet? = nil) {
+        self.members = members
+        self.kind = kind
+        self.sourceSet = sourceSet
+        self.id = Self.id(of: members)
+    }
+
+    private static func id(of members: [HashedPhoto]) -> String {
+        members.map(\.assetId).min() ?? ""
+    }
 
     var count: Int { members.count }
     var memberIds: Set<String> { Set(members.map(\.assetId)) }
@@ -123,11 +138,15 @@ enum DuplicateGrouper {
     /// the usual dHash working threshold: well under the ~32 two unrelated
     /// pictures average, above the 2–6 a re-encode or a modest resize costs.
     static let lookAlikeMaxDistance = 10
-    /// Seconds allowed between one frame of a moment and the next.
-    static let seriesMaxGap = 30
+    /// Seconds allowed between one frame of a moment and the next. 30 s let
+    /// a walk-around of different subjects read as one moment.
+    static let seriesMaxGap = 10
     /// How far apart two *consecutive* frames of a moment may be. Looser than
     /// a look-alike: the subject is supposed to have moved.
-    static let seriesMaxDistance = 20
+    static let seriesMaxDistance = 16
+    /// How far any frame may drift from the run's first frame: chaining
+    /// neighbour to neighbour alone let a run wander to another scene.
+    static let seriesMaxDrift = 20
     /// Two frames 20 seconds apart is an ordinary thing to shoot.
     static let seriesMinCount = 3
     /// A smaller copy's long edge is at most this share of the bigger one's.
@@ -218,7 +237,7 @@ enum DuplicateGrouper {
         for (left, right) in nearPairs {
             let a = free(left), b = free(right)
             for index in a {
-                if let other = b.first(where: { focalCompatible(photos[index], photos[$0]) }) {
+                if let other = b.first(where: { lookAlikeCompatible(photos[index], photos[$0]) }) {
                     alike.union(index, other)
                 }
             }
@@ -250,9 +269,13 @@ enum DuplicateGrouper {
         var current = [timed[0]]
         for index in timed.dropFirst() {
             let previous = photos[current[current.count - 1]], photo = photos[index]
+            let first = photos[current[0]]
             let gap = (photo.creationDate ?? 0) - (previous.creationDate ?? 0)
             let distance = (photo.hash.bits ^ previous.hash.bits).nonzeroBitCount
-            if gap <= seriesMaxGap, distance <= seriesMaxDistance, focalCompatible(previous, photo) {
+            let drift = (photo.hash.bits ^ first.hash.bits).nonzeroBitCount
+            if gap <= seriesMaxGap, distance <= seriesMaxDistance, drift <= seriesMaxDrift,
+               focalCompatible(previous, photo), aspectCompatible(previous, photo),
+               screenshotCompatible(previous, photo) {
                 current.append(index)
             } else {
                 runs.append(current)
@@ -299,6 +322,12 @@ enum DuplicateGrouper {
         return left == right ? a.assetId < b.assetId : left < right
     }
 
+    /// A screenshot is only ever like another screenshot: screens of one app
+    /// share a layout, a photo of a screen is not a screenshot of it.
+    static func screenshotCompatible(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
+        a.isScreenshot == b.isScreenshot
+    }
+
     /// Same scene at 24mm and 35mm is two framings, not a copy (persona An).
     /// Unknown focal length vetoes nothing.
     static func focalCompatible(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
@@ -315,17 +344,28 @@ enum DuplicateGrouper {
         return abs(left - right) / max(left, right) <= aspectTolerance
     }
 
+    /// Two photos may be look-alikes at all: same focal length, same shape
+    /// (an unknown shape is no proof), both screenshots or neither.
+    static func lookAlikeCompatible(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
+        guard a.width != nil, a.height != nil, b.width != nil, b.height != nil else { return false }
+        return focalCompatible(a, b) && aspectCompatible(a, b) && screenshotCompatible(a, b)
+    }
+
     /// Splits a chained component so every member is within
-    /// `lookAlikeMaxDistance` of its cluster's first photo. Union-find alone
-    /// lets A~B~C~D pull D into A's group though the two share nothing.
+    /// `lookAlikeMaxDistance` of **every** other member of its cluster
+    /// (complete linkage). Union-find alone lets A~B~C~D pull D into A's
+    /// group though the two share nothing; checking only the first member
+    /// still let two members sit twice the threshold apart.
     static func leaderClusters(_ component: [Int], photos: [HashedPhoto]) -> [[Int]] {
         var clusters: [[Int]] = []
         for index in component {
             let photo = photos[index]
             if let slot = clusters.firstIndex(where: { cluster in
-                let leader = photos[cluster[0]]
-                return (leader.hash.bits ^ photo.hash.bits).nonzeroBitCount <= lookAlikeMaxDistance
-                    && focalCompatible(leader, photo) && aspectCompatible(leader, photo)
+                cluster.allSatisfy { member in
+                    let other = photos[member]
+                    return (other.hash.bits ^ photo.hash.bits).nonzeroBitCount <= lookAlikeMaxDistance
+                        && lookAlikeCompatible(other, photo)
+                }
             }) {
                 clusters[slot].append(index)
             } else {
@@ -427,7 +467,7 @@ enum DuplicateGrouper {
     private static func linkCompatible(_ indices: [Int], photos: [HashedPhoto], into sets: inout UnionFind) {
         guard indices.count > 1 else { return }
         for (position, index) in indices.enumerated() {
-            if let other = indices[(position + 1)...].first(where: { focalCompatible(photos[index], photos[$0]) }) {
+            if let other = indices[(position + 1)...].first(where: { lookAlikeCompatible(photos[index], photos[$0]) }) {
                 sets.union(index, other)
             }
         }

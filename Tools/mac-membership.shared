@@ -17,3 +17,5 @@ Features/Support/SupportModel.swift
 Features/ServerUpload/ServerUploadModel.swift
 Features/ServerUpload/ServerUploadIndex.swift
 Features/Ingest/IngestModel.swift
+Features/Duplicates/DuplicatesModel.swift
+Features/Duplicates/DuplicateReviewSession.swift

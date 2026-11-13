@@ -34,14 +34,21 @@ một dòng **rỗng**, chỉ thử lại ở lượt quét được phép dùng
 
 ## 3. Lượt quét
 
+**Không bao giờ tự chạy** (người dùng 2026-11-10: lượt quét tự động lần đầu cho quá nhiều nhóm sai). Mở màn chỉ đọc kết
+quả đã lưu; lần đầu là *"Not Checked Yet"* + **Check Library**. Lượt kiểm tra là **ba bước**, mỗi bước một vạch tiến độ
+trong ô trạng thái dưới hàng lọc: **Step 1 of 3 · Reading photos** (N of M) → **Step 2 of 3 · Grouping** (vạch chạy) →
+**Step 3 of 3 · Comparing matches** (N of M · list updates when done). Mọi việc nặng chạy ngoài main thread; tiến độ đẩy
+lên màn tối đa 4 lần/giây.
+
 1. Dọn dòng của những ảnh đã biến mất.
 2. Danh sách việc = ảnh **chưa có dấu vân tay**, hoặc **ngày sửa đã lệch**.
 3. Lô **200**, xin **8** ảnh song song, **ghi sau mỗi lô** — huỷ giữa chừng thì lần sau chạy tiếp.
-4. Gom nhóm (§4) — **kết quả hiện dần**: sau mỗi lô đã gom, nhóm mới hiện vào danh sách; dải trên ghi *"Scanning 1,200
-   of 38,000 · 40 found so far"* + **Cancel** (chữ accent, không đỏ) (A4).
-5. **Chấm chất lượng** (§6) cho ảnh **đã nằm trong một nhóm** thuộc loại Similar hoặc Burst — không chấm cả
-   thư viện. Chấm xong nhóm nào thì thẻ nhóm đó cập nhật lý do tại chỗ; trong lúc chờ, thẻ ghi *"Checking sharpness…"*
-   thay cho chip lý do.
+4. Gom nhóm (§4) **một lần, khi đọc xong** — không còn "40 found so far": nhóm tạm gom giữa chừng sai nhiều và làm
+   thẻ nhảy chỗ (2026-11-10). Danh sách cũ ở yên tới khi lượt mới xong. **Cancel** (chữ accent, không đỏ) giữ mọi lô đã
+   ghi và không chạy sang bước 3.
+5. **So khớp và chấm** (§4a, §6) cho ảnh **đã nằm trong một nhóm** — không chấm cả thư viện. Kết quả vào danh sách
+   **một lần khi bước 3 xong**; trong lúc chờ, thẻ ghi *"Checking…"* thay cho chip lý do. Bước 3 cũng tự chạy khi mở màn
+   nếu có ảnh trong nhóm chưa được so (ví dụ sau khi thêm cột feature print); ô trạng thái hiện tiến độ của nó.
 
 - Ảnh chỉ có trên iCloud mà lượt này không được dùng mạng: dòng trạng thái ghi *"148 photos only in iCloud — will check
   on Wi-Fi"* thay cho *"not scanned yet"* (A4).
@@ -60,8 +67,26 @@ Ba loại, mỗi loại một viên lọc (người dùng chốt 2026-10-21: hà
 | Loại (chữ trên màn) | Luật | Bản giữ đề xuất |
 |---|---|---|
 | **Exact** | ảnh giống y hệt: dấu vân tay bằng nhau, cùng kích thước pixel, cùng giây chụp (hoặc cùng ngày sửa khi thiếu ngày chụp), **và dung lượng file lệch ≤ 1%** (bản nén lại ở chất lượng khác thì không phải Exact). **Cùng tên file** sau khi bỏ đuôi bản sao (`IMG_1 2`, `IMG_1 (1)`, `IMG_1-2`, `IMG_1 copy`; không bỏ `_2` vì điện thoại đánh số khung burst như vậy); thiếu tên thì dung lượng phải bằng đúng (2026-10-22: máy ảnh chụp 10–30 khung/giây cho hai khung HAT_1079/HAT_1080 cùng hash, cùng giây, lệch 0,14% dung lượng — 110/119 nhóm Exact trên máy thật là khung liên tiếp như vậy). Mọi ảnh của nhóm cùng kích thước | luật file D3: đã chỉnh → favorite → file lớn hơn → nhiều pixel hơn |
-| **Similar** | (a) **bản nhỏ**: thành phần liên thông của quan hệ "y hệt" ở trên **cộng** quan hệ "bản nhỏ" (lệch ≤ 6/64 bit, cùng tỷ lệ khung ±2%, nhỏ hơn ≥ 25% cạnh dài, cùng giây chụp **hoặc** bản nhỏ thiếu ngày chụp EXIF — gửi lại qua WhatsApp/Zalo/AirDrop, bản xuất cỡ nhỏ), khi nhóm có **ít nhất hai kích thước**; (b) **ảnh gần giống**: lệch ≤ 10/64 bit **so với ảnh đầu nhóm** (không nối dây chuyền A~B~C — sửa 2026-10-20, nhóm cũ gom cả ảnh khác hẳn nhau), cùng tỷ lệ khung ±2%, không thuộc loại khác | (a) bản lớn hơn, **trừ khi** có bản xuất đã chỉnh (§7.4); (b) theo điểm chất lượng (§6), rồi D3 |
-| **Burst** | chuỗi theo thời gian: tấm kế cách tấm **ngay trước** ≤ 30 s và lệch ≤ 20 bit, tối thiểu **3** ảnh; burst PhotoKit (≥ 2 khung app thấy được) luôn vào đây | theo điểm chất lượng (§6) |
+| **Similar** | (a) **bản nhỏ**: thành phần liên thông của quan hệ "y hệt" ở trên **cộng** quan hệ "bản nhỏ" (lệch ≤ 6/64 bit, cùng tỷ lệ khung ±2%, nhỏ hơn ≥ 25% cạnh dài, cùng giây chụp **hoặc** bản nhỏ thiếu ngày chụp EXIF — gửi lại qua WhatsApp/Zalo/AirDrop, bản xuất cỡ nhỏ), khi nhóm có **ít nhất hai kích thước**; (b) **ảnh gần giống**: lệch ≤ 10/64 bit **với mọi ảnh khác trong nhóm** (liên kết đầy đủ, 2026-11-10; trước đó chỉ so với ảnh đầu nhóm nên hai thành viên có thể lệch 20 bit), cùng tỷ lệ khung ±2% — **thiếu kích thước thì không gom**, ảnh chụp màn hình chỉ gom với ảnh chụp màn hình — không thuộc loại khác. Hash chỉ **đề cử**; nhóm chỉ hiện khi Vision xác nhận (§4a) | (a) bản lớn hơn, **trừ khi** có bản xuất đã chỉnh (§7.4); (b) theo điểm chất lượng (§6), rồi D3 |
+| **Burst** | chuỗi theo thời gian: tấm kế cách tấm **ngay trước** ≤ 10 s và lệch ≤ 16 bit, mọi tấm lệch ≤ 20 bit **so với tấm đầu chuỗi** (không trôi sang cảnh khác), cùng tỷ lệ khung, tối thiểu **3** ảnh, rồi Vision xác nhận từng bước (§4a); burst PhotoKit (≥ 2 khung app thấy được) luôn vào đây | theo điểm chất lượng (§6) |
+
+### 4a. Xác nhận bằng Vision (2026-11-10)
+
+Dấu vân tay 64 bit chỉ nhìn độ sáng trái→phải: ảnh sáng giữa, đường chân trời, bố cục tài liệu cho hai ảnh khác hẳn nhau
+lệch vài bit — đo trên bộ ảnh thử, hai hoa văn khác nhau có hash **trùng hệt**. Vì vậy nhóm Similar và Burst chỉ hiện khi
+**feature print** của Vision (revision 2, trên bản 512px mà bước chấm §6 đã đọc) đồng ý:
+
+- Similar: **mọi cặp** trong nhóm cách nhau ≤ **0.4**; nhóm tách thành các cụm thoả điều đó, cụm < 2 ảnh bị bỏ.
+- Burst: mỗi khung cách khung **ngay trước** ≤ **0.55**; chuỗi bị cắt ở khung đổi cảnh, đoạn < 3 khung bị bỏ.
+- Exact và bracket/focus stack không qua bước này (Exact đã chứng minh bằng kích thước, giây và tên file; bracket vốn khác
+  sáng).
+- **Thiếu print** (chưa so, chỉ có trên iCloud khi không dùng mạng) thì cặp đó **không** được tính là giống — nhóm chờ, không
+  hiện sai.
+- Số đo (Mac, model thật): bản lưu lại/1280px 0.08–0.15, cắt 6% + 0.25 EV 0.16–0.23, ảnh khác nhau ≥ 0.64, hai hoa văn
+  hash trùng 0.74.
+- Máy nào trả cùng một vector cho mọi ảnh (simulator: CPU không có model, đo 2026-11-10) thì app coi như không đọc được print:
+  mỗi tiến trình thử một lần trên hai ảnh tổng hợp khác hẳn nhau. Trên simulator vì vậy chỉ thấy Exact và burst PhotoKit.
+- Print lưu ở cột `duplicate_quality.featurePrint` (v63), là kết quả quét như các cột chấm.
 
 - Thứ tự gom: Exact và bản nhỏ (một lượt) → Burst → ảnh gần giống. Ảnh đã vào loại trước
   không vào loại sau; nhóm còn < 2 ảnh sau khi rút bị bỏ. Chỉ **Exact** vào Quick clean (§7.2).
@@ -161,8 +186,16 @@ tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người
 - Dải trên đóng băng (nền `.bar`): **hàng lọc** là segmented control hệ thống (người dùng 2026-10-22, thay hàng viên; iPhone/Duo ngoài trải hết bề ngang, màn rộng tối đa 420pt)
   (A6): **Exact · Similar · Burst** (bracket/focus stack nằm trong Burst), mỗi đoạn kèm số nhóm; loại không có nhóm thì ẩn. **Không có All**
   (2026-10-21): luôn đúng một đoạn được chọn — mặc định Exact; đoạn đã nhớ mà hết nhóm thì chuyển sang đoạn đầu còn nhóm.
-- Dưới hàng lọc chỉ còn tiến độ khi đang quét (*Cancel*) hoặc dòng *"Checked … · N photos not checked yet"* khi có ảnh chờ.
-  Không *"~GB to free"*, không *"Reviewed x of y"*, không vạch tiến độ (người dùng 2026-10-22).
+- Dưới hàng lọc là **ô trạng thái cao cố định 54pt** (2026-11-10): tiến độ của bước đang chạy (§3, vạch + *Cancel*) hoặc
+  hai dòng *"Checked 2 min ago"* / *"N photos not checked yet"* (*"Every photo checked"* khi không còn gì). Cao cố định để
+  danh sách không xê dịch khi một lượt bắt đầu hay kết thúc — trước đó chạm vào vòng tròn lại mở Compare vì thẻ vừa trôi lên.
+  Không *"~GB to free"*, không *"Reviewed x of y"* (người dùng 2026-10-22).
+- **Thứ tự đứng yên**: mỗi nhóm giữ chỗ nó có lúc mới hiện; điểm chấm về không sắp lại danh sách; nhóm mới nối cuối; chỉ
+  đổi kiểu sắp xếp mới sắp lại cả danh sách. Mã nhóm = mã ảnh nhỏ nhất trong nhóm, nên đổi bản giữ không đổi thẻ.
+- Màn rộng: thẻ xếp theo **hàng** cột đều (không masonry — masonry chia lại cột mỗi khi một thẻ thu gọn, thẻ dưới tay
+  người dùng nhảy sang cột khác).
+- Dải Quick clean có mặt hay không quyết định **một lần mỗi lần tải**; đánh dấu hết bản sao thì dải ghi *"Every copy
+  decided"* và Review… mờ, không biến mất dưới tay.
 - Thanh điều hướng, bên phải, đúng hai nút icon, mỗi nút một viên glass riêng, không chung capsule (người dùng 2026-10-22 thay menu ⋯; 2026-10-23 tách đôi): **sắp xếp** ⇅ (menu chọn
   **Easiest first** — A7: nhóm có khoảng cách điểm lớn nhất giữa bản giữ và bản kế lên đầu — · **Most space first** ·
   **Newest first** · **Oldest first**; nhớ lại lần sau; mờ khi đang quét) rồi **quét lại** ↻ (VoiceOver *"Check Again"*, A3).
@@ -177,8 +210,10 @@ Thẻ bo `r-lg`, đệm 12:
 - **Thẻ chỉ có ảnh và chữ nhỏ trên ảnh** (người dùng 2026-10-21): không tên loại, không *"~MB to free"*, không dòng ngày,
   không dòng ghi chú dưới lưới (*"N kept: …"*, *"New photo since…"*). Loại nhóm đã có ở hàng lọc. VoiceOver vẫn đọc tên nhóm (*"Similar, 9 photos"*). Không có chữ nào ngoài ảnh;
   cổng "giữ ít nhất một" đã bỏ (2026-10-24, [06b §1](06b-duplicates-marks-merge-delete.md)).
-- Lưới `N + 2` cột như v2 (bản giữ 2×2 ô góc trên trái, khe 4, `DuplicateCardMetrics`). Trên bản giữ: tối đa **2 chip lý
-  do** (§6 hoặc D3) và nhãn **✓ Keep**.
+- **Mọi ảnh cùng một cỡ** (người dùng 2026-11-10: "không để ảnh keep to hơn nữa"): lưới ô vuông `N + 1` cột, khe 4,
+  ảnh theo thứ tự cố định của nhóm, trái→phải (`DuplicateCardMetrics`; iPhone 3 ảnh/hàng, màn rộng 4). Ô bản giữ to 2×2
+  trước đây đổi chỗ mỗi khi bản đề xuất đổi, chạm trúng ảnh khác ảnh định chạm. Trên bản giữ: nhãn **✓ Keep** và tối đa
+  **1 chip lý do** (§6 hoặc D3).
 - **Chú thích dưới mỗi bản sao** (D10): tối đa **2 dòng chữ trắng trên nền đen 55%** trong ảnh, góc dưới trái:
   - dòng 1 — điều bản này **thua** bản giữ, bằng lời, theo ưu tiên: *Eyes closed* · *Soft* · *Blown highlights* · *Smaller
     copy* · *Not edited* · *JPEG only* · *Still photo*;
@@ -193,16 +228,16 @@ Thẻ bo `r-lg`, đệm 12:
 - **Không có hàng nút ở chân thẻ** (người dùng 2026-10-21; trước đây *Remove the other N · Keep all · Compare*). Đánh dấu
   bằng vòng tròn trên từng ô; dọn nhanh bản sao y hệt bằng dải Quick clean (§7.2).
   - Chạm một ảnh: mở Compare (§7.6); ở thẻ **Burst** chạm mở thẳng **Choose frames** (§8) tại khung đó.
-  - Đánh dấu ảnh ở ô lớn (bản giữ đề xuất): ảnh ở lại ô lớn với viền đỏ, không còn nhãn Keep, tới khi bỏ dấu (2026-10-20 —
-    trước đó app chọn ngay bản giữ khác và ảnh vừa đánh dấu rơi khỏi ô lớn, trông như bấm không ăn).
-  - Burst: bản giữ đề xuất 2×2 ở đầu, các khung còn lại theo **thứ tự chụp** (người dùng 2026-10-17) — một loạt
+  - Đánh dấu bản giữ đề xuất: ảnh ở nguyên ô của nó với viền đỏ; nhãn Keep chuyển sang ảnh được đề xuất kế tiếp — không ô
+    nào đổi chỗ.
+  - Burst: các khung theo **thứ tự chụp** (người dùng 2026-10-17) — một loạt
     sắp theo điểm không còn đọc được như một loạt. Thứ tự "tốt nhất" ở mọi loại khác dùng **một** hàm: D3 + điểm (§6).
 - **Luôn hiện đủ ảnh** (người dùng 2026-10-21, thay D9): nhóm 51 ảnh vẽ đủ 51 ô, không còn viên *Show all N*.
 - **Thu gọn** (v2 §7.4) sau Quick clean / Keep all: viền đỏ của các ô vừa đánh dấu **giữ 0.6 s**, rung nhẹ, rồi mới thu
   thành dòng 56pt; danh sách giữ vị trí cuộn của thẻ kế (D9). Đánh dấu từng ô không thu gọn.
 - Haptic: `.selection` khi đánh dấu một ô; `.impact(.light)` cho Keep all; `.warning` khi chạm cổng
   "giữ ít nhất một"; `.success` khi xoá xong.
-- Pinch đổi số bản sao mỗi hàng 1…5 như v2 (HUD *"3 per row"*).
+- Pinch đổi mật độ 1…5 (2…6 ảnh mỗi hàng; HUD *"3 per row"*).
 
 ### 7.5 Thẻ bộ nguyên liệu
 

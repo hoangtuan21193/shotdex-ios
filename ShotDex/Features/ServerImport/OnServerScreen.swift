@@ -96,20 +96,7 @@ struct OnServerScreen: View {
         .formSheet(item: $editing) { draft in
             FileServerFormScreen(draft: draft)
         }
-        .confirmationDialog(
-            pendingDelete.map { "Delete \($0.name)?" } ?? "",
-            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            titleVisibility: .visible,
-            presenting: pendingDelete
-        ) { server in
-            Button("Delete Connection", role: .destructive) {
-                try? dependencies.fileServers.delete(id: server.id)
-                dependencies.fileServerCatalog.reload()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("The upload history is kept, and nothing on the server or in your library is deleted.")
-        }
+        .deleteConnectionAlert($pendingDelete, dependencies: dependencies)
         .navigationDestination(for: ServerBrowseRoute.self) { route in
             if let server = servers.first(where: { $0.id == route.connectionId }) {
                 ServerBrowserHost(server: server, session: session(for: server))

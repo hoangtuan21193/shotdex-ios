@@ -10,6 +10,7 @@ import os
 @MainActor
 final class OnServerBackgroundService {
     static let identifier = "com.hoangtuan.shotdex.onserver"
+    static let continuedIdentifier = "com.hoangtuan.shotdex.onserver.continued"
     private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "on-server-background")
 
     private let check: OnServerCheck
@@ -20,9 +21,68 @@ final class OnServerBackgroundService {
     /// in Photos catches up with what the pass found (FS-06.12 §4).
     var afterPass: (@MainActor () async -> Void)?
 
+    /// Checked out of total over every server source, for the system's
+    /// progress UI; nil while unknown.
+    var fraction: (@MainActor () async -> Double?)?
+    /// A continued task is asked for or running now.
+    private var hasContinuedTask = false
+
     init(check: OnServerCheck, needsPower: @escaping @MainActor () -> Bool) {
         self.check = check
         self.needsPower = needsPower
+        check.onForegroundPassStart = { [weak self] in self?.passStarted() }
+    }
+
+    /// A foreground pass with work left (user 2026-11-11: "it has to check
+    /// in the background too"): on iOS 26 it asks to go on after the app
+    /// leaves, with the system's own progress UI, as Backup does. Refused
+    /// or before iOS 26, the background stops the pass and the processing
+    /// slot below takes over when iOS grants one.
+    private func passStarted() {
+        guard #available(iOS 26.0, *), !hasContinuedTask else { return }
+        let request = BGContinuedProcessingTaskRequest(
+            identifier: Self.continuedIdentifier,
+            title: String(localized: "Checking photos on your server", comment: "System progress title for the on-server check"),
+            subtitle: String(localized: "Starting…", comment: "System progress subtitle before the on-server check has counts")
+        )
+        request.strategy = .fail
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            hasContinuedTask = true
+            check.keepsRunningInBackground = true
+            OnServerTrace.log("continued task accepted")
+        } catch {
+            OnServerTrace.log("continued task refused: \(error.localizedDescription)")
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func runContinued(_ task: BGContinuedProcessingTask) {
+        OnServerTrace.log("continued task running")
+        let check = check
+        task.expirationHandler = {
+            Task { @MainActor in check.stopInBackground() }
+        }
+        task.progress.totalUnitCount = 1_000
+        let updates = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                if let fraction = await self?.fraction?() {
+                    task.progress.completedUnitCount = Int64(fraction * 1_000)
+                    task.updateTitle(task.title, subtitle: String(
+                        localized: "\(Int(fraction * 100))% checked", comment: "System progress subtitle for the on-server check"))
+                }
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+        Task { @MainActor in
+            await check.waitForPass()
+            updates.cancel()
+            hasContinuedTask = false
+            check.keepsRunningInBackground = false
+            OnServerTrace.log("continued task done · work left \(check.hasWorkLeft)")
+            task.setTaskCompleted(success: !check.hasWorkLeft)
+            if check.hasWorkLeft { appDidEnterBackground() }
+        }
     }
 
     /// Before launch finishes (BGTaskScheduler rule) — see `ShotDexApp.init`.
@@ -30,10 +90,21 @@ final class OnServerBackgroundService {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.identifier, using: .main) { task in
             MainActor.assumeIsolated { self.run(task) }
         }
+        if #available(iOS 26.0, *) {
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.continuedIdentifier, using: .main) { task in
+                MainActor.assumeIsolated {
+                    guard let continued = task as? BGContinuedProcessingTask else {
+                        task.setTaskCompleted(success: false)
+                        return
+                    }
+                    self.runContinued(continued)
+                }
+            }
+        }
     }
 
     func appDidEnterBackground() {
-        guard check.hasWorkLeft else { return }
+        guard check.hasWorkLeft, !hasContinuedTask else { return }
         let request = BGProcessingTaskRequest(identifier: Self.identifier)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = needsPower()

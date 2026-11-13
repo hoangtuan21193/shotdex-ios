@@ -149,14 +149,11 @@ struct DuplicateReviewTests {
         #expect(DuplicateReview.sorted([new, bigFree], by: .mostSpace, freeBytes: free).map(\.id) == ["x1", "n1"])
     }
 
-    /// Card geometry on the four boards: iPhone and Duo cover 2 copies per
-    /// row, iPad 3, keeper = two tiles + one gap.
+    /// Card geometry: iPhone 3 photos per row, iPad 4, every cell the same.
     @Test func cardMetricsMatchTheBoards() {
         let phone = DuplicateCardMetrics(innerWidth: 370 - 24, copyColumns: 2)
-        #expect(phone.tile == 83)
-        #expect(phone.keeper == 170)
-        let pinched = DuplicateCardMetrics(innerWidth: 346, copyColumns: 3)
-        #expect(pinched.tile == 66)
+        #expect(phone.gridColumns == 3)
+        #expect(phone.tile == 112)
         // iPad landscape: 1344pt content → 3 cards of 437pt.
         #expect(DuplicateCardMetrics.cardColumns(contentWidth: 1344, isRegular: true) == 3)
         #expect(Int(DuplicateCardMetrics.cardWidth(contentWidth: 1344, columns: 3)) == 437)
@@ -165,27 +162,21 @@ struct DuplicateReviewTests {
         #expect(DuplicateCardMetrics.cardColumns(contentWidth: 835, isRegular: true) == 2)
         #expect(DuplicateCardMetrics.cardColumns(contentWidth: 370, isRegular: false) == 1)
         let ipad = DuplicateCardMetrics(innerWidth: 437 - 24, copyColumns: 3)
-        #expect(ipad.tile == 79)
+        #expect(ipad.gridColumns == 4)
+        #expect(ipad.tile == 100)
     }
 
-    /// Board `PH_DuplicatesLargeGroup`: keeper 2×2 cells, copies beside it
-    /// then in full rows below, every copy square.
-    @Test func aBigGroupFillsTheCardUnderTheKeeper() {
+    /// Every photo the same size, in a fixed order: the kept one is not
+    /// bigger, so nothing swaps places when the suggestion changes.
+    @Test func everyPhotoGetsTheSameCell() {
         let metrics = DuplicateCardMetrics(innerWidth: 346, copyColumns: 2)
-        #expect(metrics.keeper == metrics.tile * 2 + DuplicateCardMetrics.copyGap)
-        let origins = metrics.copyOrigins(count: 7)
         let step = metrics.tile + DuplicateCardMetrics.copyGap
-        // Four beside the keeper, two rows of two.
-        #expect(origins[0] == CGPoint(x: metrics.keeper + 4, y: 0))
-        #expect(origins[3] == CGPoint(x: metrics.keeper + 4 + step, y: step))
-        // Then a full-width row under it, from the left edge.
-        #expect(origins[4] == CGPoint(x: 0, y: metrics.keeper + 4))
-        #expect(origins[6] == CGPoint(x: 2 * step, y: metrics.keeper + 4))
-        #expect(metrics.gridHeight(copyCount: 7) == metrics.keeper + step)
-        // Three copies stay beside the keeper: no row below.
-        #expect(metrics.gridHeight(copyCount: 3) == metrics.keeper)
-        // Nothing spills past the card.
-        #expect(origins.allSatisfy { $0.x + metrics.tile <= 346 })
+        #expect(metrics.origin(at: 0) == .zero)
+        #expect(metrics.origin(at: 2) == CGPoint(x: 2 * step, y: 0))
+        #expect(metrics.origin(at: 3) == CGPoint(x: 0, y: step))
+        #expect(metrics.gridHeight(photoCount: 2) == metrics.tile)
+        #expect(metrics.gridHeight(photoCount: 4) == metrics.tile + step)
+        #expect((0..<7).allSatisfy { metrics.origin(at: $0).x + metrics.tile <= 346 })
     }
 
     /// AC-Q2: not scored yet → the file rule, and the chip says so honestly.
@@ -256,7 +247,7 @@ struct DuplicateReviewTests {
         #expect(items.count == 212)
         #expect(items.flatMap(\.removal.remove).count == 227)
         // Untick five groups holding six other copies: one triple, four pairs.
-        let unticked: Set<String> = ["k197", "k5", "k6", "k7", "k8"]
+        let unticked = Set([197, 5, 6, 7, 8].map { groups[$0].id })
         let selected = QuickClean.selection(items, excluding: unticked)
         #expect(selected.count == 230 - 6 - 3)
         #expect(!selected.contains("c194-0") && !selected.contains("c195-0") && !selected.contains("c196-0"))

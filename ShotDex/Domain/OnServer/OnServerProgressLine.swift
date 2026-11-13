@@ -110,6 +110,8 @@ enum OnServerProgressLine {
         case .space: String(localized: "Waiting for space", comment: "On-server check: less than 2 GB would be left free")
         case .unreachable(let name): String(localized: "\(name) isn't reachable", comment: "On-server check: the server did not answer")
         case .openApp: String(localized: "Open ShotDex to continue", comment: "On-server check: runs only while ShotDex is open")
+        case .iCloudRefusing: String(localized: "iCloud isn't sending originals · trying again soon",
+                                     comment: "On-server check: iCloud refused every download of a batch; the check waits and tries again")
         }
     }
 }

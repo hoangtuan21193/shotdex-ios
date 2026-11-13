@@ -87,8 +87,29 @@ final class OnServerCheck {
 
     /// The scene came to the foreground: a pass starts unless one runs.
     func appBecameActive() {
+        OnServerTrace.log("app active (pass running: \(task != nil))")
         isInFront = true
         start()
+    }
+
+    /// iOS lets the pass go on after the app leaves the screen (a continued
+    /// processing task, iOS 26): the background no longer stops it.
+    var keepsRunningInBackground = false
+
+    /// A foreground pass started with work left — where the continued task
+    /// is asked for, while the app is still in front.
+    @ObservationIgnored var onForegroundPassStart: (@MainActor () -> Void)?
+
+    /// iOS ended the background time it gave the pass.
+    func stopInBackground() {
+        OnServerTrace.log("background time over — cancelling the pass")
+        keepsRunningInBackground = false
+        task?.cancel()
+    }
+
+    /// Waits for the pass going now, if any.
+    func waitForPass() async {
+        await task?.value
     }
 
     /// Wi‑Fi or power came, or the network is back: a server that was not
@@ -99,20 +120,39 @@ final class OnServerCheck {
     }
 
     private func start() {
-        guard task == nil else { return }
+        if let task {
+            // A pass still winding down after a background: the foreground
+            // that came meanwhile starts the next one when it ends, rather
+            // than being dropped until the app is opened again. A pass that
+            // is running on is left alone.
+            if task.isCancelled { startsAgain = true }
+            return
+        }
         isRunning = true
+        startsAgain = false
+        if isInFront, hasWorkLeft { onForegroundPassStart?() }
         task = Task { [weak self] in
             await self?.run()
-            self?.isRunning = false
-            self?.stage = nil
-            self?.task = nil
+            guard let self else { return }
+            self.isRunning = false
+            self.stage = nil
+            self.task = nil
+            if self.startsAgain, self.isInFront { self.start() }
         }
     }
+
+    /// A start asked for while a pass runs.
+    private var startsAgain = false
 
     /// The scene went to the background: the foreground pass stops here;
     /// the system's background slot takes over when it grants one.
     func appDidEnterBackground() {
         isInFront = false
+        guard !keepsRunningInBackground else {
+            OnServerTrace.log("app to background — the pass goes on (continued task)")
+            return
+        }
+        OnServerTrace.log("app to background — cancelling the pass")
         task?.cancel()
     }
 
@@ -122,11 +162,14 @@ final class OnServerCheck {
     func startBackground() -> Task<Void, Never> {
         if let task { return task }
         isRunning = true
+        startsAgain = false
         let started = Task { [weak self] in
             await self?.run()
-            self?.isRunning = false
-            self?.stage = nil
-            self?.task = nil
+            guard let self else { return }
+            self.isRunning = false
+            self.stage = nil
+            self.task = nil
+            if self.startsAgain, self.isInFront { self.start() }
         }
         task = started
         return started
@@ -167,12 +210,17 @@ final class OnServerCheck {
         let start = now()
         lastPassHashed = (0, 0)
         let sources = (try? environment.serverSources()) ?? []
+        OnServerTrace.log("══ pass starts · \(sources.count) server source(s)")
+        defer {
+            OnServerTrace.log("══ pass ends · cancelled \(Task.isCancelled) · waits \(waits.values.map { String(describing: $0) }) · photosWait \(photosWait.map { String(describing: $0) } ?? "none") · hashed server \(lastPassHashed.server) photos \(lastPassHashed.photos)")
+        }
         guard !sources.isEmpty else {
             waits = [:]
             photosWait = nil
             return
         }
         let (isExpensive, isCharging) = await environment.conditions()
+        OnServerTrace.log("conditions · expensive network \(isExpensive) · charging \(isCharging)")
         var openSources: [(id: String, connectionId: String)] = []
         var allRules: [OnServerSchedule.JobRules] = []
         var newWaits: [String: OnServerSchedule.Wait] = [:]
@@ -183,13 +231,22 @@ final class OnServerCheck {
         let photosRules = OnServerSchedule.wait(for: jobsBySource.map(OnServerSchedule.rules(of:)),
                                                 isExpensivePath: isExpensive, isCharging: isCharging)
         let environment = self.environment
+        // Set once every source is listed: the Photos side stops after the
+        // batch in hand, and the rounds below take turns with the servers.
+        // Without it the servers waited for every iCloud original first —
+        // 56,000 photos on an iPad, days, and not one server file read
+        // (user 2026-11-11).
+        let listingDone = OSAllocatedUnfairLock(initialState: false)
+        let refused = OSAllocatedUnfairLock(initialState: false)
         let photosMeanwhile: Task<Int, Never>? = photosRules == nil && !Task.isCancelled ? Task { [weak self] in
             var hashed = 0
-            while !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
+            while !Task.isCancelled, !listingDone.withLock({ $0 }), let summary = try? await environment.hashPhotos(start) {
                 hashed += summary.adopted + summary.seeded + summary.hashed
                 // Screens read the counts again, as after any batch.
                 self?.generation &+= 1
-                if summary.waitingForSpace || summary.listed + summary.seeded + summary.hashed + summary.failed == 0 { break }
+                if summary.iCloudRefusing { refused.withLock { $0 = true } }
+                if summary.waitingForSpace || summary.iCloudRefusing
+                    || summary.listed + summary.seeded + summary.hashed + summary.failed == 0 { break }
             }
             return hashed
         } : nil
@@ -202,19 +259,27 @@ final class OnServerCheck {
             }
             guard !Task.isCancelled else { break }
             stage = .listing
+            OnServerActivity.shared.begin(.listing(source: source.name))
             if await environment.list(source.id) {
                 openSources.append((source.id, source.connectionId))
             } else {
                 newWaits[source.id] = .unreachable(source.name)
             }
         }
+        listingDone.withLock { $0 = true }
+        // The download in hand is dropped, not waited for: on a slow iCloud
+        // one original took 230 s (trace 2026-11-11), a batch hours. It is
+        // asked for again in the rounds below.
+        photosMeanwhile?.cancel()
         if let photosMeanwhile {
             // Cancelled with the pass: the batch in hand finishes first.
             let hashed = await withTaskCancellationHandler { await photosMeanwhile.value } onCancel: { photosMeanwhile.cancel() }
             lastPassHashed.photos += hashed
         }
+        OnServerTrace.log("listing done · open sources \(openSources.count) of \(sources.count)")
         waits = newWaits
         photosWait = OnServerSchedule.wait(for: allRules, isExpensivePath: isExpensive, isCharging: isCharging)
+        if photosWait == nil, refused.withLock({ $0 }) { photosWait = .iCloudRefusing }
         generation &+= 1
 
         // Hashes the other devices worked out come first: what they read is
@@ -239,11 +304,28 @@ final class OnServerCheck {
         }
         if !Task.isCancelled { await environment.publishShared(start) }
         stage = nil
+        OnServerActivity.shared.clear()
         if Task.isCancelled {
             for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
             if photosWait == nil { photosWait = .openApp }
         } else if waits.isEmpty, photosWait == nil {
             finishedAt = now()
+        }
+        if photosWait == .iCloudRefusing { scheduleRetry() }
+    }
+
+    /// How long the Photos side rests after iCloud refused a whole batch.
+    static let iCloudRetry: Duration = .seconds(10 * 60)
+    private var retry: Task<Void, Never>?
+
+    /// A new pass once iCloud has had time, while the app is in front or a
+    /// continued task holds the check.
+    private func scheduleRetry() {
+        retry?.cancel()
+        retry = Task { [weak self] in
+            try? await Task.sleep(for: Self.iCloudRetry)
+            guard !Task.isCancelled, let self, self.isInFront || self.keepsRunningInBackground else { return }
+            self.start()
         }
     }
 
@@ -266,6 +348,11 @@ final class OnServerCheck {
             if photosWait == nil, !Task.isCancelled { stage = .hashingPhotos }
             if photosWait == nil, !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
                 if summary.waitingForSpace { photosWait = .space }
+                if summary.iCloudRefusing {
+                    // Asking again at once only gets the same answer: rest.
+                    OnServerTrace.log("iCloud refused a whole batch — the Photos side rests \(Int(Self.iCloudRetry.components.seconds / 60)) min")
+                    photosWait = .iCloudRefusing
+                }
                 lastPassHashed.photos += summary.adopted + summary.seeded + summary.hashed
                 didWork = didWork || summary.listed + summary.seeded + summary.hashed + summary.failed > 0
             }
@@ -315,7 +402,10 @@ extension OnServerCheck.Environment {
                 return (network.isExpensivePath, power.isCharging)
             },
             list: { sourceId in
-                if let summary = await refresh.rescan(sourceId: sourceId) {
+                let listed = await OnServerTrace.timed("list server source", { (summary: ServerSourceIndexer.Summary?) in
+                    summary.map { "· \($0)" } ?? "· no summary (another pass is listing, or it failed — see the ServerSourceRefresh log)"
+                }) { await refresh.rescan(sourceId: sourceId) }
+                if let summary = listed {
                     if summary.photos > 0 { await listingChanged() }
                     return !summary.disconnected && summary.stoppedBy == nil
                 }
@@ -332,7 +422,11 @@ extension OnServerCheck.Environment {
                 // The ledger on the NAS (FS-19.07 §12.2): every device reads
                 // it and writes what it hashed.
                 pass.deviceId = BackupDeviceIdentity.current()
-                return try await pass.run(sourceId: sourceId, connectionId: connectionId, folder: server.folder, now: now)
+                return try await OnServerTrace.timed("server batch", { (summary: ServerFileHashPass.Summary) in
+                    "· from Backup/Common \(summary.seeded) · from ledger \(summary.fromLedger) · read+hashed \(summary.hashed) · failed \(summary.failed) · published \(summary.published) · stopped by \(summary.stoppedBy.map { $0.localizedDescription } ?? "nothing")"
+                }) {
+                    try await pass.run(sourceId: sourceId, connectionId: connectionId, folder: server.folder, now: now)
+                }
             },
             hashPhotos: { now in
                 var pass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
@@ -340,6 +434,15 @@ extension OnServerCheck.Environment {
                 #if os(macOS)
                 // A Mac library is usually on disk: four originals at once.
                 pass.concurrentDownloads = 4
+                let downloadLimit: Int? = nil
+                #else
+                // One at a time on iPhone and iPad (§4). Four at once was
+                // tried (trace 2026-11-11): iCloud then failed 27 of 28 with
+                // CloudPhotoLibraryErrorDomain 1006, where one at a time had
+                // finished every file, slowly.
+                // Short batches: the server's turn comes between them, and a
+                // batch of 200 slow downloads kept it waiting for hours.
+                let downloadLimit: Int? = 24
                 #endif
                 if let exchange, IndexShareService.sharesIndex {
                     pass.adoptListed = { copyIds, now in
@@ -349,14 +452,20 @@ extension OnServerCheck.Environment {
                         }
                     }
                 }
-                return try await pass.run(now: now)
+                return try await OnServerTrace.timed("photos batch", { (summary: PhotosFileHashPass.Summary) in
+                    "· listed \(summary.listed) · adopted \(summary.adopted) · from Backup \(summary.seeded) · downloaded+hashed \(summary.hashed) · failed \(summary.failed) · waiting for space \(summary.waitingForSpace)"
+                }) {
+                    try await pass.run(downloadLimit: downloadLimit, now: now)
+                }
             },
             observeConditions: { changed in
                 network.setPathChangeHandler { _, _ in changed() }
                 power.setPowerChangeHandler { _, _ in changed() }
             },
             merge: {
-                let merged = try OnServerMergePass(database: database).run()
+                let merged = try await OnServerTrace.timed("merge", { (count: Int) in "· \(count)" }) {
+                    try OnServerMergePass(database: database).run()
+                }
                 if merged > 0 { await listingChanged() }
                 return merged
             },
@@ -364,7 +473,7 @@ extension OnServerCheck.Environment {
                 guard let exchange, let indexShare, IndexShareService.sharesIndex else { return 0 }
                 // Bounded: a slow or offline iCloud must not hold up hashing;
                 // what lands later is taken on the next pass.
-                await indexShare.pull(waitingAtMost: .seconds(10))
+                await OnServerTrace.timed("iCloud pull of shared hashes") { await indexShare.pull(waitingAtMost: .seconds(10)) }
                 guard !Task.isCancelled else { return 0 }
                 do { return try await exchange.adopt(now: now) } catch {
                     OnServerCheck.logger.error("adopt: \(error.localizedDescription, privacy: .public)")
@@ -377,7 +486,7 @@ extension OnServerCheck.Environment {
                     OnServerCheck.logger.error("record own hashes: \(error.localizedDescription, privacy: .public)")
                 }
                 // A few batches a pass; the rest go up on the next one.
-                await indexShare.push(batches: 5)
+                await OnServerTrace.timed("iCloud push of own hashes") { await indexShare.push(batches: 5) }
             },
             audit: { now, photos, openSources in
                 let photosPass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
@@ -407,7 +516,7 @@ extension OnServerCheck.Environment {
                 }
                 pass.photos = photos
                 pass.sources = openSources
-                do { return try await pass.run(now: now) } catch {
+                do { return try await OnServerTrace.timed("random audit") { try await pass.run(now: now) } } catch {
                     if !(error is CancellationError) {
                         OnServerCheck.logger.error("audit: \(error.localizedDescription, privacy: .public)")
                     }
@@ -415,5 +524,75 @@ extension OnServerCheck.Environment {
                 }
             }
         )
+    }
+}
+
+/// A timed trace of the on-server check, for "what is it doing that takes
+/// so long" (user 2026-11-11). Debug builds only: every line goes to the
+/// unified log (category `OnServerTrace`) and to
+/// `Library/Caches/onserver-trace.log` in the app's container, which
+/// `xcrun devicectl device copy from` reads off a device. Sizes, counts and
+/// seconds; a Photos file is named by its resource key.
+enum OnServerTrace {
+    private static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "OnServerTrace")
+    private static let queue = DispatchQueue(label: "com.hoangtuan.shotdex.onserver-trace")
+    private static let maximumBytes = 2 << 20
+
+    static let isEnabled: Bool = {
+        #if DEBUG
+        return NSClassFromString("XCTestCase") == nil
+        #else
+        return false
+        #endif
+    }()
+
+    static var fileURL: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("onserver-trace.log")
+    }
+
+    static func log(_ message: @autoclosure () -> String) {
+        guard isEnabled else { return }
+        let text = message()
+        logger.notice("\(text, privacy: .public)")
+        let line = "\(Date().formatted(.iso8601.time(includingFractionalSeconds: true).timeZone(separator: .omitted))) \(text)\n"
+        queue.async {
+            guard let url = fileURL, let data = line.data(using: .utf8) else { return }
+            if let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int, size > maximumBytes {
+                // Keep the newer half.
+                if let old = try? Data(contentsOf: url) { try? old.suffix(maximumBytes / 2).write(to: url) }
+            }
+            if let handle = try? FileHandle(forWritingTo: url) {
+                defer { try? handle.close() }
+                _ = try? handle.seekToEnd()
+                try? handle.write(contentsOf: data)
+            } else {
+                try? data.write(to: url)
+            }
+        }
+    }
+
+    /// Runs `work`, then logs `name`, how long it took and what `describe` says of its result.
+    @discardableResult
+    static func timed<T>(_ name: String, _ describe: (T) -> String = { _ in "" }, _ work: () async throws -> T) async rethrows -> T {
+        guard isEnabled else { return try await work() }
+        let clock = ContinuousClock()
+        let start = clock.now
+        log("▶ \(name)")
+        do {
+            let value = try await work()
+            log("◀ \(name) \(seconds(start.duration(to: clock.now)))s \(describe(value))")
+            return value
+        } catch {
+            log("✗ \(name) \(seconds(start.duration(to: clock.now)))s \(error is CancellationError ? "cancelled" : error.localizedDescription)")
+            throw error
+        }
+    }
+
+    static func seconds(_ duration: Duration) -> String {
+        String(format: "%.1f", Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18)
+    }
+
+    static func megabytes(_ bytes: Int64?) -> String {
+        bytes.map { String(format: "%.1fMB", Double($0) / 1_048_576) } ?? "?MB"
     }
 }

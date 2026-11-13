@@ -22,6 +22,8 @@ struct SettingsScreen: View {
     @AppStorage(SettingsKeys.shareMetadataLevel) private var shareMetadataLevel = MetadataLevel.all
     /// Add a Source, from Add Folder or Drive… or Grant Access….
     @State private var isAddingSource = false
+    /// The source Remove Source… asks about.
+    @State private var removingSource: SourcesModel.Row?
     @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
@@ -33,7 +35,7 @@ struct SettingsScreen: View {
     @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
     @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
-    @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
+    @AppStorage(SettingsKeys.keepScreenAwakeMode) private var keepScreenAwakeMode = KeepScreenAwake.stored.rawValue
     @AppStorage(SettingsKeys.lookUpPlaces) private var looksUpPlaces = true
     @AppStorage(SettingsKeys.sharesIndex) private var sharesIndex = true
     /// Pulled from iCloud: a Mac on this account indexes for every device.
@@ -121,6 +123,7 @@ struct SettingsScreen: View {
                 AddSourceSheet()
                     .environment(dependencies)
             }
+            .removeSourceAlert($removingSource, dependencies: dependencies)
             .task(id: libraryModel?.isIndexing) {
                 await refreshIndexInfo()
                 // A finished run changes the unknown cameras and what the
@@ -587,6 +590,7 @@ struct SettingsScreen: View {
             ForEach(dependencies.sources.rows) { row in
                 SourceRowView(row: row)
                     .settingsRowInsets()
+                    .sourceRemoval(row) { removingSource = row }
             }
             Button { isAddingSource = true } label: {
                 rowLabel(.addFolderOrDrive, style: .action)
@@ -648,13 +652,14 @@ struct SettingsScreen: View {
                 ))
             }
             .settingsRow(.useCellularData)
-            Toggle(isOn: $keepScreenAwake) {
-                rowLabel(.keepScreenAwake, value: toggleValue(
-                    keepScreenAwake,
-                    on: String(localized: "while indexing runs", comment: "Settings, Keep Screen Awake value line when on"),
-                    off: String(localized: "the screen locks as usual", comment: "Settings, Keep Screen Awake value line when off")
-                ))
+            Picker(selection: $keepScreenAwakeMode) {
+                ForEach(KeepScreenAwake.allCases) { mode in
+                    Text(mode.title).tag(mode.rawValue)
+                }
+            } label: {
+                rowLabel(.keepScreenAwake, value: (KeepScreenAwake(rawValue: keepScreenAwakeMode) ?? .off).detail)
             }
+            .pickerStyle(.menu)
             .settingsRow(.keepScreenAwake)
             Toggle(isOn: $looksUpPlaces) {
                 rowLabel(.lookUpPlaceNames, value: toggleValue(
@@ -1473,6 +1478,62 @@ private extension View {
                 Button("Clear Results", role: .destructive, action: onClearScan)
             } message: {
                 Text("The scan opens every photo in full, so building these again takes a while.")
+            }
+    }
+}
+
+private extension View {
+    /// Remove Source… on a source's row — swipe, and the context menu for a
+    /// pointer (FS-19.01 §1, as on the Mac: FS-18.04 §3 AC-72). The Photos
+    /// library is not a source that can be removed.
+    @ViewBuilder
+    func sourceRemoval(_ row: SourcesModel.Row, ask: @escaping () -> Void) -> some View {
+        if row.text.kind == .photos {
+            self
+        } else {
+            self
+                .swipeActions {
+                    Button(String(localized: "Remove", comment: "Settings › Sources: swipe to remove a source"), role: .destructive, action: ask)
+                        // The list's accent tint otherwise paints it orange.
+                        .tint(.red)
+                }
+                .contextMenu {
+                    Button(role: .destructive, action: ask) {
+                        Label(String(localized: "Remove Source…", comment: "Settings › Sources: remove a source"), systemImage: "minus.circle")
+                    }
+                }
+        }
+    }
+
+    /// `.alert` for the reason `destructiveAlerts` gives.
+    func removeSourceAlert(_ removing: Binding<SourcesModel.Row?>, dependencies: AppDependencies) -> some View {
+        let model = dependencies.sources
+        return self
+            .alert(removing.wrappedValue.map { String(localized: "Remove “\($0.name)”?", comment: "Settings › Sources: Remove Source alert title") } ?? "",
+                   isPresented: Binding(get: { removing.wrappedValue != nil }, set: { if !$0 { removing.wrappedValue = nil } }),
+                   presenting: removing.wrappedValue) { row in
+                Button(String(localized: "Cancel", comment: "Settings › Sources: keep the source"), role: .cancel) {}
+                Button(String(localized: "Remove", comment: "Settings › Sources: confirm Remove Source"), role: .destructive) {
+                    guard model.readingSourceId != row.id else {
+                        model.failure = .error(String(localized: "“\(row.name)” is being read. Remove it when the read finishes.",
+                                                      comment: "Settings › Sources: remove while the source is read"))
+                        return
+                    }
+                    Task {
+                        await model.remove(sourceId: row.id)
+                        dependencies.folderRoots.forget(row.id)
+                        // The grid's on-server glyph reads presence again.
+                        dependencies.onServerCheck.onBatch?()
+                    }
+                }
+            } message: { row in
+                Text(row.text.removeMessage)
+            }
+            .alert(model.failure?.title ?? "",
+                   isPresented: Binding(get: { model.failure != nil }, set: { if !$0 { model.failure = nil } })) {
+                Button(String(localized: "OK", comment: "Settings › Sources: dismiss an error")) {}
+            } message: {
+                Text(model.failure?.message ?? "")
             }
     }
 }

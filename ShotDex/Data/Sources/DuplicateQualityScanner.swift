@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreML
 import Foundation
 import os
 import Photos
@@ -16,9 +17,17 @@ import Vision
 protocol DuplicateQualityReading: Sendable {
     /// `nil` when the photo is no longer in the library.
     func measure(assetId: String, allowNetwork: Bool) async -> DuplicateQualityRecord?
+    /// Whether this reader's feature prints can be trusted on this device.
+    var readsFeaturePrints: Bool { get }
+}
+
+extension DuplicateQualityReading {
+    var readsFeaturePrints: Bool { false }
 }
 
 struct DuplicateQualityReader: DuplicateQualityReading {
+    var readsFeaturePrints: Bool { Self.printsTellPicturesApart }
+
     func measure(assetId: String, allowNetwork: Bool) async -> DuplicateQualityRecord? {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first else { return nil }
         return await measure(asset, allowNetwork: allowNetwork)
@@ -27,9 +36,12 @@ struct DuplicateQualityReader: DuplicateQualityReading {
     func measure(_ asset: PHAsset, allowNetwork: Bool) async -> DuplicateQualityRecord {
         async let exif = ExifReader().readExifFromLocalDerivative(for: asset)
         var score = DuplicateQualityScore(sharpness: nil)
+        var print: Data?
         if let image = await Self.rendition(for: asset, allowNetwork: allowNetwork), let cgImage = image.cgImage,
            !Self.isProxy(cgImage, of: asset) {
             score = Self.score(cgImage)
+            // Empty when Vision refused: read, so not re-queued every run.
+            print = Self.featurePrint(cgImage) ?? Data()
         }
         var raw: RawExif?
         if case .success(let read) = await exif { raw = read }
@@ -39,7 +51,8 @@ struct DuplicateQualityReader: DuplicateQualityReading {
             score: score,
             exposureBias: raw?.exposureBias,
             software: raw?.software,
-            scoredAt: Int(Date().timeIntervalSince1970)
+            scoredAt: Int(Date().timeIntervalSince1970),
+            featurePrint: print
         )
     }
 
@@ -50,6 +63,63 @@ struct DuplicateQualityReader: DuplicateQualityReading {
     static func isProxy(_ image: CGImage, of asset: PHAsset) -> Bool {
         let want = min(Double(DuplicateQuality.thumbnailEdge), Double(max(asset.pixelWidth, asset.pixelHeight)))
         return Double(max(image.width, image.height)) < want * 0.9
+    }
+
+    /// Vision's feature print of the rendition, archived — what confirms a
+    /// look-alike the 64-bit hash only nominated (`DuplicateVerifier`).
+    static func featurePrint(_ image: CGImage) -> Data? {
+        guard printsTellPicturesApart else { return nil }
+        return autoreleasepool {
+            guard let observation = rawPrint(image) else { return nil }
+            return try? NSKeyedArchiver.archivedData(withRootObject: observation, requiringSecureCoding: true)
+        }
+    }
+
+    /// Whether Vision's prints on this device tell pictures apart at all.
+    /// The simulator's CPU path hands back one and the same vector for every
+    /// image (measured 2026-11-10: every pair at distance 0) — trusted, it
+    /// would call any two photos the same picture. Checked once per process
+    /// on two synthetic images that share nothing.
+    static let printsTellPicturesApart: Bool = {
+        guard let first = rawPrint(probeImage(seed: 1)), let second = rawPrint(probeImage(seed: 7)) else { return false }
+        var distance: Float = 0
+        guard (try? first.computeDistance(&distance, to: second)) != nil else { return false }
+        return distance > 0.05
+    }()
+
+    private static func probeImage(seed: Int) -> CGImage {
+        let side = 256
+        var pixels = [UInt8](repeating: 255, count: side * side * 4)
+        for y in 0..<side {
+            for x in 0..<side {
+                let index = (y * side + x) * 4
+                pixels[index] = UInt8((x * (seed + 1) + y * seed * 3) % 256)
+                pixels[index + 1] = UInt8((y * (seed + 2)) % 256)
+                pixels[index + 2] = UInt8(((x ^ y) * seed) % 256)
+            }
+        }
+        let context = CGContext(data: &pixels, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        return context!.makeImage()!
+    }
+
+    /// Vision's print of `image` — the Neural Engine first, the CPU when it
+    /// refuses.
+    private static func rawPrint(_ image: CGImage) -> VNFeaturePrintObservation? {
+        for cpuOnly in [false, true] {
+            let request = VNGenerateImageFeaturePrintRequest()
+            request.revision = VNGenerateImageFeaturePrintRequestRevision2
+            if cpuOnly {
+                let cpu = (try? request.supportedComputeStageDevices)?[.main]?.first {
+                    if case .cpu = $0 { return true } else { return false }
+                }
+                guard let cpu else { continue }
+                request.setComputeDevice(cpu, for: .main)
+            }
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            if (try? handler.perform([request])) != nil, let observation = request.results?.first { return observation }
+        }
+        return nil
     }
 
     /// Luma measures plus faces. Runs off the main actor; no pixels kept.
@@ -222,8 +292,11 @@ actor DuplicateQualityPass {
         isRunning = true
         defer { isRunning = false }
         try store.pruneOrphans()
-        let ids = groups.filter { !$0.members.allSatisfy(\.isScreenshot) }.flatMap { $0.members.map(\.assetId) }
-        let pending = try store.pendingAssetIds(among: ids, retryingFailed: allowNetwork)
+        // Screenshots too: their feature print is what confirms a group
+        // (`DuplicateVerifier`), even where sharpness says nothing.
+        let ids = groups.flatMap { $0.members.map(\.assetId) }
+        let pending = try store.pendingAssetIds(among: ids, retryingFailed: allowNetwork,
+                                                retryingEmptyPrints: reader.readsFeaturePrints)
         var processed = 0
         for start in stride(from: 0, to: pending.count, by: Self.batchSize) {
             if Task.isCancelled { return }

@@ -62,10 +62,10 @@ struct DuplicateGrouperTests {
             photo("C", bits: hashA ^ 0b111, width: 1600, height: 1200, size: 400_000, created: base + 86_400 * 30, camera: false),
             photo("G", bits: hashG, width: 3000, height: 2000, created: base + 5000),
             photo("H", bits: hashG, width: 3000, height: 2000, created: base + 5000),
-            // Each step 12–15 bits, 2 s apart.
+            // Each step 12–16 bits, 2 s apart, within 20 of the first frame.
             photo("D", bits: 0x0, created: base + 9000),
             photo("E", bits: 0xFFF, created: base + 9002),
-            photo("F", bits: 0xFFF ^ 0x7FFF_0000, created: base + 9004),
+            photo("F", bits: 0x00FF_FFF0, created: base + 9004),
         ]
         let groups = DuplicateGrouper.groups(from: photos)
         #expect(kinds(groups) == [
@@ -245,7 +245,7 @@ struct DuplicateGrouperTests {
             photo("new1", bits: 0xFFFF_0000, created: 9000), photo("new2", bits: 0xFFFF_0000, created: 8000),
         ]
         let groups = DuplicateGrouper.groups(from: photos)
-        #expect(groups.map(\.id) == ["new2", "old1"])
+        #expect(groups.map(\.id) == ["new1", "old1"])
     }
 
     @Test func manyIdenticalHashesStayCheap() {

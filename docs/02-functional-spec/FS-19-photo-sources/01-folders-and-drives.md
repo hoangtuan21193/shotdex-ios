@@ -79,7 +79,7 @@ theo ngày chụp ngay khi đọc, và theo dõi thư mục để file mới t�
   chừng: banner thành "T7 RAW Archive was disconnected · 1,240 of 3,812 photos read · connect it to read the rest". Stop / Remove Source… dừng ngay khung
   hình bấm, phần đuôi dọn ở nền ([BD-03.04](../../01-basic-design/BD-03-metadata-indexing-flow/04-progress-and-background.md)).
 - Nhiệt, Low Power Mode, cổng nhường cho viewer: như BD-03.03. Mac thêm **Pause Indexing on Battery Power** (bật) và
-  **Prevent Sleep While Indexing**; iPad, iPhone, Duo dùng **Keep Screen Awake While Indexing** (tắt) như FS-08.02.
+  **Prevent Sleep While Indexing**; iPad, iPhone, Duo dùng **Keep Screen Awake** (Off · While Working · While ShotDex Is Open, mặc định Off) như FS-08.02 §3.
 - Nhiều nguồn cùng chờ: đọc lần lượt theo thứ tự thêm; ổ chậm không chặn ổ nhanh — mỗi nguồn một hàng đợi.
 - Số đo cần có từ spike (`/plan`): file/giây trên SSD trong, SSD USB-C, HDD, NAS gigabit. Chưa đo thì không hứa số trong UI.
 

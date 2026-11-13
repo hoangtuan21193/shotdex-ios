@@ -1,0 +1,27 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Re-index" },
+    { "action": "wait", "seconds": 25 },
+    { "action": "tap", "label": "Done" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Duplicates", "type": "button" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "IP_Dup_NotChecked" },
+    { "action": "tap", "label": "Check Library" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "IP_Dup_Checking" },
+    { "action": "wait", "seconds": 25 },
+    { "action": "screenshot", "name": "IP_Dup_List" },
+    { "action": "dump", "name": "IP_Dup_List" },
+    { "action": "tap", "label": "Remove", "index": 1 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "IP_Dup_Marked" },
+    { "action": "dump", "name": "IP_Dup_Marked" }
+  ]
+}

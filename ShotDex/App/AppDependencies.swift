@@ -645,6 +645,23 @@ final class AppDependencies {
             return ((try? backups.jobs()) ?? []).contains { connections.contains($0.connectionId) && $0.settings.onlyWhileCharging }
         })
         onServerBackground.afterPass = { await photosAlbumSync.syncNow() }
+        // The system progress bar counts what the smart album's header
+        // counts — the first Also on Server condition, its server › folder —
+        // so the two never disagree (user 2026-11-11: 36% in the system
+        // banner, ~80% in the album; one counted the whole server, the
+        // other its Share folder). No such album: the first server source.
+        onServerBackground.fraction = { [database] in
+            await Task.detached {
+                let servers = (try? SourceStore(database: database).serverConnections()) ?? [:]
+                let rule = ((try? SmartAlbumStore(database: database).fetchAllOrdered()) ?? [])
+                    .lazy.flatMap { $0.query.cleaned.allRules }
+                    .first { $0.field == .alsoOnServer && servers[$0.text] != nil }
+                guard let sourceId = rule?.text ?? servers.keys.sorted().first,
+                      let progress = try? OnServerProgressQueries(database: database).progress(sourceId: sourceId, folder: rule?.folder),
+                      progress.total > 0 else { return nil }
+                return Double(progress.checked) / Double(progress.total)
+            }.value
+        }
         photoEditing.deletionGate = photoDeletionGate
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {
@@ -794,4 +811,12 @@ final class AppDependencies {
 
 extension AppDependencies: LibraryServices {
     var indexRunAssertion: any IndexRunAssertion { backgroundIndex }
+}
+
+extension AppDependencies: DuplicatesServices {
+    func showDuplicatesDeleted(_ text: String) {
+        banner.show(text, actionTitle: String(localized: "Open Photos", comment: "Duplicates banner: open the Photos app")) {
+            if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
+        }
+    }
 }

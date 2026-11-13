@@ -15,6 +15,10 @@ enum OnServerSchedule {
         case unreachable(String)
         /// Phase 1 runs only while ShotDex is open.
         case openApp
+        /// iCloud refused every original of a batch (CloudPhotoLibrary
+        /// error 1006 on an iPad, 2026-11-11): the Photos side rests and
+        /// tries again later, rather than asking for hundreds a minute.
+        case iCloudRefusing
     }
 
     /// The rules of one Backup job that matter here.

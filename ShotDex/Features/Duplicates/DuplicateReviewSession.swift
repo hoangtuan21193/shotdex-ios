@@ -15,7 +15,12 @@ import os
 @MainActor
 @Observable
 final class DuplicateReviewSession {
-    private(set) var state: DuplicateReviewState
+    private(set) var state: DuplicateReviewState {
+        didSet { revision &+= 1 }
+    }
+    /// Bumped on every change, so the screen's model can cache what it
+    /// derives from the marks instead of walking every group per redraw.
+    @ObservationIgnored private(set) var revision = 0
     @ObservationIgnored private let store: DuplicateReviewStore?
     @ObservationIgnored private let writes = DispatchQueue(label: "duplicates.review.writes", qos: .userInitiated)
     nonisolated private static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "duplicates")

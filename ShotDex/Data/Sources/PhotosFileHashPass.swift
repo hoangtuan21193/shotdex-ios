@@ -44,13 +44,20 @@ struct PhotosFileHashPass: Sendable {
         /// The next file would leave less than 2 GB free: the pass stopped
         /// before downloading it (`Waiting for space`).
         var waitingForSpace = false
+        /// Every download of the batch failed and none came: iCloud is
+        /// refusing originals right now.
+        var iCloudRefusing: Bool { hashed == 0 && failed >= Self.refusalBatch }
+        static let refusalBatch = 6
     }
 
     /// Lists up to `limit` assets that were never listed or changed since,
     /// newest first, fills what Backup's ledger knows, then hashes up to
     /// `limit` candidate files.
     @discardableResult
-    func run(limit: Int = 200, now: Date = Date()) async throws -> Summary {
+    /// `downloadLimit`: files downloaded in this batch, when fewer than
+    /// `limit` — listing costs no network, so it keeps its pace while the
+    /// downloads take short turns with the server side.
+    func run(limit: Int = 200, downloadLimit: Int? = nil, now: Date = Date()) async throws -> Summary {
         var summary = Summary()
         var listedIds: [String] = []
         for copy in try store.photosCopiesNeedingListing(limit: limit) {
@@ -79,7 +86,8 @@ struct PhotosFileHashPass: Sendable {
         }
         summary.seeded = try store.seedFromBackupLedger(at: now)
 
-        let candidates = try store.photosCandidates(triedBefore: now, limit: limit, everything: hashesEverything)
+        let candidates = try store.photosCandidates(triedBefore: now, limit: downloadLimit ?? limit, everything: hashesEverything)
+        OnServerTrace.log("  photos: listed \(summary.listed) asset(s) · \(candidates.count) file(s) to download this batch · \(OnServerTrace.megabytes(candidates.reduce(Int64(0)) { $0 + ($1.size ?? 0) })) · free \(OnServerTrace.megabytes(freeBytes()))")
         guard !candidates.isEmpty else { return summary }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         // Up to `concurrentDownloads` at once; the space rule counts what
@@ -109,14 +117,23 @@ struct PhotosFileHashPass: Sendable {
                 inFlight += 1
                 let (download, workDirectory, store) = (self.download, self.workDirectory, self.store)
                 group.addTask {
+                    let clock = ContinuousClock()
+                    let began = clock.now
+                    // The file key reads `1:IMG_9537.HEIC`: the name after the type.
+                    OnServerActivity.shared.begin(.downloading, fileName: String(file.fileKey.drop { $0 != ":" }.dropFirst()),
+                                                  bytesTotal: file.size)
+                    defer { OnServerActivity.shared.end() }
                     do {
                         let url = try await download(file.assetId, file.fileKey, workDirectory)
                         defer { try? FileManager.default.removeItem(at: url) }
+                        let downloaded = clock.now
                         let sha = try FileChecksum.sha256(of: url)
+                        OnServerTrace.log("  photos file \(file.fileKey) \(OnServerTrace.megabytes(file.size)) · download \(OnServerTrace.seconds(began.duration(to: downloaded)))s · hash \(OnServerTrace.seconds(downloaded.duration(to: clock.now)))s")
                         try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
                         return .hashed(size)
                     } catch {
                         if error is CancellationError || Task.isCancelled { return .cancelled(size) }
+                        OnServerTrace.log("  photos file \(file.fileKey) \(OnServerTrace.megabytes(file.size)) · FAILED after \(OnServerTrace.seconds(began.duration(to: clock.now)))s · \(error.localizedDescription)")
                         return .failed(error.localizedDescription, file.copyId, file.fileKey, size)
                     }
                 }
@@ -165,7 +182,8 @@ extension PhotosFileHashPass {
     static func liveDownloader() -> @Sendable (String, String, URL) async throws -> URL {
         { assetId, fileKey, directory in
             let file = AssetUploadFile(key: fileKey, filename: "original", isRAW: false, role: .original, estimatedBytes: 0)
-            return try await PhotoKitOriginalExporter().export(assetId: assetId, file: file, into: directory)
+            return try await PhotoKitOriginalExporter().export(assetId: assetId, file: file, into: directory,
+                                                               progress: { OnServerActivity.shared.progress($0) })
         }
     }
 

@@ -196,6 +196,8 @@ struct MacRootWindow: View {
                 MacOnServerScreen(menu: photoMenu, picture: Self.demoPicture)
             } else if let source = serverSource {
                 MacServerBrowserScreen(source: source)
+            } else if selection == .duplicates {
+                MacDuplicatesScreen()
             } else if let selection, selection.isPendingScreen {
                 MacPendingPlace(item: selection)
             } else {
@@ -1744,6 +1746,8 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "onThisDay" { selection = .onThisDay }
         if MacDemoLibrary.section == "hidden" { selection = .hidden }
         if MacDemoLibrary.section == "albums" { selection = .albums }
+        // `-ShotDexSection duplicates` (board `MAC_Duplicates`).
+        if MacDemoLibrary.section == "duplicates" { selection = .duplicates }
         // Board `MAC_Ingest`: a demo card and a folder to import it into.
         if MacDemoLibrary.section == "ingest" {
             Task { if let id = await MacDemoCard.seed(dependencies) { selection = .card(id) } }

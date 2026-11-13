@@ -117,7 +117,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .continueIndexing: "Continue Indexing"
         case .reindexLibrary: "Re-index Library"
         case .useCellularData: "Use Cellular Data for Indexing"
-        case .keepScreenAwake: "Keep Screen Awake While Indexing"
+        case .keepScreenAwake: "Keep Screen Awake"
         case .lookUpPlaceNames: "Look Up Place Names"
         case .shareIndexAcrossDevices: "Share Index Across Devices"
         case .indexOnThisDevice: "Index on This Device"

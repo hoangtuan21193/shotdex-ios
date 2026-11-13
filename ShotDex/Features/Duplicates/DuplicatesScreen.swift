@@ -5,11 +5,11 @@ import SwiftUI
 struct DuplicatesDestination: Hashable {}
 
 /// Duplicates utility (tier A, DESIGN.md §2; FS-06.06 §7). A pinned band —
-/// kind filter, sort, how many groups are reviewed, the last scan and Rescan —
-/// over a list of **decision cards**: the suggested keeper big with "Keep" and
-/// why, the copies beside it each saying what it lacks; a hold on a photo
+/// kind filter, then a fixed-height slot for the check's progress or its
+/// status — over a list of **decision cards**: every photo the same size, the
+/// suggested keeper marked "Keep" with why, the copies saying what they lack; a hold on a photo
 /// offers Keep all and Not duplicates. A decided group folds to one line. Marks
-/// gather in a floating bar with Delete. Pinch changes copies per row.
+/// gather in a floating bar with Delete. Pinch changes photos per row.
 /// Nothing is marked until the user taps, and nothing rescans unless asked.
 struct DuplicatesScreen: View {
     @Environment(AppDependencies.self) private var dependencies
@@ -97,7 +97,7 @@ struct DuplicatesScreen: View {
         }
         .overlay(alignment: .top) {
             if hudVisible {
-                Text("\(copyColumns) per row", comment: "Duplicates: HUD while pinching, copies per row on a card")
+                Text("\(copyColumns + 1) per row", comment: "Duplicates: HUD while pinching, photos per row on a card")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
                     .padding(.horizontal, AppTheme.Spacing.lg)
@@ -221,15 +221,20 @@ struct DuplicatesScreen: View {
         }
     }
 
-    /// The band rides the list while copies are undecided and the filter
-    /// could show them.
+    /// The band rides the list when the last load found undecided copies
+    /// and the filter could show them. It stays until the next load even
+    /// once every copy is decided: leaving under the finger would pull every
+    /// card up by its height.
     private func showsQuickCleanBand(_ model: DuplicatesModel) -> Bool {
-        guard !model.isScanning, model.pendingQuickClean.copies > 0 else { return false }
+        guard model.offersQuickClean else { return false }
         switch model.filter {
         case .kind(let kind): return kind.isCopy
         }
     }
 
+    /// Cards in rows of equal columns, in list order. Not masonry: a
+    /// masonry layout re-dealt every card to another column whenever one
+    /// folded or a group changed, so the card under the finger moved.
     private func cards(_ model: DuplicatesModel) -> some View {
         let contentWidth = max(0, containerWidth - AppTheme.Size.screenMargin * 2)
         let columnCount = DuplicateCardMetrics.cardColumns(contentWidth: contentWidth, isRegular: isRegular)
@@ -238,16 +243,11 @@ struct DuplicatesScreen: View {
             innerWidth: cardWidth - DuplicateCardMetrics.cardPadding * 2,
             copyColumns: copyColumns
         )
-        let columns = distribute(model.sortedGroups, into: columnCount, model: model, metrics: metrics)
-        return HStack(alignment: .top, spacing: DuplicateCardMetrics.cardSpacing) {
-            ForEach(columns.indices, id: \.self) { index in
-                LazyVStack(spacing: AppTheme.Spacing.md) {
-                    ForEach(columns[index]) { group in
-                        groupView(group, model: model, metrics: metrics)
-                            .id(group.id)
-                    }
-                }
-                .frame(width: columnCount > 1 ? cardWidth : nil)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: DuplicateCardMetrics.cardSpacing, alignment: .top),
+                            count: columnCount)
+        return LazyVGrid(columns: columns, alignment: .leading, spacing: AppTheme.Spacing.md) {
+            ForEach(model.sortedGroups) { group in
+                groupView(group, model: model, metrics: metrics)
             }
         }
     }
@@ -261,35 +261,6 @@ struct DuplicatesScreen: View {
         } else {
             DuplicateDecisionCard(group: group, model: model, metrics: metrics)
         }
-    }
-
-    /// Masonry: each card goes to the shortest column so far, in sort order,
-    /// so a folded row does not leave a hole beside a full card.
-    private func distribute(
-        _ groups: [DuplicateGroup],
-        into count: Int,
-        model: DuplicatesModel,
-        metrics: DuplicateCardMetrics
-    ) -> [[DuplicateGroup]] {
-        guard count > 1 else { return [groups] }
-        var columns = Array(repeating: [DuplicateGroup](), count: count)
-        var heights = Array(repeating: CGFloat(0), count: count)
-        for group in groups {
-            let target = heights.indices.min { heights[$0] < heights[$1] } ?? 0
-            columns[target].append(group)
-            heights[target] += estimatedHeight(group, model: model, metrics: metrics) + AppTheme.Spacing.md
-        }
-        return columns
-    }
-
-    private func estimatedHeight(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> CGFloat {
-        if model.isCollapsed(group) { return 56 }
-        if group.sourceSet != nil {
-            let rows = (group.count + metrics.gridColumns - 1) / metrics.gridColumns
-            return CGFloat(rows) * (metrics.tile + DuplicateCardMetrics.copyGap) + AppTheme.Spacing.md
-        }
-        let body = metrics.gridHeight(copyCount: group.count - 1)
-        return body + AppTheme.Spacing.md
     }
 
     // MARK: Pinch
@@ -347,7 +318,9 @@ struct DuplicatesScreen: View {
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.primary)
-                    Text(inAlbums > 0
+                    Text(inAlbums == 1
+                         ? String(localized: "1 is in an album · kept photo joins it", comment: "Duplicates: floating bar, one marked photo is in an album")
+                         : inAlbums > 1
                          ? String(localized: "\(inAlbums) are in albums · kept photo joins them", comment: "Duplicates: floating bar, marked photos that are in albums")
                          : String(localized: "Recently Deleted keeps them 30 days", comment: "Duplicates: floating bar, where deleted photos go"))
                         .font(.caption)
@@ -490,21 +463,38 @@ private struct DuplicatesHeaderBand: View {
     let isRegular: Bool
 
     var body: some View {
+        // Nothing to filter and nothing running: no empty band.
+        if !model.presentFilters.isEmpty || model.checkStep != nil || statusText != nil {
+            band
+        }
+    }
+
+    private var band: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            filterRow
-            Group {
-                if model.isScanning {
-                    progress
-                        .frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
-                        .padding(.horizontal, AppTheme.Size.screenMargin)
-                } else if let status = statusText {
-                    Text(status)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            if !model.presentFilters.isEmpty { filterRow }
+            // One slot of fixed height for the progress or the status, so
+            // the list under the band never moves when a check starts or
+            // ends — a tap aimed at a ring must land on that ring.
+            if model.checkStep != nil || statusText != nil {
+                Group {
+                    if let step = model.checkStep {
+                        DuplicatesCheckProgress(step: step, cancel: model.cancelScan)
+                    } else if let status = statusText {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(status.title)
+                                .font(.footnote.weight(.semibold))
+                            Text(status.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         .monospacedDigit()
                         .lineLimit(1)
-                        .padding(.horizontal, AppTheme.Size.screenMargin)
+                        .frame(minHeight: 44, alignment: .leading)
+                    }
                 }
+                .frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
+                .frame(height: DuplicatesCheckProgress.height, alignment: .top)
+                .padding(.horizontal, AppTheme.Size.screenMargin)
             }
         }
         .padding(.vertical, AppTheme.Spacing.sm)
@@ -529,84 +519,59 @@ private struct DuplicatesHeaderBand: View {
         .labelsHidden()
         .frame(maxWidth: isRegular ? 420 : .infinity)
         .padding(.horizontal, AppTheme.Size.screenMargin)
-        .disabled(model.isBusy && !model.isScanning)
-    }
-
-    @ViewBuilder
-    private var progress: some View {
-        if case .scanning(let scan) = model.phase {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack {
-                    Text(DuplicatesScanProgress.text(scan, found: model.groups.count))
-                        .font(.footnote.weight(.semibold))
-                        .monospacedDigit()
-                    Spacer()
-                    // Accent, not red: on this screen red only ever means
-                    // "this photo goes" (Q8). Cancelling keeps every batch saved.
-                    Button("Cancel") { model.cancelScan() }
-                        .font(.footnote.weight(.semibold))
-                        .frame(minHeight: 44)
-                }
-                ProgressView(value: scan.fraction)
-            }
-        }
-        // No "~4.2 GB to free" and no "Reviewed x of y" (user, 2026-10-22).
+        .disabled(model.phase == .loading)
     }
 
     /// "Checked 2 min ago · 148 photos only in iCloud — will check on Wi-Fi";
     /// the band shows it only when something waits (A4).
-    private var statusText: String? {
+    private var statusText: (title: String, detail: String)? {
         guard let scanState = model.scanState else { return nil }
-        let pending: String
+        let detail: String
         if !model.canUseNetwork, model.cloudOnlyCount > 0 {
-            pending = model.cloudOnlyCount == 1
+            detail = model.cloudOnlyCount == 1
                 ? String(localized: "1 photo only in iCloud — will check on Wi-Fi", comment: "Duplicates header: photos whose thumbnails need the network")
                 : String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
                          comment: "Duplicates header: photos whose thumbnails need the network")
         } else if model.pendingCount > 0 {
-            pending = model.pendingCount == 1
+            detail = model.pendingCount == 1
                 ? String(localized: "1 photo not checked yet", comment: "Duplicates header: photos a rescan would cover")
                 : String(localized: "\(model.pendingCount.formatted()) photos not checked yet",
                          comment: "Duplicates header: photos a rescan would cover")
         } else {
-            return nil
+            detail = String(localized: "Every photo checked", comment: "Duplicates header: nothing left for a rescan")
         }
         let checked = String(localized: "Checked \(scanState.scannedAt.formatted(.relative(presentation: .named)))",
                              comment: "Duplicates header: when the last scan ran")
-        return "\(checked) · \(pending)"
+        return (checked, detail)
     }
 }
 
 // MARK: - Decision card
 
-/// One group as a decision: the keeper over 2×2 cells with "Keep", its
-/// reasons and its sizes on the photo, the copies square in the cells beside
-/// and below it. No button row (2026-10-21): the ring marks, a tap opens
-/// Compare (Choose frames on a burst), a hold offers Keep all and Not
-/// duplicates. A burst puts its keeper first and the rest in capture order
-/// (FS-06.06 §7.4).
+/// One group as a decision: every photo in a same-size square cell, in the
+/// group's fixed order; the suggested keeper carries "Keep" and one reason,
+/// the copies say what they lack. No button row (2026-10-21): the ring marks,
+/// a tap opens Compare (Choose frames on a burst), a hold offers Keep all and
+/// Not duplicates (FS-06.06 §7.4).
 private struct DuplicateDecisionCard: View {
     let group: DuplicateGroup
     let model: DuplicatesModel
     let metrics: DuplicateCardMetrics
-    /// The photo the user just marked from the big slot. Marking the
-    /// suggested keeper makes the model suggest another one; without this
-    /// the marked photo would leave the slot at once (into a cell, or out of
-    /// sight in a folded group) and the ring would look dead.
-    @State private var pinnedSlotId: String?
 
     var body: some View {
         let keeper = model.keeper(of: group)
-        let slot = slotMember(keeper: keeper)
         // Only photos and the words on them (2026-10-21): no title, no
-        // "to free", no notes, and every photo shown — no Show all.
-        VStack(alignment: .leading, spacing: 0) {
-            if let slot {
-                // Burst: the keeper first, the rest in capture order.
-                keeperGrid(slot, keeper: keeper,
-                           copies: group.members.filter { $0.assetId != slot.assetId })
+        // "to free", no notes, and every photo shown — no Show all. Every
+        // photo the same size, in the group's own order (2026-11-10).
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(group.members.enumerated()), id: \.element.id) { index, member in
+                let origin = metrics.origin(at: index)
+                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, keeper: keeper)
+                    .offset(x: origin.x, y: origin.y)
             }
         }
+        .frame(height: metrics.gridHeight(photoCount: group.count), alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DuplicateCardMetrics.cardPadding)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
         .accessibilityElement(children: .contain)
@@ -615,48 +580,17 @@ private struct DuplicateDecisionCard: View {
         .onAppear { model.loadTraits(for: group) }
     }
 
-    /// The big slot holds the keeper, unless the user marked the photo in
-    /// it — that one stays put, red, until it is unmarked.
-    private func slotMember(keeper: HashedPhoto?) -> HashedPhoto? {
-        if let pinnedSlotId, model.isMarked(pinnedSlotId),
-           let pinned = group.members.first(where: { $0.assetId == pinnedSlotId }) {
-            return pinned
-        }
-        return keeper
-    }
-
-    private func toggleMark(_ member: HashedPhoto, inSlot: Bool) {
-        if inSlot, !model.isMarked(member.assetId) { pinnedSlotId = member.assetId }
+    private func toggleMark(_ member: HashedPhoto) {
         withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) }
-        if !model.isMarked(member.assetId), pinnedSlotId == member.assetId { pinnedSlotId = nil }
     }
 
-    /// The keeper's reasons, or "Checking sharpness…" while the pass has not
-    /// reached this group (§3 step 5).
+    /// The keeper's reasons, or "Checking…" while the pass has not reached
+    /// this group (§3 step 5). One chip: the cells are all the same size now.
     private func keeperChips(_ keeper: HashedPhoto?) -> [String] {
         if model.isChecking(group) {
-            return [String(localized: "Checking sharpness…", comment: "Duplicates: chip on the kept photo while the group is being scored")]
+            return [String(localized: "Checking…", comment: "Duplicates: chip on the kept photo while the group is being compared")]
         }
-        return model.reasons(for: group, keeper: keeper).map(\.title)
-    }
-
-    /// The keeper over 2×2 cells at the top left, the copies in the cells
-    /// beside and below it — every copy square, the card filled (board
-    /// `PH_DuplicatesLargeGroup`). Sizes and reasons ride on the photos.
-    /// - Parameter keeper: picked once per card — every caption is worded
-    ///   against it, and picking it again per tile cost a group's worth of
-    ///   scoring per tile on each redraw.
-    private func keeperGrid(_ slot: HashedPhoto, keeper: HashedPhoto?, copies: [HashedPhoto]) -> some View {
-        let origins = metrics.copyOrigins(count: copies.count)
-        return ZStack(alignment: .topLeading) {
-            tile(slot, side: metrics.keeper, radius: AppTheme.Radius.md, inSlot: true, keeper: keeper)
-            ForEach(Array(copies.enumerated()), id: \.element.id) { index, member in
-                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, inSlot: false, keeper: keeper)
-                    .offset(x: origins[index].x, y: origins[index].y)
-            }
-        }
-        .frame(height: metrics.gridHeight(copyCount: copies.count), alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        return Array(model.reasons(for: group, keeper: keeper).map(\.title).prefix(1))
     }
 
     private func facts(_ member: HashedPhoto) -> String {
@@ -674,7 +608,7 @@ private struct DuplicateDecisionCard: View {
         member.assetId == keeper?.assetId ? [] : model.caption(of: member, in: group, keeper: keeper)
     }
 
-    private func tile(_ member: HashedPhoto, side: CGFloat, radius: CGFloat, inSlot: Bool, keeper: HashedPhoto?) -> some View {
+    private func tile(_ member: HashedPhoto, side: CGFloat, radius: CGFloat, keeper: HashedPhoto?) -> some View {
         let isKeeper = member.assetId == keeper?.assetId
         let isMarked = model.isMarked(member.assetId)
         return DuplicateThumbnail(
@@ -683,9 +617,9 @@ private struct DuplicateDecisionCard: View {
             radius: radius,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
-            onToggleMark: { toggleMark(member, inSlot: inSlot) },
+            onToggleMark: { toggleMark(member) },
             factLines: captionLines(member, keeper: keeper),
-            chips: inSlot && isKeeper ? keeperChips(keeper) : [],
+            chips: isKeeper && !isMarked ? keeperChips(keeper) : [],
             isKeeper: isKeeper
         )
         // D7: a tap looks, the ring marks. A burst is looked at frame by
@@ -694,14 +628,13 @@ private struct DuplicateDecisionCard: View {
         .sensoryFeedback(.selection, trigger: isMarked)
         .contextMenu {
             Button {
-                pinnedSlotId = nil
                 withAnimation(AppTheme.Motion.standard) { model.keepOnly(member.assetId, in: group) }
             } label: {
                 Label(String(localized: "Keep just this one", comment: "Duplicates tile menu: keep this photo, mark the rest"),
                       systemImage: "checkmark.circle")
             }
             Button {
-                toggleMark(member, inSlot: inSlot)
+                toggleMark(member)
             } label: {
                 Label(isMarked
                       ? String(localized: "Don't remove", comment: "Duplicates tile menu: take the mark away")
@@ -741,7 +674,7 @@ private struct DuplicateDecisionCard: View {
         .accessibilityAction(named: isMarked
                              ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
                              : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
-            toggleMark(member, inSlot: inSlot)
+            toggleMark(member)
         }
     }
 
@@ -930,17 +863,24 @@ struct DuplicateThumbnail: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                if !chips.isEmpty {
+                // Under 100pt a chip would have ~30pt beside the ring: the
+                // Keep pill alone says which one stays.
+                if !chips.isEmpty, side >= 100 {
                     HStack(spacing: AppTheme.Spacing.xs) {
                         ForEach(chips, id: \.self) { chip in
                             Text(chip)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                                 .padding(.horizontal, 7)
                                 .frame(height: 20)
                                 .background(Color.black.opacity(0.55), in: Capsule())
                         }
                     }
+                    // Clear of the 44pt ring in the top-right corner, even
+                    // on the small cells of a pinched card.
+                    .frame(maxWidth: max(0, side - 44 - AppTheme.Spacing.sm), alignment: .leading)
                     .padding(AppTheme.Spacing.sm)
                 }
             }
@@ -981,8 +921,8 @@ struct DuplicateThumbnail: View {
             .onDisappear(perform: cancelThumbnail)
     }
 
-    /// Asks again whenever the tile grows — a copy promoted to keeper goes
-    /// from one cell to 2x2, and its small image would otherwise stay,
+    /// Asks again whenever the tile grows — a pinch to fewer photos per row
+    /// makes every cell bigger, and the small image would otherwise stay,
     /// scaled up and soft. Not gated on a request in flight: PhotoKit often
     /// answers the degraded pass synchronously, before the id is stored.
     private func loadThumbnail() {

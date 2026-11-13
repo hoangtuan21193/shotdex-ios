@@ -5,7 +5,8 @@ import SwiftUI
 /// `PH_Duplicates`): the identical copies nobody has
 /// decided yet, and one button that previews them before anything is marked.
 /// **Review…** is the screen's one accent-filled button (DESIGN.md §4).
-/// Gone once every copies group is decided.
+/// Stays until the next load once every copies group is decided, so the
+/// cards under it never move on a tap.
 struct DuplicatesQuickCleanBand: View {
     let model: DuplicatesModel
     let review: () -> Void
@@ -17,7 +18,9 @@ struct DuplicatesQuickCleanBand: View {
                 Text(String(localized: "Quick clean", comment: "Duplicates list: band over the cards"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(pending.copies == 1
+                Text(pending.copies == 0
+                     ? String(localized: "Every copy decided", comment: "Duplicates Quick clean band: nothing left for it")
+                     : pending.copies == 1
                      ? String(localized: "1 copy · \(bytes(pending.bytes))", comment: "Duplicates Quick clean band: copies to remove and their size")
                      : String(localized: "\(pending.copies.formatted()) copies · \(bytes(pending.bytes))",
                               comment: "Duplicates Quick clean band: copies to remove and their size"))
@@ -37,7 +40,7 @@ struct DuplicatesQuickCleanBand: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .disabled(model.isBusy)
+            .disabled(model.isBusy || pending.copies == 0)
         }
         .padding(AppTheme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -85,35 +88,73 @@ private struct DuplicatesKindThumbnail: View {
 }
 
 /// "Scanning 1,200 of 38,000 · 40 found so far" with Cancel (A4).
-struct DuplicatesScanProgress: View {
-    let model: DuplicatesModel
+struct DuplicatesCheckProgress: View {
+    /// The band's status slot: two lines, the 44pt Cancel row and the bar.
+    static let height: CGFloat = 54
+
+    let step: DuplicatesCheckStep
+    let cancel: () -> Void
 
     var body: some View {
-        if case .scanning(let scan) = model.phase {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack {
-                    Text(DuplicatesScanProgress.text(scan, found: model.groups.count))
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(Self.title(step))
                         .font(.footnote.weight(.semibold))
-                        .monospacedDigit()
-                    Spacer()
-                    Button(String(localized: "Cancel", comment: "Duplicates: stop the scan in progress")) { model.cancelScan() }
+                    Text(Self.detail(step))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .monospacedDigit()
+                .lineLimit(1)
+                Spacer(minLength: 0)
+                // Accent, not red: on this screen red only ever means
+                // "this photo goes" (Q8). Cancelling keeps what was read.
+                if step != .grouping {
+                    Button(String(localized: "Cancel", comment: "Duplicates: stop the check in progress"), action: cancel)
                         .font(.footnote.weight(.semibold))
                         .frame(minHeight: 44)
                 }
-                ProgressView(value: scan.fraction)
             }
+            if let fraction = Self.fraction(step) {
+                ProgressView(value: fraction)
+            } else {
+                ProgressView().progressViewStyle(.linear)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    static func fraction(_ step: DuplicatesCheckStep) -> Double? {
+        switch step {
+        case .reading(let scan): scan.total > 0 ? scan.fraction : nil
+        case .grouping: nil
+        case .comparing(let progress): progress.total > 0 ? Double(progress.processed) / Double(progress.total) : nil
         }
     }
 
-    static func text(_ scan: DuplicateScanProgress, found: Int) -> String {
-        guard scan.total > 0 else {
-            return String(localized: "Getting ready…", comment: "Duplicates header: before the first batch of the check")
+    static func title(_ step: DuplicatesCheckStep) -> String {
+        switch step {
+        case .reading: String(localized: "Step 1 of 3 · Reading photos", comment: "Duplicates header: first step of the check")
+        case .grouping: String(localized: "Step 2 of 3 · Grouping", comment: "Duplicates header: second step of the check")
+        case .comparing: String(localized: "Step 3 of 3 · Comparing matches", comment: "Duplicates header: third step, Vision confirms each group")
         }
-        let scanning = String(localized: "Checking \(scan.processed.formatted()) of \(scan.total.formatted())",
-                              comment: "Duplicates header: check progress")
-        guard found > 0 else { return scanning }
-        return scanning + " · " + String(localized: "\(found.formatted()) found so far",
-                                         comment: "Duplicates header: groups already found while scanning")
+    }
+
+    static func detail(_ step: DuplicatesCheckStep) -> String {
+        switch step {
+        case .reading(let scan):
+            guard scan.total > 0 else {
+                return String(localized: "Getting ready…", comment: "Duplicates header: before the first batch of the check")
+            }
+            return String(localized: "\(scan.processed.formatted()) of \(scan.total.formatted()) photos",
+                          comment: "Duplicates header: check progress")
+        case .grouping:
+            return String(localized: "Finding photos that look alike…", comment: "Duplicates header: grouping step")
+        case .comparing(let progress):
+            return String(localized: "\(progress.processed.formatted()) of \(progress.total.formatted()) photos · list updates when done",
+                          comment: "Duplicates header: comparing step progress")
+        }
     }
 }
 

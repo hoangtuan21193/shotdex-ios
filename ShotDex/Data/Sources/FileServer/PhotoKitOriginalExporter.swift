@@ -83,6 +83,12 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
     }
 
     func export(assetId: String, file: AssetUploadFile, into directory: URL) async throws -> URL {
+        try await export(assetId: assetId, file: file, into: directory, progress: nil)
+    }
+
+    /// `progress`: bytes written so far, after each chunk.
+    func export(assetId: String, file: AssetUploadFile, into directory: URL,
+                progress: (@Sendable (Int64) -> Void)?) async throws -> URL {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first else {
             throw RemoteFileError.other(String(localized: "The photo is no longer in your library.", comment: "Upload to Server: asset deleted mid-batch"))
         }
@@ -94,7 +100,7 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
         let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = true
         do {
-            try await Self.stream(resource, to: url, options: options)
+            try await Self.stream(resource, to: url, options: options, progress: progress)
         } catch {
             try? FileManager.default.removeItem(at: url)
             if Task.isCancelled { throw CancellationError() }
@@ -110,7 +116,9 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
     /// The original, streamed to `url` chunk by chunk, and cancelled with the
     /// task — Pause must stop a multi-GB iCloud download at once, which
     /// `writeData` does not (FS-22.02 §4).
-    private static func stream(_ resource: PHAssetResource, to url: URL, options: PHAssetResourceRequestOptions) async throws {
+    private static func stream(_ resource: PHAssetResource, to url: URL, options: PHAssetResourceRequestOptions,
+                               progress: (@Sendable (Int64) -> Void)? = nil) async throws {
+        let written = OSAllocatedUnfairLock(initialState: Int64(0))
         guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
             throw CocoaError(.fileWriteUnknown)
         }
@@ -123,6 +131,10 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let id = manager.requestData(for: resource, options: options) { chunk in
                     do { try handle.write(contentsOf: chunk) } catch { writeError.withLock { $0 = $0 ?? error } }
+                    if let progress {
+                        let total = written.withLock { $0 += Int64(chunk.count); return $0 }
+                        progress(total)
+                    }
                 } completionHandler: { error in
                     if let error = error ?? writeError.withLock({ $0 }) {
                         continuation.resume(throwing: error)

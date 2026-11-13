@@ -86,6 +86,23 @@ cổng → từng vòng băm server rồi Photos tới khi một vòng không l�
 sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn server. App xuống nền → dừng giữa hai đợt, lý do
 `Open ShotDex to continue`.
 
+**Photos không được chặn server** (người dùng 2026-11-11: iPad chạy mấy ngày, 20.471 file Photos đã băm, **0** trong
+108.244 file server có hash — sổ SHA Mac ghi trên NAS chưa từng được đọc). Phía Photos chạy *trong lúc* liệt kê server,
+và dừng sau đợt đang dở ngay khi liệt kê xong; từ đó hai phía **luân phiên từng đợt** trong các vòng băm. Trước đó lượt
+chờ phía Photos tải hết mọi bản gốc iCloud cùng cỡ rồi mới đụng tới server — vòng băm server (nơi đọc sổ §12.2) không
+bao giờ tới. App về trước mặt khi lượt vừa huỷ còn đang dừng: lượt mới chạy ngay khi lượt cũ xong, không bị bỏ rơi tới
+lần mở app sau. Test: `OnServerScheduleTests.photosBacklogDoesNotHoldUpServer`, `foregroundDuringWindDownStartsAgain`.
+
+**iCloud từ chối thì nghỉ** (2026-11-11: iPad nhận `CloudPhotoLibraryErrorDomain 1006` cho 456 lượt tải liền, mỗi lượt sau
+0,0 s). Một đợt Photos mà hỏng ít nhất 6 file và không file nào về → phía Photos dừng trong lượt đó, lý do chờ
+`iCloud isn't sending originals · trying again soon`, 10 phút sau lượt mới tự chạy (khi app ở trước mặt hoặc tác vụ nền
+còn giữ). Phía server vẫn chạy. Test: `OnServerScheduleTests.iCloudRefusalRests`.
+
+**Chạy nền iOS 26** (2026-11-11): lượt bắt đầu ở trước mặt mà còn việc thì xin `BGContinuedProcessingTask`
+(`com.hoangtuan.shotdex.onserver.continued`); được nhận thì ra nền lượt không dừng, iOS hiện thanh tiến độ hệ thống.
+Thanh đó đếm **cùng phạm vi với header smart album** — điều kiện Also on Server đầu tiên (server › folder) — để hai số
+không lệch; không có album nào thì đếm cả nguồn server đầu tiên.
+
 ## 7. Smart album — điều kiện **Also on Server** (đổi 2026-11-06)
 
 Người dùng 2026-11-06 ([intent also-on-nas-condition](../../_intents/2026-11-06-also-on-nas-condition.md)): đặt trong
@@ -122,6 +139,16 @@ hệt trên NAS. Tách ra thành trường riêng; Source thôi nhận nguồn s
   checked.` khi quyền `.limited`; `Waiting to Charge` khi job bật Only While Charging. Tính cho điều kiện **Also on
   Server** đầu tiên của album, đọc lại sau mỗi đợt băm (album tải lại theo). Mã: `OnServerProgressQueries`,
   `OnServerProgressLine`.
+- **Thanh điều kiện một hàng** (người dùng 2026-11-11, hai lần: "header chiếm quá nhiều diện tích", rồi "tên album sang
+  phải, số ảnh và các số liệu khác bên trái, dài quá thì ẩn bớt chữ"). Trái: số ảnh (đậm), rồi **`Checking` + thanh tiến
+  độ** (đã kiểm / tổng) khi còn ảnh chưa có câu trả lời (người dùng 2026-11-11: "text dài quá thì bỏ, chỉ checking với
+  progress bar"); xong hoặc đang chờ thì dòng ngắn của lượt (`Checked 3 min ago`, lý do chờ), cắt đuôi khi thiếu chỗ.
+  Kiểm bản gốc và Keep in Photos chỉ còn trong popover. Tên album giữ đủ chỗ, số liệu nhường. Phải (màn rộng: iPad, Duo trong): tên album + ngày đang xem; thanh điều hướng
+  không còn hàng tiêu đề riêng. Màn hẹp (iPhone, Duo ngoài): tên vẫn trên thanh điều hướng, vì ở đó nó không tốn thêm
+  hàng. Chip điều kiện, Match all/any và các câu dài (lệch hash §12.4, thiếu bản sửa, gợi ý Shared Library) nằm trong
+  popover mở khi bấm phần trái; ⓘ màu nhấn khi có câu chờ đọc, chevron khi không. Chip bộ lọc tạm (xoá được) thêm hàng 2
+  chỉ khi đang lọc. Cỡ chữ trợ năng thì phần trái xuống dòng thay vì cắt. Mã: `SmartAlbumConditionsBar`,
+  `SmartAlbumDetailScreen.titleInBar`. Board: `PH_/DI_/DC_/IP_SmartAlbum` (iPad: lưới bắt đầu ở 132 thay vì 330).
 - **Mọi thiết bị cùng lượt**, gồm Mac: rule model dùng chung (`SmartAlbumRule`), bỏ server khỏi Source mà không đổi
   `MAC_SmartAlbumEditor` thì Mac mất điều kiện. Board phải vẽ lại trước khi code: `PH_SmartAlbumEditor`,
   `DI_SmartAlbumEditor`, `DC_SmartAlbumEditor`, `IP_SmartAlbumEditor`, `MAC_SmartAlbumEditor` và chip trên

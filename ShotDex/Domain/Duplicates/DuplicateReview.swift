@@ -373,14 +373,16 @@ enum DuplicateReview {
     }
 }
 
-/// Geometry of the decision card (FS-06.06 §7, board `PH_DuplicatesLargeGroup`):
-/// one grid of `copyColumns + 2` square cells, 4pt apart. The keeper spans
-/// 2×2 cells — each side twice a copy — at the top left; the copies fill the
-/// cells to its right, then the rows below it, left to right, always square.
-/// A big group fills the card instead of leaving the keeper alone in a column.
+/// Geometry of the decision card (FS-06.06 §7): one grid of square cells,
+/// all the same size, 4pt apart, members in a fixed order left to right.
+/// The kept photo carries a Keep badge, not a bigger cell (user,
+/// 2026-11-10): a bigger keeper made the cells swap places whenever the
+/// suggestion changed, so a tap landed on another photo than the one aimed at.
 struct DuplicateCardMetrics: Equatable {
     static let copyGap: CGFloat = 4
     static let cardPadding: CGFloat = 12
+    /// The stored density: photos per row minus one (kept from when it
+    /// counted copies beside a 2×2 keeper, so a pinched density survives).
     static let compactColumns = 2
     static let regularColumns = 3
     static let columnRange = 1...5
@@ -389,54 +391,32 @@ struct DuplicateCardMetrics: Equatable {
     static let cardSpacing: CGFloat = 16
 
     let tile: CGFloat
-    let keeper: CGFloat
     let copyColumns: Int
 
     /// - Parameters:
     ///   - innerWidth: card width minus its two paddings.
-    ///   - copyColumns: copies per row, the density the user pinched to.
+    ///   - copyColumns: the density the user pinched to.
     init(innerWidth: CGFloat, copyColumns: Int) {
         let columns = max(1, copyColumns)
-        let cells = columns + 2
+        let cells = columns + 1
         let usable = innerWidth - Self.copyGap * CGFloat(cells - 1)
-        let tile = max(24, (usable / CGFloat(cells)).rounded(.down))
-        self.tile = tile
-        self.keeper = tile * 2 + Self.copyGap
+        self.tile = max(24, (usable / CGFloat(cells)).rounded(.down))
         self.copyColumns = columns
     }
 
-    /// Cells across the card's grid: the keeper's two plus the copy columns.
-    var gridColumns: Int { copyColumns + 2 }
+    /// Photos per row.
+    var gridColumns: Int { copyColumns + 1 }
 
-    /// Top-left corner of each copy, in order, relative to the keeper's.
-    /// Beside the keeper first (`copyColumns` wide, two rows), then full rows
-    /// under it.
-    func copyOrigins(count: Int) -> [CGPoint] {
+    /// Top-left corner of the photo at `index`, left to right, row by row.
+    func origin(at index: Int) -> CGPoint {
         let step = tile + Self.copyGap
-        let besideCount = min(count, copyColumns * 2)
-        var origins: [CGPoint] = []
-        origins.reserveCapacity(count)
-        for index in 0..<besideCount {
-            origins.append(CGPoint(
-                x: keeper + Self.copyGap + CGFloat(index % copyColumns) * step,
-                y: CGFloat(index / copyColumns) * step
-            ))
-        }
-        for index in besideCount..<max(besideCount, count) {
-            let below = index - besideCount
-            origins.append(CGPoint(
-                x: CGFloat(below % gridColumns) * step,
-                y: keeper + Self.copyGap + CGFloat(below / gridColumns) * step
-            ))
-        }
-        return origins
+        return CGPoint(x: CGFloat(index % gridColumns) * step, y: CGFloat(index / gridColumns) * step)
     }
 
-    /// Height of the keeper and its copies together.
-    func gridHeight(copyCount: Int) -> CGFloat {
-        let below = max(0, copyCount - copyColumns * 2)
-        let rows = (below + gridColumns - 1) / gridColumns
-        return keeper + CGFloat(rows) * (tile + Self.copyGap)
+    /// Height of a group's grid.
+    func gridHeight(photoCount: Int) -> CGFloat {
+        let rows = max(1, (photoCount + gridColumns - 1) / gridColumns)
+        return CGFloat(rows) * tile + CGFloat(rows - 1) * Self.copyGap
     }
 
     /// Card columns for a content width: one on compact, as many ≥ 400pt

@@ -66,4 +66,16 @@ extension AppDatabase {
             }
         }
     }
+
+    /// Vision feature prints for grouped photos (2026-11-10): the hash only
+    /// nominates a look-alike, the print confirms it. A scan result, so the
+    /// stored rows simply re-queue: every existing score lacks a print.
+    static func registerDuplicateFeaturePrints(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v63-duplicateFeaturePrint") { db in
+            try db.alter(table: "duplicate_quality") { t in
+                // Archived `VNFeaturePrintObservation`; NULL until read.
+                t.add(column: "featurePrint", .blob)
+            }
+        }
+    }
 }

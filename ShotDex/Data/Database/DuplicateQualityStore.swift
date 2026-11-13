@@ -13,6 +13,9 @@ struct DuplicateQualityRecord: Equatable, Sendable {
     var exposureBias: Double?
     var software: String?
     var scoredAt: Int
+    /// Archived Vision feature print of the 512px rendition — what confirms
+    /// a look-alike the hash only nominated. `nil` when it could not be read.
+    var featurePrint: Data? = nil
 }
 
 struct DuplicateQualityStore: Sendable {
@@ -48,7 +51,11 @@ struct DuplicateQualityStore: Sendable {
     /// Grouped photos with no row, or a row from before the photo was last
     /// edited. Rows whose thumbnail could not be read (`sharpness IS NULL`)
     /// are retried only when the network is allowed this run.
-    func pendingAssetIds(among assetIds: some Collection<String>, retryingFailed: Bool) throws -> [String] {
+    /// - Parameter retryingEmptyPrints: this device reads feature prints, so
+    ///   a print stored empty (Vision refused, or a device that could not
+    ///   read them) is asked for again.
+    func pendingAssetIds(among assetIds: some Collection<String>, retryingFailed: Bool,
+                         retryingEmptyPrints: Bool = false) throws -> [String] {
         let ids = Array(Set(assetIds))
         guard !ids.isEmpty else { return [] }
         return try database.reader.read { db in
@@ -60,11 +67,33 @@ struct DuplicateQualityStore: Sendable {
                     LEFT JOIN duplicate_quality q ON q.assetId = p.assetId
                     WHERE p.assetId IN (\(databaseQuestionMarks(count: chunk.count)))
                       AND (q.assetId IS NULL OR q.modificationDate IS NOT p.modificationDate
-                           OR (q.sharpness IS NULL AND ?))
+                           OR (q.sharpness IS NULL AND ?)
+                           OR (q.sharpness IS NOT NULL AND q.featurePrint IS NULL)
+                           OR (q.sharpness IS NOT NULL AND length(q.featurePrint) = 0 AND ?))
                     ORDER BY p.creationDate DESC
-                    """, arguments: StatementArguments(chunk) + [retryingFailed])
+                    """, arguments: StatementArguments(chunk) + [retryingFailed, retryingEmptyPrints])
             }
             return pending
+        }
+    }
+
+    /// Archived feature prints of `assetIds` that have one.
+    func featurePrints(for assetIds: some Collection<String>) throws -> [String: Data] {
+        let ids = Array(Set(assetIds))
+        guard !ids.isEmpty else { return [:] }
+        return try database.reader.read { db in
+            var result: [String: Data] = [:]
+            for start in stride(from: 0, to: ids.count, by: 500) {
+                let chunk = Array(ids[start..<min(start + 500, ids.count)])
+                let rows = try Row.fetchCursor(db, sql: """
+                    SELECT assetId, featurePrint FROM duplicate_quality
+                    WHERE featurePrint IS NOT NULL AND assetId IN (\(databaseQuestionMarks(count: chunk.count)))
+                    """, arguments: StatementArguments(chunk))
+                while let row = try rows.next() {
+                    if let data: Data = row["featurePrint"], !data.isEmpty { result[row["assetId"]] = data }
+                }
+            }
+            return result
         }
     }
 
@@ -75,12 +104,13 @@ struct DuplicateQualityStore: Sendable {
                 try db.execute(sql: """
                     INSERT OR REPLACE INTO duplicate_quality
                         (assetId, modificationDate, sharpness, eyesOpen, eyeConfidence, highlightClip, shadowClip,
-                         faceRect, exposureBias, software, scoredAt)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         faceRect, exposureBias, software, scoredAt, featurePrint)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, arguments: [
                         record.assetId, record.modificationDate, record.score.sharpness, record.score.eyesOpen,
                         record.score.eyeConfidence, record.score.highlightClip, record.score.shadowClip,
                         record.score.faceRect.map(Self.text), record.exposureBias, record.software, record.scoredAt,
+                        record.featurePrint,
                     ])
             }
         }

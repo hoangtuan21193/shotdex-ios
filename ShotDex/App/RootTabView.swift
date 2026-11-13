@@ -454,13 +454,19 @@ struct RootTabView: View {
 }
 
 /// Keeps the screen awake while indexing runs, gated on the
-/// `index.keepScreenAwake` setting.
+/// `index.keepScreenAwakeMode` setting: off, while working (indexing or
+/// the on-server check), or the whole time ShotDex is open.
 private struct KeepScreenAwakeModifier: ViewModifier {
     let libraryModel: LibraryModel?
 
-    @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
+    @AppStorage(SettingsKeys.keepScreenAwakeMode) private var modeRaw = KeepScreenAwake.stored.rawValue
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(AppDependencies.self) private var dependencies
     @State private var model = ScreenAwakeCoordinator.shared
+
+    private var mode: KeepScreenAwake { KeepScreenAwake(rawValue: modeRaw) ?? .off }
+    /// The on-server check is reading or downloading (FS-19.07).
+    private var isChecking: Bool { dependencies.onServerCheck.isRunning }
 
     private var isIndexing: Bool {
         libraryModel?.isIndexing == true
@@ -474,13 +480,19 @@ private struct KeepScreenAwakeModifier: ViewModifier {
     /// In Low Power Mode only a manually started run keeps the screen awake;
     /// automatic runs let the display sleep normally.
     private var isActive: Bool {
-        keepScreenAwake && isIndexing && (!isLowPowerMode || isManualRun)
+        switch mode {
+        case .off: false
+        case .always: true
+        case .whileWorking: (isIndexing && (!isLowPowerMode || isManualRun)) || (isChecking && !isLowPowerMode)
+        }
     }
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: keepScreenAwake) { sync() }
+            .onChange(of: modeRaw) { sync() }
             .onChange(of: isIndexing) { sync() }
+            .onChange(of: isChecking) { sync() }
+            .onAppear { sync() }
             .onChange(of: isLowPowerMode) { sync() }
             .onChange(of: isManualRun) { sync() }
             .onChange(of: scenePhase) { _, phase in
@@ -493,13 +505,13 @@ private struct KeepScreenAwakeModifier: ViewModifier {
     }
 
     private func sync() {
-        model.update(enabled: isActive, indexing: isIndexing)
+        model.update(enabled: isActive, indexing: isActive)
     }
 }
 
 extension View {
     /// Keep the display awake while `libraryModel` is indexing, honoring the
-    /// user's `index.keepScreenAwake` setting.
+    /// user's Keep Screen Awake setting.
     func keepScreenAwakeWhileIndexing(libraryModel: LibraryModel?) -> some View {
         modifier(KeepScreenAwakeModifier(libraryModel: libraryModel))
     }

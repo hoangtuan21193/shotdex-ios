@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 563" font-family="-apple-system,Helvetica,sans-serif">
+  <rect width="800" height="563" rx="40" fill="#d9d9de"/>
+  <text x="20" y="40" font-size="16" fill="#777">Màn trong Duo 951×669 (thu nhỏ)</text>
+  <rect x="125" y="7" width="550" height="556" rx="22" fill="#f2f2f7" stroke="#bbb"/>
+  <text x="145" y="44" font-size="15" fill="#c6730e">Cancel</text>
+  <text x="355" y="44" font-size="16" font-weight="600">New Backup</text>
+  <text x="610" y="44" font-size="15" fill="#aaa">Start</text>
+  <g font-size="15">
+    <text x="150" y="88" fill="#777">Source</text>
+    <rect x="145" y="96" width="510" height="44" rx="12" fill="#fff"/><text x="165" y="124">Photos Library</text>
+    <text x="150" y="168" fill="#777">Destination</text>
+    <rect x="145" y="176" width="510" height="88" rx="12" fill="#fff"/><text x="165" y="204">Connection</text><text x="165" y="248">Folder</text>
+    <text x="150" y="292" fill="#777">Folders on NAS Home</text>
+    <rect x="145" y="300" width="510" height="56" rx="12" fill="#fff"/><text x="165" y="333">Organize</text>
+    <text x="150" y="400" fill="#777">What to Copy</text>
+    <rect x="145" y="408" width="510" height="155" rx="12" fill="#fff"/><text x="165" y="440">Photos &amp; Videos</text><text x="165" y="484">Photos Only</text><text x="165" y="528">Videos Only</text>
+  </g>
+  <line x1="125" y1="562" x2="675" y2="562" stroke="#d00" stroke-width="3" stroke-dasharray="8 6"/>
+  <rect x="690" y="430" width="105" height="120" rx="10" fill="#fff4f4" stroke="#d00"/>
+  <text x="698" y="455" font-size="14" fill="#b00">Dưới mép:</text>
+  <text x="698" y="477" font-size="14" fill="#b00">Edited</text>
+  <text x="698" y="497" font-size="14" fill="#b00">Wi-Fi only</text>
+  <text x="698" y="517" font-size="14" fill="#b00">Charging</text>
+  <text x="698" y="537" font-size="14" fill="#b00">(phải cuộn)</text>
+  <text x="20" y="250" font-size="14" fill="#555">trống</text>
+  <text x="700" y="250" font-size="14" fill="#555">trống</text>
+</svg>

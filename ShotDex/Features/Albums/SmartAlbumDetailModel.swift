@@ -47,6 +47,10 @@ final class SmartAlbumDetailModel {
     /// The on-server check's line under the conditions, when a condition
     /// is `Source is <server>` (FS-19.07 §7); empty otherwise.
     private(set) var onServerLines: [String] = []
+    /// Checked out of total while photos are left to check, for the
+    /// header's bar; nil once every photo has an answer or the album has no
+    /// server condition.
+    private(set) var onServerFraction: Double?
 
     var matchCount: Int { items.count }
 
@@ -62,6 +66,13 @@ final class SmartAlbumDetailModel {
         self.pipeline = pipeline
         self.query = album.query
         self.albumId = album.id
+        // Last answer first (user 2026-11-11: the bar came seconds after the
+        // album opened — the count is ~3 s of SQL at 55,000 photos): the
+        // cached line shows at once and the fresh one replaces it.
+        if let cached = OnServerLineCache.value(albumId: album.id) {
+            onServerLines = cached.lines
+            onServerFraction = cached.fraction
+        }
         self.sourceStore = SourceStore(database: database)
         self.database = database
         self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
@@ -86,8 +97,11 @@ final class SmartAlbumDetailModel {
     /// condition (or a Source condition on a server, not yet rewritten) —
     /// after each batch the check runs.
     func refreshOnServer(_ check: OnServerCheck, isLimited: Bool) async {
+        var progress: OnServerProgress?
         onServerLines = await Self.onServerLines(query: query, check: check, database: database,
-                                                 sourceNames: sourceNames, isLimited: isLimited)
+                                                 sourceNames: sourceNames, isLimited: isLimited, progress: &progress)
+        onServerFraction = progress.flatMap { $0.total > $0.checked && $0.total > 0 ? Double($0.checked) / Double($0.total) : nil }
+        OnServerLineCache.store(.init(lines: onServerLines, fraction: onServerFraction), albumId: albumId)
     }
 
     /// The on-server check's lines for a query with a server condition
@@ -95,6 +109,15 @@ final class SmartAlbumDetailModel {
     /// header, which shows the album through the Library grid.
     static func onServerLines(query: SmartAlbumQuery, check: OnServerCheck, database: AppDatabase,
                               sourceNames: [String: String], isLimited: Bool) async -> [String] {
+        var progress: OnServerProgress?
+        return await onServerLines(query: query, check: check, database: database, sourceNames: sourceNames,
+                                   isLimited: isLimited, progress: &progress)
+    }
+
+    /// The same, handing back the counts the lines were made from.
+    static func onServerLines(query: SmartAlbumQuery, check: OnServerCheck, database: AppDatabase,
+                              sourceNames: [String: String], isLimited: Bool,
+                              progress found: inout OnServerProgress?) async -> [String] {
         let store = SourceStore(database: database)
         let servers = (try? await Task.detached { try store.serverConnections() }.value) ?? [:]
         guard let rule = query.cleaned.allRules.first(where: {
@@ -111,6 +134,7 @@ final class SmartAlbumDetailModel {
         let progress = await OnServerReadGate.shared.value("progress:\(sourceId):\(folder ?? "")", database: database) {
             try queries.progress(sourceId: sourceId, folder: folder)
         } ?? OnServerProgress()
+        found = progress
         let names = (try? await Task.detached { try shared.deviceNames(caught) }.value) ?? [:]
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
         return OnServerProgressLine.lines(.init(
@@ -159,10 +183,17 @@ final class SmartAlbumDetailModel {
             filters.append(.criteria(filter.criteria))
         }
         let requested = (filter, sortOrder)
-        let rows = (try? await libraryQueries.gridItems(
-            matchingAll: filters,
-            sort: sortOrder.librarySort
-        )) ?? []
+        // A read that fails — cut off by a cancelled task, or busy while the
+        // on-server check writes — keeps the grid it has. Taking it as "no
+        // matches" emptied the album a few minutes into a check (iPad
+        // 2026-11-11: each batch cancelled the reload of the one before).
+        let rows: [LibraryGridItem]
+        do {
+            rows = try await libraryQueries.gridItems(matchingAll: filters, sort: sortOrder.librarySort)
+        } catch {
+            if token == loadToken { isLoading = false }
+            return
+        }
         let total = filter.isActive
             ? ((try? await libraryQueries.count(matchingAll: [.query(query)])) ?? 0)
             : rows.count
@@ -264,5 +295,32 @@ extension SmartAlbumDetailModel: PhotoBrowsingSource {
 
     func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata? {
         await pipeline.indexSingle(assetId: assetId)
+    }
+}
+
+/// The last on-server line of each smart album, kept across launches, so
+/// opening the album shows it before the count is read again.
+enum OnServerLineCache {
+    struct Entry: Codable, Equatable {
+        var lines: [String]
+        var fraction: Double?
+    }
+
+    private static let key = "onServerLineCache"
+
+    static func value(albumId: String) -> Entry? {
+        all()[albumId]
+    }
+
+    static func store(_ entry: Entry, albumId: String) {
+        var entries = all()
+        guard entries[albumId] != entry else { return }
+        entries[albumId] = entry.lines.isEmpty ? nil : entry
+        if let data = try? JSONEncoder().encode(entries) { UserDefaults.standard.set(data, forKey: key) }
+    }
+
+    private static func all() -> [String: Entry] {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [:] }
+        return (try? JSONDecoder().decode([String: Entry].self, from: data)) ?? [:]
     }
 }

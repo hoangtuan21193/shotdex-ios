@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import os
 import Photos
 import SwiftUI
 import UniformTypeIdentifiers
@@ -12,6 +13,32 @@ struct DuplicateNotice: Identifiable {
     let message: String
 }
 
+/// What the Duplicates model needs from the app around it — the iOS
+/// `AppDependencies` and the Mac's `MacDependencies` both provide it, so one
+/// model (scan, verification, ranking, marks, delete) serves both screens.
+@MainActor
+protocol DuplicatesServices: AnyObject {
+    var database: AppDatabase { get }
+    var metadataStore: MetadataStore { get }
+    var photoLibrary: PhotoLibraryService { get }
+    var networkStatus: NetworkMonitor { get }
+    var perceptualHashStore: PerceptualHashStore { get }
+    var duplicateScanPipeline: DuplicateScanPipeline { get }
+    var duplicateQualityPass: DuplicateQualityPass { get }
+    var duplicateReview: DuplicateReviewSession { get }
+    var bursts: any BurstLibrary { get }
+    /// "37 photos moved to Recently Deleted…" after a delete went through.
+    func showDuplicatesDeleted(_ text: String)
+}
+
+/// One step of a check, for the band's progress bar (user, 2026-11-10:
+/// every step shows its progress, not only the first).
+enum DuplicatesCheckStep: Equatable {
+    case reading(DuplicateScanProgress)
+    case grouping
+    case comparing(DuplicateScoringProgress)
+}
+
 /// Which group the side-by-side opens on, and which photo goes first
 /// (FS-06.06 §7.6).
 struct DuplicateComparePresentation: Identifiable, Equatable {
@@ -22,9 +49,15 @@ struct DuplicateComparePresentation: Identifiable, Equatable {
 
 /// Drives the Duplicates screen. Opening the screen reads the **cached**
 /// groups of the last scan (`duplicate_groups`); hashing and regrouping only
-/// happen when the user asks for a rescan — or once, automatically, when the
-/// library has never been scanned. Marks for deletion are the user's own, per
-/// group; nothing is pre-marked.
+/// happen when the user taps Check Library / Check Again — never on their
+/// own (user, 2026-11-10: the automatic first check showed too many wrong
+/// groups). Every group the hash nominates is confirmed by Vision feature
+/// prints before it shows (`DuplicateVerifier`). Marks for deletion are the
+/// user's own, per group; nothing is pre-marked.
+///
+/// Nothing on screen moves under the finger: groups keep the place they got
+/// when they first showed (`rank`), a new score never re-sorts the list, and
+/// a rescan keeps the old list until its result is ready.
 @MainActor
 @Observable
 final class DuplicatesModel {
@@ -35,7 +68,7 @@ final class DuplicatesModel {
         case grouping
     }
 
-    private let dependencies: AppDependencies
+    private let dependencies: any DuplicatesServices
     private var photoLibrary: PhotoLibraryService { dependencies.photoLibrary }
 
     private(set) var phase: Phase = .loading
@@ -55,30 +88,55 @@ final class DuplicatesModel {
     /// Whether this run may use the network — the iCloud line says "will
     /// check on Wi-Fi" only when it may not.
     var canUseNetwork: Bool { allowNetworkForScanning }
-    /// Groups found so far while a scan runs (A4): regrouped from the hashes
-    /// written so far every few seconds, shown at once, cached at the end.
-    @ObservationIgnored private var lastInterimGrouping = ContinuousClock.now
-    @ObservationIgnored private var interimTask: Task<Void, Never>?
     /// The user's marks and decisions; lives in `AppDependencies` so it
     /// outlasts this model (FS-06.06b §1).
     let session: DuplicateReviewSession
     /// Edited / RAW / Live / favourite per member, read per card as it appears.
-    private(set) var traits: [String: DuplicateMemberTraits] = [:]
+    private(set) var traits: [String: DuplicateMemberTraits] = [:] {
+        didSet { traitsVersion &+= 1 }
+    }
+    @ObservationIgnored private var traitsVersion = 0
+    /// What the screen derives from every group — counts, marks, Quick
+    /// clean — computed once per change of what it depends on, not per redraw.
+    @ObservationIgnored private var derivedCache: [String: (key: DerivedKey, value: Any)] = [:]
+
+    private struct DerivedKey: Equatable {
+        var groups: Int
+        var scores: Int
+        var traits: Int
+        var review: Int
+    }
+
+    private func derived<Value>(_ name: String, _ make: () -> Value) -> Value {
+        // Read so SwiftUI keeps observing what the value depends on.
+        _ = groups.count
+        _ = scores.count
+        _ = traits.count
+        _ = session.state
+        let key = DerivedKey(groups: groupsVersion, scores: scoresVersion, traits: traitsVersion, review: session.revision)
+        if let hit = derivedCache[name], hit.key == key, let value = hit.value as? Value { return value }
+        let value = make()
+        derivedCache[name] = (key, value)
+        return value
+    }
     /// What the scoring pass measured, per member (FS-06.06 §6).
     private(set) var scores: [String: DuplicateQualityScore] = [:] {
         didSet { scoresVersion &+= 1 }
     }
     @ObservationIgnored private var scoresVersion = 0
     @ObservationIgnored private var sortedGroupsCache: (key: SortedGroupsKey, groups: [DuplicateGroup])?
+    /// Each group's place in the list, given when it first showed. Only a
+    /// change of sort re-ranks everything; later groups go to the end.
+    @ObservationIgnored private var rank: [String: Int] = [:]
+    @ObservationIgnored private var rankedSort: DuplicateSort?
+    /// PhotoKit bursts, read once per screen.
+    @ObservationIgnored private var burstGroups: [DuplicateGroup]?
     /// The scoring pass's progress while it runs; `nil` when idle.
     private(set) var scoring: DuplicateScoringProgress?
     @ObservationIgnored private var scoringTask: Task<Void, Never>?
     /// Which `startScoring` the running task belongs to: an older task that
     /// finishes late must not clear a newer one's state.
     @ObservationIgnored private var scoringGeneration = 0
-    /// Exposure read by the pass since the last cache read: a regroup-free
-    /// reload picks up brackets once the pass ends.
-    @ObservationIgnored private var scoringReadExposure = false
     @ObservationIgnored private var traitsRequested: Set<String> = []
     /// Members whose traits the next flush reads (`loadTraits(for:)`).
     @ObservationIgnored private var traitsQueue: [PHAsset] = []
@@ -125,7 +183,7 @@ final class DuplicatesModel {
     private var loadTask: Task<Void, Never>?
     private var hasLoadedOnce = false
 
-    init(dependencies: AppDependencies) {
+    init(dependencies: any DuplicatesServices) {
         self.dependencies = dependencies
         self.session = dependencies.duplicateReview
         self.chosenFilter = DuplicatesFilter(stored: UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter))
@@ -147,7 +205,9 @@ final class DuplicatesModel {
 
     /// Every mark that is in a group — whatever the filter shows (06b §1,
     /// AC-M5). A mark on a photo no longer in any group waits until it is.
-    var scopedMarks: Set<String> {
+    var scopedMarks: Set<String> { derived("scopedMarks") { computeScopedMarks() } }
+
+    private func computeScopedMarks() -> Set<String> {
         let marks = session.marks
         guard !marks.isEmpty else { return [] }
         var scoped: Set<String> = []
@@ -159,7 +219,9 @@ final class DuplicatesModel {
         return scoped
     }
 
-    var markedBytes: Int {
+    var markedBytes: Int { derived("markedBytes") { computeMarkedBytes() } }
+
+    private func computeMarkedBytes() -> Int {
         let scoped = scopedMarks
         var seen: Set<String> = []
         var bytes = 0
@@ -198,21 +260,35 @@ final class DuplicatesModel {
     /// those made the list stutter and the cards jump under the finger.
     var sortedGroups: [DuplicateGroup] {
         // Read so the list keeps observing them; the cache key does the rest.
+        // Scores are not in the key: a score landing never moves a card.
         _ = groups.count
-        _ = scores.count
-        let key = SortedGroupsKey(groups: groupsVersion, scores: scoresVersion, filter: filter, sort: sort)
+        let key = SortedGroupsKey(groups: groupsVersion, filter: filter, sort: sort)
         if let cache = sortedGroupsCache, cache.key == key { return cache.groups }
-        let shown = groups.filter(filter.includes)
-        let sorted = DuplicateReview.sorted(shown, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
+        if rankedSort != sort {
+            rank = [:]
+            rankedSort = sort
+        }
+        let unranked = groups.filter { rank[$0.id] == nil }
+        if !unranked.isEmpty {
+            var next = (rank.values.max() ?? -1) + 1
+            for group in sortedBySort(unranked) {
+                rank[group.id] = next
+                next += 1
+            }
+        }
+        let shown = groups.filter(filter.includes).sorted { (rank[$0.id] ?? 0) < (rank[$1.id] ?? 0) }
+        sortedGroupsCache = (key, shown)
+        return shown
+    }
+
+    private func sortedBySort(_ groups: [DuplicateGroup]) -> [DuplicateGroup] {
+        DuplicateReview.sorted(groups, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
             self.keeper(of: group).map { DuplicateReview.scoreGap(group, keeper: $0, scores: self.scores) } ?? 0
         }
-        sortedGroupsCache = (key, sorted)
-        return sorted
     }
 
     private struct SortedGroupsKey: Equatable {
         var groups: Int
-        var scores: Int
         var filter: DuplicatesFilter
         var sort: DuplicateSort
     }
@@ -228,13 +304,23 @@ final class DuplicatesModel {
         presentKinds.map(DuplicatesFilter.kind)
     }
 
-    func groupCount(_ filter: DuplicatesFilter) -> Int { groups.filter(filter.includes).count }
+    func groupCount(_ filter: DuplicatesFilter) -> Int {
+        derived("groupCounts") { () -> [DuplicatesFilter: Int] in
+            var counts: [DuplicatesFilter: Int] = [:]
+            for group in groups { counts[.kind(group.kind), default: 0] += 1 }
+            return counts
+        }[filter] ?? 0
+    }
 
     // MARK: Quick clean
 
     /// Copies groups nobody has decided yet, and what they would free: the
     /// Quick clean band over the list (§7.2) shows while this is not zero.
     var pendingQuickClean: (copies: Int, bytes: Int) {
+        derived("pendingQuickClean") { computePendingQuickClean() }
+    }
+
+    private func computePendingQuickClean() -> (copies: Int, bytes: Int) {
         groups.reduce(into: (copies: 0, bytes: 0)) { total, group in
             guard group.kind.isCopy, group.sourceSet == nil, !isReviewed(group) else { return }
             total.copies += group.count - 1
@@ -253,8 +339,9 @@ final class DuplicatesModel {
     /// Select N photos: the ticked rows' copies get marked. Nothing is
     /// deleted; the Delete bar takes it from here (§7.2).
     func applyQuickClean(_ items: [QuickCleanItem], excluding unticked: Set<String>) {
+        let byId = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for item in items where !unticked.contains(item.groupId) {
-            guard let group = groups.first(where: { $0.id == item.groupId }) else { continue }
+            guard let group = byId[item.groupId] else { continue }
             session.setMarks(of: group.members.map(\.assetId), to: Set(item.removal.remove))
             session.setKeptAll(group.memberIds, false)
         }
@@ -324,7 +411,7 @@ final class DuplicatesModel {
         session.isCollapsed(group.memberIds) && isReviewed(group)
     }
 
-    var reviewedCount: Int { groups.filter(isReviewed).count }
+    var reviewedCount: Int { derived("reviewedCount") { groups.filter(isReviewed).count } }
 
     /// "~96 MB to free" in the header: what keeping one per group would free.
     var totalFreeBytes: Int {
@@ -456,65 +543,85 @@ final class DuplicatesModel {
 
     // MARK: Load
 
-    /// First appearance: show the cache, and kick off the one automatic scan
-    /// if the library has never been scanned.
+    /// First appearance: show the cache. Never starts a check by itself
+    /// (user, 2026-11-10) — Check Library does.
     func loadIfNeeded() {
         guard !hasLoadedOnce else { return }
-        loadCache(autoScanIfNeverScanned: true)
+        loadCache()
     }
 
-    /// Reads the cached groups off the main thread.
-    func loadCache(autoScanIfNeverScanned: Bool = false) {
+    /// Reads the cached groups, confirms them against the stored feature
+    /// prints and folds in PhotoKit bursts — all off the main thread — then
+    /// publishes once.
+    /// - Parameter startsScoring: false after a cancelled check — Cancel
+    ///   must not run straight into step 3.
+    func loadCache(startsScoring: Bool = true) {
         guard !isScanning else { return }
         loadTask?.cancel()
-        phase = .loading
+        if !hasLoadedOnce { phase = .loading }
         let store = dependencies.perceptualHashStore
         let qualityStore = DuplicateQualityStore(database: dependencies.database)
         let retryingFailed = allowNetworkForScanning
+        let knownBursts = burstGroups
         loadTask = Task { [weak self] in
-            let result = await Task.detached(priority: .userInitiated) { () -> CacheSnapshot? in
-                guard let groups = try? store.cachedGroups() else {
-                    // Never grouped (or a read failure):
-                    // report the rest so the screen can decide what to show.
-                    return CacheSnapshot(
-                        groups: nil,
-                        assetsById: [:],
-                        coverage: (try? store.coverage()) ?? PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0),
-                        scanState: nil,
-                        pendingCount: (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0
-                    )
+            let bursts = await self?.readBursts(known: knownBursts) ?? (groups: [], assets: [:])
+            let result = await Task.detached(priority: .userInitiated) { () -> CacheSnapshot in
+                let coverage = (try? store.coverage()) ?? PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0)
+                let pending = (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0
+                guard let cached = try? store.cachedGroups() else {
+                    // Never grouped (or a read failure): report the rest so
+                    // the screen can decide what to show.
+                    return CacheSnapshot(groups: nil, assetsById: [:], coverage: coverage, scanState: nil, pendingCount: pending)
                 }
-                let ids = groups.flatMap { $0.members.map(\.assetId) }
-                let assets = PhotoLibraryService.fetchAssets(ids: ids)
+                let ids = cached.flatMap { $0.members.map(\.assetId) }
+                let prints = FeaturePrintDistances((try? qualityStore.featurePrints(for: ids)) ?? [:])
+                var groups = DuplicateVerifier.verify(cached) { prints.distance($0, $1) }
+                // A PhotoKit burst is a Burst group: its frames leave any other.
+                if !bursts.groups.isEmpty {
+                    let taken = Set(bursts.groups.flatMap { $0.members.map(\.assetId) })
+                    groups = groups.compactMap { group in
+                        let rest = group.members.filter { !taken.contains($0.assetId) }
+                        return rest.count > 1 ? DuplicateGroup(members: rest, kind: group.kind, sourceSet: group.sourceSet) : nil
+                    }
+                }
+                let assets = PhotoLibraryService.fetchAssets(ids: groups.flatMap { $0.members.map(\.assetId) })
+                var assetsById = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
+                // Members whose PHAsset is gone (deleted outside the app) drop
+                // out; groups that fall to one member vanish.
+                groups = groups.compactMap { group in
+                    let present = group.members.filter { assetsById[$0.assetId] != nil }
+                    return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
+                }
+                assetsById.merge(bursts.assets) { old, _ in old }
+                let memberIds = groups.flatMap { $0.members.map(\.assetId) } + bursts.groups.flatMap { $0.members.map(\.assetId) }
                 return CacheSnapshot(
-                    groups: groups,
-                    assetsById: Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) }),
-                    coverage: (try? store.coverage()) ?? PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0),
+                    groups: groups + bursts.groups,
+                    assetsById: assetsById,
+                    coverage: coverage,
                     scanState: try? store.scanState(),
-                    pendingCount: (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0,
-                    scores: (try? qualityStore.scores(for: ids)) ?? [:],
+                    pendingCount: pending,
+                    scores: (try? qualityStore.scores(for: memberIds)) ?? [:],
                     cloudOnlyCount: (try? store.unreadableCount()) ?? 0
                 )
             }.value
-            guard let self, !Task.isCancelled, let result else { return }
+            guard let self, !Task.isCancelled else { return }
             self.hasLoadedOnce = true
             self.apply(result)
-            await self.mergeBursts()
             if result.groups == nil, result.coverage.hashedPhotos > 0 {
                 // Hashes exist but were never grouped (a scan from before
                 // kinds) — grouping is cheap, do it now.
                 await self.regroupAndCache()
-                self.loadCache()
+                // A check started meanwhile owns the phase now.
+                guard !Task.isCancelled, !self.isScanning else { return }
+                self.phase = .idle
+                self.loadCache(startsScoring: startsScoring)
                 return
             }
-            self.phase = .idle
-            if autoScanIfNeverScanned, result.scanState == nil, result.coverage.hashedPhotos == 0 {
-                self.startScan()
-            } else {
-                // The groups may have changed under a running pass.
-                self.stopScoring()
-                self.startScoring()
-            }
+            if self.phase == .loading || self.phase == .grouping { self.phase = .idle }
+            guard startsScoring else { return }
+            // The groups may have changed under a running pass.
+            self.stopScoring()
+            self.startScoring()
         }
     }
 
@@ -530,28 +637,25 @@ final class DuplicatesModel {
         var cloudOnlyCount = 0
     }
 
+    /// Whether the last load found copies for Quick clean — the band's
+    /// presence, fixed per load (see `DuplicatesScreen.showsQuickCleanBand`).
+    private(set) var offersQuickClean = false
+
     private func apply(_ snapshot: CacheSnapshot) {
-        let groups = snapshot.groups ?? []
-        // Members whose PHAsset is gone (deleted outside the app) drop out;
-        // groups that fall to one member vanish.
-        let present = groups.compactMap { group -> DuplicateGroup? in
-            let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
-            return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
-        }
         // Not duplicates (§9): hidden for good, unless a new photo joined.
-        self.groups = present.filter { group in
-            if case .hidden = session.dismissal(of: group.memberIds) { return false }
-            return true
-        }
+        let fresh = (snapshot.groups ?? []).filter { !isHidden($0) }
+        if fresh != groups { groups = fresh }
         assetsById = snapshot.assetsById
         coverage = snapshot.coverage
         scanState = snapshot.scanState
         pendingCount = snapshot.pendingCount
-        scores = snapshot.scores
+        if scores != snapshot.scores { scores = snapshot.scores }
         cloudOnlyCount = snapshot.cloudOnlyCount
+        let offers = pendingQuickClean.copies > 0
+        if offers != offersQuickClean { offersQuickClean = offers }
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
-        UserDefaults.standard.set(self.groups.count, forKey: SettingsKeys.duplicateGroupCount)
+        UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
         UserDefaults.standard.set(totalFreeBytes, forKey: SettingsKeys.duplicateFreeBytes)
     }
 
@@ -565,13 +669,15 @@ final class DuplicatesModel {
             let count = await Task.detached(priority: .utility) {
                 (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0
             }.value
-            self?.pendingCount = count
+            if self?.pendingCount != count { self?.pendingCount = count }
         }
     }
 
     // MARK: Scan
 
-    /// Hashes what is new or edited, regroups, caches, and reloads.
+    /// The check the user asked for: hash what is new or edited, regroup,
+    /// confirm with Vision, reload. Three steps, one progress bar each
+    /// (`checkStep`). The list on screen stays as it was until the end.
     func startScan() {
         guard scanTask == nil, !isDeleting else { return }
         loadTask?.cancel()
@@ -579,14 +685,20 @@ final class DuplicatesModel {
         let pipeline = dependencies.duplicateScanPipeline
         let allowNetwork = allowNetworkForScanning
         phase = .scanning(DuplicateScanProgress(processed: 0, total: 0))
-        // Built outside the task, so it captures `self` weakly once instead of
-        // reading the task's own captured `self` from another concurrency
-        // domain every time the pipeline reports — which Swift 6 rejects.
+        // Throttled: one main-actor hop per batch at most every 250 ms, so
+        // progress never floods the screen it is drawn on.
+        let throttle = OSAllocatedUnfairLock(initialState: ContinuousClock.now - .seconds(1))
         let report: @Sendable (DuplicateScanProgress) -> Void = { [weak self] progress in
+            let due = throttle.withLock { last -> Bool in
+                let now = ContinuousClock.now
+                guard progress.processed >= progress.total || now - last >= .milliseconds(250) else { return false }
+                last = now
+                return true
+            }
+            guard due else { return }
             Task { @MainActor in
                 guard let self, self.isScanning else { return }
                 self.phase = .scanning(progress)
-                self.groupSoFar()
             }
         }
         scanTask = Task { [weak self] in
@@ -594,13 +706,13 @@ final class DuplicatesModel {
             do {
                 let summary = try await pipeline.run(allowNetwork: allowNetwork, onProgress: report)
                 guard let self else { return }
-                if summary.didNotStart {
+                if summary.didNotStart || summary.wasCancelled {
                     self.phase = .idle
+                    if summary.wasCancelled { self.loadCache(startsScoring: false) }
                     return
                 }
-                self.interimTask?.cancel()
-                self.interimTask = nil
                 await self.regroupAndCache()
+                self.phase = .idle
                 self.loadCache()
             } catch {
                 guard let self else { return }
@@ -612,38 +724,18 @@ final class DuplicatesModel {
 
     func cancelScan() {
         scanTask?.cancel()
-        interimTask?.cancel()
         stopScoring()
     }
 
-    /// Regroups what is hashed so far, at most every 3 s, so groups show and
-    /// open while the scan runs ("40 found so far"). The cache is written
-    /// once, when the scan ends.
-    private func groupSoFar() {
-        guard interimTask == nil, ContinuousClock.now - lastInterimGrouping >= .seconds(3) else { return }
-        lastInterimGrouping = .now
-        let store = dependencies.perceptualHashStore
-        interimTask = Task { [weak self] in
-            let snapshot = await Task.detached(priority: .utility) { () -> CacheSnapshot? in
-                guard let photos = try? store.hashedPhotos() else { return nil }
-                let groups = DuplicateGrouper.groups(from: photos)
-                let assets = PhotoLibraryService.fetchAssets(ids: groups.flatMap { $0.members.map(\.assetId) })
-                return CacheSnapshot(groups: groups,
-                                     assetsById: Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) }),
-                                     coverage: PerceptualHashCoverage(hashedPhotos: photos.count, indexedPhotos: 0),
-                                     scanState: nil, pendingCount: 0)
-            }.value
-            guard let self else { return }
-            self.interimTask = nil
-            guard let snapshot, self.isScanning, !Task.isCancelled else { return }
-            self.groups = (snapshot.groups ?? []).compactMap { group in
-                let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
-                guard present.count > 1 else { return nil }
-                let kept = DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet)
-                return self.isHidden(kept) ? nil : kept
-            }
-            self.assetsById.merge(snapshot.assetsById) { _, new in new }
-            await self.mergeBursts()
+    /// Which step of a check runs now, for the band's progress bar; `nil`
+    /// when nothing runs.
+    var checkStep: DuplicatesCheckStep? {
+        switch phase {
+        case .scanning(let progress): return .reading(progress)
+        case .grouping: return .grouping
+        case .idle, .loading:
+            if let scoring { return .comparing(scoring) }
+            return nil
         }
     }
 
@@ -655,33 +747,47 @@ final class DuplicatesModel {
         scoring != nil && !group.members.allSatisfy(\.isScreenshot) && !DuplicateReview.isScored(group.members, scores)
     }
 
-    /// Scores grouped photos that lack a score. Each batch lands in the
-    /// cards at once; when the pass ends, the cache is read again so
-    /// brackets the new exposure readings reveal show as source sets.
+    /// Scores grouped photos that lack a score or a feature print. When the
+    /// pass ends, the cache is read again so the new prints confirm or split
+    /// groups and new exposure readings reveal brackets — one reload, at the
+    /// end, not one per batch.
     func startScoring() {
-        guard scoringTask == nil, !groups.isEmpty else { return }
+        guard scoringTask == nil else { return }
+        let store = dependencies.perceptualHashStore
         scoringGeneration += 1
         let token = scoringGeneration
         let pass = dependencies.duplicateQualityPass
-        let groups = self.groups
         let allowNetwork = allowNetworkForScanning
-        scoring = DuplicateScoringProgress(processed: 0, total: 0)
+        // The pass reads every *nominated* group — the cache before
+        // verification — so a look-alike can be confirmed at all.
+        // Records that change what the list shows: a print that can confirm
+        // or split a group, an exposure reading that reveals a bracket. A
+        // retried photo that is still unreadable changes nothing — reloading
+        // for it would start the pass again, forever. Counted under a lock and
+        // read right after the pass, not through a main-actor hop that may
+        // land after it.
+        let meaningful = OSAllocatedUnfairLock(initialState: 0)
         let report: @Sendable ([DuplicateQualityRecord], DuplicateScoringProgress) -> Void = { [weak self] records, progress in
+            let count = records.filter { !($0.featurePrint ?? Data()).isEmpty || $0.exposureBias != nil }.count
+            if count > 0 { meaningful.withLock { $0 += count } }
             Task { @MainActor in
                 guard let self, self.scoringGeneration == token else { return }
-                // Scores land even after a stop: they are on disk already.
-                for record in records { self.scores[record.assetId] = record.score }
-                if records.contains(where: { $0.exposureBias != nil }) { self.scoringReadExposure = true }
-                if self.scoringTask != nil { self.scoring = progress }
+                if self.scoringTask != nil, progress.total > 0 { self.scoring = progress }
             }
         }
         scoringTask = Task { [weak self] in
-            try? await pass.run(groups: groups, allowNetwork: allowNetwork, onBatch: report)
+            let nominated = await Task.detached(priority: .utility) {
+                (try? store.cachedGroups()) ?? []
+            }.value
+            if !nominated.isEmpty, !Task.isCancelled {
+                try? await pass.run(groups: nominated, allowNetwork: allowNetwork, onBatch: report)
+            }
             guard let self, self.scoringGeneration == token else { return }
-            let reload = self.scoringReadExposure && !Task.isCancelled
+            let reload = meaningful.withLock { $0 } > 0 && !Task.isCancelled
             self.scoringTask = nil
             self.scoring = nil
-            self.scoringReadExposure = false
+            // The reload reads the new prints; the pass it starts finds
+            // nothing new to write, so it does not reload again.
             if reload { self.loadCache() }
         }
     }
@@ -737,6 +843,7 @@ final class DuplicatesModel {
         session.setKeptAll(group.memberIds, false)
     }
 
+    #if os(iOS)
     /// Merge to HDR / Focus Stack on a source set (§5, AC-G5).
     var stackPresentation: PhotoStackPresentation?
 
@@ -750,6 +857,7 @@ final class DuplicatesModel {
         guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
         stackPresentation = PhotoStackPresentation(assets: assets, purpose: set.kind == .bracket ? .hdr : .focusStack)
     }
+    #endif
 
     /// Not duplicates (§9): the group leaves the list and every count, for
     /// good — until a new photo joins it.
@@ -765,6 +873,7 @@ final class DuplicatesModel {
         return false
     }
 
+    #if os(iOS)
     // MARK: Frame picker
 
     /// The shared frame picker on screen (§8).
@@ -804,22 +913,27 @@ final class DuplicatesModel {
         let present = ids.filter { assetsById[$0] != nil }
         session.setMarks(of: present, to: Set(present).subtracting(kept))
     }
+    #endif
 
     // MARK: Bursts
 
-    /// PhotoKit bursts are Burst groups (§4): read once per load, their
-    /// frames taken out of any other group so a photo is in one place only.
-    func mergeBursts() async {
+    /// PhotoKit bursts are Burst groups (§4), read once per screen. The
+    /// PhotoKit reads run detached inside `BurstLibrary`; only the small
+    /// assembly happens here.
+    private func readBursts(known: [DuplicateGroup]?) async -> (groups: [DuplicateGroup], assets: [String: PHAsset]) {
         let library = dependencies.bursts
-        var burstGroups: [DuplicateGroup] = []
-        // Frames the index knows keep their file size and facts.
-        let known = Dictionary(groups.flatMap(\.members).map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
+        if let known {
+            var assets: [String: PHAsset] = [:]
+            for member in known.flatMap(\.members) { assets[member.assetId] = library.asset(for: member.assetId) }
+            return (known, assets)
+        }
+        var groups: [DuplicateGroup] = []
+        var assets: [String: PHAsset] = [:]
         for row in await library.bursts() {
             let frames = await library.frames(ofBurst: row.id)
             let members: [HashedPhoto] = frames.compactMap { frame in
                 guard let asset = library.asset(for: frame.id) else { return nil }
-                assetsById[frame.id] = asset
-                if let photo = known[frame.id] { return photo }
+                assets[frame.id] = asset
                 return HashedPhoto(
                     assetId: frame.id, hash: PerceptualHash(bits: 0),
                     width: asset.pixelWidth, height: asset.pixelHeight, fileSize: nil,
@@ -828,15 +942,10 @@ final class DuplicatesModel {
                 )
             }
             guard members.count >= 2 else { continue }
-            burstGroups.append(DuplicateGroup(members: members, kind: .burst))
+            groups.append(DuplicateGroup(members: members, kind: .burst))
         }
-        guard !burstGroups.isEmpty else { return }
-        let taken = Set(burstGroups.flatMap { $0.members.map(\.assetId) })
-        let others = groups.compactMap { group -> DuplicateGroup? in
-            let rest = group.members.filter { !taken.contains($0.assetId) }
-            return rest.count > 1 ? DuplicateGroup(members: rest, kind: group.kind, sourceSet: group.sourceSet) : nil
-        }
-        groups = others + burstGroups.filter { !isHidden($0) }
+        burstGroups = groups
+        return (groups, assets)
     }
 
     private func isHidden(_ group: DuplicateGroup) -> Bool {
@@ -1016,7 +1125,7 @@ final class DuplicatesModel {
     /// days" + Open Photos (06b §3). No Undo: an app cannot read Recently
     /// Deleted back.
     private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int) {
-        let size = DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))
+        let size = Self.byteFormatter.string(fromByteCount: Int64(bytes))
         var text = count == 1
             ? String(localized: "1 photo moved to Recently Deleted", comment: "Duplicates: banner after deleting")
             : String(localized: "\(count) photos moved to Recently Deleted", comment: "Duplicates: banner after deleting")
@@ -1030,10 +1139,20 @@ final class DuplicatesModel {
                 : String(localized: "\(missedAlbums) kept photos couldn't take their copies' albums or favorite",
                          comment: "Duplicates: banner, inheritance could not be written for several kept photos"))
         }
-        dependencies.banner.show(text, actionTitle: String(localized: "Open Photos", comment: "Duplicates banner: open the Photos app")) {
-            if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
-        }
+        lastDeleteSummary = text.replacingOccurrences(of: "\n", with: " · ")
+        dependencies.showDuplicatesDeleted(text)
     }
+
+    /// The last delete's summary, for a screen with no app banner (the Mac
+    /// shows it in its footer).
+    private(set) var lastDeleteSummary: String?
+
+    /// Sizes on this screen ("1.8 MB"), file-style.
+    static let byteFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter
+    }()
 
     /// Prunes photos that are gone — deleted here or from Compare — from the
     /// rows, the hash cache and the groups, so the screen updates at once.

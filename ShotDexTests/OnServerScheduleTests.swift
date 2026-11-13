@@ -54,14 +54,72 @@ struct OnServerScheduleTests {
         calls.workRounds = 2
         let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
         await check.run(now: { Date(timeIntervalSince1970: 1_000) })
-        // The Photos side runs while the source is listed (3 calls: 2 with
-        // work, 1 without), then once a round with the server's 3.
-        #expect(calls.counts == Calls.Counts(list: 1, server: 3, photos: 6))
+        // The Photos side runs while the source is listed and stops when
+        // the listing is done (1–3 calls, by timing), then once a round
+        // with the server's 3.
+        #expect(calls.counts.list == 1)
+        #expect(calls.counts.server == 3)
+        #expect((4...6).contains(calls.counts.photos))
         #expect(check.waits.isEmpty)
         #expect(check.photosWait == nil)
         #expect(check.finishedAt == Date(timeIntervalSince1970: 1_000))
         // Every round of one pass passes the same start time.
         #expect(Set(calls.starts) == [Date(timeIntervalSince1970: 1_000)])
+    }
+
+    /// A library with days of iCloud downloads left does not hold the
+    /// server back: once the source is listed, server batches take turns
+    /// with Photos batches (user 2026-11-11: 20,000 Photos files hashed on
+    /// an iPad, not one server file).
+    @Test func photosBacklogDoesNotHoldUpServer() async {
+        let calls = Calls()
+        calls.workRounds = 2
+        calls.photosWorkRounds = 1_000
+        var photosAtFirstServer: Int? = nil
+        let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
+        calls.onServer = { if photosAtFirstServer == nil { photosAtFirstServer = calls.counts.photos } }
+        calls.onPhotos = { if calls.counts.photos == 20 { check.appDidEnterBackground() } }
+        check.appBecameActive()
+        while check.isRunning { await Task.yield() }
+        #expect((photosAtFirstServer ?? .max) < 5)
+    }
+
+    /// Back in front while the cancelled pass is still finishing its batch:
+    /// the next pass starts when it ends instead of the foreground being lost.
+    @Test func foregroundDuringWindDownStartsAgain() async {
+        let calls = Calls()
+        calls.workRounds = 100
+        let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
+        calls.onPhotos = {
+            if calls.counts.photos == 2 {
+                check.appDidEnterBackground()
+                check.appBecameActive()
+            }
+            if calls.counts.photos == 6 { check.appDidEnterBackground() }
+        }
+        check.appBecameActive()
+        // Bounded: before the fix the second pass never came.
+        for _ in 0..<20_000 where check.isRunning || calls.counts.list < 2 { await Task.yield() }
+        #expect(calls.counts.list == 2)
+        check.appDidEnterBackground()
+        while check.isRunning { await Task.yield() }
+    }
+
+    /// iCloud refuses every original of a batch: the Photos side stops for
+    /// this pass and says so, instead of asking for the next 24 at once —
+    /// and the server side still runs (iPad, 2026-11-11: 456 refusals in
+    /// a few minutes, each after 0.0 s).
+    @Test func iCloudRefusalRests() async {
+        let calls = Calls()
+        calls.workRounds = 1
+        calls.photosRefuse = true
+        let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
+        await check.run()
+        #expect(check.photosWait == .iCloudRefusing)
+        #expect(check.finishedAt == nil)
+        #expect(calls.counts.server >= 1)
+        // One refused batch while listing, none after.
+        #expect(calls.counts.photos == 1)
     }
 
     /// The server did not answer the listing: nothing is read from it, and
@@ -129,6 +187,11 @@ private final class Calls {
     var workRounds = 0
     var starts: [Date] = []
     var onPhotos: () -> Void = {}
+    var onServer: () -> Void = {}
+    /// Photos rounds with work, when not `workRounds`.
+    var photosWorkRounds: Int?
+    /// Every Photos batch fails whole, as when iCloud refuses originals.
+    var photosRefuse = false
 
     func environment(jobs: [OnServerSchedule.JobRules], expensive: Bool) -> OnServerCheck.Environment {
         OnServerCheck.Environment(
@@ -140,6 +203,7 @@ private final class Calls {
                 await MainActor.run {
                     self.counts.server += 1
                     self.starts.append(start)
+                    self.onServer()
                     return ServerFileHashPass.Summary(hashed: self.counts.server <= self.workRounds ? 1 : 0)
                 }
             },
@@ -148,7 +212,8 @@ private final class Calls {
                     self.counts.photos += 1
                     self.starts.append(start)
                     self.onPhotos()
-                    return PhotosFileHashPass.Summary(hashed: self.counts.photos <= self.workRounds ? 1 : 0)
+                    if self.photosRefuse { return PhotosFileHashPass.Summary(failed: 24) }
+                    return PhotosFileHashPass.Summary(hashed: self.counts.photos <= (self.photosWorkRounds ?? self.workRounds) ? 1 : 0)
                 }
             }
         )

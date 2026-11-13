@@ -49,7 +49,7 @@ struct DuplicateSeriesTests {
         let photos = [
             photo("a", bits: 0x0000_0000_0000_0000, secondsIn: 0),
             photo("b", bits: 0x0000_0000_0000_3FFF, secondsIn: 5),
-            photo("c", bits: 0x0000_0000_0FFF_FFFF, secondsIn: 10),
+            photo("c", bits: 0x0000_0000_007F_FFF8, secondsIn: 10),
         ]
         for (left, right) in [(photos[0], photos[1]), (photos[1], photos[2])] {
             let distance = (left.hash.bits ^ right.hash.bits).nonzeroBitCount
@@ -60,20 +60,22 @@ struct DuplicateSeriesTests {
         #expect(!DuplicateGrouper.groups(from: photos).contains { $0.kind == .similar })
     }
 
-    /// Each step is compared with the frame before it, not with the first one,
-    /// so a run may drift a long way from where it started.
-    @Test func aSeriesMayDriftFurtherThanOneStepAllows() {
-        let first: UInt64 = 0
-        let last: UInt64 = 0x0000_0000_00FF_FFFF
-        #expect((first ^ last).nonzeroBitCount > DuplicateGrouper.seriesMaxDistance)
+    /// Small steps may not add up to another scene: every frame stays within
+    /// `seriesMaxDrift` of the run's first (2026-11-10 — chaining alone let a
+    /// walk past different subjects read as one burst).
+    @Test func aSeriesMayNotDriftToAnotherScene() {
+        let first: UInt64 = 0x0F0F_0F0F_0000_0000
+        let middle: UInt64 = first ^ 0x0000_0000_0000_0FFF
+        let last: UInt64 = first ^ 0x0000_0000_00FF_FFFF
+        #expect((first ^ middle).nonzeroBitCount <= DuplicateGrouper.seriesMaxDistance)
+        #expect((middle ^ last).nonzeroBitCount <= DuplicateGrouper.seriesMaxDistance)
+        #expect((first ^ last).nonzeroBitCount > DuplicateGrouper.seriesMaxDrift)
 
-        let result = groups([
+        #expect(groups([
             photo("a", bits: first, secondsIn: 0),
-            photo("b", bits: 0x0000_0000_0000_0FFF, secondsIn: 5),
+            photo("b", bits: middle, secondsIn: 5),
             photo("c", bits: last, secondsIn: 10),
-        ])
-        #expect(result.count == 1)
-        #expect(result[0].count == 3)
+        ]).isEmpty)
     }
 
     @Test func aGapLongerThanTheWindowStartsANewSeries() {

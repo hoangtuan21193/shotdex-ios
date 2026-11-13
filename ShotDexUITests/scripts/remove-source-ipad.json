@@ -1,0 +1,20 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "swipe", "label": "NAS Home", "direction": "left" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "IP_SourcesSwipe" },
+    { "action": "tap", "label": "Remove" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "IP_RemoveSourceAlert" },
+    { "action": "tap", "label": "Cancel" },
+    { "action": "wait", "seconds": 1 }
+  ]
+}

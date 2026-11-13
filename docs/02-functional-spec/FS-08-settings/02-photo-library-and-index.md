@@ -19,7 +19,7 @@
 | Access | trạng thái quyền + **Manage photo access** |
 | **Continue Indexing (N)** | chỉ hiện khi còn ảnh chưa đọc xong; chạy qua chính model Library nên tiến độ và nút huỷ dùng chung giao diện với mọi lượt index |
 | **Use Cellular Data for Indexing** | mặc định **tắt**; dòng phụ nói rõ mỗi ảnh chỉ tải vài trăm KB, và Wi-Fi thì luôn được phép |
-| **Keep Screen Awake While Indexing** | mặc định **tắt** |
+| **Keep Screen Awake** | Off · While Working · While ShotDex Is Open — mặc định **Off** |
 | Thẻ **Your library** (đầu trang) | số ảnh/video đã index (`12,495 of 54,971`, gọn còn một số khi đọc hết, đang chạy lấy số sống từ tiến độ) · vạch tiến độ **không chạy hoạt ảnh** · lần index gần nhất · nút chữ **Re-index** (mờ khi đang chạy); đang chạy thì dưới vạch có Cancel, tốc độ, mạng, cảnh báo — [01b §1](01b-rows-and-root.md) |
 | Library Size | tổng dung lượng đã biết; chưa biết hết thì in kèm `~` vì con số mới là **sàn** |
 | Privacy | giải thích xử lý cục bộ + **Clear local metadata index** (phá huỷ, có hộp xác nhận) |
@@ -38,9 +38,18 @@
   hai nút dính chung một dòng. **Làm mờ thay vì ẩn cũng chính là phản hồi cho cú bấm**: lượt chạy thủ công
   bật cờ **đồng bộ** nên hàng xám ngay khung hình đó, và một hàng đã mờ thì không bị bấm dồn để chạy hai lượt.
 
-## 3. Keep Screen Awake While Indexing
+## 3. Keep Screen Awake
 
-Bật **và** đang index thì màn không tự tắt.
+Ba lựa chọn (người dùng 2026-11-11: "phải thêm option keep màn hình sáng khi đang bật ShotDex"; trước đó là một công tắc
+chỉ cho lúc index):
+
+- **Off** — màn tự tắt theo Auto-Lock của hệ thống.
+- **While Working** — màn không tự tắt khi đang index **hoặc** lượt kiểm "có trên server" (FS-19.07) đang chạy. Chế độ
+  tiết kiệm pin: chỉ một lượt index người dùng tự bấm mới giữ màn (như trước); lượt kiểm server thì không.
+- **While ShotDex Is Open** — màn không tự tắt suốt lúc ShotDex ở trước mặt, kể cả chế độ tiết kiệm pin.
+
+Ai đã bật công tắc cũ thì thành While Working. Mã: `KeepScreenAwake` (`SettingsKeys.swift`),
+`KeepScreenAwakeModifier` (`RootTabView.swift`).
 
 - **App không bao giờ đổi độ sáng màn** — giữ nguyên độ sáng người dùng đã chọn suốt lúc index.
 - **Bỏ tự hạ sáng** (2026-09-25): bản cũ hạ độ sáng về 0.15 sau 1 phút không chạm. "Không chạm" không có
