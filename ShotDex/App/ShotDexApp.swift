@@ -6,6 +6,8 @@ import SwiftUI
 struct ShotDexApp: App {
     @State private var dependencies: AppDependencies
     @Environment(\.scenePhase) private var scenePhase
+    /// The staggered catch-up passes of the current foreground (see `.active`).
+    @State private var foregroundWork: Task<Void, Never>?
     init() {
         // Before anything opens a session of its own: whatever is left under
         // /tmp from a run that was force-quit or killed is ours and is dead.
@@ -60,6 +62,8 @@ struct ShotDexApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
+                        foregroundWork?.cancel()
+                        foregroundWork = nil
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                         dependencies.backupBackground.appDidEnterBackground()
                         dependencies.ingestBackground.appDidEnterBackground()
@@ -76,19 +80,36 @@ struct ShotDexApp: App {
                         Task { await dependencies.refreshWidgetSnapshot() }
                         // Looks "Add to ShotDex" left while the app was away.
                         Task { await dependencies.lookInbox.drain() }
-                        // Files added to a folder source while ShotDex was
-                        // away: read now, no Re-index (FS-19.01 §5).
-                        Task { await dependencies.sources.readAll() }
-                        // Backups catch up on what arrived while away (FS-22.02 §1).
-                        dependencies.backupCoordinator.appBecameActive()
-                        // Whether Photos items are on the servers, from where
-                        // the last pass stopped (FS-19.07 §6).
-                        dependencies.onServerCheck.appBecameActive()
-                        // New and changed Photos items: are their originals
-                        // here (FS-06.10 §4)?
-                        dependencies.originalPresenceCheck.appBecameActive()
-                        // Keep in Photos: changes made while away (FS-06.12 §4).
-                        dependencies.photosAlbumSync.setNeedsSync()
+                        // The heavy catch-up passes wait until the app has
+                        // been in front for 2 s, then start one every 2 s.
+                        // All at once they put six database scans of the
+                        // whole library on six cores the moment the app came
+                        // back, and the first taps and tab switches stuttered
+                        // behind them (iPad trace 2026-11-14). Going to the
+                        // background again before they start cancels them.
+                        foregroundWork?.cancel()
+                        foregroundWork = Task { @MainActor in
+                            let steps: [@MainActor () -> Void] = [
+                                // Files added to a folder source while ShotDex
+                                // was away: read now, no Re-index (FS-19.01 §5).
+                                { Task { await dependencies.sources.readAll() } },
+                                // Whether Photos items are on the servers, from
+                                // where the last pass stopped (FS-19.07 §6).
+                                { dependencies.onServerCheck.appBecameActive() },
+                                // New and changed Photos items: are their
+                                // originals here (FS-06.10 §4)?
+                                { dependencies.originalPresenceCheck.appBecameActive() },
+                                // Backups catch up on what arrived while away (FS-22.02 §1).
+                                { dependencies.backupCoordinator.appBecameActive() },
+                                // Keep in Photos: changes made while away (FS-06.12 §4).
+                                { dependencies.photosAlbumSync.setNeedsSync() },
+                            ]
+                            for step in steps {
+                                try? await Task.sleep(for: .seconds(2))
+                                guard !Task.isCancelled else { return }
+                                step()
+                            }
+                        }
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

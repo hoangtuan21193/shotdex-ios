@@ -27,6 +27,12 @@
    khoá main vài giây — bấm Albums không ăn (14/11).
 10. **Màn danh sách mở ngay từ cache.** Albums giữ bản danh sách lần trước trong Caches (`albums-list.json`: id,
    tên, số, id ảnh bìa) và hiện nó ngay khi khởi động lạnh, rồi đếm lại ở nền và thay. Không màn trống chờ đếm.
+11. **Không đọc DB trên main khi chuyển tab hay quay lại app.** Đếm ảnh theo nguồn, bảng thumbnail file, map lưới
+   55k đều chạy nền; đếm theo nguồn khi mở màn bỏ qua nếu vừa đếm < 15 s.
+12. **Việc bù khi app active chạy giãn, không dồn.** Chỉ việc nhẹ (widget, Looks inbox) chạy ngay; đọc nguồn, kiểm tra
+   on-server, ảnh gốc, backup, Keep in Photos chạy lần lượt sau 2 s, cách nhau 2 s, huỷ nếu app xuống nền lại.
+   *Vì* trace iPad 14/11: sáu truy vấn quét toàn thư viện (0,5–0,8 s CPU mỗi cái) chạy cùng lúc trên sáu lõi ngay
+   lúc app quay lại.
 
 ## 2. Mốc quy mô
 

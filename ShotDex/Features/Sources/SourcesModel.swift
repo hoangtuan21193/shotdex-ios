@@ -77,7 +77,13 @@ final class SourcesModel {
 
     /// What screens call on appear: `reload()` in a task, one at a time; a
     /// request during a read runs once more after it.
-    func refresh() {
+    ///
+    /// A screen's appear (`force` false) is skipped when the counts were read
+    /// in the last 15 s: they cost ~0.5 s of CPU on a 55k library, and
+    /// switching tabs back and forth re-ran them each time. Anything that
+    /// changed the data passes `force`.
+    func refresh(force: Bool = false) {
+        if !force, let lastSnapshotAt, Date().timeIntervalSince(lastSnapshotAt) < 15 { return }
         guard refreshTask == nil else {
             refreshesAgain = true
             return
@@ -92,6 +98,7 @@ final class SourcesModel {
     }
 
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
+    @ObservationIgnored private var lastSnapshotAt: Date?
     @ObservationIgnored private var refreshesAgain = false
 
     /// `load()` with the reads off the main actor — the read path runs it at a
@@ -122,6 +129,7 @@ final class SourcesModel {
     }
 
     private func apply(_ snapshot: Snapshot) {
+        lastSnapshotAt = Date()
         let sources = snapshot.sources, counts = snapshot.counts, statuses = snapshot.statuses
         let access = photoLibrary.authorizationState.title
         rows = sources.map { source in
@@ -255,7 +263,7 @@ final class SourcesModel {
             try? store.setWhenUnplugged(choice, sourceId: source.id)
         }
         readCount += 1
-        refresh()
+        refresh(force: true)
     }
 
     func read(sourceId: String, isAdding: Bool = false) async {
@@ -405,14 +413,14 @@ final class SourcesModel {
     /// behind it (Cull): the Library reloads what went, the rows recount.
     func photosDeleted() {
         readCount += 1
-        refresh()
+        refresh(force: true)
     }
 
     /// A file opened from the cloud is down and read (FS-19.01b §4): the
     /// grid swaps its cloud tile for the photo, the rows recount.
     func cloudFileDownloaded() {
         readCount += 1
-        refresh()
+        refresh(force: true)
     }
 
     /// Rescan in a server source's browser, or Try Again on its row.
@@ -440,7 +448,7 @@ final class SourcesModel {
     /// A server source's listing found new or changed photos.
     func serverListingChanged() {
         readCount += 1
-        refresh()
+        refresh(force: true)
     }
 
     #if DEBUG
