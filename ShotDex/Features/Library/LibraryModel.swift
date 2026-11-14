@@ -94,6 +94,16 @@ final class LibraryModel {
     /// re-renders visible cells in place — it must NOT re-anchor, so the user's
     /// scroll position survives an index run finishing or being cancelled.
     private(set) var contentRefreshGeneration = 0
+    /// Tells the grid that PhotoKit assets for some rows have arrived.
+    @ObservationIgnored let assetLoadSignal = GridAssetLoadSignal()
+    /// Bumped as assets arrive, for the Mac grid, which redraws from it. The
+    /// iOS Library body does not read it (it takes `assetLoadSignal`).
+    private(set) var assetGeneration = 0
+    /// Last time index progress was published, and badge lookups that found
+    /// a row still pending — both kept off SwiftUI and the database while the
+    /// grid scrolls during an index run.
+    @ObservationIgnored private var progressPublishedAt: ContinuousClock.Instant?
+    @ObservationIgnored private var pendingBadgeChecks: [String: ContinuousClock.Instant] = [:]
     /// Bumped every time rows are published, same list or not — the Mac grid
     /// rebuilds on this and nothing else (an asset chunk resolving bumps
     /// `contentRefreshGeneration` too, and must not rebuild 55k rows).
@@ -308,8 +318,12 @@ final class LibraryModel {
             }
         )
         self.assetCache = assetCache
+        // Straight to the grid: a chunk lands every ~30 rows of a fling, and
+        // bumping an observed version re-ran the Library body and every
+        // visible tile's full configure each time.
         assetCache.onChunkLoaded = { [weak self] in
-            self?.contentRefreshGeneration &+= 1
+            self?.assetLoadSignal.fire()
+            self?.assetGeneration &+= 1
         }
         // Under memory pressure the PHAsset chunks are the one cache we
         // hold; visible tiles re-fetch their chunk on the next request.
@@ -1072,6 +1086,15 @@ final class LibraryModel {
                     { progress in
                         Task { @MainActor in
                             guard self.runGeneration == generation, !self.hasCancelledIndexRun else { return }
+                            // At most twice a second (and always the last one):
+                            // the Library body reads this, and every write while
+                            // the user scrolls re-ran it.
+                            let now = ContinuousClock.now
+                            if let last = self.progressPublishedAt, now - last < .milliseconds(500),
+                               progress.processed < progress.total {
+                                return
+                            }
+                            self.progressPublishedAt = now
                             self.indexProgress = progress
                         }
                     }
@@ -1692,11 +1715,24 @@ extension LibraryModel: PhotoBrowsingSource {
             if case .badge(let item) = cached { return item }
             return nil
         }
+        // A row found still pending is not asked again for a few seconds: a
+        // tile scrolling past, or reconfigured, fired a read every time.
+        let now = ContinuousClock.now
+        if let checked = pendingBadgeChecks[assetId], now - checked < .seconds(3) { return nil }
         let libraryQueries = self.libraryQueries
         let row = await Task.detached(priority: .utility) {
             (try? libraryQueries.metadata(assetId: assetId)) ?? nil
         }.value
-        return badgeCache.record(row, assetId: assetId)
+        let item = badgeCache.record(row, assetId: assetId)
+        if item == nil {
+            if pendingBadgeChecks.count > 2_000 {
+                pendingBadgeChecks = pendingBadgeChecks.filter { now - $0.value < .seconds(3) }
+            }
+            pendingBadgeChecks[assetId] = now
+        } else {
+            pendingBadgeChecks[assetId] = nil
+        }
+        return item
     }
 
     func metadata(for assetId: String) -> PhotoMetadata? {

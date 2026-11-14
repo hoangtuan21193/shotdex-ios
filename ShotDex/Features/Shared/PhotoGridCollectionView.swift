@@ -110,6 +110,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// The viewer this grid opens zooms out of and back into its tiles
     /// (FS-02 §8 D5).
     var viewerLink: PhotoViewerLink? = nil
+    /// Fires when PhotoKit assets for some rows have been fetched, so tiles
+    /// drawn without one fill in (`GridAssetLoadSignal`).
+    var assetLoadSignal: GridAssetLoadSignal? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -209,6 +212,7 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         let marksChanged = context.coordinator.updateMarks(photoMarks, version: photoMarks?.version ?? 0)
         context.coordinator.apply(self, isInitial: false)
         context.coordinator.registerViewerLink()
+        context.coordinator.registerAssetLoadSignal()
         if uploadsChanged || unsupportedChanged || marksChanged { context.coordinator.refreshVisibleCells() }
     }
 
@@ -865,6 +869,27 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
 
         // MARK: Viewer zoom (FS-02 §8 D5)
 
+        /// PhotoKit assets arrived for some rows: re-render only the visible
+        /// tiles that were drawn without one. Wired straight to the model, not
+        /// through SwiftUI — a chunk lands every ~30 rows of a fling, and going
+        /// through a published version re-ran the whole screen and every
+        /// visible cell's full configure each time.
+        func registerAssetLoadSignal() {
+            guard let signal = parent.assetLoadSignal else { return }
+            signal.handler = { [weak self] in self?.configureCellsMissingAssets() }
+        }
+
+        private func configureCellsMissingAssets() {
+            guard let collectionView else { return }
+            for indexPath in collectionView.indexPathsForVisibleItems {
+                guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoGridCell,
+                      cell.isMissingAsset,
+                      let flatIndex = flatIndex(for: indexPath)
+                else { continue }
+                configure(cell, at: flatIndex)
+            }
+        }
+
         func registerViewerLink() {
             guard let link = parent.viewerLink else { return }
             link.frameProvider = { [weak self] id in self?.tileFrameInWindow(of: id) }
@@ -1307,15 +1332,28 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             let indexPath = collectionView.indexPathForItem(at: probe)
                 ?? collectionView.indexPathsForVisibleItems.min()
             guard let indexPath, let flat = flatIndex(for: indexPath) else { return nil }
-            guard let date = parent.photos[flat].creationDateValue else {
-                return String(localized: "No Date")
+            let granularity = GridDensity.granularity(forColumns: GridDensity.clamped(parent.columnCount))
+            let assetId = parent.photos[flat].assetId
+            // The same top photo as the last tick (most ticks of a scroll):
+            // formatting a date allocates, and this runs every frame, twice.
+            if let cached = dateTitleCache, cached.assetId == assetId, cached.granularity == granularity {
+                return cached.title
             }
-            switch GridDensity.granularity(forColumns: GridDensity.clamped(parent.columnCount)) {
-            case .day: return MetadataFormatter.dayHeader(date)
-            case .month: return MetadataFormatter.monthHeader(date)
-            case .year: return MetadataFormatter.yearHeader(date)
+            let title: String
+            if let date = parent.photos[flat].creationDateValue {
+                switch granularity {
+                case .day: title = MetadataFormatter.dayHeader(date)
+                case .month: title = MetadataFormatter.monthHeader(date)
+                case .year: title = MetadataFormatter.yearHeader(date)
+                }
+            } else {
+                title = String(localized: "No Date")
             }
+            dateTitleCache = (assetId, granularity, title)
+            return title
         }
+
+        private var dateTitleCache: (assetId: String, granularity: PhotoGridDateGranularity, title: String)?
 
         /// Last value handed to `onVisibleDateChange`, so an unchanged date
         /// does not re-enter SwiftUI on every scroll frame.
@@ -2105,6 +2143,9 @@ final class PhotoGridCell: UICollectionViewCell {
     /// Identity + in-flight lookup of the lazy badge fill: the fetch result
     /// only applies while the cell still shows the asset it was started for.
     private var configuredAssetId: String?
+    /// Drawn without its PHAsset (the chunk was still loading): the tile the
+    /// asset-load signal re-renders.
+    private(set) var isMissingAsset = false
     private var badgeFetchTask: Task<Void, Never>?
     private var accessibilityMediaLabel = "Photo"
     private var accessibilityUploaded = false
@@ -2295,6 +2336,7 @@ final class PhotoGridCell: UICollectionViewCell {
     ) {
         self.photoLibrary = photoLibrary
         configuredAssetId = item.assetId
+        isMissingAsset = asset == nil
         badgeFetchTask?.cancel()
         badgeFetchTask = nil
         let isCloudPlaceholder = photoLibrary.fileThumbnails.isCloudPlaceholder(item.assetId)

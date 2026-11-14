@@ -52,13 +52,17 @@ final class SearchSession {
     static let suggestionLimit = 8
 
     private let index: SearchIndexQueries
+    /// Rebuilt lazily (it never runs while the library scrolls or indexes);
+    /// opening search is one of the moments it catches up.
+    private let indexer: SearchIndexer?
     private let library: LibraryQueries
     let service: SearchService
     private var updateTask: Task<Void, Never>?
     private var spellingCandidates: [SearchGroup]?
 
-    init(index: SearchIndexQueries, library: LibraryQueries, service: SearchService) {
+    init(index: SearchIndexQueries, indexer: SearchIndexer? = nil, library: LibraryQueries, service: SearchService) {
         self.index = index
+        self.indexer = indexer
         self.library = library
         self.service = service
     }
@@ -144,7 +148,19 @@ final class SearchSession {
 
     // MARK: Empty field
 
+    /// The empty field's rows from the index as it is, then again once a
+    /// stale index has caught up — the screen never waits on a rebuild.
     func loadHighlights() async {
+        await readHighlights()
+        guard let indexer else { return }
+        await indexer.refreshed()
+        guard !Task.isCancelled else { return }
+        spellingCandidates = nil
+        await readHighlights()
+        if hasInput { scheduleUpdate(immediately: true) }
+    }
+
+    private func readHighlights() async {
         let groups = (try? await index.groups(in: [.camera, .lens, .place, .year])) ?? []
         highlights = SearchSuggestionRanker.libraryHighlights(groups)
     }

@@ -44,7 +44,10 @@ struct LibraryScreen: View {
     @State private var scrubberModel = PhotoGridScrubberModel()
     /// Date of the photos under the top of the grid, shown as the screen's
     /// title. Nil before the first layout and while the library is empty.
-    @State private var visibleDate: String?
+    /// The date under the top of the grid. Its own observable, read only by
+    /// the title view: as screen state it re-ran this whole body every time
+    /// the date changed mid-scroll.
+    @State private var visibleDate = VisibleDateModel()
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var pasteEditsPresentation: PasteEditsPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
@@ -760,7 +763,7 @@ struct LibraryScreen: View {
             onUserScroll: {
                 if isIndexPanelExpanded { setIndexPanelExpanded(false) }
             },
-            onVisibleDateChange: { visibleDate = $0 },
+            onVisibleDateChange: { [visibleDate] in visibleDate.text = $0 },
             // Always on, like Photos: the dim count sits in the gap between the
             // last row and the tab bar, so the grid does not end flush against
             // the chrome. With a query active it doubles as the match count.
@@ -775,7 +778,8 @@ struct LibraryScreen: View {
             contextMenuProvider: { item in tileMenu(assetId: item.assetId).makeMenu() },
             onPullToRefresh: { model.reload() },
             scrubber: scrubberModel,
-            viewerLink: viewerLink
+            viewerLink: viewerLink,
+            assetLoadSignal: model.assetLoadSignal
         )
         .overlay(alignment: .trailing) {
             if model.appliedSort.isDateOrdered {
@@ -1178,14 +1182,8 @@ struct LibraryScreen: View {
                     .font(.headline)
                     .lineLimit(1)
                     .accessibilityLabel("Sorted by \(model.appliedSort.displayName)")
-            } else if let visibleDate, !isSelecting || isDuoInner {
-                Text(visibleDate)
-                    .font(.headline)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.18), value: visibleDate)
-                    .accessibilityLabel("Showing photos from \(visibleDate)")
+            } else if !isSelecting || isDuoInner {
+                VisibleDateTitle(model: visibleDate)
             }
         }
         // Break the shared Liquid Glass container so the indexing token reads as
@@ -1326,4 +1324,29 @@ struct LimitedAccessBanner: View {
     .environment(dependencies)
     .environment(dependencies.photoLibrary)
     .environment(AppNavigation())
+}
+
+/// The date under the top of the Library grid (see `LibraryScreen.visibleDate`).
+@MainActor
+@Observable
+final class VisibleDateModel {
+    var text: String?
+}
+
+/// The principal toolbar date. Reads `VisibleDateModel` itself, so a new date
+/// re-renders this text alone.
+private struct VisibleDateTitle: View {
+    let model: VisibleDateModel
+
+    var body: some View {
+        if let text = model.text {
+            Text(text)
+                .font(.headline)
+                .monospacedDigit()
+                .lineLimit(1)
+                .contentTransition(.numericText())
+                .animation(.easeInOut(duration: 0.18), value: text)
+                .accessibilityLabel("Showing photos from \(text)")
+        }
+    }
 }

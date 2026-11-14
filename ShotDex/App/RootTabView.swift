@@ -561,6 +561,7 @@ struct SearchTab: View {
         self.onAdvanced = onAdvanced
         _session = State(initialValue: SearchSession(
             index: dependencies.searchIndex,
+            indexer: dependencies.searchIndexer,
             library: dependencies.libraryQueries,
             service: dependencies.searchService
         ))
@@ -646,6 +647,7 @@ struct SearchSheet: View {
         self.onAdvanced = onAdvanced
         _session = State(initialValue: SearchSession(
             index: dependencies.searchIndex,
+            indexer: dependencies.searchIndexer,
             library: dependencies.libraryQueries,
             service: dependencies.searchService
         ))

@@ -1185,6 +1185,9 @@ struct MacRootWindow: View {
                     guard !Task.isCancelled else { return }
                     let text = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
                     let tokens = searchTokens
+                    // Catches a stale index up in the background (it is never
+                    // rebuilt while the library is busy, FS-01.03c §7).
+                    if !text.isEmpty { dependencies.searchIndexer.refresh() }
                     let reading = await dependencies.search.preview(text)
                     var groups = text.isEmpty ? [] : ((try? await dependencies.searchIndex.groups(matching: text)) ?? [])
                     let chosen = Set(tokens.flatMap(\.rules).map { "\($0.field.rawValue)|\($0.text)|\($0.number ?? -1)" })
@@ -1375,7 +1378,7 @@ struct MacRootWindow: View {
                     MacPhotoTable(items: library.items, generation: frozenRowsGeneration ?? library.rowsGeneration, details: tableDetails,
                                   detailsGeneration: tableDetailsGeneration, photoLibrary: dependencies.photoLibrary,
                                   assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
-                                  assetGeneration: library.contentRefreshGeneration, picture: Self.demoPicture,
+                                  assetGeneration: library.contentRefreshGeneration &+ library.assetGeneration, picture: Self.demoPicture,
                                   sort: library.sort, setSort: { library.sort = $0 },
                                   onSelection: { photoSelection?.set($0) }, contextMenu: photoMenuBuilder,
                                   markKey: markKey, focusGeneration: gridFocusGeneration, onOpen: openViewer,
@@ -1396,7 +1399,7 @@ struct MacRootWindow: View {
                                  contextMenu: photoMenuBuilder, markKey: markKey, focusGeneration: gridFocusGeneration, onOpen: openViewer, marks: tableDetails, marksGeneration: tableDetailsGeneration,
                                  generation: frozenRowsGeneration ?? library.rowsGeneration,
                                  assetAt: { library.asset(atFlatIndex: library.items.count - 1 - $0) },
-                                 assetGeneration: library.contentRefreshGeneration)
+                                 assetGeneration: library.contentRefreshGeneration &+ library.assetGeneration)
                 }
             }
             // The grid stays under the viewer: closing it lands where the grid was.

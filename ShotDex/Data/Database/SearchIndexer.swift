@@ -1,43 +1,58 @@
 import Foundation
 
-/// Keeps the search index (FS-01.03c §1) in step with the library: rebuilds it
-/// once at launch and again a few seconds after the tables it reads stop
-/// changing, off the main actor.
+/// Keeps the search index (FS-01.03c §1) in step with the library — lazily.
 ///
-/// A burst of writes — an index run saves a batch of 200 every moment — is one
-/// rebuild, not one per batch; and a long run still gets a rebuild every
-/// `longestWait`, so search does not stay a run behind until it ends.
+/// A rebuild reads every photo row, so it must never compete with scrolling
+/// or with an index run: a change only marks the index stale. It is rebuilt
+/// when the search screen asks (`refresh()`, on opening it), or once the
+/// library has been quiet for `quietPeriod` — never in the middle of a burst
+/// of writes. Until then search answers from the previous build, which differs
+/// only by the photos of the last few minutes.
 actor SearchIndexer {
     /// The tables a group is computed from. Not `search_group` itself, or every
-    /// rebuild would schedule the next.
+    /// rebuild would mark the index stale again.
     static let watchedTables = ["photo_metadata", "photo_keyword", "photo_user_keyword", "photo_copies", "sources"]
 
     private let database: AppDatabase
     private let quietPeriod: Duration
-    private let longestWait: Duration
     private var observer: Task<Void, Never>?
-    private var pending: Task<Void, Never>?
-    private var pendingSince: ContinuousClock.Instant?
-    private var isRebuilding = false
-    private var needsAnotherRebuild = false
+    private var idleRebuild: Task<Void, Never>?
+    private var building: Task<Void, Never>?
+    private var isStale = true
 
-    /// Rebuilds finished since launch — for tests and the indexing banner.
+    /// Rebuilds finished since launch — for tests.
     private(set) var rebuildCount = 0
 
-    init(database: AppDatabase, quietPeriod: Duration = .seconds(3), longestWait: Duration = .seconds(30)) {
+    init(database: AppDatabase, quietPeriod: Duration = .seconds(60)) {
         self.database = database
         self.quietPeriod = quietPeriod
-        self.longestWait = longestWait
     }
 
-    /// Starts watching. Safe to call more than once.
+    /// Starts watching. Safe to call more than once. Builds nothing by itself
+    /// until the library has been quiet for `quietPeriod`.
     nonisolated func start() {
         Task { await self.begin() }
     }
 
+    /// The search screen opened: rebuild now if anything changed since the
+    /// last build. Returns at once; `refreshed()` waits for it.
+    nonisolated func refresh() {
+        Task { await self.refreshed() }
+    }
+
+    /// Rebuilds if stale and waits for the build (or the one already running).
+    func refreshed() async {
+        if let building {
+            await building.value
+            return
+        }
+        guard isStale else { return }
+        await rebuild()
+    }
+
     private func begin() {
         guard observer == nil else { return }
-        schedule(after: .zero)
+        scheduleIdleRebuild()
         let database = self.database
         observer = Task { [weak self] in
             for await _ in DatabaseChangeSignal.changes(in: database, tables: Self.watchedTables) {
@@ -47,41 +62,36 @@ actor SearchIndexer {
     }
 
     private func changed() {
-        let now = ContinuousClock.now
-        if pendingSince == nil { pendingSince = now }
-        // Past the longest wait, let the scheduled rebuild run instead of
-        // pushing it back again.
-        if let since = pendingSince, now - since >= longestWait, pending != nil { return }
-        schedule(after: quietPeriod)
+        isStale = true
+        scheduleIdleRebuild()
     }
 
-    private func schedule(after delay: Duration) {
-        pending?.cancel()
-        pending = Task { [weak self] in
-            if delay > .zero { try? await Task.sleep(for: delay) }
+    /// Every change pushes the idle rebuild back: an index run that saves a
+    /// batch every few seconds never triggers one.
+    private func scheduleIdleRebuild() {
+        idleRebuild?.cancel()
+        let quietPeriod = self.quietPeriod
+        idleRebuild = Task { [weak self] in
+            try? await Task.sleep(for: quietPeriod)
             guard !Task.isCancelled else { return }
-            await self?.rebuild()
+            await self?.rebuildIfStale()
         }
     }
 
-    /// Rebuilds now; a change during the rebuild queues exactly one more.
-    func rebuild() async {
-        guard !isRebuilding else {
-            needsAnotherRebuild = true
-            return
-        }
-        isRebuilding = true
-        pending = nil
-        pendingSince = nil
+    private func rebuildIfStale() async {
+        guard isStale, building == nil else { return }
+        await rebuild()
+    }
+
+    private func rebuild() async {
+        isStale = false
         let store = SearchIndexStore(database: database)
-        await Task.detached(priority: .utility) {
-            try? store.rebuild()
-        }.value
-        rebuildCount += 1
-        isRebuilding = false
-        if needsAnotherRebuild {
-            needsAnotherRebuild = false
-            schedule(after: quietPeriod)
+        let task = Task<Void, Never>.detached(priority: .background) {
+            _ = try? store.rebuild()
         }
+        building = task
+        await task.value
+        building = nil
+        rebuildCount += 1
     }
 }
