@@ -1,1290 +1,1299 @@
 {
-  "attachments": {},
-  "boards": {
-    "ES_P_ExportSettings.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Video Settings — nút tỉ lệ mở panel 278: 6 tỉ lệ, Fit/Fill, 720p/1080p/4K, fps, codec; Output ~30 MB — khớp code 4/10",
-      "w": 402,
-      "x": 10122,
-      "y": 4834
-    },
-    "F1_P_MultiSelect.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Chọn nhiều clip — 3 clip viền xanh + ✓; panel lô 260: hàng lệnh Speed · Volume · Look · Motion… — khớp code 4/10",
-      "w": 402,
-      "x": 3374,
-      "y": 4834
-    },
-    "F2_P_BeatDetect.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Nhịp nhạc — hàng lệnh nhạc (Beats đang bật) đầu panel; 96 BPM · 30 nhịp, Snap, Cut Clips to Beat — khớp code 4/10",
-      "w": 402,
-      "x": 3856,
-      "y": 4834
-    },
-    "F2_P_BeatDuration.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Duration bắt nhịp (ảnh) — Photo 4 3.30s, slider có vạch nhịp, kết ở beat 28 · 0:17.50 — khớp code 4/10",
-      "w": 402,
-      "x": 4338,
-      "y": 4834
-    },
-    "F3_P_Ducking.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Tự hạ nhạc — đồ thị 370×78; Ducking bật ở hàng lệnh đầu panel; Amount −12 dB · 0.3 / 0.8s; đáy ✕ — khớp code 4/10",
-      "w": 402,
-      "x": 4820,
-      "y": 4834
-    },
-    "F4_P_Captions.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Phụ đề tự động — 58% trên máy; hàng lệnh phụ đề đầu panel; vạch phụ đề trên dải tổng quan #5E9CFF — khớp code 4/10",
-      "w": 402,
-      "x": 5302,
-      "y": 4834
-    },
-    "F5_P_ClipLook.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Look riêng cho clip (iPhone) — ô Look trước Delete; LOOK FOR THIS CLIP + Use Video Look, This Clip — khớp code 4/10",
-      "w": 402,
-      "x": 12532,
-      "y": 4834
-    },
-    "F5_P_Looks.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Look (cả video) — chip Filter · Adjust · Color như editor ảnh; Filter: Presets / My Looks / LUTs — khớp code 4/10",
-      "w": 402,
-      "x": 5784,
-      "y": 4834
-    },
-    "F5_P_SaveLook.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Save as Look… — look + Adjust/Color của cả video thành My Look; hộp Save Look của editor, dòng \"Not saved:\" kể phần bị bỏ (FS-12.06c §6b)",
-      "w": 402,
-      "x": 15906,
-      "y": 4834
-    },
-    "F6_P_FineScrub.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Scrub từng khung — pinch timeline tới 360 pt/s (1 khung = 12 pt); gợi ý “pinch in to return” — khớp code 4/10",
-      "w": 402,
-      "x": 6748,
-      "y": 4834
-    },
-    "F6_P_Keyboard.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Phím tắt khi cắm bàn phím — danh sách 12 dòng (Space, J/K/L, ⇧←/→, ⌘B, I/O, ⌥[ ⌥] …) trong vùng panel — khớp code 4/10",
-      "w": 402,
-      "x": 7230,
-      "y": 4834
-    },
-    "F6_P_PreciseTrim.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Trim từng khung — kính lúp Ø124 trên ngón; nút ‹ −1 khung · 0:09.07 · +1 khung › nổi trên timeline — khớp code 4/10",
-      "w": 402,
-      "x": 6266,
-      "y": 4834
-    },
-    "F7_P_BeforeAfter.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Trước / sau — Split trên khung 402×226; nút bật = nền trắng glyph đen; nhãn Before / After ở y 70 — khớp code 4/10",
-      "w": 402,
-      "x": 7712,
-      "y": 4834
-    },
-    "F8_P_ExportPresets.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Preset xuất (Sẵn sàng) — 6 dòng (Reels ~30 MB · 4K ~72 …); dòng LUT ngay trên nút xuất — khớp code 4/10",
-      "w": 402,
-      "x": 8194,
-      "y": 4834
-    },
-    "MP_P_Drag.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Media · đang kéo — tab … · Select · 🔍; vạch giữa clip 2 và 3 trên lát timeline + “+ 0:09.2” — khớp code 4/10",
-      "w": 402,
-      "x": 11086,
-      "y": 4834
-    },
-    "MP_P_Drag916.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Media · kéo vào project 9:16 — đích là dải tổng quan: vạch giữa clip 2 và 3 + “+ 0:09.2” — khớp code 4/10",
-      "w": 402,
-      "x": 15424,
-      "y": 4834
-    },
-    "MP_P_InVideo.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Media · In Video — tab … · Select · 🔍; mục đang dùng theo thứ tự timeline, có khoảng giờ — khớp code 4/10",
-      "w": 402,
-      "x": 11568,
-      "y": 4834
-    },
-    "MP_P_Limited.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Media · quyền Ảnh giới hạn — 12 mục, “Manage Access…” đầu Recents; tab … · Select · 🔍 — khớp code 4/10",
-      "w": 402,
-      "x": 12050,
-      "y": 4834
-    },
-    "MP_P_MediaPicker.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Media — panel 340, Recents · Albums · In Video · 6 · Select (bật) · Add (3); ô vuông, “×2” = 2 chỗ — khớp code 4/10",
-      "w": 402,
-      "x": 10604,
-      "y": 4834
-    },
-    "Main.dc.html": {
-      "h": 874,
-      "title": "iPhone · Library: lưới 3 cột kèm badge, ngày ở giữa toolbar, tab bar kính nổi",
-      "w": 402,
-      "x": 482,
-      "y": 560
-    },
-    "P10_TextOverlay916.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "9:16 · Sửa chữ — panel 278: hàng lệnh chữ trên cùng, thông số cuộn dưới; đáy ✕ · GOLDEN HOUR · ✓ — khớp code 4/10",
-      "w": 402,
-      "x": 9640,
-      "y": 4834
-    },
-    "P11_Ratio43.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Project 4:3 — khung 402×302 ở y 60, transport y 362, timeline 402–790 — khớp code 4/10",
-      "w": 402,
-      "x": 13014,
-      "y": 4834
-    },
-    "P11_Ratio43_Selected.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "4:3 · Chọn clip — không lát timeline: tổng quan 402–430, panel 360 ở 430–790; khung không đổi — khớp code 4/10",
-      "w": 402,
-      "x": 13496,
-      "y": 4834
-    },
-    "P12_Ratio219.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Project 21:9 — khung 402×172 ở y 60, transport y 232, timeline 272–790 — khớp code 4/10",
-      "w": 402,
-      "x": 13978,
-      "y": 4834
-    },
-    "P12_Ratio219_Selected.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "21:9 · Chọn clip — lát 272–422 (thước 34 + cửa sổ 116), tổng quan 422–450, panel 340 — khớp code 4/10",
-      "w": 402,
-      "x": 14460,
-      "y": 4834
-    },
-    "P1_Main.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Màn chính (16:9) — khung 402×226 ở y 60; hàng đáy 5 công cụ thêm vào timeline, ô đều — khớp code 4/10",
-      "w": 402,
-      "x": 0,
-      "y": 4834
-    },
-    "P2_ClipSelected.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Chọn clip — hàng lệnh Split … Look · Delete; video không Duration; tay nắm mép clip — khớp code 4/10",
-      "w": 402,
-      "x": 482,
-      "y": 4834
-    },
-    "P3_TextOverlay.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Sửa chữ — đáy ✕ · GOLDEN HOUR · ✓; hàng đầu panel: Edit · Font · Color · Style · Align — khớp code 4/10",
-      "w": 402,
-      "x": 964,
-      "y": 4834
-    },
-    "P4_MusicChooser.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Music — “Video sound” (âm gốc cả project) trên cùng, rồi Add Music from Files… + My Music — khớp code 4/10",
-      "w": 402,
-      "x": 1446,
-      "y": 4834
-    },
-    "P5_MusicTrack.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Băng nhạc — đáy ✕ · Morning Drive · ✓; hàng đầu panel: Beats · Ducking · Replace… — khớp code 4/10",
-      "w": 402,
-      "x": 1928,
-      "y": 4834
-    },
-    "P6_RatioBackground.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Video Settings · Fit — Ratio 9:16 rồi Background (Blur / Color / Image); Output ~30 MB — khớp code 4/10",
-      "w": 402,
-      "x": 2410,
-      "y": 4834
-    },
-    "P7_Export.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Export — đang xuất 62% trong panel 340; không hàng Quality, tóm tắt mở Video Settings — khớp code 4/10",
-      "w": 402,
-      "x": 2892,
-      "y": 4834
-    },
-    "P8_Main916.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Project 9:16 — ô xem trước 216×384 ở y 60, timeline 306; 5 công cụ thêm vào timeline ở đáy — khớp code 4/10",
-      "w": 402,
-      "x": 8676,
-      "y": 4834
-    },
-    "P9_ClipSelected916.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "9:16 · Chọn clip — panel 278: hàng lệnh rồi Speed · Volume (video không Duration); đáy ✕ · Clip 2 · ✓ — khớp code 4/10",
-      "w": 402,
-      "x": 9158,
-      "y": 4834
-    },
-    "P9_Collapsed.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "9:16 · Panel thu gọn — panel 78 (712–790), timeline 484–712 có tay nắm clip 2, khung không đổi — khớp code 4/10",
-      "w": 402,
-      "x": 14942,
-      "y": 4834
-    },
-    "PH01_Edit.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Edit — LIGHT ⌄ dính đầu panel 344, 6 công cụ ở đáy; đề xuất 30/9: bỏ ⋯, giữ lâu Undo mở History",
-      "w": 402,
-      "x": 460,
-      "y": 2534
-    },
-    "PH02_EditCurve.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Edit cuộn tới CURVE — hàng Curve (4 chấm kênh + nút Edit Curve), rồi COLOR với track màu Temp/Tint/Vibrance",
-      "w": 402,
-      "x": 942,
-      "y": 2534
-    },
-    "PH03_Curve.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Curve — Edit Curve mở đồ thị 219 TRONG panel (không đè ảnh), cột phải RGB · Red · Green · Blue · Reset",
-      "w": 402,
-      "x": 1424,
-      "y": 2534
-    },
-    "PH04_Presets.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Presets — 3 tab Presets · My Looks · LUTs, lưới 4 cột ô 87×62 (20 look có sẵn), không ✕/✓, chạm là áp",
-      "w": 402,
-      "x": 1906,
-      "y": 2534
-    },
-    "PH05_MyLooks.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Presets › My Looks — Save Current (mờ khi chưa sửa) và Import XMP Preset đứng đầu; look nhập ghi “Imported”",
-      "w": 402,
-      "x": 2388,
-      "y": 2534
-    },
-    "PH06_LUTs.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Presets › LUTs — Import .cube là ô đầu, LUT đã nhập nằm sau",
-      "w": 402,
-      "x": 2870,
-      "y": 2534
-    },
-    "PH07_Transform.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Crop — đề xuất: thước trên ảnh = góc xoay (đang −3.2°); panel bỏ slider Angle, Upright thêm một hàng",
-      "w": 402,
-      "x": 3352,
-      "y": 2534
-    },
-    "PH08_TransformIndex.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Crop — chạm “CROP ⌃” mở mục lục 4 nhóm, ✓ cam đánh dấu nhóm đang ở, chạm là nhảy",
-      "w": 402,
-      "x": 3834,
-      "y": 2534
-    },
-    "PH09_Upright.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Transform › Upright — 6 chip 3 + 3, Geometry dưới; đề xuất: gợi ý lần đầu trên ảnh, thước + khung cắt",
-      "w": 402,
-      "x": 4316,
-      "y": 2534
-    },
-    "PH10_Geometry.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Transform › Geometry — Vertical · Horizontal · Rotate · Aspect · Scale · Offset X/Y, mỗi slider một hàng 40",
-      "w": 402,
-      "x": 4798,
-      "y": 2534
-    },
-    "PH11_MaskChooser.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Mask chưa có gì — lưới 4 cột 14 loại vùng (ô 87×60); Face Skin · Eyes · Lips mờ khi ảnh không có mặt",
-      "w": 402,
-      "x": 5280,
-      "y": 2534
-    },
-    "PH12_MaskBrush.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Mask › Brush — “Mask 1 ⌄ · Mask Overlay · + · ⋯”, hàng cọ ghim Vẽ/Xoá · Size · Feather · Flow, rồi slider",
-      "w": 402,
-      "x": 5762,
-      "y": 2534
-    },
-    "PH13_Heal.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Heal — Heal · Clone · Red Eye (không Remove), Size · Feather · Opacity, vết chọn màu cam, New Source / Delete",
-      "w": 402,
-      "x": 6244,
-      "y": 2534
-    },
-    "PH14_MarkupChooser.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Markup chưa có lớp — “Add a layer”: lưới 4 cột 11 loại lớp (Text … Magnifier), chạm là thêm",
-      "w": 402,
-      "x": 6726,
-      "y": 2534
-    },
-    "PH15_MarkupText.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Markup › Text — Font · Color · Content; đề xuất 30/9: một hàng B · I · U | căn lề | Size − 200 px +, bỏ slider",
-      "w": 402,
-      "x": 7208,
-      "y": 2534
-    },
-    "PH16_Filmstrip.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Nhiều ảnh — filmstrip 56 (ô 44, bo 6, viền trắng) trên panel, Sync + “1 / 5” ở cuối; panel giữ 344",
-      "w": 402,
-      "x": 7690,
-      "y": 2534
-    },
-    "PH17_SyncMenu.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Nhiều ảnh › Sync — menu tại chỗ: Sync Look · Sync Everything · Apply Previous · Auto Sync (không ở ⋯)",
-      "w": 402,
-      "x": 8172,
-      "y": 2534
-    },
-    "PH18_SaveSheet.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Save — “Save Edit” theo code 1/10: JPEG | HEIC; SAVE COPY: menu Metadata 3 mức + Save Copy; Save Changes",
-      "w": 402,
-      "x": 8654,
-      "y": 2534
-    },
-    "PH19_HDR.dc.html": {
-      "h": 874,
-      "title": "iPhone · HDR — Combine Photos ▸ HDR: câu giải thích · Deghost Off/Low/Medium/High (mặc định Medium) · Strength 60 · dòng",
-      "w": 402,
-      "x": 9136,
-      "y": 2534
-    },
-    "PH20_HDRSaveAs.dc.html": {
-      "h": 874,
-      "title": "iPhone · HDR › Save — alert Save As: JPEG · HEIC · Cancel (máy không ghi HEIC: chỉ JPEG + câu báo)",
-      "w": 402,
-      "x": 9618,
-      "y": 2534
-    },
-    "PH21_EditWhich.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · RAW + JPEG — action sheet “Edit which version?”, Edit RAW mờ + “iOS can't read this RAW yet”; theo code 1/10",
-      "w": 402,
-      "x": 10100,
-      "y": 2534
-    },
-    "PH22_RawAlert.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Edit một RAW iOS chưa đọc được — alert “Can't Edit This RAW”, tên máy + bản iOS, nút OK; theo code 1/10",
-      "w": 402,
-      "x": 10582,
-      "y": 2534
-    },
-    "PH23_Cull.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Cull — thanh 52 ✕ · 37 / 240 · Undo, hàng Reject ★×5 Pick 340, filmstrip 56 — khớp code 3/10",
-      "w": 402,
-      "x": 11064,
-      "y": 2534
-    },
-    "PH24_CullSummary.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Cull — thẻ cuối lượt đủ 3 nút; Delete ẩn khi 0 Rejected, Review ẩn khi 0 unflagged — khớp code 3/10",
-      "w": 402,
-      "x": 11546,
-      "y": 2534
-    },
-    "PH25_GridRatings.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Lưới — glyph dưới-trái: cờ · favorite · ★N (10pt); ô Rejected mờ 45% — khớp code 3/10",
-      "w": 402,
-      "x": 12028,
-      "y": 2534
-    },
-    "PH26_GridRejected.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Lọc Rejected — viên đỏ Delete 120 (32pt) ghim phải, cạnh Clear — khớp code 3/10",
-      "w": 402,
-      "x": 12510,
-      "y": 2534
-    },
-    "PH27_ViewerRating.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Viewer — chrome như code; dòng 2 bảng thông tin nối thêm ★★★★☆ · Picked — khớp code 3/10",
-      "w": 402,
-      "x": 12992,
-      "y": 2534
-    },
-    "PH28_ViewerMenu.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Viewer ⋯ (giữa thanh dưới) — nhóm đầu Rating ▸ · Flag ▸ · Cull From Here; Rating mở — khớp code 3/10",
-      "w": 402,
-      "x": 13474,
-      "y": 2534
-    },
-    "PH29_InfoKeywords.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Photo Info — Caption + keyword (capsule ×, + Add Keyword) trên Location — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 13956,
-      "y": 2534
-    },
-    "PH30_BulkKeywords.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 14438,
-      "y": 2534
-    },
-    "PH31_Watermark.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Watermark — xem trước 320, chip 48, lưới 3×3, Size px, Margin, Opacity — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 14920,
-      "y": 2534
-    },
-    "PH32_ResizeWatermark.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Resize — hàng Watermark 44pt giữa Metadata và Delete Originals (tắt, mờ) — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 15402,
-      "y": 2534
-    },
-    "PH33_Export.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 15884,
-      "y": 2534
-    },
-    "PH34_FileName.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 16366,
-      "y": 2534
-    },
-    "PH35_ExportRunning.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Export đang chạy — 212 of 500, GB + thời gian còn lại, bước từng file — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 16848,
-      "y": 2534
-    },
-    "PH36_ExportSummary.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Export xong có lỗi — Not Exported kèm lý do, Retry Failed / Done — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 17330,
-      "y": 2534
-    },
-    "PH37_ShareWatermark.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Share — đầu sheet Watermark: © Tuan; dòng Share Without Watermark — đề xuất 2/10, code chưa có",
-      "w": 402,
-      "x": 17812,
-      "y": 2534
-    },
-    "PH38_EditFileCopy.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Edit ảnh file (T7, thư mục) — tự lưu: chỗ Save là ✓ xám \"Edited · Saved\", menu Revert to Original; không Done (FS-19 AC-50)",
-      "w": 402,
-      "x": 18274,
-      "y": 2534
-    },
-    "PH39_ViewerMenuSources.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Viewer ⋯ — ảnh ở Photos và NAS/thư mục: hai dòng Hide in Photos · Hide in ShotDex Only thay Hide (FS-19 AC-73); ảnh một nơi giữ Hide như PH28",
-      "w": 402,
-      "x": 18736,
-      "y": 2534
-    },
-    "PH40_ViewerCloudDownload.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Viewer — mở file chỉ có trên iCloud Drive (như code): trang đen, chỉ nút Close, giữa: glyph, tên file, \"Downloading from iCloud Drive…\", thanh trắng 220, \"29 kB of 58 kB\", Cancel (FS-19.01b §4, AC-15/16). Cancel → \"Only in iCloud Drive\" + nút Download; tải xong → viewer thường (capsule info + toolbar)",
-      "w": 402,
-      "x": 2892,
-      "y": 560
-    },
-    "PH_AddSource.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sheet Add a Source: Photos Library · Folder or Drive · Server, dòng thẻ nhớ, Choose Folder…",
-      "w": 402,
-      "x": 23136,
-      "y": 560
-    },
-    "PH_AdvancedSearch.dc.html": {
-      "h": 874,
-      "title": "iPhone · Advanced Search: sheet large, Media Type, Match, 3 điều kiện, số ảnh khớp",
-      "w": 402,
-      "x": 1928,
-      "y": 560
-    },
-    "PH_AlbumDetail.dc.html": {
-      "h": 874,
-      "title": "iPhone · Album Iceland 2026: lưới 3 cột, tên + ngày, nút Filter và Select",
-      "w": 402,
-      "x": 5784,
-      "y": 560
-    },
-    "PH_Backup.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 1/6 · danh sách job (Utilities › Backup): thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume, xong → Up to Date; + = 2/6 — đề xuất 12/10, code chưa có",
-      "w": 402,
-      "x": 28482,
-      "y": 560
-    },
-    "PH_BackupCustomDate.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 5/6 · Day › Custom…: cây Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh; ký tự NAS cấm bị chặn",
-      "w": 402,
-      "x": 30330,
-      "y": 560
-    },
-    "PH_BackupFolder.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 3/6 · Choose Folder (Folder › Choose… ở 2/6): ‹ lên folder cha (mờ ở gốc), ✕ về form không đổi gì; ⋯ New Folder · Rename Folder; chạm giữ folder: Rename; ảnh mờ",
-      "w": 402,
-      "x": 29406,
-      "y": 560
-    },
-    "PH_BackupNew.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 2/6 · New Backup: Source, Destination, dòng Organize (mở 4/6), What to Copy, When",
-      "w": 402,
-      "x": 28944,
-      "y": 560
-    },
-    "PH_BackupOrganize.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 4/6 · Organize: cây Preview; Folders (Levels, Year, Month, Day — menu ví dụ, Custom… mở 5/6); Photos and Videos (Together · Apart at the Top · Apart in Each Year/Month/Day); File Names; trùng tên → Keep Both",
-      "w": 402,
-      "x": 29868,
-      "y": 560
-    },
-    "PH_BackupRunning.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Backup 6/6 · job đang chạy (chạm thẻ ở 1/6): %, Pause/Stop, file đang tải iCloud / đang up, tổng, file lỗi; resume theo sổ từng file",
-      "w": 402,
-      "x": 30792,
-      "y": 560
-    },
-    "PH_BurstFrames.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Duplicates 5/5 · Màn chọn khung dùng chung (§8, tầng D): khung lớn 536pt, dải phim 56pt (chấm đỏ = khung yếu, tick = đã chọn), Zoom to face, nút chọn 44 góc dưới phải, Done · Keep 3, remove 21; không có X, vuốt xuống để đóng. Dùng cho Burst, focus stack, viewer ⋯ Choose Frames…",
-      "w": 402,
-      "x": 11086,
-      "y": 560
-    },
-    "PH_CameraDatabase.dc.html": {
-      "h": 874,
-      "title": "iPhone · Unknown Cameras: máy ảnh chưa có trong sensor database, chạm để chọn sensor",
-      "w": 402,
-      "x": 16388,
-      "y": 560
-    },
-    "PH_ChartEditor.dc.html": {
-      "h": 874,
-      "title": "iPhone · Edit Chart: X = Year, chọn Columns; Donut/Bars bị tắt, xem trước ngay dưới",
-      "w": 402,
-      "x": 13978,
-      "y": 560
-    },
-    "PH_Collage.dc.html": {
-      "h": 874,
-      "title": "iPhone · Collage: bỏ nhãn đếm, Export bên phải Dynamic Island",
-      "w": 402,
-      "x": 12050,
-      "y": 560
-    },
-    "PH_CollageExport.dc.html": {
-      "h": 874,
-      "title": "iPhone · Xuất collage: Back và Save ngang Dynamic Island",
-      "w": 402,
-      "x": 12532,
-      "y": 560
-    },
-    "PH_Collections.dc.html": {
-      "h": 874,
-      "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10) · 20/10: Utilities tách thành tab riêng, Sources ngay dưới Media Types; tab bar Library · Collections · Utilities",
-      "w": 402,
-      "x": 5302,
-      "y": 560
-    },
-    "PH_Compare.dc.html": {
-      "h": 874,
-      "title": "iPhone · Compare (chọn ≥2 ảnh): màn A/B của Duplicates, Keep | Delete từng ảnh, Delete N trên thanh trên (FS-01.08, 2026-10-24)",
-      "w": 402,
-      "x": 3856,
-      "y": 560
-    },
-    "PH_Compress.dc.html": {
-      "h": 874,
-      "title": "iPhone · Resize: Cancel và Resize ngang Dynamic Island, bỏ tiêu đề",
-      "w": 402,
-      "x": 13014,
-      "y": 560
-    },
-    "PH_CompressionPresets.dc.html": {
-      "h": 874,
-      "title": "iPhone · Resize Presets: 4 preset có sẵn, 3 preset tuỳ chỉnh, nút Add Preset",
-      "w": 402,
-      "x": 15906,
-      "y": 560
-    },
-    "PH_Creations.dc.html": {
-      "h": 874,
-      "title": "iPhone · Collages: thẻ một cột, cover collage 64pt, ngày giờ + số ảnh, nút +",
-      "w": 402,
-      "x": 11568,
-      "y": 560
-    },
-    "PH_DateRange.dc.html": {
-      "h": 874,
-      "title": "iPhone · sheet Date Range chồng lên Edit Chart: lịch tháng, chọn 23/8–12/9, Cancel / Apply",
-      "w": 402,
-      "x": 14460,
-      "y": 560
-    },
-    "PH_DeleteCopies.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sheet Move 1 Photo?: 4 bản sao có ô đánh dấu, chỉ bật bản đang mở",
-      "w": 402,
-      "x": 26028,
-      "y": 560
-    },
-    "PH_DeletePermanent.dc.html": {
-      "h": 874,
-      "title": "iPhone · Hộp đỏ thứ hai: Delete 3 Photos Permanently? (T7 không có Thùng rác)",
-      "w": 402,
-      "x": 25546,
-      "y": 560
-    },
-    "PH_Duplicates.dc.html": {
-      "h": 874,
-      "title": "iPhone · Duplicates 1/5 · Mở ra là danh sách ngay, không màn tóm tắt (v3 §7.2–7.4, 06b §3). Ô đầu: dải Quick clean \"212 copies · 1.2 GB\" + Review… (nút accent duy nhất; mở sheet xem trước, Select N photos chỉ đánh dấu; dải ẩn khi hết nhóm bản sao chưa quyết). hàng lọc theo loại Exact · Similar · Burst (luôn chọn đúng một, không có All), thanh trên chỉ có hai nút: sort ⇅ (Easiest first · Most space · Newest · Oldest) và quét lại ↻ (Check Again); không ⋯, không Ignored, không Clear Selection, không \"~GB to free\" (22/10). Thẻ (thẻ chỉ có ảnh, luôn hiện đủ ảnh): chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh); thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
-      "w": 402,
-      "x": 8676,
-      "y": 560
-    },
-    "PH_DuplicatesCompare.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Duplicates 4/5 · So sánh nhóm (§7.6, tầng D): chạm ảnh trên thẻ mở ở đây, ảnh vừa chạm ở trên; 2 ảnh xếp chồng, pinch một ảnh là cả hai zoom cùng chỗ; vuốt ngang một ảnh để thay ảnh khác của nhóm; mỗi ảnh chỉ một nút thùng rác (= dấu của ô, viền đỏ); X hoặc vuốt xuống để đóng. Không cờ, không sao.",
-      "w": 402,
-      "x": 10122,
-      "y": 560
-    },
-    "PH_DuplicatesLargeGroup.dc.html": {
-      "h": 874,
-      "title": "iPhone · Duplicates 2/5 · Burst 51 ảnh, thẻ chỉ có ảnh, luôn hiện đủ ảnh (bản giữ 2×2 trước, rồi theo thứ tự chụp), không còn chân thẻ: chạm ảnh mở Choose frames, nhấn giữ ảnh có Keep all · Not duplicates. Focus stack cùng dáng: \"Focus stack? · 24 frames\", Focus Stack · Not duplicates",
-      "w": 402,
-      "x": 9158,
-      "y": 560
-    },
-    "PH_DuplicatesPinched.dc.html": {
-      "h": 874,
-      "title": "iPhone · Duplicates 3/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
-      "w": 402,
-      "x": 9640,
-      "y": 560
-    },
-    "PH_EmptyLibrary.dc.html": {
-      "h": 874,
-      "title": "iPhone · Thư viện trống: 3 thẻ Photos Library / Folder or Drive / Server, dòng thẻ nhớ",
-      "w": 402,
-      "x": 26510,
-      "y": 560
-    },
-    "PH_FocusStack.dc.html": {
-      "h": 874,
-      "title": "iPhone · Focus Stack: Cancel và Save ngang Dynamic Island",
-      "w": 402,
-      "x": 20244,
-      "y": 560
-    },
-    "PH_Hidden.dc.html": {
-      "h": 874,
-      "title": "iPhone · Collections › Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos",
-      "w": 402,
-      "x": 25064,
-      "y": 560
-    },
-    "PH_Ingest.dc.html": {
-      "h": 874,
-      "title": "iPhone · Nhập từ thẻ: New 812, lưới 4 cột có tick, sheet đích/tên/metadata, Import 811 Photos",
-      "w": 402,
-      "x": 24100,
-      "y": 560
-    },
-    "PH_IngestProgress.dc.html": {
-      "h": 874,
-      "title": "iPhone · Đang nhập: Copy · Verify · Backup, Pause, Stop Import…",
-      "w": 402,
-      "x": 24582,
-      "y": 560
-    },
-    "PH_KeepOnIPhone.dc.html": {
-      "h": 874,
-      "title": "iPhone · Keep on This iPhone (1/2): sheet từ thanh chọn ⋯, menu lọc ≡ của album, ⋯ viewer — Viewing Copies (mặc định) · Originals kèm dung lượng, Keep New Photos Added Later (album), chú thích dung lượng trống trên nút Keep",
-      "w": 402,
-      "x": 37510,
-      "y": 560
-    },
-    "PH_LibraryMore.dc.html": {
-      "h": 874,
-      "title": "iPhone · Menu Filter and sort thêm nhóm View: Grid / List, Go to Date…",
-      "w": 402,
-      "x": 26992,
-      "y": 560
-    },
-    "PH_LibrarySelect.dc.html": {
-      "h": 874,
-      "title": "iPhone · Chọn ảnh: 5 ảnh badge amber, menu ⋯ mở (có Print…), thanh Share/pill/Delete",
-      "w": 402,
-      "x": 964,
-      "y": 560
-    },
-    "PH_Metadata.dc.html": {
-      "h": 874,
-      "title": "iPhone · Photo Info (sheet large, kéo lên): bản đồ, Camera & Lens, Exposure, 35mm eq.",
-      "w": 402,
-      "x": 3374,
-      "y": 560
-    },
-    "PH_OnThisDay.dc.html": {
-      "h": 874,
-      "title": "iPhone · On This Day (October 2): nhóm theo năm, header kính dính, mới nhất ở đáy",
-      "w": 402,
-      "x": 7230,
-      "y": 560
-    },
-    "PH_OnThisIPhone.dc.html": {
-      "h": 874,
-      "title": "iPhone · Utilities › On This iPhone (2/2): một thẻ dung lượng + đang tải/Pause, album giữ cả dạng chip (↓ = giữ cả ảnh mới), lưới ảnh/video đã ở trên máy; Select → Remove from iPhone; ⋯ Pause/Remove All",
-      "w": 402,
-      "x": 37992,
-      "y": 560
-    },
-    "PH_Onboarding.dc.html": {
-      "h": 874,
-      "title": "iPhone · Onboarding: bốn lời hứa (Your photos stay where they are), Next: thêm nguồn, Continue ghim đáy",
-      "w": 402,
-      "x": 0,
-      "y": 560
-    },
-    "PH_Panorama.dc.html": {
-      "h": 874,
-      "title": "iPhone · Panorama: Cancel và Save ngang Dynamic Island",
-      "w": 402,
-      "x": 21208,
-      "y": 560
-    },
-    "PH_Search.dc.html": {
-      "h": 874,
-      "title": "iPhone · Search “Sony 85mm”: Recents, capsule diễn giải, ô tìm trên bàn phím",
-      "w": 402,
-      "x": 1446,
-      "y": 560
-    },
-    "PH_ServerBrowser.dc.html": {
-      "h": 874,
-      "title": "iPhone · NAS Home › Kyoto là nguồn được index: không còn In Library/Import, ⋯ có Save to Photos, Hide thay Delete",
-      "w": 402,
-      "x": 18798,
-      "y": 560
-    },
-    "PH_ServerForm.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sheet Add Connection: máy tìm thấy trong mạng (laptop/NAS/Mac/PC) + form SMB",
-      "w": 402,
-      "x": 18316,
-      "y": 560
-    },
-    "PH_ServerList.dc.html": {
-      "h": 874,
-      "title": "iPhone · Cài đặt › File Servers: danh sách kết nối đã lưu (tên + thư mục), nút + Add Connection",
-      "w": 402,
-      "x": 17834,
-      "y": 560
-    },
-    "PH_ServerUpload.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sheet Upload to Server (bước chuẩn bị): kết nối, thư mục, Date Folders, loại file",
-      "w": 402,
-      "x": 19280,
-      "y": 560
-    },
-    "PH_Settings.dc.html": {
-      "h": 874,
-      "title": "iPhone · Cài đặt kiểu Mochi: thẻ Your library, mục Sources \"4 sources · T7 RAW Archive offline\", 4 nhóm hàng; hàng AI sau Playback (FS-08.07, 14/10)",
-      "w": 402,
-      "x": 14942,
-      "y": 560
-    },
-    "PH_SettingsAI.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Settings › AI: Use For (AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10",
-      "w": 402,
-      "x": 36064,
-      "y": 560
-    },
-    "PH_SettingsAIProvider.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Settings › AI › Claude: tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3",
-      "w": 402,
-      "x": 36546,
-      "y": 560
-    },
-    "PH_SettingsSources.dc.html": {
-      "h": 874,
-      "title": "iPhone · Cài đặt › Sources: 5 nguồn, Add Folder or Drive… / Connect to Server…, Cache Size Limit mặc định 5 GB",
-      "w": 402,
-      "x": 23618,
-      "y": 560
-    },
-    "PH_Share.dc.html": {
-      "h": 874,
-      "title": "iPhone · Share sheet trên Library: header Metadata removed, 2 hàng mức metadata",
-      "w": 402,
-      "x": 4820,
-      "y": 560
-    },
-    "PH_SmartAlbum.dc.html": {
-      "h": 874,
-      "title": "iPhone · Smart album Telephoto Sony: thanh điều kiện (1,284 photos, Match all) trên lưới",
-      "w": 402,
-      "x": 6266,
-      "y": 560
-    },
-    "PH_SmartAlbumEditor.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sheet Edit Smart Album: Name, Media Type, Match, 3 điều kiện (Camera, Focal, ISO)",
-      "w": 402,
-      "x": 6748,
-      "y": 560
-    },
-    "PH_Sources.dc.html": {
-      "h": 874,
-      "title": "iPhone · Nguồn: nhóm Sources ở cuối tab Collections, dưới Utilities (user 12/10) — Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL; + Add Source · 20/10: Utilities tách thành tab riêng, Sources ngay dưới Media Types; tab bar Library · Collections · Utilities",
-      "w": 402,
-      "x": 22654,
-      "y": 560
-    },
-    "PH_StackExposures.dc.html": {
-      "h": 874,
-      "title": "iPhone · Stack Exposures: Cancel và Save ngang Dynamic Island",
-      "w": 402,
-      "x": 20726,
-      "y": 560
-    },
-    "PH_Statistics.dc.html": {
-      "h": 874,
-      "title": "iPhone · Thống kê: mọi thẻ biểu đồ có nút Cột/Đường hoặc Tròn/Thanh; Năm=Cột, Tháng=Đường",
-      "w": 402,
-      "x": 13496,
-      "y": 560
-    },
-    "PH_Support.dc.html": {
-      "h": 874,
-      "title": "iPhone · Support (đẩy từ Settings): Report a Bug, Your Messages, What People Asked For",
-      "w": 402,
-      "x": 16870,
-      "y": 560
-    },
-    "PH_SupportThread.dc.html": {
-      "h": 874,
-      "title": "iPhone · Support thread (chọn màn thread, không phải compose): Bug, Conversation, Send Reply",
-      "w": 402,
-      "x": 17352,
-      "y": 560
-    },
-    "PH_UploadedToServer.dc.html": {
-      "h": 874,
-      "title": "iPhone · Uploaded to Server: Where They Are theo kết nối/thư mục + All Uploaded Photos",
-      "w": 402,
-      "x": 19762,
-      "y": 560
-    },
-    "PH_Utilities.dc.html": {
-      "h": 874,
-      "title": "iPhone · tab Utilities (24/10): card Statistics trên đầu (Photos · Cameras · Lenses + cột 12 tháng, tháng nhiều nhất màu accent; chạm mở Statistics) · Library · Create (Collages, Video Projects, Focus Stack, Panorama, HDR, Stack Exposures) · Elsewhere; Explore, Places, Trips đã gỡ",
-      "w": 402,
-      "x": 37028,
-      "y": 560
-    },
-    "PH_VideoProjects.dc.html": {
-      "h": 874,
-      "title": "iPhone · Video Projects: nháp lẫn bản đã xuất một danh sách, nhãn Draft, Edited 5 min ago, bìa clip đầu — theo spec 3/10",
-      "w": 402,
-      "x": 21690,
-      "y": 560
-    },
-    "PH_VideoProjectsDelete.dc.html": {
-      "h": 874,
-      "title": "iPhone · Delete Draft?: alert 2 nút Cancel / Delete đỏ trên Video Projects mờ — theo spec 3/10",
-      "w": 402,
-      "x": 22172,
-      "y": 560
-    },
-    "PH_VideoTrim.dc.html": {
-      "h": 874,
-      "title": "iPhone · Cắt video: Cancel và Save ngang Dynamic Island",
-      "w": 402,
-      "x": 4338,
-      "y": 560
-    },
-    "PH_Viewer.dc.html": {
-      "h": 874,
-      "title": "iPhone · Viewer theo sáng/tối (mặc định sáng): nút đóng, panel ngày/EXIF, thanh Share·♡ⓘ Edit ⋯·Delete",
-      "w": 402,
-      "x": 2410,
-      "y": 560
-    },
-    "PH_ViewerMore.dc.html": {
-      "h": 874,
-      "title": "iPhone · Menu ⋯ Viewer thêm Rotate Counterclockwise / Clockwise, Print…",
-      "w": 402,
-      "x": 27474,
-      "y": 560
-    },
-    "PH_WidgetSettings.dc.html": {
-      "h": 874,
-      "title": "iPhone · Sửa widget: preview Medium ghim trên, chip Photo/Time/Date/Weather, tuỳ chọn dưới",
-      "w": 402,
-      "x": 15424,
-      "y": 560
-    },
-    "TX_P_TextPanel.dc.html": {
-      "h": 874,
-      "title": "iPhone · Text: panel Text — Add Text, Auto Captions, Fonts You Used (thay vì thêm khối ngay, 2026-10-11)",
-      "w": 402,
-      "x": 16388,
-      "y": 4834
-    }
+ "attachments": {},
+ "boards": {
+  "ES_P_ExportSettings.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Video Settings — nút tỉ lệ mở panel 278: 6 tỉ lệ, Fit/Fill, 720p/1080p/4K, fps, codec; Output ~30 MB — khớp code 4/10",
+   "w": 402,
+   "x": 10122,
+   "y": 4834
   },
-  "createdOnFiles": {
-    "at": "2026-10-03T22:41:47Z",
-    "v": 1
+  "F1_P_MultiSelect.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Chọn nhiều clip — 3 clip viền xanh + ✓; panel lô 260: hàng lệnh Speed · Volume · Look · Motion… — khớp code 4/10",
+   "w": 402,
+   "x": 3374,
+   "y": 4834
   },
-  "designSystems": [],
-  "launch": {
-    "view": "canvas"
+  "F2_P_BeatDetect.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Nhịp nhạc — hàng lệnh nhạc (Beats đang bật) đầu panel; 96 BPM · 30 nhịp, Snap, Cut Clips to Beat — khớp code 4/10",
+   "w": 402,
+   "x": 3856,
+   "y": 4834
   },
-  "notes": {
-    "app_row_PH": {
-      "kind": "title1",
-      "maxW": 8000,
-      "text": "iPhone 17 · 402×874",
-      "w": 240,
-      "x": 0,
-      "y": 300
-    },
-    "editor_note_iphone": {
-      "fill": "blue",
-      "maxH": 1200,
-      "text": "Vẽ lại từ ảnh chụp app thật (iPhone 17, iOS 26.5, 30/9). Ảnh test là dải nhiễu 3:1 nên bảng dùng ảnh mẫu 3:2 (tỉ lệ luật panel 344). Chỗ code khác bản chốt cũ thì theo code: Save là đĩa ✓ cam 34, cụm nút cách mép 20; Heal không có Remove mà có Red Eye; Curve có cột kênh bên phải. Đề xuất 30/9 cho băng trên (code chưa đổi): bỏ nút ⋯; histogram nới từ 27 lên 66 × 34 (lấy chỗ của ⋯ và khoảng hở), màu R/G/B hoà sáng như bản iPad; Save giữ đĩa cam 34 nhưng dùng icon export như Video Studio. History mở bằng giữ lâu nút Undo (điện thoại vẫn có History như iPad); Copy / Paste Edits, Fill Screen, Revert to Original, Reset All bỏ khỏi điện thoại. Băng trên theo cùng quy cách: nút tròn 34, 12 giữa nhóm, 5 trong nhóm (Back | Undo · Redo … histogram | Save). Markup › Text (đề xuất): một hàng B · I · U | căn lề 3 ô | Size − 200 px + (348 / 378pt), bỏ slider Size. Lớp đang chọn trên ảnh (đề xuất 30/9, code chưa đổi) — một kiểu cho mọi thiết bị: khung trắng liền 1,5pt có bóng mờ tối, cách chữ 6pt; 4 chấm tròn trắng 10pt ở góc; núm xoay 24pt trên cần 16pt ở giữa cạnh trên. Kéo góc = phóng to/thu nhỏ đều quanh tâm lớp (tính theo khoảng cách tâm→ngón tay nên đúng cả khi chữ đang nghiêng); kéo núm = xoay quanh tâm, hít ở 0/90/180/270 kèm rung nhẹ, có chip độ. Chấm và núm nằm NGOÀI chữ nên không che chú thích nhỏ (lý do núm 22pt cũ bị bỏ); phép tính theo tâm sửa lỗi kéo góc sai hướng khi chữ nghiêng. Không dùng màu accent. Tay nắm ẩn khi đang kéo thân lớp; hai ngón vẫn phóng/xoay được. Cỡ chữ hiện bằng px của ảnh đang sửa (“200 px” = 5% cạnh ngắn 4000px); lưu vẫn là tỉ lệ cạnh ngắn để crop/resize giữ tỉ lệ; −/+ bước 1% cạnh ngắn, chạm số để gõ px. “% cạnh ngắn” là ngôn ngữ của renderer, px là thứ người chụp đọc khi xuất ảnh. 30/9 — Transform: thao tác trực tiếp trên ảnh, panel chỉ để chỉnh chính xác. Khung cắt trắng 1,5pt có bóng mờ, góc chữ L 3pt (cạnh 20) + vạch giữa cạnh kiểu Photos: kéo góc/cạnh = cắt, kéo bên trong = dời ảnh, lưới 1/3 khi kéo. Thước vạch dưới đáy vùng ảnh (nền tối 44pt, vạch giữa + số độ): vuốt ngang xoay ±45°, hít ở 0 kèm rung, chạm số để về 0; khi xoay lưới 1/3 đổi thành lưới mịn 8×8 và ảnh tự phóng cho không lộ góc. Xoay hai ngón trên ảnh cũng xoay (cùng giá trị). Rotate 90° và Flip là hai nút kính 34 ở góc trên-trái vùng ảnh, ngoài khung cắt. Panel giữ Aspect, Upright và slider Geometry để chỉnh chính xác. Code chưa đổi. iPhone: PH07 đang xoay −3.2°; PH09 có gợi ý lần đầu (tự ẩn). 30/9 (sửa): thước trên ảnh = góc xoay, không còn chip Straighten · Vertical · Horizontal; phối cảnh dọc/ngang ở panel (Upright, slider Geometry); slider Angle trong panel bỏ vì trùng thước. 1/10 (theo code): Save Edit bỏ công tắc Include Metadata — phần SAVE COPY có menu Metadata (All Metadata · No Location · No Metadata, mặc định theo Settings) + Save Copy; Save Changes luôn giữ ngày, vị trí và metadata. Cặp RAW + JPEG hỏi “Edit which version?” trước khi mở editor (Edit RAW mờ khi iOS chưa đọc được RAW). RAW iOS chưa đọc được: alert “Can't Edit This RAW” (OK; Skip khi sửa nhiều ảnh; thêm Share Original với DNG).",
-      "w": 380,
-      "x": 0,
-      "y": 2534
-    },
-    "editor_row_iphone": {
-      "kind": "title1",
-      "maxW": 8000,
-      "text": "iPhone 17 · 402 × 874 — như code, trừ băng trên (⋯ bỏ, histogram rộng, Save export) và Transform trên ảnh — đề xuất 30/9",
-      "w": 240,
-      "x": 460,
-      "y": 2234
-    },
-    "sec_app": {
-      "kind": "title1",
-      "maxW": 8000,
-      "size": 120,
-      "text": "Màn hình app",
-      "w": 240,
-      "x": 0,
-      "y": 0
-    },
-    "sec_editor": {
-      "kind": "title1",
-      "maxW": 8000,
-      "size": 120,
-      "text": "Sửa ảnh",
-      "w": 240,
-      "x": 0,
-      "y": 1934
-    },
-    "sec_video": {
-      "kind": "title1",
-      "maxW": 8000,
-      "size": 120,
-      "text": "Video Studio",
-      "w": 240,
-      "x": 0,
-      "y": 4234
-    },
-    "video_r_iphone": {
-      "kind": "title1",
-      "maxW": 8000,
-      "text": "iPhone dọc · 402 × 874 — thanh dưới = thêm vào timeline; cả video = Look và Video Settings; chọn item: đáy = ✕ / tên / ✓; Media = thư viện trong panel, kéo vào timeline",
-      "w": 240,
-      "x": 0,
-      "y": 4534
-    },
-    "video_r_iphone_n": {
-      "fill": "orange",
-      "maxH": 380,
-      "size": 24,
-      "text": "Thanh dưới = thêm vào timeline (Media · Text · Sticker · Music · Look); cả video = Look và Video Settings. Chọn item: đáy = ✕ / tên / ✓ như editor ảnh; lệnh của item là hàng đầu panel. Media = thư viện ngay trong panel, kéo vào timeline; tab In Video + dấu ✓ (hoặc “×2”) cho ảnh/video đang dùng (chạm = chèn ở playhead, Select → Add). Kéo bắt đầu từ lưới trong UIScrollView nên phải đi qua UIKit pan — cử chỉ SwiftUI chết trong UIScrollView (bẫy đã biết). iPhone chỉ dùng dọc — màn ngang là của Duo màn trong. Băng trên như editor ảnh (đĩa ngoài cùng cách mép 16 vì góc bo màn cắt ở x 10 — khớp code 4/10): Back · Undo · Redo | nút tỉ lệ (Video Settings) + Export tròn cam chỉ icon; không còn hàng thông số dưới băng. Khung đặt ở y 60 ngay dưới băng; ô xem trước và panel theo TỈ LỆ PROJECT, cố định suốt project, không nhảy khi mở panel: 16:9 khung 402×226 + panel 340 (trên nó lát timeline 96 + dải tổng quan 28), timeline khi không chọn 464; 1:1 khung 342×342 + panel 320; 4:5 khung 290×362 + panel 300; 9:16 khung 216×384 + panel 278. Hàng đáy 5 công cụ ô đều 78, không cuộn. Chọn thứ gì thì hàng đáy là ✕ · tên · ✓, lệnh của nó là hàng đầu panel (cao như cũ); không có nút Show original. Cuối hàng: 11 màn đề xuất, 3 màn project 9:16, Cài đặt video, panel Media (Recents · đang kéo · In Video · quyền giới hạn).\n\nTHEO SPEC 3/10: clip video không có Duration (thời lượng nằm ở dòng phụ “6.2s · video”); ảnh và khung freeze giữ Duration 0.5–10. Không có Master — âm gốc cả project là “Video sound” đầu panel Music; Quick Adjust = Speed · Duration (chỉ ảnh) · Video sound. Tên “Video Settings” ở mọi nơi; MB theo ~10 Mbps ở 1080p30 (24 s ≈ ~30 MB). Export không còn hàng Quality: dòng tóm tắt “0:24 · 16:9 · 30 fps · ~30 MB” mở Video Settings; LUT mất → “1 look is missing its LUT and exports without it.” ngay trên nút xuất. Media: Recents · Albums · In Video · 6 · Select · 🔍, ô lưới vuông, “×2” thay ✓ khi dùng ở 2 chỗ, “Manage Access…”. Clip đang chọn có tay nắm mép 12pt #57BFD1; vạch phụ đề / voice trên dải tổng quan #5E9CFF (cyan chỉ ở khối đang chọn). Trước/sau trên iPhone, Duo: bật = nền trắng glyph đen. Thêm tỉ lệ: 4:3 khung 402×302 + panel 360 không lát timeline (tổng quan 402–430); 21:9 khung 402×172 + lát 150 (272–422) + panel 340 — P11, P12. Vuốt grabber xuống thu panel chọn còn 78 (grabber + hàng lệnh, 712–790), timeline lộ ra có tay nắm mép (P9_Collapsed); 4:3 thu y như vậy, không có lát. Không có lát timeline (1:1 · 4:5 · 9:16 · 4:3) thì đích thả khi kéo media là dải tổng quan (MP_P_Drag916). Bấm Export mở panel Export Video chưa xuất — Sẵn sàng là F8_P_ExportPresets. THEO PLAN 3/10: Sẵn sàng xuất = các board F8_* (dòng LUT “1 look is missing its LUT and exports without it.” ngay trên nút xuất); IL5_Export · IP_Export · DI6_Export · DC_Export = Đang xuất (preset mờ, “Exporting… 62%”, Cancel Export ở chỗ nút xuất, ✕ ẩn); P7_Export giữ. Clip gọi theo số trên timeline (“Clip 2”, “Photo 4”), không tên địa điểm. Back không hỏi “Discard this video?” — nháp tự lưu (FS-12.18).",
-      "w": 460,
-      "x": 15946,
-      "y": 4834
-    }
+  "F2_P_BeatDuration.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Duration bắt nhịp (ảnh) — Photo 4 3.30s, slider có vạch nhịp, kết ở beat 28 · 0:17.50 — khớp code 4/10",
+   "w": 402,
+   "x": 4338,
+   "y": 4834
   },
-  "order": [
-    "PH_Onboarding.dc.html",
-    "Main.dc.html",
-    "PH_LibrarySelect.dc.html",
-    "PH_Search.dc.html",
-    "PH_AdvancedSearch.dc.html",
-    "PH_Viewer.dc.html",
-    "PH40_ViewerCloudDownload.dc.html",
-    "PH_Metadata.dc.html",
-    "PH_Compare.dc.html",
-    "PH_VideoTrim.dc.html",
-    "PH_Share.dc.html",
-    "PH_Collections.dc.html",
-    "PH_Backup.dc.html",
-    "PH_BackupNew.dc.html",
-    "PH_BackupFolder.dc.html",
-    "PH_BackupOrganize.dc.html",
-    "PH_BackupCustomDate.dc.html",
-    "PH_BackupRunning.dc.html",
-    "PH_AlbumDetail.dc.html",
-    "PH_SmartAlbum.dc.html",
-    "PH_SmartAlbumEditor.dc.html",
-    "PH_OnThisDay.dc.html",
-    "PH_Duplicates.dc.html",
-    "PH_DuplicatesLargeGroup.dc.html",
-    "PH_DuplicatesCompare.dc.html",
-    "PH_DuplicatesPinched.dc.html",
-    "PH_BurstFrames.dc.html",
-    "PH_Creations.dc.html",
-    "PH_Collage.dc.html",
-    "PH_CollageExport.dc.html",
-    "PH_Compress.dc.html",
-    "PH_Statistics.dc.html",
-    "PH_ChartEditor.dc.html",
-    "PH_DateRange.dc.html",
-    "PH_Settings.dc.html",
-    "PH_WidgetSettings.dc.html",
-    "PH_CompressionPresets.dc.html",
-    "PH_CameraDatabase.dc.html",
-    "PH_Support.dc.html",
-    "PH_SupportThread.dc.html",
-    "PH_ServerList.dc.html",
-    "PH_ServerForm.dc.html",
-    "PH_ServerBrowser.dc.html",
-    "PH_ServerUpload.dc.html",
-    "PH_UploadedToServer.dc.html",
-    "PH_FocusStack.dc.html",
-    "PH_StackExposures.dc.html",
-    "PH_Panorama.dc.html",
-    "PH_VideoProjects.dc.html",
-    "PH_VideoProjectsDelete.dc.html",
-    "PH01_Edit.dc.html",
-    "PH02_EditCurve.dc.html",
-    "PH03_Curve.dc.html",
-    "PH04_Presets.dc.html",
-    "PH05_MyLooks.dc.html",
-    "PH06_LUTs.dc.html",
-    "PH07_Transform.dc.html",
-    "PH08_TransformIndex.dc.html",
-    "PH09_Upright.dc.html",
-    "PH10_Geometry.dc.html",
-    "PH11_MaskChooser.dc.html",
-    "PH12_MaskBrush.dc.html",
-    "PH13_Heal.dc.html",
-    "PH14_MarkupChooser.dc.html",
-    "PH15_MarkupText.dc.html",
-    "PH16_Filmstrip.dc.html",
-    "PH17_SyncMenu.dc.html",
-    "PH18_SaveSheet.dc.html",
-    "PH19_HDR.dc.html",
-    "PH20_HDRSaveAs.dc.html",
-    "PH21_EditWhich.dc.html",
-    "PH22_RawAlert.dc.html",
-    "PH23_Cull.dc.html",
-    "PH24_CullSummary.dc.html",
-    "PH25_GridRatings.dc.html",
-    "PH26_GridRejected.dc.html",
-    "PH27_ViewerRating.dc.html",
-    "PH28_ViewerMenu.dc.html",
-    "PH29_InfoKeywords.dc.html",
-    "PH30_BulkKeywords.dc.html",
-    "PH31_Watermark.dc.html",
-    "PH32_ResizeWatermark.dc.html",
-    "PH33_Export.dc.html",
-    "PH34_FileName.dc.html",
-    "PH35_ExportRunning.dc.html",
-    "PH36_ExportSummary.dc.html",
-    "PH37_ShareWatermark.dc.html",
-    "PH38_EditFileCopy.dc.html",
-    "PH39_ViewerMenuSources.dc.html",
-    "P1_Main.dc.html",
-    "P2_ClipSelected.dc.html",
-    "P3_TextOverlay.dc.html",
-    "P4_MusicChooser.dc.html",
-    "P5_MusicTrack.dc.html",
-    "P6_RatioBackground.dc.html",
-    "P7_Export.dc.html",
-    "F1_P_MultiSelect.dc.html",
-    "F2_P_BeatDetect.dc.html",
-    "F2_P_BeatDuration.dc.html",
-    "F3_P_Ducking.dc.html",
-    "F4_P_Captions.dc.html",
-    "F5_P_Looks.dc.html",
-    "F8_P_ExportPresets.dc.html",
-    "F6_P_PreciseTrim.dc.html",
-    "F6_P_FineScrub.dc.html",
-    "F6_P_Keyboard.dc.html",
-    "F7_P_BeforeAfter.dc.html",
-    "P8_Main916.dc.html",
-    "P9_ClipSelected916.dc.html",
-    "P10_TextOverlay916.dc.html",
-    "ES_P_ExportSettings.dc.html",
-    "MP_P_MediaPicker.dc.html",
-    "MP_P_Drag.dc.html",
-    "MP_P_InVideo.dc.html",
-    "MP_P_Limited.dc.html",
-    "F5_P_ClipLook.dc.html",
-    "P11_Ratio43.dc.html",
-    "P11_Ratio43_Selected.dc.html",
-    "P12_Ratio219.dc.html",
-    "P12_Ratio219_Selected.dc.html",
-    "P9_Collapsed.dc.html",
-    "MP_P_Drag916.dc.html",
-    "PH_Sources.dc.html",
-    "PH_AddSource.dc.html",
-    "PH_SettingsSources.dc.html",
-    "PH_Ingest.dc.html",
-    "PH_IngestProgress.dc.html",
-    "PH_Hidden.dc.html",
-    "PH_DeletePermanent.dc.html",
-    "PH_DeleteCopies.dc.html",
-    "PH_EmptyLibrary.dc.html",
-    "PH_LibraryMore.dc.html",
-    "PH_ViewerMore.dc.html",
-    "F5_P_SaveLook.dc.html",
-    "TX_P_TextPanel.dc.html",
-    "PH_SettingsAI.dc.html",
-    "PH_SettingsAIProvider.dc.html",
-    "PH_Utilities.dc.html",
-    "PH_KeepOnIPhone.dc.html",
-    "PH_OnThisIPhone.dc.html"
-  ],
-  "pages": [],
-  "title": "ShotDex · iPhone",
-  "v": 3
+  "F3_P_Ducking.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Tự hạ nhạc — đồ thị 370×78; Ducking bật ở hàng lệnh đầu panel; Amount −12 dB · 0.3 / 0.8s; đáy ✕ — khớp code 4/10",
+   "w": 402,
+   "x": 4820,
+   "y": 4834
+  },
+  "F4_P_Captions.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Phụ đề tự động — 58% trên máy; hàng lệnh phụ đề đầu panel; vạch phụ đề trên dải tổng quan #5E9CFF — khớp code 4/10",
+   "w": 402,
+   "x": 5302,
+   "y": 4834
+  },
+  "F5_P_ClipLook.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Look riêng cho clip (iPhone) — ô Look trước Delete; LOOK FOR THIS CLIP + Use Video Look, This Clip — khớp code 4/10",
+   "w": 402,
+   "x": 12532,
+   "y": 4834
+  },
+  "F5_P_Looks.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Look (cả video) — chip Filter · Adjust · Color như editor ảnh; Filter: Presets / My Looks / LUTs — khớp code 4/10",
+   "w": 402,
+   "x": 5784,
+   "y": 4834
+  },
+  "F5_P_SaveLook.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Save as Look… — look + Adjust/Color của cả video thành My Look; hộp Save Look của editor, dòng \"Not saved:\" kể phần bị bỏ (FS-12.06c §6b)",
+   "w": 402,
+   "x": 15906,
+   "y": 4834
+  },
+  "F6_P_FineScrub.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Scrub từng khung — pinch timeline tới 360 pt/s (1 khung = 12 pt); gợi ý “pinch in to return” — khớp code 4/10",
+   "w": 402,
+   "x": 6748,
+   "y": 4834
+  },
+  "F6_P_Keyboard.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Phím tắt khi cắm bàn phím — danh sách 12 dòng (Space, J/K/L, ⇧←/→, ⌘B, I/O, ⌥[ ⌥] …) trong vùng panel — khớp code 4/10",
+   "w": 402,
+   "x": 7230,
+   "y": 4834
+  },
+  "F6_P_PreciseTrim.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Trim từng khung — kính lúp Ø124 trên ngón; nút ‹ −1 khung · 0:09.07 · +1 khung › nổi trên timeline — khớp code 4/10",
+   "w": 402,
+   "x": 6266,
+   "y": 4834
+  },
+  "F7_P_BeforeAfter.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Trước / sau — Split trên khung 402×226; nút bật = nền trắng glyph đen; nhãn Before / After ở y 70 — khớp code 4/10",
+   "w": 402,
+   "x": 7712,
+   "y": 4834
+  },
+  "F8_P_ExportPresets.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Preset xuất (Sẵn sàng) — 6 dòng (Reels ~30 MB · 4K ~72 …); dòng LUT ngay trên nút xuất — khớp code 4/10",
+   "w": 402,
+   "x": 8194,
+   "y": 4834
+  },
+  "MP_P_Drag.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Media · đang kéo — tab … · Select · 🔍; vạch giữa clip 2 và 3 trên lát timeline + “+ 0:09.2” — khớp code 4/10",
+   "w": 402,
+   "x": 11086,
+   "y": 4834
+  },
+  "MP_P_Drag916.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Media · kéo vào project 9:16 — đích là dải tổng quan: vạch giữa clip 2 và 3 + “+ 0:09.2” — khớp code 4/10",
+   "w": 402,
+   "x": 15424,
+   "y": 4834
+  },
+  "MP_P_InVideo.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Media · In Video — tab … · Select · 🔍; mục đang dùng theo thứ tự timeline, có khoảng giờ — khớp code 4/10",
+   "w": 402,
+   "x": 11568,
+   "y": 4834
+  },
+  "MP_P_Limited.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Media · quyền Ảnh giới hạn — 12 mục, “Manage Access…” đầu Recents; tab … · Select · 🔍 — khớp code 4/10",
+   "w": 402,
+   "x": 12050,
+   "y": 4834
+  },
+  "MP_P_MediaPicker.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Media — panel 340, Recents · Albums · In Video · 6 · Select (bật) · Add (3); ô vuông, “×2” = 2 chỗ — khớp code 4/10",
+   "w": 402,
+   "x": 10604,
+   "y": 4834
+  },
+  "Main.dc.html": {
+   "h": 874,
+   "title": "iPhone · Library: lưới 3 cột kèm badge, ngày ở giữa toolbar, tab bar kính nổi",
+   "w": 402,
+   "x": 482,
+   "y": 560
+  },
+  "P10_TextOverlay916.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "9:16 · Sửa chữ — panel 278: hàng lệnh chữ trên cùng, thông số cuộn dưới; đáy ✕ · GOLDEN HOUR · ✓ — khớp code 4/10",
+   "w": 402,
+   "x": 9640,
+   "y": 4834
+  },
+  "P11_Ratio43.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Project 4:3 — khung 402×302 ở y 60, transport y 362, timeline 402–790 — khớp code 4/10",
+   "w": 402,
+   "x": 13014,
+   "y": 4834
+  },
+  "P11_Ratio43_Selected.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "4:3 · Chọn clip — không lát timeline: tổng quan 402–430, panel 360 ở 430–790; khung không đổi — khớp code 4/10",
+   "w": 402,
+   "x": 13496,
+   "y": 4834
+  },
+  "P12_Ratio219.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Project 21:9 — khung 402×172 ở y 60, transport y 232, timeline 272–790 — khớp code 4/10",
+   "w": 402,
+   "x": 13978,
+   "y": 4834
+  },
+  "P12_Ratio219_Selected.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "21:9 · Chọn clip — lát 272–422 (thước 34 + cửa sổ 116), tổng quan 422–450, panel 340 — khớp code 4/10",
+   "w": 402,
+   "x": 14460,
+   "y": 4834
+  },
+  "P1_Main.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Màn chính (16:9) — khung 402×226 ở y 60; hàng đáy 5 công cụ thêm vào timeline, ô đều — khớp code 4/10",
+   "w": 402,
+   "x": 0,
+   "y": 4834
+  },
+  "P2_ClipSelected.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Chọn clip — hàng lệnh Split … Look · Delete; video không Duration; tay nắm mép clip — khớp code 4/10",
+   "w": 402,
+   "x": 482,
+   "y": 4834
+  },
+  "P3_TextOverlay.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Sửa chữ — đáy ✕ · GOLDEN HOUR · ✓; hàng đầu panel: Edit · Font · Color · Style · Align — khớp code 4/10",
+   "w": 402,
+   "x": 964,
+   "y": 4834
+  },
+  "P4_MusicChooser.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Music — “Video sound” (âm gốc cả project) trên cùng, rồi Add Music from Files… + My Music — khớp code 4/10",
+   "w": 402,
+   "x": 1446,
+   "y": 4834
+  },
+  "P5_MusicTrack.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Băng nhạc — đáy ✕ · Morning Drive · ✓; hàng đầu panel: Beats · Ducking · Replace… — khớp code 4/10",
+   "w": 402,
+   "x": 1928,
+   "y": 4834
+  },
+  "P6_RatioBackground.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Video Settings · Fit — Ratio 9:16 rồi Background (Blur / Color / Image); Output ~30 MB — khớp code 4/10",
+   "w": 402,
+   "x": 2410,
+   "y": 4834
+  },
+  "P7_Export.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Export — đang xuất 62% trong panel 340; không hàng Quality, tóm tắt mở Video Settings — khớp code 4/10",
+   "w": 402,
+   "x": 2892,
+   "y": 4834
+  },
+  "P8_Main916.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Project 9:16 — ô xem trước 216×384 ở y 60, timeline 306; 5 công cụ thêm vào timeline ở đáy — khớp code 4/10",
+   "w": 402,
+   "x": 8676,
+   "y": 4834
+  },
+  "P9_ClipSelected916.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "9:16 · Chọn clip — panel 278: hàng lệnh rồi Speed · Volume (video không Duration); đáy ✕ · Clip 2 · ✓ — khớp code 4/10",
+   "w": 402,
+   "x": 9158,
+   "y": 4834
+  },
+  "P9_Collapsed.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "9:16 · Panel thu gọn — panel 78 (712–790), timeline 484–712 có tay nắm clip 2, khung không đổi — khớp code 4/10",
+   "w": 402,
+   "x": 14942,
+   "y": 4834
+  },
+  "PH01_Edit.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Edit — LIGHT ⌄ dính đầu panel 344, 6 công cụ ở đáy; đề xuất 30/9: bỏ ⋯, giữ lâu Undo mở History",
+   "w": 402,
+   "x": 460,
+   "y": 2534
+  },
+  "PH02_EditCurve.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Edit cuộn tới CURVE — hàng Curve (4 chấm kênh + nút Edit Curve), rồi COLOR với track màu Temp/Tint/Vibrance",
+   "w": 402,
+   "x": 942,
+   "y": 2534
+  },
+  "PH03_Curve.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Curve — Edit Curve mở đồ thị 219 TRONG panel (không đè ảnh), cột phải RGB · Red · Green · Blue · Reset",
+   "w": 402,
+   "x": 1424,
+   "y": 2534
+  },
+  "PH04_Presets.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Presets — 3 tab Presets · My Looks · LUTs, lưới 4 cột ô 87×62 (20 look có sẵn), không ✕/✓, chạm là áp",
+   "w": 402,
+   "x": 1906,
+   "y": 2534
+  },
+  "PH05_MyLooks.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Presets › My Looks — Save Current (mờ khi chưa sửa) và Import XMP Preset đứng đầu; look nhập ghi “Imported”",
+   "w": 402,
+   "x": 2388,
+   "y": 2534
+  },
+  "PH06_LUTs.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Presets › LUTs — Import .cube là ô đầu, LUT đã nhập nằm sau",
+   "w": 402,
+   "x": 2870,
+   "y": 2534
+  },
+  "PH07_Transform.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Crop — đề xuất: thước trên ảnh = góc xoay (đang −3.2°); panel bỏ slider Angle, Upright thêm một hàng",
+   "w": 402,
+   "x": 3352,
+   "y": 2534
+  },
+  "PH08_TransformIndex.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Crop — chạm “CROP ⌃” mở mục lục 4 nhóm, ✓ cam đánh dấu nhóm đang ở, chạm là nhảy",
+   "w": 402,
+   "x": 3834,
+   "y": 2534
+  },
+  "PH09_Upright.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Transform › Upright — 6 chip 3 + 3, Geometry dưới; đề xuất: gợi ý lần đầu trên ảnh, thước + khung cắt",
+   "w": 402,
+   "x": 4316,
+   "y": 2534
+  },
+  "PH10_Geometry.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Transform › Geometry — Vertical · Horizontal · Rotate · Aspect · Scale · Offset X/Y, mỗi slider một hàng 40",
+   "w": 402,
+   "x": 4798,
+   "y": 2534
+  },
+  "PH11_MaskChooser.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Mask chưa có gì — lưới 4 cột 14 loại vùng (ô 87×60); Face Skin · Eyes · Lips mờ khi ảnh không có mặt",
+   "w": 402,
+   "x": 5280,
+   "y": 2534
+  },
+  "PH12_MaskBrush.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Mask › Brush — “Mask 1 ⌄ · Mask Overlay · + · ⋯”, hàng cọ ghim Vẽ/Xoá · Size · Feather · Flow, rồi slider",
+   "w": 402,
+   "x": 5762,
+   "y": 2534
+  },
+  "PH13_Heal.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Heal — Heal · Clone · Red Eye (không Remove), Size · Feather · Opacity, vết chọn màu cam, New Source / Delete",
+   "w": 402,
+   "x": 6244,
+   "y": 2534
+  },
+  "PH14_MarkupChooser.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Markup chưa có lớp — “Add a layer”: lưới 4 cột 11 loại lớp (Text … Magnifier), chạm là thêm",
+   "w": 402,
+   "x": 6726,
+   "y": 2534
+  },
+  "PH15_MarkupText.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Markup › Text — Font · Color · Content; đề xuất 30/9: một hàng B · I · U | căn lề | Size − 200 px +, bỏ slider",
+   "w": 402,
+   "x": 7208,
+   "y": 2534
+  },
+  "PH16_Filmstrip.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Nhiều ảnh — filmstrip 56 (ô 44, bo 6, viền trắng) trên panel, Sync + “1 / 5” ở cuối; panel giữ 344",
+   "w": 402,
+   "x": 7690,
+   "y": 2534
+  },
+  "PH17_SyncMenu.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Nhiều ảnh › Sync — menu tại chỗ: Sync Look · Sync Everything · Apply Previous · Auto Sync (không ở ⋯)",
+   "w": 402,
+   "x": 8172,
+   "y": 2534
+  },
+  "PH18_SaveSheet.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Save — “Save Edit” theo code 1/10: JPEG | HEIC; SAVE COPY: menu Metadata 3 mức + Save Copy; Save Changes",
+   "w": 402,
+   "x": 8654,
+   "y": 2534
+  },
+  "PH19_HDR.dc.html": {
+   "h": 874,
+   "title": "iPhone · HDR — Combine Photos ▸ HDR: câu giải thích · Deghost Off/Low/Medium/High (mặc định Medium) · Strength 60 · dòng",
+   "w": 402,
+   "x": 9136,
+   "y": 2534
+  },
+  "PH20_HDRSaveAs.dc.html": {
+   "h": 874,
+   "title": "iPhone · HDR › Save — alert Save As: JPEG · HEIC · Cancel (máy không ghi HEIC: chỉ JPEG + câu báo)",
+   "w": 402,
+   "x": 9618,
+   "y": 2534
+  },
+  "PH21_EditWhich.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · RAW + JPEG — action sheet “Edit which version?”, Edit RAW mờ + “iOS can't read this RAW yet”; theo code 1/10",
+   "w": 402,
+   "x": 10100,
+   "y": 2534
+  },
+  "PH22_RawAlert.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Edit một RAW iOS chưa đọc được — alert “Can't Edit This RAW”, tên máy + bản iOS, nút OK; theo code 1/10",
+   "w": 402,
+   "x": 10582,
+   "y": 2534
+  },
+  "PH23_Cull.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Cull — thanh 52 ✕ · 37 / 240 · Undo, hàng Reject ★×5 Pick 340, filmstrip 56 — khớp code 3/10",
+   "w": 402,
+   "x": 11064,
+   "y": 2534
+  },
+  "PH24_CullSummary.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Cull — thẻ cuối lượt đủ 3 nút; Delete ẩn khi 0 Rejected, Review ẩn khi 0 unflagged — khớp code 3/10",
+   "w": 402,
+   "x": 11546,
+   "y": 2534
+  },
+  "PH25_GridRatings.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Lưới — glyph dưới-trái: cờ · favorite · ★N (10pt); ô Rejected mờ 45% — khớp code 3/10",
+   "w": 402,
+   "x": 12028,
+   "y": 2534
+  },
+  "PH26_GridRejected.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Lọc Rejected — viên đỏ Delete 120 (32pt) ghim phải, cạnh Clear — khớp code 3/10",
+   "w": 402,
+   "x": 12510,
+   "y": 2534
+  },
+  "PH27_ViewerRating.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Viewer — chrome như code; dòng 2 bảng thông tin nối thêm ★★★★☆ · Picked — khớp code 3/10",
+   "w": 402,
+   "x": 12992,
+   "y": 2534
+  },
+  "PH28_ViewerMenu.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Viewer ⋯ (giữa thanh dưới) — nhóm đầu Rating ▸ · Flag ▸ · Cull From Here; Rating mở — khớp code 3/10",
+   "w": 402,
+   "x": 13474,
+   "y": 2534
+  },
+  "PH29_InfoKeywords.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Photo Info — Caption + keyword (capsule ×, + Add Keyword) trên Location — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 13956,
+   "y": 2534
+  },
+  "PH30_BulkKeywords.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 14438,
+   "y": 2534
+  },
+  "PH31_Watermark.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Watermark — xem trước 320, chip 48, lưới 3×3, Size px, Margin, Opacity — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 14920,
+   "y": 2534
+  },
+  "PH32_ResizeWatermark.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Resize — hàng Watermark 44pt giữa Metadata và Delete Originals (tắt, mờ) — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 15402,
+   "y": 2534
+  },
+  "PH33_Export.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 15884,
+   "y": 2534
+  },
+  "PH34_FileName.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 16366,
+   "y": 2534
+  },
+  "PH35_ExportRunning.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Export đang chạy — 212 of 500, GB + thời gian còn lại, bước từng file — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 16848,
+   "y": 2534
+  },
+  "PH36_ExportSummary.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Export xong có lỗi — Not Exported kèm lý do, Retry Failed / Done — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 17330,
+   "y": 2534
+  },
+  "PH37_ShareWatermark.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Share — đầu sheet Watermark: © Tuan; dòng Share Without Watermark — đề xuất 2/10, code chưa có",
+   "w": 402,
+   "x": 17812,
+   "y": 2534
+  },
+  "PH38_EditFileCopy.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Edit ảnh file (T7, thư mục) — tự lưu: chỗ Save là ✓ xám \"Edited · Saved\", menu Revert to Original; không Done (FS-19 AC-50)",
+   "w": 402,
+   "x": 18274,
+   "y": 2534
+  },
+  "PH39_ViewerMenuSources.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Viewer ⋯ — ảnh ở Photos và NAS/thư mục: hai dòng Hide in Photos · Hide in ShotDex Only thay Hide (FS-19 AC-73); ảnh một nơi giữ Hide như PH28",
+   "w": 402,
+   "x": 18736,
+   "y": 2534
+  },
+  "PH40_ViewerCloudDownload.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Viewer — mở file chỉ có trên iCloud Drive (như code): trang đen, chỉ nút Close, giữa: glyph, tên file, \"Downloading from iCloud Drive…\", thanh trắng 220, \"29 kB of 58 kB\", Cancel (FS-19.01b §4, AC-15/16). Cancel → \"Only in iCloud Drive\" + nút Download; tải xong → viewer thường (capsule info + toolbar)",
+   "w": 402,
+   "x": 2892,
+   "y": 560
+  },
+  "PH_AddSource.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sheet Add a Source: Photos Library · Folder or Drive · Server, dòng thẻ nhớ, Choose Folder…",
+   "w": 402,
+   "x": 23136,
+   "y": 560
+  },
+  "PH_AdvancedSearch.dc.html": {
+   "h": 874,
+   "title": "iPhone · Advanced Search: sheet large, Media Type, Match, 3 điều kiện, số ảnh khớp",
+   "w": 402,
+   "x": 1928,
+   "y": 560
+  },
+  "PH_AlbumDetail.dc.html": {
+   "h": 874,
+   "title": "iPhone · Album Iceland 2026: lưới 3 cột, tên + ngày, nút Filter và Select",
+   "w": 402,
+   "x": 5784,
+   "y": 560
+  },
+  "PH_Backup.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 1/6 · danh sách job (Utilities › Backup): thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume, xong → Up to Date; + = 2/6 — đề xuất 12/10, code chưa có",
+   "w": 402,
+   "x": 28482,
+   "y": 560
+  },
+  "PH_BackupCustomDate.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 5/6 · Day › Custom…: cây Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh; ký tự NAS cấm bị chặn",
+   "w": 402,
+   "x": 30330,
+   "y": 560
+  },
+  "PH_BackupFolder.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 3/6 · Choose Folder (Folder › Choose… ở 2/6): ‹ lên folder cha (mờ ở gốc), ✕ về form không đổi gì; ⋯ New Folder · Rename Folder; chạm giữ folder: Rename; ảnh mờ",
+   "w": 402,
+   "x": 29406,
+   "y": 560
+  },
+  "PH_BackupNew.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 2/6 · New Backup: Source, Destination, dòng Organize (mở 4/6), What to Copy, When",
+   "w": 402,
+   "x": 28944,
+   "y": 560
+  },
+  "PH_BackupOrganize.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 4/6 · Organize: cây Preview; Folders (Levels, Year, Month, Day — menu ví dụ, Custom… mở 5/6); Photos and Videos (Together · Apart at the Top · Apart in Each Year/Month/Day); File Names; trùng tên → Keep Both",
+   "w": 402,
+   "x": 29868,
+   "y": 560
+  },
+  "PH_BackupRunning.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Backup 6/6 · job đang chạy (chạm thẻ ở 1/6): %, Pause/Stop, file đang tải iCloud / đang up, tổng, file lỗi; resume theo sổ từng file",
+   "w": 402,
+   "x": 30792,
+   "y": 560
+  },
+  "PH_BurstFrames.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Duplicates 5/5 · Màn chọn khung dùng chung (§8, tầng D): khung lớn 536pt, dải phim 56pt (chấm đỏ = khung yếu, tick = đã chọn), Zoom to face, nút chọn 44 góc dưới phải, Done · Keep 3, remove 21; không có X, vuốt xuống để đóng. Dùng cho Burst, focus stack, viewer ⋯ Choose Frames…",
+   "w": 402,
+   "x": 11086,
+   "y": 560
+  },
+  "PH_CameraDatabase.dc.html": {
+   "h": 874,
+   "title": "iPhone · Unknown Cameras: máy ảnh chưa có trong sensor database, chạm để chọn sensor",
+   "w": 402,
+   "x": 16388,
+   "y": 560
+  },
+  "PH_ChartEditor.dc.html": {
+   "h": 874,
+   "title": "iPhone · Edit Chart: X = Year, chọn Columns; Donut/Bars bị tắt, xem trước ngay dưới",
+   "w": 402,
+   "x": 13978,
+   "y": 560
+  },
+  "PH_Collage.dc.html": {
+   "h": 874,
+   "title": "iPhone · Collage: bỏ nhãn đếm, Export bên phải Dynamic Island",
+   "w": 402,
+   "x": 12050,
+   "y": 560
+  },
+  "PH_CollageExport.dc.html": {
+   "h": 874,
+   "title": "iPhone · Xuất collage: Back và Save ngang Dynamic Island",
+   "w": 402,
+   "x": 12532,
+   "y": 560
+  },
+  "PH_Collections.dc.html": {
+   "h": 874,
+   "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10) · 20/10: Utilities tách thành tab riêng, Sources ngay dưới Media Types; tab bar Library · Collections · Utilities",
+   "w": 402,
+   "x": 5302,
+   "y": 560
+  },
+  "PH_Compare.dc.html": {
+   "h": 874,
+   "title": "iPhone · Compare (chọn ≥2 ảnh): màn A/B của Duplicates, Keep | Delete từng ảnh, Delete N trên thanh trên (FS-01.08, 2026-10-24)",
+   "w": 402,
+   "x": 3856,
+   "y": 560
+  },
+  "PH_Compress.dc.html": {
+   "h": 874,
+   "title": "iPhone · Resize: Cancel và Resize ngang Dynamic Island, bỏ tiêu đề",
+   "w": 402,
+   "x": 13014,
+   "y": 560
+  },
+  "PH_CompressionPresets.dc.html": {
+   "h": 874,
+   "title": "iPhone · Resize Presets: 4 preset có sẵn, 3 preset tuỳ chỉnh, nút Add Preset",
+   "w": 402,
+   "x": 15906,
+   "y": 560
+  },
+  "PH_Creations.dc.html": {
+   "h": 874,
+   "title": "iPhone · Collages: thẻ một cột, cover collage 64pt, ngày giờ + số ảnh, nút +",
+   "w": 402,
+   "x": 11568,
+   "y": 560
+  },
+  "PH_DateRange.dc.html": {
+   "h": 874,
+   "title": "iPhone · sheet Date Range chồng lên Edit Chart: lịch tháng, chọn 23/8–12/9, Cancel / Apply",
+   "w": 402,
+   "x": 14460,
+   "y": 560
+  },
+  "PH_DeleteCopies.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sheet Move 1 Photo?: 4 bản sao có ô đánh dấu, chỉ bật bản đang mở",
+   "w": 402,
+   "x": 26028,
+   "y": 560
+  },
+  "PH_DeletePermanent.dc.html": {
+   "h": 874,
+   "title": "iPhone · Hộp đỏ thứ hai: Delete 3 Photos Permanently? (T7 không có Thùng rác)",
+   "w": 402,
+   "x": 25546,
+   "y": 560
+  },
+  "PH_Duplicates.dc.html": {
+   "h": 874,
+   "title": "iPhone · Duplicates 1/5 · Mở ra là danh sách ngay, không màn tóm tắt (v3 §7.2–7.4, 06b §3). Ô đầu: dải Quick clean \"212 copies · 1.2 GB\" + Review… (nút accent duy nhất; mở sheet xem trước, Select N photos chỉ đánh dấu; dải ẩn khi hết nhóm bản sao chưa quyết). hàng lọc theo loại Exact · Similar · Burst (luôn chọn đúng một, không có All), thanh trên chỉ có hai nút: sort ⇅ (Easiest first · Most space · Newest · Oldest) và quét lại ↻ (Check Again); không ⋯, không Ignored, không Clear Selection, không \"~GB to free\" (22/10). Thẻ (thẻ chỉ có ảnh, luôn hiện đủ ảnh): chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh); thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
+   "w": 402,
+   "x": 8676,
+   "y": 560
+  },
+  "PH_DuplicatesCompare.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Duplicates 4/5 · So sánh nhóm (§7.6, tầng D): chạm ảnh trên thẻ mở ở đây, ảnh vừa chạm ở trên; 2 ảnh xếp chồng, pinch một ảnh là cả hai zoom cùng chỗ; vuốt ngang một ảnh để thay ảnh khác của nhóm; mỗi ảnh chỉ một nút thùng rác (= dấu của ô, viền đỏ); X hoặc vuốt xuống để đóng. Không cờ, không sao.",
+   "w": 402,
+   "x": 10122,
+   "y": 560
+  },
+  "PH_DuplicatesLargeGroup.dc.html": {
+   "h": 874,
+   "title": "iPhone · Duplicates 2/5 · Burst 51 ảnh, thẻ chỉ có ảnh, luôn hiện đủ ảnh (bản giữ 2×2 trước, rồi theo thứ tự chụp), không còn chân thẻ: chạm ảnh mở Choose frames, nhấn giữ ảnh có Keep all · Not duplicates. Focus stack cùng dáng: \"Focus stack? · 24 frames\", Focus Stack · Not duplicates",
+   "w": 402,
+   "x": 9158,
+   "y": 560
+  },
+  "PH_DuplicatesPinched.dc.html": {
+   "h": 874,
+   "title": "iPhone · Duplicates 3/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
+   "w": 402,
+   "x": 9640,
+   "y": 560
+  },
+  "PH_EmptyLibrary.dc.html": {
+   "h": 874,
+   "title": "iPhone · Thư viện trống: 3 thẻ Photos Library / Folder or Drive / Server, dòng thẻ nhớ",
+   "w": 402,
+   "x": 26510,
+   "y": 560
+  },
+  "PH_FocusStack.dc.html": {
+   "h": 874,
+   "title": "iPhone · Focus Stack: Cancel và Save ngang Dynamic Island",
+   "w": 402,
+   "x": 20244,
+   "y": 560
+  },
+  "PH_Hidden.dc.html": {
+   "h": 874,
+   "title": "iPhone · Collections › Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos",
+   "w": 402,
+   "x": 25064,
+   "y": 560
+  },
+  "PH_Ingest.dc.html": {
+   "h": 874,
+   "title": "iPhone · Nhập từ thẻ: New 812, lưới 4 cột có tick, sheet đích/tên/metadata, Import 811 Photos",
+   "w": 402,
+   "x": 24100,
+   "y": 560
+  },
+  "PH_IngestProgress.dc.html": {
+   "h": 874,
+   "title": "iPhone · Đang nhập: Copy · Verify · Backup, Pause, Stop Import…",
+   "w": 402,
+   "x": 24582,
+   "y": 560
+  },
+  "PH_KeepOnIPhone.dc.html": {
+   "h": 874,
+   "title": "iPhone · Keep on This iPhone (1/2): sheet từ thanh chọn ⋯, menu lọc ≡ của album, ⋯ viewer — Viewing Copies (mặc định) · Originals kèm dung lượng, Keep New Photos Added Later (album), chú thích dung lượng trống trên nút Keep",
+   "w": 402,
+   "x": 37510,
+   "y": 560
+  },
+  "PH_LibraryMore.dc.html": {
+   "h": 874,
+   "title": "iPhone · Menu Filter and sort thêm nhóm View: Grid / List, Go to Date…",
+   "w": 402,
+   "x": 26992,
+   "y": 560
+  },
+  "PH_LibrarySelect.dc.html": {
+   "h": 874,
+   "title": "iPhone · Chọn ảnh: 5 ảnh badge amber, menu ⋯ mở (có Print…), thanh Share/pill/Delete",
+   "w": 402,
+   "x": 964,
+   "y": 560
+  },
+  "PH_Metadata.dc.html": {
+   "h": 874,
+   "title": "iPhone · Photo Info (sheet large, kéo lên): bản đồ, Camera & Lens, Exposure, 35mm eq.",
+   "w": 402,
+   "x": 3374,
+   "y": 560
+  },
+  "PH_OnThisDay.dc.html": {
+   "h": 874,
+   "title": "iPhone · On This Day (October 2): nhóm theo năm, header kính dính, mới nhất ở đáy",
+   "w": 402,
+   "x": 7230,
+   "y": 560
+  },
+  "PH_OnThisIPhone.dc.html": {
+   "h": 874,
+   "title": "iPhone · Utilities › On This iPhone (2/2): một thẻ dung lượng + đang tải/Pause, album giữ cả dạng chip (↓ = giữ cả ảnh mới), lưới ảnh/video đã ở trên máy; Select → Remove from iPhone; ⋯ Pause/Remove All",
+   "w": 402,
+   "x": 37992,
+   "y": 560
+  },
+  "PH_Onboarding.dc.html": {
+   "h": 874,
+   "title": "iPhone · Onboarding: bốn lời hứa (Your photos stay where they are), Next: thêm nguồn, Continue ghim đáy",
+   "w": 402,
+   "x": 0,
+   "y": 560
+  },
+  "PH_Panorama.dc.html": {
+   "h": 874,
+   "title": "iPhone · Panorama: Cancel và Save ngang Dynamic Island",
+   "w": 402,
+   "x": 21208,
+   "y": 560
+  },
+  "PH_Search.dc.html": {
+   "h": 874,
+   "title": "iPhone · Search “Sony 85mm”: Recents, capsule diễn giải, ô tìm trên bàn phím",
+   "w": 402,
+   "x": 1446,
+   "y": 560
+  },
+  "PH_ServerBrowser.dc.html": {
+   "h": 874,
+   "title": "iPhone · NAS Home › Kyoto là nguồn được index: không còn In Library/Import, ⋯ có Save to Photos, Hide thay Delete",
+   "w": 402,
+   "x": 18798,
+   "y": 560
+  },
+  "PH_ServerForm.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sheet Add Connection: máy tìm thấy trong mạng (laptop/NAS/Mac/PC) + form SMB",
+   "w": 402,
+   "x": 18316,
+   "y": 560
+  },
+  "PH_ServerList.dc.html": {
+   "h": 874,
+   "title": "iPhone · Cài đặt › File Servers: danh sách kết nối đã lưu (tên + thư mục), nút + Add Connection",
+   "w": 402,
+   "x": 17834,
+   "y": 560
+  },
+  "PH_ServerUpload.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sheet Upload to Server (bước chuẩn bị): kết nối, thư mục, Date Folders, loại file",
+   "w": 402,
+   "x": 19280,
+   "y": 560
+  },
+  "PH_Settings.dc.html": {
+   "h": 874,
+   "title": "iPhone · Cài đặt kiểu Mochi: thẻ Your library, mục Sources \"4 sources · T7 RAW Archive offline\", 4 nhóm hàng; hàng AI sau Playback (FS-08.07, 14/10)",
+   "w": 402,
+   "x": 14942,
+   "y": 560
+  },
+  "PH_SettingsAI.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Settings › AI: Use For (AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10",
+   "w": 402,
+   "x": 36064,
+   "y": 560
+  },
+  "PH_SettingsAIProvider.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "Settings › AI › Claude: tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3",
+   "w": 402,
+   "x": 36546,
+   "y": 560
+  },
+  "PH_SettingsSources.dc.html": {
+   "h": 874,
+   "title": "iPhone · Cài đặt › Sources: 5 nguồn, Add Folder or Drive… / Connect to Server…, Cache Size Limit mặc định 5 GB",
+   "w": 402,
+   "x": 23618,
+   "y": 560
+  },
+  "PH_Share.dc.html": {
+   "h": 874,
+   "title": "iPhone · Share sheet trên Library: header Metadata removed, 2 hàng mức metadata",
+   "w": 402,
+   "x": 4820,
+   "y": 560
+  },
+  "PH_SmartAlbum.dc.html": {
+   "h": 874,
+   "title": "iPhone · Smart album Telephoto Sony: thanh điều kiện (1,284 photos, Match all) trên lưới",
+   "w": 402,
+   "x": 6266,
+   "y": 560
+  },
+  "PH_SmartAlbumEditor.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sheet Edit Smart Album: Name, Media Type, Match, 3 điều kiện (Camera, Focal, ISO)",
+   "w": 402,
+   "x": 6748,
+   "y": 560
+  },
+  "PH_Sources.dc.html": {
+   "h": 874,
+   "title": "iPhone · Nguồn: nhóm Sources ở cuối tab Collections, dưới Utilities (user 12/10) — Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL; + Add Source · 20/10: Utilities tách thành tab riêng, Sources ngay dưới Media Types; tab bar Library · Collections · Utilities",
+   "w": 402,
+   "x": 22654,
+   "y": 560
+  },
+  "PH_StackExposures.dc.html": {
+   "h": 874,
+   "title": "iPhone · Stack Exposures: Cancel và Save ngang Dynamic Island",
+   "w": 402,
+   "x": 20726,
+   "y": 560
+  },
+  "PH_Statistics.dc.html": {
+   "h": 874,
+   "title": "iPhone · Thống kê: mọi thẻ biểu đồ có nút Cột/Đường hoặc Tròn/Thanh; Năm=Cột, Tháng=Đường",
+   "w": 402,
+   "x": 13496,
+   "y": 560
+  },
+  "PH_Support.dc.html": {
+   "h": 874,
+   "title": "iPhone · Support (đẩy từ Settings): Report a Bug, Your Messages, What People Asked For",
+   "w": 402,
+   "x": 16870,
+   "y": 560
+  },
+  "PH_SupportThread.dc.html": {
+   "h": 874,
+   "title": "iPhone · Support thread (chọn màn thread, không phải compose): Bug, Conversation, Send Reply",
+   "w": 402,
+   "x": 17352,
+   "y": 560
+  },
+  "PH_UploadedToServer.dc.html": {
+   "h": 874,
+   "title": "iPhone · Uploaded to Server: Where They Are theo kết nối/thư mục + All Uploaded Photos",
+   "w": 402,
+   "x": 19762,
+   "y": 560
+  },
+  "PH_Utilities.dc.html": {
+   "h": 874,
+   "title": "iPhone · tab Utilities (24/10): card Statistics trên đầu (Photos · Cameras · Lenses + cột 12 tháng, tháng nhiều nhất màu accent; chạm mở Statistics) · Library · Create (Collages, Video Projects, Focus Stack, Panorama, HDR, Stack Exposures) · Elsewhere; Explore, Places, Trips đã gỡ",
+   "w": 402,
+   "x": 37028,
+   "y": 560
+  },
+  "PH_VideoProjects.dc.html": {
+   "h": 874,
+   "title": "iPhone · Video Projects: nháp lẫn bản đã xuất một danh sách, nhãn Draft, Edited 5 min ago, bìa clip đầu — theo spec 3/10",
+   "w": 402,
+   "x": 21690,
+   "y": 560
+  },
+  "PH_VideoProjectsDelete.dc.html": {
+   "h": 874,
+   "title": "iPhone · Delete Draft?: alert 2 nút Cancel / Delete đỏ trên Video Projects mờ — theo spec 3/10",
+   "w": 402,
+   "x": 22172,
+   "y": 560
+  },
+  "PH_VideoTrim.dc.html": {
+   "h": 874,
+   "title": "iPhone · Cắt video: Cancel và Save ngang Dynamic Island",
+   "w": 402,
+   "x": 4338,
+   "y": 560
+  },
+  "PH_Viewer.dc.html": {
+   "h": 874,
+   "title": "iPhone · Viewer theo sáng/tối (mặc định sáng): nút đóng, panel ngày/EXIF, thanh Share·♡ⓘ Edit ⋯·Delete",
+   "w": 402,
+   "x": 2410,
+   "y": 560
+  },
+  "PH_ViewerMore.dc.html": {
+   "h": 874,
+   "title": "iPhone · Menu ⋯ Viewer thêm Rotate Counterclockwise / Clockwise, Print…",
+   "w": 402,
+   "x": 27474,
+   "y": 560
+  },
+  "PH_WidgetSettings.dc.html": {
+   "h": 874,
+   "title": "iPhone · Sửa widget: preview Medium ghim trên, chip Photo/Time/Date/Weather, tuỳ chọn dưới",
+   "w": 402,
+   "x": 15424,
+   "y": 560
+  },
+  "TX_P_TextPanel.dc.html": {
+   "h": 874,
+   "title": "iPhone · Text: panel Text — Add Text, Auto Captions, Fonts You Used (thay vì thêm khối ngay, 2026-10-11)",
+   "w": 402,
+   "x": 16388,
+   "y": 4834
+  },
+  "PH41_EditHistory.dc.html": {
+   "h": 874,
+   "radius": 44,
+   "title": "iPhone · Edit History — sheet: SNAPSHOTS (+ Snapshot, lưu theo ảnh) trên STEPS của phiên; chạm để quay về (FS-03.18 §5)",
+   "w": 402,
+   "x": 19218,
+   "y": 2534
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-10-03T22:41:47Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "app_row_PH": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "iPhone 17 · 402×874",
+   "w": 240,
+   "x": 0,
+   "y": 300
+  },
+  "editor_note_iphone": {
+   "fill": "blue",
+   "maxH": 1200,
+   "text": "Vẽ lại từ ảnh chụp app thật (iPhone 17, iOS 26.5, 30/9). Ảnh test là dải nhiễu 3:1 nên bảng dùng ảnh mẫu 3:2 (tỉ lệ luật panel 344). Chỗ code khác bản chốt cũ thì theo code: Save là đĩa ✓ cam 34, cụm nút cách mép 20; Heal không có Remove mà có Red Eye; Curve có cột kênh bên phải. Đề xuất 30/9 cho băng trên (code chưa đổi): bỏ nút ⋯; histogram nới từ 27 lên 66 × 34 (lấy chỗ của ⋯ và khoảng hở), màu R/G/B hoà sáng như bản iPad; Save giữ đĩa cam 34 nhưng dùng icon export như Video Studio. History mở bằng giữ lâu nút Undo (điện thoại vẫn có History như iPad); Copy / Paste Edits, Fill Screen, Revert to Original, Reset All bỏ khỏi điện thoại. Băng trên theo cùng quy cách: nút tròn 34, 12 giữa nhóm, 5 trong nhóm (Back | Undo · Redo … histogram | Save). Markup › Text (đề xuất): một hàng B · I · U | căn lề 3 ô | Size − 200 px + (348 / 378pt), bỏ slider Size. Lớp đang chọn trên ảnh (đề xuất 30/9, code chưa đổi) — một kiểu cho mọi thiết bị: khung trắng liền 1,5pt có bóng mờ tối, cách chữ 6pt; 4 chấm tròn trắng 10pt ở góc; núm xoay 24pt trên cần 16pt ở giữa cạnh trên. Kéo góc = phóng to/thu nhỏ đều quanh tâm lớp (tính theo khoảng cách tâm→ngón tay nên đúng cả khi chữ đang nghiêng); kéo núm = xoay quanh tâm, hít ở 0/90/180/270 kèm rung nhẹ, có chip độ. Chấm và núm nằm NGOÀI chữ nên không che chú thích nhỏ (lý do núm 22pt cũ bị bỏ); phép tính theo tâm sửa lỗi kéo góc sai hướng khi chữ nghiêng. Không dùng màu accent. Tay nắm ẩn khi đang kéo thân lớp; hai ngón vẫn phóng/xoay được. Cỡ chữ hiện bằng px của ảnh đang sửa (“200 px” = 5% cạnh ngắn 4000px); lưu vẫn là tỉ lệ cạnh ngắn để crop/resize giữ tỉ lệ; −/+ bước 1% cạnh ngắn, chạm số để gõ px. “% cạnh ngắn” là ngôn ngữ của renderer, px là thứ người chụp đọc khi xuất ảnh. 30/9 — Transform: thao tác trực tiếp trên ảnh, panel chỉ để chỉnh chính xác. Khung cắt trắng 1,5pt có bóng mờ, góc chữ L 3pt (cạnh 20) + vạch giữa cạnh kiểu Photos: kéo góc/cạnh = cắt, kéo bên trong = dời ảnh, lưới 1/3 khi kéo. Thước vạch dưới đáy vùng ảnh (nền tối 44pt, vạch giữa + số độ): vuốt ngang xoay ±45°, hít ở 0 kèm rung, chạm số để về 0; khi xoay lưới 1/3 đổi thành lưới mịn 8×8 và ảnh tự phóng cho không lộ góc. Xoay hai ngón trên ảnh cũng xoay (cùng giá trị). Rotate 90° và Flip là hai nút kính 34 ở góc trên-trái vùng ảnh, ngoài khung cắt. Panel giữ Aspect, Upright và slider Geometry để chỉnh chính xác. Code chưa đổi. iPhone: PH07 đang xoay −3.2°; PH09 có gợi ý lần đầu (tự ẩn). 30/9 (sửa): thước trên ảnh = góc xoay, không còn chip Straighten · Vertical · Horizontal; phối cảnh dọc/ngang ở panel (Upright, slider Geometry); slider Angle trong panel bỏ vì trùng thước. 1/10 (theo code): Save Edit bỏ công tắc Include Metadata — phần SAVE COPY có menu Metadata (All Metadata · No Location · No Metadata, mặc định theo Settings) + Save Copy; Save Changes luôn giữ ngày, vị trí và metadata. Cặp RAW + JPEG hỏi “Edit which version?” trước khi mở editor (Edit RAW mờ khi iOS chưa đọc được RAW). RAW iOS chưa đọc được: alert “Can't Edit This RAW” (OK; Skip khi sửa nhiều ảnh; thêm Share Original với DNG).",
+   "w": 380,
+   "x": 0,
+   "y": 2534
+  },
+  "editor_row_iphone": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "iPhone 17 · 402 × 874 — như code, trừ băng trên (⋯ bỏ, histogram rộng, Save export) và Transform trên ảnh — đề xuất 30/9",
+   "w": 240,
+   "x": 460,
+   "y": 2234
+  },
+  "sec_app": {
+   "kind": "title1",
+   "maxW": 8000,
+   "size": 120,
+   "text": "Màn hình app",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "sec_editor": {
+   "kind": "title1",
+   "maxW": 8000,
+   "size": 120,
+   "text": "Sửa ảnh",
+   "w": 240,
+   "x": 0,
+   "y": 1934
+  },
+  "sec_video": {
+   "kind": "title1",
+   "maxW": 8000,
+   "size": 120,
+   "text": "Video Studio",
+   "w": 240,
+   "x": 0,
+   "y": 4234
+  },
+  "video_r_iphone": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "iPhone dọc · 402 × 874 — thanh dưới = thêm vào timeline; cả video = Look và Video Settings; chọn item: đáy = ✕ / tên / ✓; Media = thư viện trong panel, kéo vào timeline",
+   "w": 240,
+   "x": 0,
+   "y": 4534
+  },
+  "video_r_iphone_n": {
+   "fill": "orange",
+   "maxH": 380,
+   "size": 24,
+   "text": "Thanh dưới = thêm vào timeline (Media · Text · Sticker · Music · Look); cả video = Look và Video Settings. Chọn item: đáy = ✕ / tên / ✓ như editor ảnh; lệnh của item là hàng đầu panel. Media = thư viện ngay trong panel, kéo vào timeline; tab In Video + dấu ✓ (hoặc “×2”) cho ảnh/video đang dùng (chạm = chèn ở playhead, Select → Add). Kéo bắt đầu từ lưới trong UIScrollView nên phải đi qua UIKit pan — cử chỉ SwiftUI chết trong UIScrollView (bẫy đã biết). iPhone chỉ dùng dọc — màn ngang là của Duo màn trong. Băng trên như editor ảnh (đĩa ngoài cùng cách mép 16 vì góc bo màn cắt ở x 10 — khớp code 4/10): Back · Undo · Redo | nút tỉ lệ (Video Settings) + Export tròn cam chỉ icon; không còn hàng thông số dưới băng. Khung đặt ở y 60 ngay dưới băng; ô xem trước và panel theo TỈ LỆ PROJECT, cố định suốt project, không nhảy khi mở panel: 16:9 khung 402×226 + panel 340 (trên nó lát timeline 96 + dải tổng quan 28), timeline khi không chọn 464; 1:1 khung 342×342 + panel 320; 4:5 khung 290×362 + panel 300; 9:16 khung 216×384 + panel 278. Hàng đáy 5 công cụ ô đều 78, không cuộn. Chọn thứ gì thì hàng đáy là ✕ · tên · ✓, lệnh của nó là hàng đầu panel (cao như cũ); không có nút Show original. Cuối hàng: 11 màn đề xuất, 3 màn project 9:16, Cài đặt video, panel Media (Recents · đang kéo · In Video · quyền giới hạn).\n\nTHEO SPEC 3/10: clip video không có Duration (thời lượng nằm ở dòng phụ “6.2s · video”); ảnh và khung freeze giữ Duration 0.5–10. Không có Master — âm gốc cả project là “Video sound” đầu panel Music; Quick Adjust = Speed · Duration (chỉ ảnh) · Video sound. Tên “Video Settings” ở mọi nơi; MB theo ~10 Mbps ở 1080p30 (24 s ≈ ~30 MB). Export không còn hàng Quality: dòng tóm tắt “0:24 · 16:9 · 30 fps · ~30 MB” mở Video Settings; LUT mất → “1 look is missing its LUT and exports without it.” ngay trên nút xuất. Media: Recents · Albums · In Video · 6 · Select · 🔍, ô lưới vuông, “×2” thay ✓ khi dùng ở 2 chỗ, “Manage Access…”. Clip đang chọn có tay nắm mép 12pt #57BFD1; vạch phụ đề / voice trên dải tổng quan #5E9CFF (cyan chỉ ở khối đang chọn). Trước/sau trên iPhone, Duo: bật = nền trắng glyph đen. Thêm tỉ lệ: 4:3 khung 402×302 + panel 360 không lát timeline (tổng quan 402–430); 21:9 khung 402×172 + lát 150 (272–422) + panel 340 — P11, P12. Vuốt grabber xuống thu panel chọn còn 78 (grabber + hàng lệnh, 712–790), timeline lộ ra có tay nắm mép (P9_Collapsed); 4:3 thu y như vậy, không có lát. Không có lát timeline (1:1 · 4:5 · 9:16 · 4:3) thì đích thả khi kéo media là dải tổng quan (MP_P_Drag916). Bấm Export mở panel Export Video chưa xuất — Sẵn sàng là F8_P_ExportPresets. THEO PLAN 3/10: Sẵn sàng xuất = các board F8_* (dòng LUT “1 look is missing its LUT and exports without it.” ngay trên nút xuất); IL5_Export · IP_Export · DI6_Export · DC_Export = Đang xuất (preset mờ, “Exporting… 62%”, Cancel Export ở chỗ nút xuất, ✕ ẩn); P7_Export giữ. Clip gọi theo số trên timeline (“Clip 2”, “Photo 4”), không tên địa điểm. Back không hỏi “Discard this video?” — nháp tự lưu (FS-12.18).",
+   "w": 460,
+   "x": 15946,
+   "y": 4834
+  }
+ },
+ "order": [
+  "PH_Onboarding.dc.html",
+  "Main.dc.html",
+  "PH_LibrarySelect.dc.html",
+  "PH_Search.dc.html",
+  "PH_AdvancedSearch.dc.html",
+  "PH_Viewer.dc.html",
+  "PH40_ViewerCloudDownload.dc.html",
+  "PH_Metadata.dc.html",
+  "PH_Compare.dc.html",
+  "PH_VideoTrim.dc.html",
+  "PH_Share.dc.html",
+  "PH_Collections.dc.html",
+  "PH_Backup.dc.html",
+  "PH_BackupNew.dc.html",
+  "PH_BackupFolder.dc.html",
+  "PH_BackupOrganize.dc.html",
+  "PH_BackupCustomDate.dc.html",
+  "PH_BackupRunning.dc.html",
+  "PH_AlbumDetail.dc.html",
+  "PH_SmartAlbum.dc.html",
+  "PH_SmartAlbumEditor.dc.html",
+  "PH_OnThisDay.dc.html",
+  "PH_Duplicates.dc.html",
+  "PH_DuplicatesLargeGroup.dc.html",
+  "PH_DuplicatesCompare.dc.html",
+  "PH_DuplicatesPinched.dc.html",
+  "PH_BurstFrames.dc.html",
+  "PH_Creations.dc.html",
+  "PH_Collage.dc.html",
+  "PH_CollageExport.dc.html",
+  "PH_Compress.dc.html",
+  "PH_Statistics.dc.html",
+  "PH_ChartEditor.dc.html",
+  "PH_DateRange.dc.html",
+  "PH_Settings.dc.html",
+  "PH_WidgetSettings.dc.html",
+  "PH_CompressionPresets.dc.html",
+  "PH_CameraDatabase.dc.html",
+  "PH_Support.dc.html",
+  "PH_SupportThread.dc.html",
+  "PH_ServerList.dc.html",
+  "PH_ServerForm.dc.html",
+  "PH_ServerBrowser.dc.html",
+  "PH_ServerUpload.dc.html",
+  "PH_UploadedToServer.dc.html",
+  "PH_FocusStack.dc.html",
+  "PH_StackExposures.dc.html",
+  "PH_Panorama.dc.html",
+  "PH_VideoProjects.dc.html",
+  "PH_VideoProjectsDelete.dc.html",
+  "PH01_Edit.dc.html",
+  "PH02_EditCurve.dc.html",
+  "PH03_Curve.dc.html",
+  "PH04_Presets.dc.html",
+  "PH05_MyLooks.dc.html",
+  "PH06_LUTs.dc.html",
+  "PH07_Transform.dc.html",
+  "PH08_TransformIndex.dc.html",
+  "PH09_Upright.dc.html",
+  "PH10_Geometry.dc.html",
+  "PH11_MaskChooser.dc.html",
+  "PH12_MaskBrush.dc.html",
+  "PH13_Heal.dc.html",
+  "PH14_MarkupChooser.dc.html",
+  "PH15_MarkupText.dc.html",
+  "PH16_Filmstrip.dc.html",
+  "PH17_SyncMenu.dc.html",
+  "PH18_SaveSheet.dc.html",
+  "PH19_HDR.dc.html",
+  "PH20_HDRSaveAs.dc.html",
+  "PH21_EditWhich.dc.html",
+  "PH22_RawAlert.dc.html",
+  "PH23_Cull.dc.html",
+  "PH24_CullSummary.dc.html",
+  "PH25_GridRatings.dc.html",
+  "PH26_GridRejected.dc.html",
+  "PH27_ViewerRating.dc.html",
+  "PH28_ViewerMenu.dc.html",
+  "PH29_InfoKeywords.dc.html",
+  "PH30_BulkKeywords.dc.html",
+  "PH31_Watermark.dc.html",
+  "PH32_ResizeWatermark.dc.html",
+  "PH33_Export.dc.html",
+  "PH34_FileName.dc.html",
+  "PH35_ExportRunning.dc.html",
+  "PH36_ExportSummary.dc.html",
+  "PH37_ShareWatermark.dc.html",
+  "PH38_EditFileCopy.dc.html",
+  "PH39_ViewerMenuSources.dc.html",
+  "P1_Main.dc.html",
+  "P2_ClipSelected.dc.html",
+  "P3_TextOverlay.dc.html",
+  "P4_MusicChooser.dc.html",
+  "P5_MusicTrack.dc.html",
+  "P6_RatioBackground.dc.html",
+  "P7_Export.dc.html",
+  "F1_P_MultiSelect.dc.html",
+  "F2_P_BeatDetect.dc.html",
+  "F2_P_BeatDuration.dc.html",
+  "F3_P_Ducking.dc.html",
+  "F4_P_Captions.dc.html",
+  "F5_P_Looks.dc.html",
+  "F8_P_ExportPresets.dc.html",
+  "F6_P_PreciseTrim.dc.html",
+  "F6_P_FineScrub.dc.html",
+  "F6_P_Keyboard.dc.html",
+  "F7_P_BeforeAfter.dc.html",
+  "P8_Main916.dc.html",
+  "P9_ClipSelected916.dc.html",
+  "P10_TextOverlay916.dc.html",
+  "ES_P_ExportSettings.dc.html",
+  "MP_P_MediaPicker.dc.html",
+  "MP_P_Drag.dc.html",
+  "MP_P_InVideo.dc.html",
+  "MP_P_Limited.dc.html",
+  "F5_P_ClipLook.dc.html",
+  "P11_Ratio43.dc.html",
+  "P11_Ratio43_Selected.dc.html",
+  "P12_Ratio219.dc.html",
+  "P12_Ratio219_Selected.dc.html",
+  "P9_Collapsed.dc.html",
+  "MP_P_Drag916.dc.html",
+  "PH_Sources.dc.html",
+  "PH_AddSource.dc.html",
+  "PH_SettingsSources.dc.html",
+  "PH_Ingest.dc.html",
+  "PH_IngestProgress.dc.html",
+  "PH_Hidden.dc.html",
+  "PH_DeletePermanent.dc.html",
+  "PH_DeleteCopies.dc.html",
+  "PH_EmptyLibrary.dc.html",
+  "PH_LibraryMore.dc.html",
+  "PH_ViewerMore.dc.html",
+  "F5_P_SaveLook.dc.html",
+  "TX_P_TextPanel.dc.html",
+  "PH_SettingsAI.dc.html",
+  "PH_SettingsAIProvider.dc.html",
+  "PH_Utilities.dc.html",
+  "PH_KeepOnIPhone.dc.html",
+  "PH_OnThisIPhone.dc.html",
+  "PH41_EditHistory.dc.html"
+ ],
+ "pages": [],
+ "title": "ShotDex · iPhone",
+ "v": 3
 }
