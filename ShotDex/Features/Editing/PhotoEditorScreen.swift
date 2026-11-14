@@ -406,6 +406,8 @@ struct PhotoEditorScreen: View {
             Button("Redo") { controller.redo() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!controller.canRedo)
+            Button("Compare") { toggleSplitCompare() }
+                .keyboardShortcut("b", modifiers: [])
             Button("Save") {
                 controller.commitCropSession()
                 if isFileCopy { flushAutosave() } else { presentSave(controller) }
@@ -1110,6 +1112,7 @@ struct PhotoEditorScreen: View {
                 .accessibilityLabel("Undo")
             circleCommand("arrow.uturn.forward", isEnabled: controller.canRedo) { controller.redo() }
                 .accessibilityLabel("Redo")
+            beforeAfterButton(controller)
             Spacer(minLength: AppTheme.Spacing.sm)
             EditorHistogramPill(histogram: controller.histogram, namespace: histogramNamespace) {
                 withAnimation(EditorHistogramTransition.animation) {
@@ -2256,7 +2259,7 @@ struct PhotoEditorScreen: View {
             // The three left discs plus their two 5pt gaps. The pill starts just
             // right of the Dynamic Island, so the fixed reserve is the run from the
             // end of that cluster to there; the pill then flexes out to the ⋯.
-            let leftClusterWidth = buttonSize * 3 + 5 * 2
+            let leftClusterWidth = buttonSize * 4 + 5 * 3
             // The reserve keeps the histogram pill clear of the Dynamic Island.
             // Gate it on a device that actually has one: an iPad in a narrow
             // Split View takes the phone layout and was leaving 219pt of empty
@@ -2281,9 +2284,7 @@ struct PhotoEditorScreen: View {
                 ) { controller.redo() }
                     .accessibilityLabel("Redo")
 
-                if showsDocumentControls {
-                    beforeAfterButton(controller)
-                }
+                beforeAfterButton(controller)
 
                 if showsDocumentControls {
                     // Fit ⇄ fill, the double tap's visible twin. A gesture
@@ -2376,17 +2377,19 @@ struct PhotoEditorScreen: View {
         .background(EditorTheme.background)
     }
 
-    /// Hold-to-see-original, mirroring the photo's own press-and-hold. Down shows
-    /// the original, up restores the edit; the circle turns white (black glyph)
-    /// while it is held — accent is spent on Save alone (FS-03.12 §6).
+    /// Compare (FS-03.18 §6): tap turns the split view on and off — original
+    /// left, edit right, the divider draggable; press and hold shows the
+    /// original, as the photo's own press-and-hold does. White with a black
+    /// glyph while either is on — accent is spent on Save alone (FS-03.12 §6).
     private func beforeAfterButton(_ controller: PhotoEditorController) -> some View {
         let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
+        let isActive = controller.showsOriginal || chrome.showsSplitCompare
         return Image(systemName: "rectangle.split.2x1")
             .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(controller.showsOriginal ? .black : Color.white.opacity(0.9))
+            .foregroundStyle(isActive ? .black : Color.white.opacity(0.9))
             .frame(width: size, height: size)
             .background {
-                if controller.showsOriginal {
+                if isActive {
                     Circle().fill(.white)
                 } else {
                     floatingCircleFill
@@ -2394,18 +2397,19 @@ struct PhotoEditorScreen: View {
             }
             .contentShape(Circle())
             .hoverEffect(.lift)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in controller.showsOriginal = true }
-                    .onEnded { _ in controller.showsOriginal = false }
-            )
-            .accessibilityLabel("Hold to see original")
-            // The drag is the whole control, so without these there is no way to
-            // see the original with VoiceOver, Switch Control or a keyboard.
+            .onTapGesture { toggleSplitCompare() }
+            .onLongPressGesture(minimumDuration: 0.3, perform: {}, onPressingChanged: { pressing in
+                controller.showsOriginal = pressing
+            })
+            .accessibilityLabel("Compare Before and After")
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction {
-                controller.showsOriginal.toggle()
-            }
+            .accessibilityValue(chrome.showsSplitCompare ? Text("Split") : Text("Off"))
+            .accessibilityAction { toggleSplitCompare() }
+            .accessibilityAction(named: Text("Show Original")) { controller.showsOriginal.toggle() }
+    }
+
+    private func toggleSplitCompare() {
+        withAnimation(.easeInOut(duration: 0.2)) { chrome.showsSplitCompare.toggle() }
     }
 
     /// A 34pt circular band button: a blurred near-black disc, white glyph. Dims
