@@ -480,3 +480,29 @@ struct ChartDashboardTests {
         }
     }
 }
+
+/// The Mac's dashboard (FS-18.04 §2, row 28) and the Last 12 Months range.
+struct MacDashboardSeedTests {
+    @Test func macSeedPlantsTheBoardOnce() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = ChartStore(database: database)
+        let first = try store.loadCharts(seededGeneration: 0, defaults: ChartSpec.macDefaultSpecs())
+        #expect(first.charts.map(\.spec.title) == ChartSpec.macDefaultSpecs().map(\.title))
+        #expect(first.charts.filter { $0.spec.kind == .kpi }.count == 5)
+        // A board the user cleared stays cleared.
+        for chart in first.charts { try store.delete(id: chart.spec.id) }
+        let again = try store.loadCharts(seededGeneration: first.seededGeneration, defaults: ChartSpec.macDefaultSpecs())
+        #expect(again.charts.isEmpty)
+    }
+
+    @Test func lastTwelveMonthsStartsElevenMonthsBeforeThisOne() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: 14, hour: 9)))
+        let range = try #require(StatsDateScope.last12Months.dateInterval(now: now, calendar: calendar))
+        let start = Date(timeIntervalSince1970: TimeInterval(range.lowerBound))
+        #expect(calendar.dateComponents([.year, .month, .day], from: start) == DateComponents(year: 2025, month: 12, day: 1))
+        #expect(range.upperBound == Int(now.timeIntervalSince1970))
+        #expect(StatsDateScope.last12Months.title == "Last 12 Months")
+    }
+}

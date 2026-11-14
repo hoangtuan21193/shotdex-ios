@@ -85,6 +85,34 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
         ]
     }
 
+    /// The Mac's dashboard (board `MAC_Statistics`, FS-18.04 §2): the five
+    /// numbers of the top row, then the cards in reading order of its four
+    /// columns. A Mac has the room for all of them; the phone keeps six.
+    static func macDefaultSpecs() -> [ChartSpec] {
+        [
+            ChartSpec(title: "Total Photos & Videos", kind: .kpi, dimension: nil, metric: .photoCount),
+            ChartSpec(title: "Slow Shutter", kind: .kpi, dimension: nil, metric: .slowShutterShare),
+            ChartSpec(title: "Median ISO", kind: .kpi, dimension: nil,
+                      metric: ChartMetric(aggregation: .median, field: .iso), scope: .thisYear),
+            ChartSpec(title: "Average Equivalent Focal Length", kind: .kpi, dimension: nil,
+                      metric: ChartMetric(aggregation: .average, field: .equivalentFocalLength)),
+            ChartSpec(title: "Median Aperture", kind: .kpi, dimension: nil,
+                      metric: ChartMetric(aggregation: .median, field: .aperture)),
+            ChartSpec(title: "Top Camera", kind: .bar, dimension: .cameraBody, topN: 5),
+            ChartSpec(title: "Top Lens", kind: .bar, dimension: .lens, topN: 5),
+            ChartSpec(title: "Photos per Month", kind: .line, dimension: .dateMonth,
+                      seriesSplit: .cameraBody, topN: 3, scope: .last12Months),
+            ChartSpec(title: "ISO", kind: .bar, dimension: .iso, scope: .thisYear),
+            ChartSpec(title: "Body + Lens", kind: .bar, dimension: .cameraLensPair, topN: 5),
+            ChartSpec(title: "Equivalent Focal Length", kind: .bar, dimension: .focalEquivalent),
+            ChartSpec(title: "Aperture", kind: .bar, dimension: .aperture),
+            ChartSpec(title: "Shutter Speed", kind: .bar, dimension: .shutter),
+            ChartSpec(title: "Photos by Weekday", kind: .bar, dimension: .weekday, scope: .thisYear),
+            ChartSpec(title: "Time of Day", kind: .bar, dimension: .hourOfDay),
+            ChartSpec(title: "Photos per Year", kind: .line, dimension: .dateYear),
+        ]
+    }
+
     /// How many of `defaultSpecs()` the first seed generation planted (Top
     /// Camera, Total Photos & Videos). An install seeded then gets the rest
     /// appended once — see `ChartStore.loadCharts(seededVersion:)`.

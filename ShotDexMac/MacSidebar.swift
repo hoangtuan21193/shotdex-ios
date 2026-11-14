@@ -384,7 +384,7 @@ enum MacSidebarItem: Hashable, Identifiable {
     /// under its name meanwhile.
     var isPendingScreen: Bool {
         switch self {
-        case .statistics, .collages, .videoProjects: true
+        case .collages, .videoProjects: true
         default: false
         }
     }

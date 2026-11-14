@@ -1,0 +1,40 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "statistics",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "dark-01-statistics"
+  },
+  {
+   "action": "scroll",
+   "label": "Top Camera",
+   "distance": 120
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "dark-02-bottom"
+  }
+ ]
+}

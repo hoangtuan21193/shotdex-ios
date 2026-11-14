@@ -69,6 +69,33 @@ enum MacTheme {
     /// `rowAlt`: every other row of a table or list (DESIGN.md §10b).
     static let rowAlternate = dynamic(light: NSColor(white: 0, alpha: 0.03), dark: NSColor(white: 1, alpha: 0.04))
 
+    // MARK: Charts — style C (MAC_STYLE v3, DESIGN.md §3.4)
+
+    /// A chart's ordinary marks: the accent at 38% (45% in dark).
+    static let chartSoft = dynamic(light: NSColor(red: 0xC6 / 255, green: 0x73 / 255, blue: 0x0E / 255, alpha: 0.38),
+                                   dark: NSColor(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255, alpha: 0.45))
+    /// The area under a single line: 10% (14% in dark).
+    static let chartArea = dynamic(light: NSColor(red: 0xC6 / 255, green: 0x73 / 255, blue: 0x0E / 255, alpha: 0.10),
+                                   dark: NSColor(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255, alpha: 0.14))
+    /// The six series colours, in this order, never cycled.
+    static let chartSeries: [Color] = [
+        dynamic(light: hex(0xC6730E), dark: hex(0xCF7F18)),
+        dynamic(light: hex(0x3D6FB6), dark: hex(0x5C88E0)),
+        dynamic(light: hex(0x1E9180), dark: hex(0x1F9C84)),
+        dynamic(light: hex(0x9A4FA0), dark: hex(0xB070C8)),
+        dynamic(light: hex(0x6F8A1E), dark: hex(0x7C962A)),
+        dynamic(light: hex(0xB83E8C), dark: hex(0xD35E98)),
+    ]
+    /// A chart tooltip's ground and text (board `tip` / `onTip`).
+    static let chartTip = dynamic(light: NSColor(red: 30 / 255, green: 30 / 255, blue: 32 / 255, alpha: 0.92),
+                                  dark: NSColor(red: 242 / 255, green: 242 / 255, blue: 244 / 255, alpha: 0.95))
+    static let onChartTip = dynamic(light: .white, dark: .black)
+
+    private static func hex(_ value: Int) -> NSColor {
+        NSColor(red: CGFloat((value >> 16) & 0xFF) / 255, green: CGFloat((value >> 8) & 0xFF) / 255,
+                blue: CGFloat(value & 0xFF) / 255, alpha: 1)
+    }
+
     private static func dynamic(light: NSColor, dark: NSColor) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light

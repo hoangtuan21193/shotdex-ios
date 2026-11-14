@@ -51,6 +51,15 @@ struct StatisticsQueries: Sendable {
         }
     }
 
+    /// Videos among `totalPhotos` (PhotoKit's media type 2): the Mac's
+    /// "54,027 photos · 1,204 videos".
+    func totalVideos(scope: StatsDateScope) throws -> Int {
+        let (whereSQL, args) = whereSQL("mediaType = 2", scope: scope)
+        return try database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata \(whereSQL)", arguments: args) ?? 0
+        }
+    }
+
     /// Usage counts grouped by an arbitrary column (camera, lens, sensor format).
     /// Percentages are shares of *all* photos in scope, so buckets always sum
     /// to ~100% regardless of missing metadata. With `includeUnknown` the rows

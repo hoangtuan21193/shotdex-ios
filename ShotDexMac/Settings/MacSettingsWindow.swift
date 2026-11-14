@@ -91,11 +91,11 @@ struct MacGeneralSettings: View {
         ScrollViewReader { proxy in
             Form {
                 MacThumbnailSettings()
-                // The Mac has no viewer, Statistics screen or reminder yet (FS-18.04 §3).
+                // The Mac has no viewer or reminder yet (FS-18.04 §3).
+                MacInsightsSetting()
                 Section {
                     MacLaterSettingsRow(switchTitle: String(localized: "View Full HDR", comment: "Mac Settings row"))
                     MacLaterSettingsRow(switchTitle: String(localized: "Autoplay Videos", comment: "Mac Settings row"))
-                    MacLaterSettingsRow(switchTitle: String(localized: "Show Insights in Statistics", comment: "Mac Settings row"))
                     MacLaterSettingsRow(switchTitle: String(localized: "On This Day Reminder", comment: "Mac Settings row"))
                 } header: {
                     Text("Viewing and Reminders", comment: "Mac Settings group")
@@ -190,5 +190,17 @@ extension View {
         #else
         self
         #endif
+    }
+}
+
+/// Show Insights in Statistics (FS-07.02 §1): the card at the top of the
+/// Statistics screen.
+private struct MacInsightsSetting: View {
+    @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
+
+    var body: some View {
+        Section {
+            Toggle(String(localized: "Show Insights in Statistics", comment: "Mac Settings row"), isOn: $showsInsights)
+        }
     }
 }

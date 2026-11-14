@@ -7,6 +7,9 @@ enum StatsDateScope: Codable, Hashable, Sendable {
     case allTime
     case thisYear
     case thisMonth
+    /// This month and the eleven before it (board `MAC_Statistics`:
+    /// Photos per Month).
+    case last12Months
     /// User-picked start–end interval, in epoch seconds (whole days).
     case custom(ClosedRange<Int>)
 
@@ -15,6 +18,7 @@ enum StatsDateScope: Codable, Hashable, Sendable {
         case .allTime: String(localized: "All Time")
         case .thisYear: String(localized: "This Year")
         case .thisMonth: String(localized: "This Month")
+        case .last12Months: String(localized: "Last 12 Months")
         case .custom(let range):
             MetadataFormatter.dateRange(
                 Date(timeIntervalSince1970: TimeInterval(range.lowerBound)),
@@ -33,6 +37,10 @@ enum StatsDateScope: Codable, Hashable, Sendable {
             return Int(start.timeIntervalSince1970)...Int(now.timeIntervalSince1970)
         case .thisMonth:
             guard let start = calendar.dateInterval(of: .month, for: now)?.start else { return nil }
+            return Int(start.timeIntervalSince1970)...Int(now.timeIntervalSince1970)
+        case .last12Months:
+            guard let month = calendar.dateInterval(of: .month, for: now)?.start,
+                  let start = calendar.date(byAdding: .month, value: -11, to: month) else { return nil }
             return Int(start.timeIntervalSince1970)...Int(now.timeIntervalSince1970)
         case .custom(let range):
             return range

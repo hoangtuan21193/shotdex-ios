@@ -1,0 +1,88 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoDatabase",
+    "demo55k.sqlite",
+    "-ShotDexDemoScale",
+    "200",
+    "-ShotDexSection",
+    "statistics"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 120
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "screenshot",
+   "name": "perf-01"
+  },
+  {
+   "action": "click",
+   "label": "statistics.source"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Photos Library",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "screenshot",
+   "name": "perf-02-source"
+  },
+  {
+   "action": "click",
+   "label": "statistics.add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Camera Brand",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.ISO"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Move Later",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "perf-03"
+  }
+ ]
+}

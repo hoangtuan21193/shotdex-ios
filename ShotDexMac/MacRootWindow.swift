@@ -99,6 +99,8 @@ struct MacRootWindow: View {
     @State private var headerAlbumId: String?
     /// Where Back goes from an album, People or Pets: the place it was opened from.
     @State private var backTarget: MacSidebarItem?
+    /// All Photos opened from a Statistics bar or row: Back returns there.
+    @State private var drilledFromStatistics = false
     @AppStorage("macSidebarShowsAlbums") private var sidebarShowsAlbums = true
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
@@ -210,6 +212,22 @@ struct MacRootWindow: View {
                 MacServerBrowserScreen(source: source)
             } else if selection == .duplicates {
                 MacDuplicatesScreen()
+            } else if selection == .statistics {
+                // A bar, a row or an insight: the whole library on those photos.
+                MacStatisticsScreen(sources: sources) { criteria, sourceId in
+                    library?.advancedQuery = nil
+                    library?.criteria = criteria
+                    selection = .allPhotos
+                    drilledFromStatistics = true
+                    // The Source popup goes along: the count the tooltip gave is the count shown.
+                    // After the place change, which clears a scope that does not follow.
+                    if let sourceId {
+                        Task { @MainActor in
+                            await Task.yield()
+                            library?.sourceScope = SmartAlbumQuery(rules: [SmartAlbumRule(field: .source, op: .isExactly, text: sourceId)])
+                        }
+                    }
+                }
             } else if let selection, selection.isPendingScreen {
                 MacPendingPlace(item: selection)
             } else {
@@ -252,6 +270,7 @@ struct MacRootWindow: View {
             commonPhotosRunId = nil
             cullRequest = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
+            if new != .allPhotos { drilledFromStatistics = false }
             if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
         }
         // A search that leaves nothing: the viewer has no grid to go back over.
@@ -1805,10 +1824,21 @@ struct MacRootWindow: View {
     private var libraryToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
             // Back from a place opened in Albums returns to Albums; a full history comes later.
-            Button { selection = backTarget ?? .albums } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
+            Button {
+                if drilledFromStatistics {
+                    drilledFromStatistics = false
+                    library?.criteria = .empty
+                    library?.sourceScope = nil
+                    selection = .statistics
+                } else {
+                    selection = backTarget ?? .albums
+                }
+            } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
                 .keyboardShortcut("[", modifiers: .command)
-                .disabled(selection?.isOpenedFromAlbums != true)
-                .help(selection?.isOpenedFromAlbums == true
+                .disabled(selection?.isOpenedFromAlbums != true && !drilledFromStatistics)
+                .help(drilledFromStatistics
+                      ? String(localized: "Back to Statistics", comment: "Mac toolbar: Back to Statistics after opening a bar's photos")
+                      : selection?.isOpenedFromAlbums == true
                       ? String(localized: "Back to \((backTarget ?? .albums).title)", comment: "Mac toolbar: Back to the place an album was opened from") : "")
             Button { } label: { Label(String(localized: "Forward", comment: "Mac toolbar"), systemImage: "chevron.right") }
                 .disabled(true)
@@ -1913,6 +1943,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "albums" { selection = .albums }
         // `-ShotDexSection duplicates` (board `MAC_Duplicates`).
         if MacDemoLibrary.section == "duplicates" { selection = .duplicates }
+        if MacDemoLibrary.section == "statistics" { selection = .statistics }
         // Board `MAC_Ingest`: a demo card and a folder to import it into.
         if MacDemoLibrary.section == "ingest" {
             Task { if let id = await MacDemoCard.seed(dependencies) { selection = .card(id) } }

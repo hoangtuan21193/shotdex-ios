@@ -1,0 +1,256 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "statistics"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-statistics"
+  },
+  {
+   "action": "dump",
+   "name": "01-statistics"
+  },
+  {
+   "action": "assertExists",
+   "label": "Insights"
+  },
+  {
+   "action": "assertExists",
+   "label": "Median ISO"
+  },
+  {
+   "action": "assertExists",
+   "label": "Time of Day"
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.ISO"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-card-menu"
+  },
+  {
+   "action": "click",
+   "label": "Duplicate",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "ISO Copy"
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.ISO Copy"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Move Later",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.ISO Copy"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Delete Chart…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-delete-question"
+  },
+  {
+   "action": "click",
+   "x": 0.5494,
+   "y": 0.5665
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "ISO Copy"
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.Median ISO"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Move Later",
+   "type": "menuItem"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "statistics.add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-add-menu"
+  },
+  {
+   "action": "click",
+   "label": "Camera Brand",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Camera Brand"
+  },
+  {
+   "action": "click",
+   "label": "statistics.source"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "05-source-menu"
+  },
+  {
+   "action": "click",
+   "label": "Photos Library",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "06-source-photos"
+  },
+  {
+   "action": "click",
+   "label": "statistics.source"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "All Sources",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "ILCE-7M4, 85 photos, 38%"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Top Camera"
+  },
+  {
+   "action": "screenshot",
+   "name": "07-drilled-library"
+  },
+  {
+   "action": "dump",
+   "name": "07-drilled-library"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scroll",
+   "label": "Top Camera",
+   "distance": 120
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "08-bottom"
+  },
+  {
+   "action": "dump",
+   "name": "08-bottom"
+  }
+ ]
+}

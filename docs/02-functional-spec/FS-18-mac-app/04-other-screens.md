@@ -194,6 +194,26 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
   thẻ nào. Thẻ có điều kiện Source riêng **giữ điều kiện của nó**, bỏ qua popup, và ghi tên nguồn đó trên thẻ.
 - Sheet sửa biểu đồ 640×560 ([FS-07.01b](../FS-07-statistics/01b-cards-editor-and-states.md)); trang một máy
   (`MAC_StatisticsCamera`) giữ popup khoảng ngày riêng của nó.
+- **Đã dựng (row 28, 2026-11-14)** — `ShotDexMac/Statistics/`:
+  - Bộ thẻ mặc định của Mac (`ChartSpec.macDefaultSpecs()`, gieo một lần, cờ `stats.mac.didSeedCharts`; thẻ đã xoá
+    không mọc lại): hàng số 5 ô (Total Photos & Videos · Slow Shutter · Median ISO *This Year* · Average Equivalent
+    Focal Length · Median Aperture) rồi Top Camera · Top Lens · Photos per Month (*Last 12 Months*, 3 máy, legend) ·
+    ISO (*This Year*) · Body + Lens · Equivalent Focal Length · Aperture · Shutter Speed · Photos by Weekday (*This
+    Year*) · Time of Day · Photos per Year. iPhone giữ sáu thẻ của FS-07.01 §3. Khoảng mới **Last 12 Months** (tháng
+    này và 11 tháng trước) có ở mọi thiết bị.
+  - Thẻ xếp vào cột thấp nhất theo thứ tự; 4 cột khi vùng nội dung ≥ 1120pt, ít hơn khi hẹp. Thẻ top-N: tên · số ·
+    % (trên số ảnh trong khoảng của thẻ) · thanh, hàng đầu amber đậm; dòng cuối "N photos from other values or without
+    this info." Thẻ cột: amber nhạt, cột cao nhất amber đậm kèm số; rê chuột hiện "ISO 401–1600 · 86 photos / Click to
+    show 86 photos". Cột 0 ảnh, giờ, thứ và đường không nhấp được (Library chưa có bộ lọc giờ/thứ — AC-57).
+  - **⋯** mỗi thẻ (cả ô số), hiện khi rê chuột, luôn có cho bàn phím/VoiceOver: Duplicate (bản sao ngay sau, tên
+    "… Copy") · Move Earlier · Move Later (trong hàng của nó: ô số với ô số, thẻ với thẻ) · Delete Chart… (hỏi lại).
+  - **+**: danh sách thẻ để thêm — các thẻ mặc định đang thiếu, rồi một biểu đồ cột cho mỗi trục chưa có. Sheet sửa
+    biểu đồ đầy đủ là row 30.
+  - Popup **Source**: All Sources + các nguồn của sidebar; đổi là tính lại mọi thẻ và Insights (lượt cũ đến sau bị
+    bỏ). Tên nguồn trên thẻ có điều kiện Source riêng: chưa vẽ (cần sheet sửa, row 30).
+  - Nhấp hàng/cột/insight: All Photos với đúng bộ lọc đó (bỏ Advanced Filter đang có).
+  - Settings › General › **Show Insights in Statistics** chạy thật (ẩn/hiện thẻ Insights).
+  - Mọi truy vấn và mọi lần ghi `stat_charts` chạy ngoài main thread.
 
 ## 3. Cửa sổ Settings (⌘,)
 
@@ -209,7 +229,7 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 
 | Pane | Board | Hàng chạy thật | Hàng mờ (chưa có tính năng) | Từ mục iOS |
 |---|---|---|---|---|
-| General | `MAC_SettingsGeneral` | câu Thumbnail size (chỉ chữ) · File Type Badge · Info on Thumbnails (File Name, Capture Time, ISO, Aperture, Shutter Speed, Focal Length, Megapixels, File Size) · Focal Length (Actual · Full-Frame Equivalent) · **Indexing** (đã có) · **Background** (đã có, [FS-22.06](../FS-22-backup/06-mac.md) §5.4) | View Full HDR · Autoplay Videos · Show Insights in Statistics · On This Day Reminder | Display, Playback, Notifications |
+| General | `MAC_SettingsGeneral` | câu Thumbnail size (chỉ chữ) · File Type Badge · Info on Thumbnails (File Name, Capture Time, ISO, Aperture, Shutter Speed, Focal Length, Megapixels, File Size) · Focal Length (Actual · Full-Frame Equivalent) · **Indexing** (đã có) · **Background** (đã có, [FS-22.06](../FS-22-backup/06-mac.md) §5.4) | View Full HDR · Autoplay Videos · On This Day Reminder (Show Insights in Statistics chạy thật từ row 28) | Display, Playback, Notifications |
 | AI | `MAC_SettingsAI`, `MAC_SettingsAIProvider` | — | cả pane: Use For › AI Search, bảng Providers và sheet sửa provider | AI ([FS-08.07](../FS-08-settings/)) |
 | Sources | `MAC_SettingsSources`, `MAC_SettingsSourcesCache` | bảng Photo Sources (Manage Access…, Re-index, Remove…, Grant Access…, Add Folder…, Connect to Server…, thả folder vào bảng) · When a Drive Is Disconnected · Pause Indexing on Battery Power · Prevent Sleep While Indexing · Look Up Place Names · Scan for People and Pets (kèm "N of M items scanned") · Preview Cache (dung lượng, Clear Cache, Cache Size Limit 2/5/10/25/50 GB) · **Index** (đếm, dung lượng, tiến độ, Re-index Library) · Camera Database (số máy chưa rõ, Review Unknown Cameras) · Clear Local Metadata Index | Index New and Changed Files · Preview Cache › Change Location… · Keep Full-Size Previews · Keep Previews of Disconnected Drives | Sources (FS-21), People and Pets, Library Size, Privacy |
 | Editing | `MAC_SettingsEditing` | — | cả pane: RAW + JPEG Pairs, Export Defaults, Presets (Mac chưa có editor và Export) | Export, Sharing |

@@ -47,9 +47,11 @@ struct ChartStore: Sendable {
     /// it is missing at the end, after whatever the user has now), 2 nothing
     /// to do — a board the user cleared stays empty. Returns the charts in
     /// order and the generation to remember.
-    func loadCharts(seededGeneration: Int) throws -> (charts: [StatChart], seededGeneration: Int) {
+    /// `defaults`: the set a fresh dashboard gets — the phone's six, or the
+    /// Mac's (`ChartSpec.macDefaultSpecs()`).
+    func loadCharts(seededGeneration: Int,
+                    defaults: [ChartSpec] = ChartSpec.defaultSpecs()) throws -> (charts: [StatChart], seededGeneration: Int) {
         try database.writer.write { db in
-            let defaults = ChartSpec.defaultSpecs()
             switch seededGeneration {
             case ..<1:
                 if try StatChart.fetchCount(db) == 0 {
