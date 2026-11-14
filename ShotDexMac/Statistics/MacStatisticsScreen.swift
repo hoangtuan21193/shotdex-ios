@@ -18,6 +18,15 @@ struct MacStatisticsScreen: View {
     @Environment(MacDependencies.self) private var dependencies
     @State private var model: MacStatisticsModel?
     @State private var deleting: ChartSpec?
+    /// New Chart… / Edit Chart…: the editor sheet (board `MAC_ChartEditor`).
+    @State private var editing: EditRequest?
+    /// A chart just saved: scrolled into view.
+    @State private var scrollTarget: String?
+
+    struct EditRequest: Identifiable {
+        let id = UUID()
+        var spec: ChartSpec?
+    }
     /// Settings › Show Insights in Statistics (FS-07.02 §1).
     @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
 
@@ -74,6 +83,16 @@ struct MacStatisticsScreen: View {
         .onChange(of: model?.sourceId) { _, id in camera?.setSource(id) }
         // Only a source added or removed: a read's progress in a row is not a reason.
         .onChange(of: Set(sources.map(\.id))) { _, ids in model?.keep(sourceIds: ids) }
+        .sheet(item: $editing) { request in
+            MacChartEditorSheet(existing: request.spec, sourceId: model?.sourceId, sources: sources) { spec in
+                if request.spec == nil {
+                    scrollTarget = model?.add(spec)
+                } else {
+                    model?.update(spec)
+                    scrollTarget = spec.id
+                }
+            }
+        }
         .confirmationDialog(String(localized: "Delete “\(deleting?.title ?? "")”?", comment: "Mac Statistics: confirm deleting a chart"),
                             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             presenting: deleting) { chart in
@@ -140,6 +159,10 @@ struct MacStatisticsScreen: View {
                     .accessibilityIdentifier("camera.showInLibrary")
                 } else {
                 Menu {
+                    Button(String(localized: "New Chart…", comment: "Mac Statistics: + menu, open the chart editor")) {
+                        editing = EditRequest(spec: nil)
+                    }
+                    .keyboardShortcut("n", modifiers: [.command, .option])
                     Section(String(localized: "Add Chart", comment: "Mac Statistics: + menu header")) {
                         if model.addable.isEmpty {
                             Text("Every chart is on the board", comment: "Mac Statistics: + menu, nothing left to add")
@@ -162,6 +185,7 @@ struct MacStatisticsScreen: View {
 
     private func content(_ model: MacStatisticsModel) -> some View {
         GeometryReader { geometry in
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showsInsights {
@@ -172,9 +196,11 @@ struct MacStatisticsScreen: View {
                         if !model.kpis.isEmpty {
                             HStack(alignment: .top, spacing: 12) {
                                 ForEach(model.kpis, id: \.id) { spec in
-                                    MacKPITile(spec: spec, data: model.results[spec.id]) {
+                                    MacKPITile(spec: spec, data: model.results[spec.id],
+                                               sourceName: spec.filter.pinnedSourceId.flatMap { id in sources.first { $0.id == id }?.name }) {
                                         menu(spec, model: model)
                                     }
+                                    .id(spec.id)
                                 }
                             }
                         }
@@ -182,6 +208,16 @@ struct MacStatisticsScreen: View {
                     }
                 }
                 .padding(16)
+            }
+            // The chart just saved is where the eye goes next.
+            .onChange(of: scrollTarget) { _, id in
+                guard let id else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    withAnimation { proxy.scrollTo(id, anchor: .center) }
+                    scrollTarget = nil
+                }
+            }
             }
         }
     }
@@ -211,6 +247,7 @@ struct MacStatisticsScreen: View {
                                                  page.load()
                                              })
                         }
+                        .id(spec.id)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)
@@ -219,11 +256,15 @@ struct MacStatisticsScreen: View {
     }
 
     private func card<Body: View>(_ spec: ChartSpec, model: MacStatisticsModel, @ViewBuilder body: @escaping () -> Body) -> some View {
-        MacChartCard(spec: spec, menu: { menu(spec, model: model) }, content: body)
+        MacChartCard(spec: spec, sourceName: spec.filter.pinnedSourceId.flatMap { id in sources.first { $0.id == id }?.name },
+                     menu: { menu(spec, model: model) }, content: body)
     }
 
     @ViewBuilder
     private func menu(_ spec: ChartSpec, model: MacStatisticsModel) -> some View {
+            Button(String(localized: "Edit Chart…", comment: "Mac Statistics: chart menu, open the editor")) {
+                editing = EditRequest(spec: spec)
+            }
             Button(String(localized: "Duplicate", comment: "Mac Statistics: chart menu")) { model.duplicate(spec.id) }
             Divider()
             Button(String(localized: "Move Earlier", comment: "Mac Statistics: chart menu")) { model.move(spec.id, earlier: true) }
@@ -318,8 +359,12 @@ private struct MacInsightsStrip: View {
 // MARK: - Card
 
 /// One card: title, its range under it, a ⋯ menu on hover, the body.
-private struct MacChartCard<Menu: View, Content: View>: View {
+struct MacChartCard<Menu: View, Content: View>: View {
     let spec: ChartSpec
+    /// A card with its own Source condition says which (FS-18.04 §2): the
+    /// popup does not move it.
+    var sourceName: String?
+    var showsMenu = true
     @ViewBuilder let menu: () -> Menu
     @ViewBuilder let content: () -> Content
     @State private var isHovered = false
@@ -330,11 +375,12 @@ private struct MacChartCard<Menu: View, Content: View>: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(MacStatisticsWords.title(spec)).fontWeight(.semibold).lineLimit(1)
                     if spec.kind != .kpi {
-                        Text(spec.scope.title).font(.caption).foregroundStyle(.secondary)
+                        Text([spec.scope.title, sourceName].compactMap { $0 }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
                 Spacer(minLength: 4)
-                MacChartMenuButton(spec: spec, isShown: isHovered, menu: menu)
+                if showsMenu { MacChartMenuButton(spec: spec, isShown: isHovered, menu: menu) }
             }
             content()
         }
@@ -350,9 +396,13 @@ private struct MacChartCard<Menu: View, Content: View>: View {
 
 /// A number of the top row (board): its name small, the value big, its
 /// range on the right; the ⋯ menu on hover.
-private struct MacKPITile<Menu: View>: View {
+struct MacKPITile<Menu: View>: View {
     let spec: ChartSpec
     let data: [ChartDatum]?
+    /// A number with its own Source condition says which.
+    var sourceName: String?
+    /// The editor's preview has no menu.
+    var showsMenu = true
     @ViewBuilder let menu: () -> Menu
     @State private var isHovered = false
 
@@ -367,7 +417,7 @@ private struct MacKPITile<Menu: View>: View {
                     .truncationMode(.tail)
                     .help(MacStatisticsWords.title(spec))
                 Spacer(minLength: 2)
-                MacChartMenuButton(spec: spec, isShown: isHovered, menu: menu)
+                if showsMenu { MacChartMenuButton(spec: spec, isShown: isHovered, menu: menu) }
             }
             HStack(alignment: .lastTextBaseline) {
                 Text(value)
@@ -376,7 +426,9 @@ private struct MacKPITile<Menu: View>: View {
                     .monospacedDigit()
                     .lineLimit(1)
                 Spacer(minLength: 4)
-                Text(spec.scope.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                // A Number grouped by something names its biggest group.
+                Text([spec.dimension != nil ? data?.first?.label : nil, spec.scope.title, sourceName].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
         .padding(.horizontal, 16)
@@ -386,7 +438,7 @@ private struct MacKPITile<Menu: View>: View {
         .onHover { isHovered = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(MacStatisticsWords.title(spec))
-        .accessibilityValue("\(value), \(spec.scope.title)")
+        .accessibilityValue([value, spec.scope.title, sourceName].compactMap { $0 }.joined(separator: ", "))
     }
 }
 
@@ -419,7 +471,7 @@ private struct MacChartMenuButton<Menu: View>: View {
 }
 
 /// The body of a chart card, by the shape of its data.
-private struct MacChartCardBody: View {
+struct MacChartCardBody: View {
     let spec: ChartSpec
     let data: [ChartDatum]?
     let failed: Bool
@@ -449,7 +501,9 @@ private struct MacChartCardBody: View {
                 .frame(maxWidth: .infinity, minHeight: 60)
         } else if spec.kind == .line {
             MacLineChart(spec: spec, data: known)
-        } else if let dimension = spec.dimension, dimension.axisKind == .categorical {
+        } else if spec.kind == .donut, let dimension = spec.dimension {
+            MacDonutChart(dimension: dimension, scope: spec.scope, data: known, total: total, open: open)
+        } else if let dimension = spec.dimension, !MacChartDrawing.drawsColumns(spec) {
             MacRankRows(spec: spec, dimension: dimension, data: known, total: total, open: open, openCamera: openCamera)
         } else if let dimension = spec.dimension {
             MacColumnChart(spec: spec, dimension: dimension, data: known, open: open)
@@ -800,5 +854,85 @@ enum MacStatisticsWords {
             return header + Double(max(1, spec.topN)) * 34 + 24
         }
         return header + 140 + 20
+    }
+}
+
+/// A donut (FS-07.01b §1): slices in the six series colours, the seventh
+/// and later grey; a legend of rows under it that open their photos.
+private struct MacDonutChart: View {
+    let dimension: ChartDimension
+    let scope: StatsDateScope
+    let all: [ChartDatum]
+    let total: Int
+    let open: (FilterCriteria) -> Void
+
+    init(dimension: ChartDimension, scope: StatsDateScope, data: [ChartDatum], total: Int, open: @escaping (FilterCriteria) -> Void) {
+        self.dimension = dimension
+        self.scope = scope
+        all = data
+        self.total = total
+        self.open = open
+    }
+
+    /// Six colours, never cycled (DESIGN.md §3.4): the seventh and later are
+    /// one grey "Other" slice, not drillable.
+    private var data: [ChartDatum] {
+        let limit = MacTheme.chartSeries.count
+        guard all.count > limit else { return all }
+        let rest = all.dropFirst(limit - 1).map(\.value).reduce(0, +)
+        return Array(all.prefix(limit - 1)) + [ChartDatum(label: String(localized: "Other", comment: "Mac Statistics donut: the slices past the sixth"),
+                                                         value: rest, drillKey: nil)]
+    }
+
+    private func color(_ index: Int) -> Color {
+        index < MacTheme.chartSeries.count && !(all.count > MacTheme.chartSeries.count && index == MacTheme.chartSeries.count - 1)
+            ? MacTheme.chartSeries[index] : Color.secondary.opacity(0.4)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Chart(Array(data.enumerated()), id: \.element.id) { index, datum in
+                SectorMark(angle: .value("Photos", datum.value), innerRadius: .ratio(0.6), angularInset: 1)
+                    .foregroundStyle(color(index))
+            }
+            .frame(height: 120)
+            .accessibilityHidden(true)
+            ForEach(Array(data.enumerated()), id: \.element.id) { index, datum in
+                let share = total > 0 ? datum.value / Double(total) : 0
+                let row = HStack(spacing: 6) {
+                    Circle().fill(color(index)).frame(width: 8, height: 8)
+                    Text(datum.label).font(.system(size: 12)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(Int(datum.value).formatted()).font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                    Text(share.formatted(.percent.precision(.fractionLength(0)))).font(.caption).foregroundStyle(.secondary)
+                        .monospacedDigit().frame(width: 30, alignment: .trailing)
+                }
+                .contentShape(Rectangle())
+                if let criteria = datum.drillKey.flatMap({ dimension.drillCriteria(key: $0) }) {
+                    Button { open(criteria) } label: { row }
+                        .buttonStyle(.plain)
+                        .help(MacStatisticsWords.clickHelp(datum.value, scope: scope))
+                        .accessibilityLabel(MacStatisticsWords.rowLabel(datum, share: share))
+                } else {
+                    row.accessibilityElement(children: .ignore).accessibilityLabel(MacStatisticsWords.rowLabel(datum, share: share))
+                }
+            }
+        }
+    }
+}
+
+/// The editor's live preview: the card as the dashboard will draw it.
+struct MacChartCardPreview: View {
+    let spec: ChartSpec
+    let data: [ChartDatum]?
+    let total: Int
+    var sourceName: String?
+
+    var body: some View {
+        MacChartCard(spec: spec, sourceName: sourceName, showsMenu: false, menu: { EmptyView() }) {
+            MacChartCardBody(spec: spec, data: data, failed: false, total: total, open: { _ in })
+        }
+        // A picture of the card: nothing in it to press or read twice.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Preview of \(spec.title)", comment: "Mac chart editor: the preview, VoiceOver"))
     }
 }

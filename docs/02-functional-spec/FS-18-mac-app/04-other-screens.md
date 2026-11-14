@@ -206,13 +206,32 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
     show 86 photos". Cột 0 ảnh, giờ, thứ và đường không nhấp được (Library chưa có bộ lọc giờ/thứ — AC-57).
   - **⋯** mỗi thẻ (cả ô số), hiện khi rê chuột, luôn có cho bàn phím/VoiceOver: Duplicate (bản sao ngay sau, tên
     "… Copy") · Move Earlier · Move Later (trong hàng của nó: ô số với ô số, thẻ với thẻ) · Delete Chart… (hỏi lại).
-  - **+**: danh sách thẻ để thêm — các thẻ mặc định đang thiếu, rồi một biểu đồ cột cho mỗi trục chưa có. Sheet sửa
-    biểu đồ đầy đủ là row 30.
+  - **+**: New Chart… (row 30) rồi danh sách thẻ để thêm — các thẻ mặc định đang thiếu, rồi một biểu đồ cột cho mỗi trục chưa có.
   - Popup **Source**: All Sources + các nguồn của sidebar; đổi là tính lại mọi thẻ và Insights (lượt cũ đến sau bị
     bỏ). Tên nguồn trên thẻ có điều kiện Source riêng: chưa vẽ (cần sheet sửa, row 30).
   - Nhấp hàng/cột/insight: All Photos với đúng bộ lọc đó (bỏ Advanced Filter đang có).
   - Settings › General › **Show Insights in Statistics** chạy thật (ẩn/hiện thẻ Insights).
   - Mọi truy vấn và mọi lần ghi `stat_charts` chạy ngoài main thread.
+- **Sheet sửa biểu đồ (row 30, 2026-11-15)** — board `MAC_ChartEditor`, `MacChartEditorSheet.swift`; kiểu màu **C** đã
+  chốt (board `MAC_ChartStyle`, MacTheme `chart*`):
+  - Mở: **+ › New Chart…** (⌥⌘N) và **⋯ › Edit Chart…** trên mọi thẻ và ô số. Sheet 640×560: Name (trống → tên gợi ý
+    hiện mờ, lưu bằng tên đó) · **Chart Type** Bars · Columns · Donut · Line · Number (Bars/Columns là `drawsColumns` của
+    biểu đồ cột; chưa chọn thì theo trục: tên → hàng, số/giờ → cột; iPhone bỏ qua) · Group By (Number có "Nothing — one
+    number") · Measure (Photo Count · Average · Median — chỉ Number · Sum · Minimum · Maximum · Slow Shutter Rate; + "Of"
+    khi cần trường) · Show **Top N** (stepper 1–20; Line: "Lines" 1–6, tắt tới khi có Split Series) · Split Series (tắt
+    ngoài Line, chú "Line charts only.") · Date Range (All Time · This Year · This Month · Last 12 Months).
+  - Number nhóm theo một trục đếm **nhóm lớn nhất** (Measure tắt, chú "Counts photos in the biggest group."); ô số ghi tên
+    nhóm đó. Đổi sang Number từ kiểu khác bắt đầu không nhóm.
+  - **Preview** sống bên phải: thẻ y như dashboard (cùng Source popup), đọc lại 250 ms sau thay đổi cuối, ngoài main;
+    dài quá thì cuộn; lỗi đọc → "Couldn't load this chart."
+  - **Conditions**: All/Photo/Video + Match all/any + các dòng điều kiện của smart album (`MacRuleLine`, **không nhóm**
+    — + chỉ thêm dòng; không chọn thư mục — điều kiện Source đếm cả nguồn). Dòng dở bị bỏ qua, có chú.
+  - Thẻ có điều kiện Source riêng ghi tên nguồn cạnh khoảng ngày (cả ô số); popup Source không đổi nó.
+  - Cancel / Esc: bản nháp không đổi → đóng; đã đổi → **Discard Changes?** (Discard · Keep Editing). Save: thẻ mới thêm
+    cuối và màn cuộn tới nó; sửa thì giữ chỗ, số cũ đứng tới khi số mới về.
+  - Donut: sáu màu chuỗi, phần thứ 7 trở đi gộp **Other** xám (không mở được); legend là hàng bấm được.
+  - **Chưa làm** (board có): số đo Keeper Rate · Picks · Average Rating · Edited Photos (model chưa có phép đo theo dấu
+    rating/flag/edit); Custom… date range; nhóm điều kiện.
 - **Trang một máy (row 29, 2026-11-14)** — board `MAC_StatisticsCamera`, `MacStatisticsCameraPage.swift`:
   - **Mở**: bấm một hàng của Top Camera (hàng có chevron ›; các thẻ khác vẫn mở Library). Trang thay dashboard trong
     cùng chỗ; toolbar: **Back** (⌘[, về dashboard) · popup **Source** (chung với dashboard) · **Show in Library** (All

@@ -157,27 +157,33 @@ final class MacStatisticsModel {
 
     /// Adds a chart at the end, with a fresh id: the same offer added twice
     /// is two charts.
-    func add(_ offer: ChartSpec) {
-        let spec = ChartSpec(title: offer.title, kind: offer.kind, dimension: offer.dimension, metric: offer.metric,
+    @discardableResult
+    func add(_ offer: ChartSpec) -> String {
+        var spec = ChartSpec(title: offer.title, kind: offer.kind, dimension: offer.dimension, metric: offer.metric,
                              filter: offer.filter, seriesSplit: offer.seriesSplit, topN: offer.topN, scope: offer.scope)
+        spec.drawsColumns = offer.drawsColumns
         let position = charts.count
         charts.append(spec)
         write { store in try store.upsert(StatChart(spec: spec, position: position)) }
         loadOne(spec)
+        return spec.id
     }
 
     /// One chart's data, merged in: adding a chart does not read the other fifteen.
     private func loadOne(_ spec: ChartSpec) {
         let queries = self.queries
+        let source = sourceId
         Task.detached(priority: .userInitiated) { [weak self] in
             let data = try? queries.chartData(for: spec, scope: spec.scope)
             let total = (try? queries.totalPhotos(scope: spec.scope)) ?? 0
-            await self?.merge(spec.id, data: data, total: total)
+            await self?.merge(spec, data: data, total: total, source: source)
         }
     }
 
-    private func merge(_ id: String, data: [ChartDatum]?, total: Int) {
-        guard charts.contains(where: { $0.id == id }) else { return }
+    private func merge(_ spec: ChartSpec, data: [ChartDatum]?, total: Int, source: String?) {
+        let id = spec.id
+        // A Source picked meanwhile, or the chart edited again: this read is stale.
+        guard source == sourceId, charts.first(where: { $0.id == id }) == spec else { return }
         if let data { results[id] = data; failedCharts.remove(id) } else { failedCharts.insert(id) }
         scopeTotals[id] = total
     }
@@ -189,13 +195,23 @@ final class MacStatisticsModel {
         }
     }
 
+    /// The editor's Save on a chart that exists: same place, new data.
+    func update(_ spec: ChartSpec) {
+        guard let index = charts.firstIndex(where: { $0.id == spec.id }) else { add(spec); return }
+        // The old figures stay until the new ones land: no blank flash on a rename.
+        charts[index] = spec
+        failedCharts.remove(spec.id)
+        write { store in try store.upsert(StatChart(spec: spec, position: index)) }
+        loadOne(spec)
+    }
+
     /// A copy right after the original, "Copy" on its title.
     func duplicate(_ id: String) {
         guard let index = charts.firstIndex(where: { $0.id == id }) else { return }
         let original = charts[index]
-        let copy = ChartSpec(title: String(localized: "\(original.title) Copy", comment: "Mac Statistics: a duplicated chart's title"),
-                             kind: original.kind, dimension: original.dimension, metric: original.metric,
-                             filter: original.filter, seriesSplit: original.seriesSplit, topN: original.topN, scope: original.scope)
+        var copy = original
+        copy.id = UUID().uuidString
+        copy.title = String(localized: "\(original.title) Copy", comment: "Mac Statistics: a duplicated chart's title")
         charts.insert(copy, at: index + 1)
         results[copy.id] = results[id]
         scopeTotals[copy.id] = scopeTotals[id]

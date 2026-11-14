@@ -25,6 +25,11 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
     /// This chart's own date range. Each spec scopes independently — there
     /// is no global dashboard scope.
     var scope: StatsDateScope
+    /// Bars or Columns in the Mac editor (board `MAC_ChartEditor`) for a
+    /// `.bar` chart: horizontal rows or vertical columns. Nil follows the
+    /// axis — rows for names, columns for numbers and times of day. The
+    /// phone draws its own way and ignores it.
+    var drawsColumns: Bool?
 
     init(
         id: String = UUID().uuidString,
@@ -51,7 +56,7 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
     // MARK: Codable (tolerant — survive future field additions)
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, kind, dimension, metric, filter, seriesSplit, topN, scope
+        case id, title, kind, dimension, metric, filter, seriesSplit, topN, scope, drawsColumns
     }
 
     init(from decoder: Decoder) throws {
@@ -65,6 +70,7 @@ struct ChartSpec: Codable, Identifiable, Equatable, Sendable {
         seriesSplit = try c.decodeIfPresent(ChartDimension.self, forKey: .seriesSplit)
         topN = try c.decodeIfPresent(Int.self, forKey: .topN) ?? 8
         scope = try c.decodeIfPresent(StatsDateScope.self, forKey: .scope) ?? .allTime
+        drawsColumns = try? c.decodeIfPresent(Bool.self, forKey: .drawsColumns)
     }
 
     /// The dashboard a fresh install opens on (FS-07.01 §3), in order: the

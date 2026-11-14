@@ -163,6 +163,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-148 | 04 §2 trang một máy | demo `-ShotDexSection statistics` (ILCE-7M4 có 12 ảnh 5 sao) | bấm hàng ILCE-7M4 của Top Camera | trang: Frames in Library, Lenses on This Body, Top Rated "12 photos rated 5 stars"; toolbar Back, Source, Show in Library; không còn + | ✅ `mac-statistics-camera.json` (+ `-dark`) |
 | AC-149 | 04 §2 trang một máy | như AC-148 | Sort By › Oldest; Show All; Back; Source › Photos Library; bấm FE 24mm; Back; Show in Library; Back; Camera Database…; Back | mỗi Library mở đúng bộ lọc, mỗi Back về lại trang; Settings mở ở Cameras; Back cuối về dashboard | ✅ `mac-statistics-camera.json` |
 | AC-150 | 04 §2 trang một máy, 45k | demo 55k | mở trang ILCE-7M4, Sort By, đổi Source, Back | không khung ShotDex nào ≥ 50 ms trên main | ✅ `mac-statistics-camera-perf.json` (`MAC_UI_SAMPLE=1`) |
+| AC-151 | 04 §2 sửa biểu đồ | demo `-ShotDexSection statistics` | ⋯ Top Lens › Edit Chart…; Columns; Date Range › This Year; Photo; Esc; Return; Save | preview đổi theo từng bước; Esc hỏi Discard Changes?, Return giữ sheet; Save đóng, thẻ Top Lens thành cột | ✅ `mac-chart-editor.json` (+ `-dark`) |
+| AC-152 | 04 §2 biểu đồ mới | như AC-151 | + › New Chart…; Donut; Name "Cameras Share"; Save; ⋯ › Edit Chart…; Esc | thẻ Donut "Cameras Share" thêm cuối, màn cuộn tới nó; sheet chưa đổi đóng ngay, không hỏi | ✅ `mac-chart-editor.json` |
+| AC-153 | 04 §2 sửa biểu đồ, 45k | demo 55k | Edit Top Lens; Columns; Donut; Line; Number; Esc; Return | không khung ShotDex nào ≥ 50 ms trên main | ✅ `mac-chart-editor-perf.json` (`MAC_UI_SAMPLE=1`) |
+| AC-154 | 04 §2 Bars/Columns | `ChartSpec` có/không `drawsColumns` | mã hoá rồi giải; giải dòng cũ | giữ `true`; dòng cũ → nil (theo trục) | ✅ `ChartDrawsColumnsTests` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

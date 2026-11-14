@@ -506,3 +506,18 @@ struct MacDashboardSeedTests {
         #expect(StatsDateScope.last12Months.title == "Last 12 Months")
     }
 }
+
+/// Board `MAC_ChartEditor`: Bars or Columns is stored on the chart; a row
+/// written before the field existed decodes with no choice (follows the axis).
+struct ChartDrawsColumnsTests {
+    @Test func roundTripsAndOldRowsDecode() throws {
+        var spec = ChartSpec(title: "Top Lens", kind: .bar, dimension: .lens, topN: 5)
+        spec.drawsColumns = true
+        let data = try JSONEncoder().encode(spec)
+        #expect(try JSONDecoder().decode(ChartSpec.self, from: data).drawsColumns == true)
+        let old = #"{"id":"A","title":"Top Lens","kind":"bar","dimension":"lens","topN":5}"#
+        let decoded = try JSONDecoder().decode(ChartSpec.self, from: Data(old.utf8))
+        #expect(decoded.drawsColumns == nil)
+        #expect(decoded.dimension == .lens)
+    }
+}

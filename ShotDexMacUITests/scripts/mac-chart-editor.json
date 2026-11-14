@@ -1,0 +1,253 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "statistics"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.Top Lens"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Edit Chart…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Edit Chart",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "01-edit"
+  },
+  {
+   "action": "dump",
+   "name": "01-edit"
+  },
+  {
+   "action": "click",
+   "label": "Columns"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-columns"
+  },
+  {
+   "action": "click",
+   "label": "chart.range"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "This Year",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "chart.measure"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "03-measure-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Photo"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Discard Changes?"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-discard"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertExists",
+   "label": "Edit Chart"
+  },
+  {
+   "action": "click",
+   "label": "chart.save"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Edit Chart"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-saved"
+  },
+  {
+   "action": "click",
+   "label": "statistics.add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "New Chart…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "New Chart",
+   "seconds": 10
+  },
+  {
+   "action": "click",
+   "label": "Donut"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "chart.name"
+  },
+  {
+   "action": "typeText",
+   "text": "Cameras Share"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-new-donut"
+  },
+  {
+   "action": "click",
+   "label": "chart.save"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Cameras Share"
+  },
+  {
+   "action": "click",
+   "label": "statistics.options.Cameras Share"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Edit Chart…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Edit Chart",
+   "seconds": 10
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Edit Chart"
+  },
+  {
+   "action": "assertMissing",
+   "label": "Discard Changes?"
+  },
+  {
+   "action": "scroll",
+   "label": "Cameras Share",
+   "distance": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "07-board-bottom"
+  }
+ ]
+}

@@ -11,6 +11,8 @@ struct MacRuleLine: View {
     var isNested = false
     /// ⌥ is down: + adds a group (Finder's predicate editor).
     var addsGroup = false
+    /// The chart editor's conditions have no groups: + only ever adds a line.
+    var allowsGroups = true
     var onChooseFolder: () -> Void
     var onRemove: () -> Void
     var onAdd: () -> Void
@@ -342,18 +344,20 @@ struct MacRuleLine: View {
     // MARK: +
 
     private var addButton: some View {
-        let groupHere = addsGroup && !isNested
+        let groups = allowsGroups && !isNested
+        let groupHere = addsGroup && groups
         return MacRuleLineButton(
             systemImage: groupHere ? "ellipsis" : "plus",
-            label: isNested ? String(localized: "Add Condition", comment: "Mac smart album editor: add a condition after this one")
-                            : groupHere ? String(localized: "Add Group", comment: "Mac smart album editor: add a nested group of conditions")
-                                        : String(localized: "Add Condition", comment: "Mac smart album editor: add a condition after this one"),
-            help: isNested ? nil : String(localized: "Add a condition. Hold Option to add a group.",
-                                          comment: "Mac smart album editor: the + button's tooltip"),
-            action: { groupHere || (!isNested && NSEvent.modifierFlags.contains(.option)) ? onAddGroup() : onAdd() }
+            label: groupHere ? String(localized: "Add Group", comment: "Mac smart album editor: add a nested group of conditions")
+                             : String(localized: "Add Condition", comment: "Mac smart album editor: add a condition after this one"),
+            help: groups ? String(localized: "Add a condition. Hold Option to add a group.",
+                                  comment: "Mac smart album editor: the + button's tooltip") : nil,
+            action: { groupHere || (groups && NSEvent.modifierFlags.contains(.option)) ? onAddGroup() : onAdd() }
         )
-        .accessibilityAction(named: Text("Add Group", comment: "Mac smart album editor: add a nested group of conditions")) {
-            if !isNested { onAddGroup() }
+        .accessibilityActions {
+            if groups {
+                Button(String(localized: "Add Group", comment: "Mac smart album editor: add a nested group of conditions")) { onAddGroup() }
+            }
         }
     }
 }
