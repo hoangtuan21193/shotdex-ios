@@ -18,6 +18,12 @@ struct MacSettingsWindow: View {
         // Review Unknown Cameras in Sources › Index opens Cameras.
         .onReceive(NotificationCenter.default.publisher(for: .macSettingsShowPane)) { note in
             if let pane = (note.object as? String).flatMap(MacSettingsPane.init(rawValue:)) { self.pane = pane }
+            MacSettingsPane.pending = nil
+        }
+        // Asked before the window existed (Statistics › Camera Database…): taken when it opens.
+        .onAppear {
+            if let pending = MacSettingsPane.pending { pane = pending }
+            MacSettingsPane.pending = nil
         }
     }
 }
@@ -64,6 +70,9 @@ enum MacSettingsPane: String, CaseIterable, Identifiable {
     }
 
     /// General, or `-ShotDexSettingsPane <name>` in a Debug build, for screenshots.
+    /// A pane asked for while the Settings window is not open yet.
+    @MainActor static var pending: MacSettingsPane?
+
     static var initial: MacSettingsPane {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments

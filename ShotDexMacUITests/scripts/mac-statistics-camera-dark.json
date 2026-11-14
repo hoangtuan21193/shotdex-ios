@@ -1,0 +1,53 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "statistics",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "ILCE-7M4, 85 photos, 38%"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "dark-01-camera"
+  },
+  {
+   "action": "scroll",
+   "label": "Lenses on This Body",
+   "distance": 120
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "dark-02-camera-bottom"
+  }
+ ]
+}

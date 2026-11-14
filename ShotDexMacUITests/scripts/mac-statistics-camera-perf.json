@@ -1,0 +1,84 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexDemoDatabase",
+    "demo55k.sqlite",
+    "-ShotDexDemoScale",
+    "200",
+    "-ShotDexSection",
+    "statistics"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 120
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "click",
+   "label": "ILCE-7M4, 17,000 photos, 38%"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "perf-camera"
+  },
+  {
+   "action": "click",
+   "label": "camera.sort"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Highest ISO",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "click",
+   "label": "statistics.source"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Photos Library",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "click",
+   "label": "camera.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  }
+ ]
+}

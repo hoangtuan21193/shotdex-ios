@@ -158,8 +158,11 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-143 | 04 §2 bộ thẻ Mac | demo `-ShotDexSection statistics` | mở Statistics | Insights; 5 ô số; Top Camera, Top Lens, Photos per Month, ISO, Body + Lens, Equivalent Focal Length, Aperture, Shutter Speed, Photos by Weekday, Time of Day, Photos per Year | ✅ `mac-statistics.json` |
 | AC-144 | 04 §2 ⋯ | như AC-143 | ⋯ của ISO › Duplicate; ⋯ ISO Copy › Move Later; ⋯ › Delete Chart… › Delete Chart; ⋯ của Median ISO | có thẻ "ISO Copy" ngay sau ISO; dời được; hỏi lại rồi mất; ô số có Move Later | ✅ `mac-statistics.json` |
 | AC-145 | 04 §2 + | như AC-143 | + › Camera Brand | thẻ Camera Brand thêm cuối | ✅ `mac-statistics.json` |
-| AC-146 | 04 §2 nhấp | như AC-143 | nhấp hàng ILCE-7M4 (85) của Top Camera | All Photos, chip Camera ILCE-7M4, "85 of 226 photos" | ✅ `mac-statistics.json` |
+| AC-146 | 04 §2 nhấp | như AC-143 | nhấp hàng FE 24mm F1.4 GM (29) của Top Lens; Back | All Photos lọc Lens đó, "29 of 226 photos"; Back về Statistics (row 29: hàng Top Camera mở trang máy — AC-148) | ✅ `mac-statistics.json` |
 | AC-147 | 03 Settings | Settings › General | tắt Show Insights in Statistics | Statistics không còn thẻ Insights; bật lại thì có | chưa kiểm bằng script |
+| AC-148 | 04 §2 trang một máy | demo `-ShotDexSection statistics` (ILCE-7M4 có 12 ảnh 5 sao) | bấm hàng ILCE-7M4 của Top Camera | trang: Frames in Library, Lenses on This Body, Top Rated "12 photos rated 5 stars"; toolbar Back, Source, Show in Library; không còn + | ✅ `mac-statistics-camera.json` (+ `-dark`) |
+| AC-149 | 04 §2 trang một máy | như AC-148 | Sort By › Oldest; Show All; Back; Source › Photos Library; bấm FE 24mm; Back; Show in Library; Back; Camera Database…; Back | mỗi Library mở đúng bộ lọc, mỗi Back về lại trang; Settings mở ở Cameras; Back cuối về dashboard | ✅ `mac-statistics-camera.json` |
+| AC-150 | 04 §2 trang một máy, 45k | demo 55k | mở trang ILCE-7M4, Sort By, đổi Source, Back | không khung ShotDex nào ≥ 50 ms trên main | ✅ `mac-statistics-camera-perf.json` (`MAC_UI_SAMPLE=1`) |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

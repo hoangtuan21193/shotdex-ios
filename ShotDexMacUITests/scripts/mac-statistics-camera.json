@@ -1,0 +1,232 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "statistics"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "ILCE-7M4, 85 photos, 38%"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-camera"
+  },
+  {
+   "action": "dump",
+   "name": "01-camera"
+  },
+  {
+   "action": "assertExists",
+   "label": "Frames in Library"
+  },
+  {
+   "action": "assertExists",
+   "label": "Top Rated"
+  },
+  {
+   "action": "assertExists",
+   "label": "camera.back"
+  },
+  {
+   "action": "assertExists",
+   "label": "camera.showInLibrary"
+  },
+  {
+   "action": "assertMissing",
+   "label": "statistics.add"
+  },
+  {
+   "action": "click",
+   "label": "camera.sort"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Oldest",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-sorted"
+  },
+  {
+   "action": "assertExists",
+   "label": "12 photos rated 5 stars"
+  },
+  {
+   "action": "click",
+   "label": "camera.showAll"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Lenses on This Body"
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-top-rated-library"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "statistics.source"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Photos Library",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertExists",
+   "label": "Lenses on This Body"
+  },
+  {
+   "action": "click",
+   "label": "FE 24mm F1.4 GM, 29 photos, 34%"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Lenses on This Body"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-lens-library"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 20
+  },
+  {
+   "action": "click",
+   "label": "camera.showInLibrary"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "Lenses on This Body"
+  },
+  {
+   "action": "screenshot",
+   "name": "04-show-in-library"
+  },
+  {
+   "action": "click",
+   "label": "Back",
+   "type": "button"
+  },
+  {
+   "action": "waitFor",
+   "label": "Lenses on This Body",
+   "seconds": 20
+  },
+  {
+   "action": "click",
+   "label": "camera.database"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-camera-database"
+  },
+  {
+   "action": "assertExists",
+   "label": "Cameras"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "camera.back"
+  },
+  {
+   "action": "waitFor",
+   "label": "Top Camera",
+   "seconds": 20
+  },
+  {
+   "action": "assertMissing",
+   "label": "Lenses on This Body"
+  },
+  {
+   "action": "screenshot",
+   "name": "06-dashboard"
+  }
+ ]
+}

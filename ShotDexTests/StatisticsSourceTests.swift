@@ -61,3 +61,45 @@ import Testing
         #expect(open.filter.pinnedSourceId == nil)
     }
 }
+
+/// Board `MAC_StatisticsCamera`: one camera's header and tiles, read in one
+/// pass; the Source popup narrows it like every card.
+@Suite struct CameraProfileTests {
+    @Test func profileOfOneCamera() throws {
+        let database = try AppDatabase.makeEmpty()
+        let t7 = try SourceStore(database: database).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true,
+                                                              pairsRawAndJpeg: true, kind: "drive")
+        let rows: [(id: String, model: String, lens: String?, favorite: Int, date: Int, source: String)] = [
+            ("A", "Canon EOS R6 Mark II", "RF 24-70mm", 1, 1_673_700_000, t7),
+            ("B", "Canon EOS R6 Mark II", "RF 85mm", 0, 1_791_000_000, t7),
+            ("C", "Canon EOS R6 Mark II", nil, 0, 1_700_000_000, PhotoLibrarySource.id),
+            ("D", "ILCE-7M4", "FE 24mm", 1, 1_700_000_000, PhotoLibrarySource.id),
+        ]
+        try database.writer.write { db in
+            for row in rows {
+                let kind = row.source == t7 ? "file" : "photos"
+                try db.execute(sql: "INSERT INTO photos (id, createdAt) VALUES (?, 1)", arguments: [row.id])
+                try db.execute(sql: """
+                    INSERT INTO photo_metadata (assetId, mediaType, isFavorite, indexedAt, exifStatus, cameraModel, normalizedCameraModel,
+                        normalizedCameraManufacturer, normalizedLensModel, sensorFormat, cropFactor, creationDate)
+                    VALUES (?, 1, ?, 1, 'indexed', ?, ?, 'Canon', ?, 'Full Frame', 1.0, ?)
+                    """, arguments: [row.id, row.favorite, row.model, row.model, row.lens, row.date])
+                try db.execute(sql: "INSERT INTO photo_copies (id, photoId, sourceId, kind, photoKitId, relativePath, relativePathKey) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                               arguments: [row.id + "-copy", row.id, row.source, kind, kind == "photos" ? row.id : nil,
+                                           kind == "photos" ? nil : row.id + ".CR3", kind == "photos" ? nil : row.id.lowercased() + ".cr3"])
+            }
+        }
+        let profile = try StatisticsQueries(database: database).cameraProfile(model: "Canon EOS R6 Mark II")
+        #expect(profile.photos == 3)
+        #expect(profile.favorites == 1)
+        #expect(profile.lenses == 2)
+        #expect(profile.brand == "Canon")
+        #expect(profile.sensorFormat == .fullFrame)
+        #expect(profile.cropFactor == 1.0)
+        #expect(profile.firstPhoto == Date(timeIntervalSince1970: 1_673_700_000))
+        #expect(profile.latestPhoto == Date(timeIntervalSince1970: 1_791_000_000))
+        let onT7 = try StatisticsQueries(database: database, sourceId: t7).cameraProfile(model: "Canon EOS R6 Mark II")
+        #expect(onT7.photos == 2)
+        #expect(try StatisticsQueries(database: database).cameraProfile(model: "Nikon Z8").photos == 0)
+    }
+}

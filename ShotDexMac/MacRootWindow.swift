@@ -101,6 +101,10 @@ struct MacRootWindow: View {
     @State private var backTarget: MacSidebarItem?
     /// All Photos opened from a Statistics bar or row: Back returns there.
     @State private var drilledFromStatistics = false
+    /// The camera page open in Statistics, kept while its photos are shown.
+    @State private var statisticsCamera: MacStatisticsCameraModel?
+    /// Back from a drill is returning: the camera page it came from stays.
+    @State private var returnsToStatisticsPage = false
     @AppStorage("macSidebarShowsAlbums") private var sidebarShowsAlbums = true
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
@@ -214,7 +218,7 @@ struct MacRootWindow: View {
                 MacDuplicatesScreen()
             } else if selection == .statistics {
                 // A bar, a row or an insight: the whole library on those photos.
-                MacStatisticsScreen(sources: sources) { criteria, sourceId in
+                MacStatisticsScreen(sources: sources, camera: $statisticsCamera) { criteria, sourceId in
                     library?.advancedQuery = nil
                     library?.criteria = criteria
                     selection = .allPhotos
@@ -271,6 +275,9 @@ struct MacRootWindow: View {
             cullRequest = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
+            // Statistics opened any way but Back from its photos: the dashboard, not a camera page.
+            if new != .allPhotos, !(new == .statistics && returnsToStatisticsPage) { statisticsCamera = nil }
+            returnsToStatisticsPage = false
             if case .album(let id) = new { photoMenu?.openAlbumId = id } else { photoMenu?.openAlbumId = nil }
         }
         // A search that leaves nothing: the viewer has no grid to go back over.
@@ -1829,6 +1836,7 @@ struct MacRootWindow: View {
                     drilledFromStatistics = false
                     library?.criteria = .empty
                     library?.sourceScope = nil
+                    returnsToStatisticsPage = true
                     selection = .statistics
                 } else {
                     selection = backTarget ?? .albums
@@ -1943,7 +1951,19 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "albums" { selection = .albums }
         // `-ShotDexSection duplicates` (board `MAC_Duplicates`).
         if MacDemoLibrary.section == "duplicates" { selection = .duplicates }
-        if MacDemoLibrary.section == "statistics" { selection = .statistics }
+        if MacDemoLibrary.section == "statistics" {
+            // Board `MAC_StatisticsCamera`: a camera with 5-star photos for its Top Rated strip.
+            selection = .statistics
+            let database = dependencies.database
+            Task.detached {
+                try? await database.writer.write { db in
+                    try db.execute(sql: """
+                        UPDATE photo_metadata SET rating = 5 WHERE assetId IN (
+                            SELECT assetId FROM photo_metadata WHERE cameraModel = 'ILCE-7M4' AND mediaType = 1 ORDER BY assetId LIMIT 12)
+                        """)
+                }
+            }
+        }
         // Board `MAC_Ingest`: a demo card and a folder to import it into.
         if MacDemoLibrary.section == "ingest" {
             Task { if let id = await MacDemoCard.seed(dependencies) { selection = .card(id) } }

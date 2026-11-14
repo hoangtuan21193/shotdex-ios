@@ -471,6 +471,56 @@ extension StatisticsQueries {
 
     // MARK: Filter + scope helpers
 
+    /// One camera's page (board `MAC_StatisticsCamera`): what the header and
+    /// the number tiles say, read in one pass over that camera's photos.
+    struct CameraProfile: Equatable, Sendable {
+        var brand: String?
+        var sensorFormat: SensorFormat?
+        var cropFactor: Double?
+        var firstPhoto: Date?
+        var latestPhoto: Date?
+        var photos = 0
+        var favorites = 0
+        var lenses = 0
+    }
+
+    /// `model` is the normalized camera model a Top Camera row carries.
+    func cameraProfile(model: String) throws -> CameraProfile {
+        let filter = SmartAlbumQuery(rules: [SmartAlbumRule(field: .cameraBody, op: .isExactly, text: model)])
+        let (conditions, values) = filterAndScope(filter, .allTime)
+        let whereSQL = Self.whereSQL(conditions)
+        return try database.reader.read { db in
+            var profile = CameraProfile()
+            if let row = try Row.fetchOne(db, sql: """
+                SELECT COUNT(*) AS photos, COALESCE(SUM(isFavorite), 0) AS favorites,
+                       MIN(creationDate) AS first, MAX(creationDate) AS latest,
+                       COUNT(DISTINCT NULLIF(normalizedLensModel, '')) AS lenses
+                FROM photo_metadata \(whereSQL)
+                """, arguments: StatementArguments(values)) {
+                profile.photos = row["photos"]
+                profile.favorites = row["favorites"]
+                profile.lenses = row["lenses"]
+                profile.firstPhoto = (row["first"] as Int?).map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                profile.latestPhoto = (row["latest"] as Int?).map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            }
+            // The most common brand and known sensor format among its photos.
+            profile.brand = try String.fetchOne(db, sql: """
+                SELECT normalizedCameraManufacturer FROM photo_metadata \(whereSQL)
+                AND normalizedCameraManufacturer IS NOT NULL AND normalizedCameraManufacturer <> ''
+                GROUP BY normalizedCameraManufacturer ORDER BY COUNT(*) DESC, normalizedCameraManufacturer LIMIT 1
+                """, arguments: StatementArguments(values))
+            if let row = try Row.fetchOne(db, sql: """
+                SELECT sensorFormat, cropFactor FROM photo_metadata \(whereSQL)
+                AND sensorFormat IS NOT NULL AND sensorFormat <> 'Unknown'
+                GROUP BY sensorFormat, cropFactor ORDER BY COUNT(*) DESC, sensorFormat LIMIT 1
+                """, arguments: StatementArguments(values)) {
+                profile.sensorFormat = (row["sensorFormat"] as String?).flatMap(SensorFormat.init(rawValue:))
+                profile.cropFactor = row["cropFactor"]
+            }
+            return profile
+        }
+    }
+
     /// The spec filter and date scope as ANDable conditions + bound values
     /// (no `WHERE`, no leading keyword). Column names inside come only from the
     /// closed-enum rule builder; values are parameters.

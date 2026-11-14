@@ -8,6 +8,9 @@ import SwiftUI
 struct MacStatisticsScreen: View {
     /// The window's sources, as the sidebar lists them: the Source popup.
     let sources: [SourceStore.Source]
+    /// A Top Camera row opened its camera's page (board `MAC_StatisticsCamera`).
+    /// Held by the window: Back from the Library returns to it.
+    @Binding var camera: MacStatisticsCameraModel?
     /// The Library on the photos of a bar, a row or an insight, in the
     /// source the popup has.
     let open: (FilterCriteria, String?) -> Void
@@ -42,6 +45,9 @@ struct MacStatisticsScreen: View {
                         model.restoreDefaults()
                     }
                 }
+            } else if let camera {
+                MacStatisticsCameraPage(model: camera, open: { open($0, camera.sourceId) },
+                                        showAllSources: { model?.sourceId = nil })
             } else if let model, model.hasLoaded {
                 content(model)
                     // A Source change reads every card again: the old numbers dim meanwhile.
@@ -52,16 +58,20 @@ struct MacStatisticsScreen: View {
             }
         }
         .background(MacTheme.content)
-        .navigationTitle(String(localized: "Statistics", comment: "Mac Statistics title"))
-        .navigationSubtitle(subtitle)
+        .navigationTitle(camera == nil ? String(localized: "Statistics", comment: "Mac Statistics title") : "")
+        .navigationSubtitle(camera == nil ? subtitle : "")
         .toolbar { toolbar }
         .task {
             guard model == nil else { return }
             let model = MacStatisticsModel(database: dependencies.database)
+            // Back from the Library to a camera page: the popup says the page's source.
+            model.sourceId = camera?.sourceId
             self.model = model
             model.reload()
         }
         // A source read, added or removed since: the counts follow.
+        // The popup is the one source of truth: a removed source, "Show All Sources", a pick.
+        .onChange(of: model?.sourceId) { _, id in camera?.setSource(id) }
         // Only a source added or removed: a read's progress in a row is not a reason.
         .onChange(of: Set(sources.map(\.id))) { _, ids in model?.keep(sourceIds: ids) }
         .confirmationDialog(String(localized: "Delete “\(deleting?.title ?? "")”?", comment: "Mac Statistics: confirm deleting a chart"),
@@ -93,6 +103,16 @@ struct MacStatisticsScreen: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        if camera != nil {
+            ToolbarItem(placement: .navigation) {
+                Button { camera = nil } label: {
+                    Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left")
+                }
+                .keyboardShortcut("[", modifiers: .command)
+                .help(String(localized: "Back to Statistics", comment: "Mac Statistics camera page: Back"))
+                .accessibilityIdentifier("camera.back")
+            }
+        }
         ToolbarItemGroup(placement: .primaryAction) {
             if let model {
                 Picker(selection: Binding(get: { model.sourceId ?? "" }, set: { model.sourceId = $0.isEmpty ? nil : $0 })) {
@@ -109,6 +129,16 @@ struct MacStatisticsScreen: View {
                 .help(String(localized: "Count the photos with a copy in one source", comment: "Mac Statistics: Source popup tooltip"))
                 .accessibilityIdentifier("statistics.source")
 
+                if let camera {
+                    Button {
+                        open(camera.criteria, camera.sourceId)
+                    } label: {
+                        Label(String(localized: "Show in Library", comment: "Mac Statistics camera page: the camera's photos in All Photos"),
+                              systemImage: "photo.on.rectangle")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .accessibilityIdentifier("camera.showInLibrary")
+                } else {
                 Menu {
                     Section(String(localized: "Add Chart", comment: "Mac Statistics: + menu header")) {
                         if model.addable.isEmpty {
@@ -123,6 +153,7 @@ struct MacStatisticsScreen: View {
                 }
                 .help(String(localized: "Add Chart", comment: "Mac Statistics: + button"))
                 .accessibilityIdentifier("statistics.add")
+                }
             }
         }
     }
@@ -172,7 +203,13 @@ struct MacStatisticsScreen: View {
                     ForEach(buckets[column], id: \.id) { spec in
                         card(spec, model: model) {
                             MacChartCardBody(spec: spec, data: model.results[spec.id], failed: model.failedCharts.contains(spec.id),
-                                             total: model.scopeTotals[spec.id] ?? 0) { open($0, model.sourceId) }
+                                             total: model.scopeTotals[spec.id] ?? 0, open: { open($0, model.sourceId) },
+                                             openCamera: { key, name in
+                                                 let page = MacStatisticsCameraModel(model: key, name: name, database: dependencies.database,
+                                                                                     sourceId: model.sourceId)
+                                                 camera = page
+                                                 page.load()
+                                             })
                         }
                     }
                 }
@@ -388,6 +425,8 @@ private struct MacChartCardBody: View {
     let failed: Bool
     let total: Int
     let open: (FilterCriteria) -> Void
+    /// A Top Camera row opens its camera's page, not the Library.
+    var openCamera: ((String, String) -> Void)?
 
     var body: some View {
         if failed {
@@ -411,7 +450,7 @@ private struct MacChartCardBody: View {
         } else if spec.kind == .line {
             MacLineChart(spec: spec, data: known)
         } else if let dimension = spec.dimension, dimension.axisKind == .categorical {
-            MacRankRows(spec: spec, dimension: dimension, data: known, total: total, open: open)
+            MacRankRows(spec: spec, dimension: dimension, data: known, total: total, open: open, openCamera: openCamera)
         } else if let dimension = spec.dimension {
             MacColumnChart(spec: spec, dimension: dimension, data: known, open: open)
         }
@@ -429,6 +468,7 @@ private struct MacRankRows: View {
     let data: [ChartDatum]
     let total: Int
     let open: (FilterCriteria) -> Void
+    var openCamera: ((String, String) -> Void)?
 
     var body: some View {
         let top = data.map(\.value).max() ?? 1
@@ -453,7 +493,21 @@ private struct MacRankRows: View {
                 }
                 .contentShape(Rectangle())
                 let words = MacStatisticsWords.rowLabel(datum, share: share)
-                if let criteria {
+                if dimension == .cameraBody, let key = datum.drillKey, let openCamera {
+                    // A chevron says this row opens a page, not the Library.
+                    Button { openCamera(key, datum.label) } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            row
+                            Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                        .buttonStyle(.plain)
+                        .help(String(localized: "Show this camera's statistics", comment: "Mac Statistics: a Top Camera row opens its page"))
+                        .accessibilityLabel(words)
+                        .accessibilityHint(String(localized: "Show this camera's statistics", comment: "Mac Statistics: a Top Camera row opens its page"))
+                } else if let criteria {
                     Button { open(criteria) } label: { row }
                         .buttonStyle(.plain)
                         .help(MacStatisticsWords.clickHelp(datum.value, scope: spec.scope))
@@ -470,7 +524,7 @@ private struct MacRankRows: View {
 /// ISO, focal length, aperture, shutter, weekday, time of day: columns in
 /// the soft tint, the tallest in the accent with its number; hovering one
 /// says how many, clicking opens them.
-private struct MacColumnChart: View {
+struct MacColumnChart: View {
     let spec: ChartSpec
     let dimension: ChartDimension
     let data: [ChartDatum]
@@ -483,8 +537,9 @@ private struct MacColumnChart: View {
         // Hour and weekday cannot be opened yet (no such Library filter): no hover light.
         let lit = hovered.flatMap { label in data.first { $0.label == label && Self.opens($0, dimension) }?.id }
         Chart(data) { datum in
+            // Board: columns at most 24 wide, air between them.
             BarMark(x: .value("Group", datum.label), y: .value("Photos", datum.value),
-                    width: hour ? .fixed(3) : .ratio(data.count > 6 ? 0.7 : 0.6))
+                    width: hour ? .fixed(3) : .fixed(data.count > 8 ? 16 : 24))
                 .foregroundStyle(datum.id == peak || datum.id == lit ? MacTheme.accent : MacTheme.chartSoft)
                 .clipShape(UnevenRoundedRectangle(topLeadingRadius: hour ? 1 : 4, topTrailingRadius: hour ? 1 : 4))
                 .annotation(position: .top, spacing: 2) {
@@ -501,7 +556,9 @@ private struct MacColumnChart: View {
             AxisMarks { value in
                 if let label = value.as(String.self), Self.showsLabel(label, in: data, hour: hour) {
                     // Long bins ("Slower than 1/30s") drop a neighbour rather than overlap it.
-                    AxisValueLabel(collisionResolution: .greedy) { Text(Self.short(label, hour: hour)).font(.caption2) }
+                    AxisValueLabel(collisionResolution: .greedy) {
+                        Text(hour ? Self.short(label, hour: true) : MacStatisticsWords.binLabel(label, dimension: dimension)).font(.caption2)
+                    }
                 }
             }
         }
@@ -659,6 +716,16 @@ private struct MacChartTooltip: View {
 // MARK: - Words
 
 enum MacStatisticsWords {
+    /// A bin's axis label as the board writes it — its lower bound: "28–34"
+    /// → "28", "f/1.0 – 2.0" → "1.0", "≤ 100" → "100", "> 6400" → "6400+".
+    /// The tooltip keeps the whole range.
+    static func binLabel(_ label: String, dimension: ChartDimension) -> String {
+        guard [.iso, .aperture, .focalActual, .focalEquivalent].contains(dimension),
+              let range = label.range(of: "[0-9]+(\\.[0-9]+)?", options: .regularExpression) else { return label }
+        let number = String(label[range])
+        return label.hasPrefix(">") || label.hasSuffix("+") ? number + "+" : number
+    }
+
     /// A line chart's period as the axis says it: "2026-09" → "Sep",
     /// "2026" → "'26" (board `MAC_Statistics`).
     static func periodLabel(_ key: String) -> String {

@@ -192,8 +192,7 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
 - Một ảnh có bản sao ở hai nguồn được đếm **một lần** (D7, FS-19). Source = T7 RAW Archive đếm ảnh có bản trên T7.
 - **Popup Source là bộ lọc tạm của màn**: áp lên mọi thẻ không có điều kiện Source riêng, không ghi vào định nghĩa
   thẻ nào. Thẻ có điều kiện Source riêng **giữ điều kiện của nó**, bỏ qua popup, và ghi tên nguồn đó trên thẻ.
-- Sheet sửa biểu đồ 640×560 ([FS-07.01b](../FS-07-statistics/01b-cards-editor-and-states.md)); trang một máy
-  (`MAC_StatisticsCamera`) giữ popup khoảng ngày riêng của nó.
+- Sheet sửa biểu đồ 640×560 ([FS-07.01b](../FS-07-statistics/01b-cards-editor-and-states.md)).
 - **Đã dựng (row 28, 2026-11-14)** — `ShotDexMac/Statistics/`:
   - Bộ thẻ mặc định của Mac (`ChartSpec.macDefaultSpecs()`, gieo một lần, cờ `stats.mac.didSeedCharts`; thẻ đã xoá
     không mọc lại): hàng số 5 ô (Total Photos & Videos · Slow Shutter · Median ISO *This Year* · Average Equivalent
@@ -214,6 +213,29 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
   - Nhấp hàng/cột/insight: All Photos với đúng bộ lọc đó (bỏ Advanced Filter đang có).
   - Settings › General › **Show Insights in Statistics** chạy thật (ẩn/hiện thẻ Insights).
   - Mọi truy vấn và mọi lần ghi `stat_charts` chạy ngoài main thread.
+- **Trang một máy (row 29, 2026-11-14)** — board `MAC_StatisticsCamera`, `MacStatisticsCameraPage.swift`:
+  - **Mở**: bấm một hàng của Top Camera (hàng có chevron ›; các thẻ khác vẫn mở Library). Trang thay dashboard trong
+    cùng chỗ; toolbar: **Back** (⌘[, về dashboard) · popup **Source** (chung với dashboard) · **Show in Library** (All
+    Photos lọc máy này, cùng nguồn). Back từ Library sau khi nhấp trên trang quay lại **trang**; vào Statistics bằng
+    sidebar từ nơi khác thì về dashboard. Chọn lại Statistics trên sidebar khi đang ở trang: không đổi (Back là lối ra).
+  - **Mọi số tính trên mọi ngày** — không có popup khoảng ngày (board không vẽ; bỏ ý cũ "giữ popup khoảng ngày riêng").
+  - Đầu trang: ô máy ảnh 56pt · tên · `Canon · Full Frame sensor (1.0× crop) · first photo … · latest …` (phần nào
+    không biết thì bỏ) · nút **Camera Database…** mở Settings › Cameras (cả khi Settings chưa mở).
+  - Sáu ô: Photos (`38% of library`, hay `of this source` khi popup có nguồn) · Lenses Used · Busiest Month (+ số ảnh) ·
+    Median ISO · Slow Shutter · Favorites. Ô hẹp: tháng rút gọn rồi bỏ số phụ, không cắt chữ.
+  - **Frames in Library**: cột ảnh mỗi tháng (amber nhạt, tháng nhiều nhất amber đậm kèm số) + đường cộng dồn (màu
+    chuỗi 2) có trục riêng bên phải và số cuối; legend; câu "Counts photos in your library, not the camera's shutter
+    count. Busiest month: …". Ít tháng: cột 14pt.
+  - **Lenses on This Body**: 5 ống kính nhiều nhất (bấm = Library lọc máy + ống kính); dòng cuối "N more lenses · M
+    photos ›" (hoặc "M photos without lens info") mở mọi ảnh của máy.
+  - **Focal Length** (tương đương), **Aperture**, **ISO**: cột như dashboard (nhãn trục là cận dưới của nhóm; tooltip ghi
+    cả khoảng; bấm = Library lọc máy + nhóm đó).
+  - **Top Rated**: ảnh 5 sao của máy (cùng nguồn), tối đa 8, badge định dạng + ★★★★★, dải tối ở chân sau dòng phơi
+    sáng; **Sort By** Newest · Oldest · Highest ISO · Longest Lens (board cũ ghi "Rating" — mọi ảnh ở đây đều 5 sao, đã
+    sửa board); **Show All** và bấm một ô = Library lọc máy + 5 sao. Lỗi đọc: "Couldn't load…" + Try Again.
+  - Trạng thái: đang đọc (mờ khi đổi nguồn), lỗi (Try Again), máy không có ảnh trong nguồn đang chọn ("No Photos from X
+    Here" + Show All Sources).
+  - Một lượt đọc ngoài main thread (`StatisticsQueries.cameraProfile` + các truy vấn biểu đồ có bộ lọc máy); lượt cũ bị huỷ.
 
 ## 3. Cửa sổ Settings (⌘,)
 
