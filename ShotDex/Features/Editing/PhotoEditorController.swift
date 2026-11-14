@@ -312,6 +312,10 @@ final class PhotoEditorController {
     /// Floor for a very small stage only. Nothing lowers the interactive render
     /// below the display size: a drag must never soften the photo.
     private static let minimumInteractiveEdge: CGFloat = 768
+    /// The drag-time draft's share of the displayed edge (FS-03.18 §1).
+    static let interactiveScale: CGFloat = 0.5
+    /// Never below this, however small the stage.
+    static let minimumDraftEdge: CGFloat = 640
     private static let rawDemosaicEdge: CGFloat = 768
     /// Nonisolated so it can be a default argument — the settle render's size is a
     /// constant, not actor state.
@@ -3493,7 +3497,10 @@ final class PhotoEditorController {
         // A zoomed stage can ask for more than the settle size; a *drag* still
         // stops there, because paying for 4800px per frame would cost the frame
         // rate the interactive render exists to protect.
-        let edge = min(Self.settleEdge, displayEdge)
+        // Half the displayed size while the finger moves, like Lightroom's
+        // tracking proxy (FS-03.18 §1); the settle render on release is full
+        // size. One constant, so the trade can be tuned on a device.
+        let edge = min(Self.settleEdge, max(Self.minimumDraftEdge, (displayEdge * Self.interactiveScale).rounded()))
         frozenInteractiveEdge = edge
         return edge
     }
@@ -3529,7 +3536,7 @@ final class PhotoEditorController {
         usesInteractiveBase: Bool = false
     ) async {
         guard let loadedSource else { return }
-        isRendering = true
+        if !isRendering { isRendering = true }
         let renderedRecipe = recipe
         do {
             var previewRecipe = recipe
@@ -3569,6 +3576,12 @@ final class PhotoEditorController {
                 previewRecipe.overlays.removeAll { $0.id == editingDrawingLayerID }
             }
             previewRecipe = renderReady(previewRecipe)
+            // While a finger moves: the draft — sharpening, noise reduction
+            // and grain step aside unless they are what is being dragged; the
+            // settle render on release puts them back (FS-03.18 §1).
+            if usesInteractiveBase {
+                previewRecipe = previewRecipe.interactiveDraft(editing: selectedAdjustment)
+            }
             // Only inside the single-mask editor: the list level is for choosing
             // a mask, and `selectMask` flips `showsMaskOverlay` on for the row
             // taps too — without the `editingMaskAdjustments` gate that tinted
@@ -3606,7 +3619,7 @@ final class PhotoEditorController {
             }
             if isVisualizingSpots { refreshSpotMap() }
             colorSamplingImage = preview.cleanImage
-            await updateHistogram()
+            scheduleHistogram(isDragging: usesInteractiveBase)
             await resolveMaskDetection()
             if !isContinuousChange {
                 refreshMaskThumbnails()
@@ -3616,7 +3629,9 @@ final class PhotoEditorController {
             guard generation == renderGeneration else { return }
             errorMessage = error.localizedDescription
         }
-        if generation == renderGeneration {
+        // Stays on through a drag: flipping it per frame re-rendered every
+        // view that reads it, every frame (FS-03.18 A4).
+        if generation == renderGeneration, !isContinuousChange {
             isRendering = false
         }
     }
@@ -3685,6 +3700,28 @@ final class PhotoEditorController {
         guard let colorSamplingImage else { return }
         histogram = await service.renderer.histogram(of: colorSamplingImage)
     }
+
+    /// One histogram at a time, never awaited by the render loop, and at most
+    /// five a second while a finger moves — Lightroom's
+    /// `_startRenderingHistograms.ABORT there is current histogram task`
+    /// (FS-03.18 §2). The settle frame always gets one.
+    private func scheduleHistogram(isDragging: Bool) {
+        let now = ContinuousClock.now
+        if isDragging {
+            if histogramTask != nil { return }
+            if let last = lastHistogramAt, now - last < Self.draggingHistogramInterval { return }
+        }
+        histogramTask?.cancel()
+        lastHistogramAt = now
+        histogramTask = Task { [weak self] in
+            await self?.updateHistogram()
+            self?.histogramTask = nil
+        }
+    }
+
+    @ObservationIgnored private var histogramTask: Task<Void, Never>?
+    @ObservationIgnored private var lastHistogramAt: ContinuousClock.Instant?
+    static let draggingHistogramInterval: Duration = .milliseconds(200)
 
     /// Mask rows show the real shape of their mask. Thumbnails are rebuilt only
     /// when the mask set or its geometry actually changed, never per slider frame.
