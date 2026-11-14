@@ -47,15 +47,15 @@ Theo phiên như nay.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | recipe có khử nhiễu + làm nét + lens blur | render chất lượng tương tác | không chạy ba tầng đó; cạnh dài = ½ hiển thị (≥ 640) | ⚠️ `EditorRenderQualityTests` |
+| AC-1 | recipe có khử nhiễu + làm nét + lens blur | render chất lượng tương tác | không chạy ba tầng đó; cạnh dài = ½ hiển thị (≥ 640) | ✅ `EditorRenderQualityTests` (e1f627ac) |
 | AC-2 | như AC-1 | render chất lượng cuối | ảnh giống hệt render hiện nay (cùng pixel) | ⚠️ `EditorRenderQualityTests.finalUnchanged` |
 | AC-3 | kéo liên tục | mỗi nhịp | preview dùng chất lượng tương tác; thả tay một render cuối | ⚠️ `PhotoEditorControllerRenderTests` |
-| AC-4 | 10 nhịp trong 1 s | histogram | tính ≤ 5 lần + 1 lần sau thả | ⚠️ test |
-| AC-5 | thả tay 2 lần cùng ảnh | render cuối | ảnh gốc giải mã một lần | ⚠️ test đếm decode |
-| AC-6 | giữ ô film look 0,3 s rồi thả ngoài dải | — | recipe không đổi, History không thêm bước | ⚠️ test controller + ui-drive |
-| AC-7 | như AC-6, thả trên ô | — | look áp, một bước History | ⚠️ test |
-| AC-8 | bật tam giác phải, ảnh có vùng 255 | — | lớp đỏ đúng vùng đó | ⚠️ `ClippingOverlayTests` |
-| AC-9 | tạo snapshot "Ấm", sửa tiếp, đóng, mở lại | chạm "Ấm" | recipe về như lúc tạo | ⚠️ `EditorSnapshotStoreTests` + screenshot |
-| AC-10 | nút ◧ | chạm | chia đôi hiện, kéo vạch được | ⚠️ screenshot iPhone/iPad/Duo |
+| AC-4 | 10 nhịp trong 1 s | histogram | tính ≤ 5 lần + 1 lần sau thả | 🟡 code (throttle 200 ms, một task một lúc, e1f627ac); chưa có test đếm |
+| AC-5 | thả tay 2 lần cùng ảnh | render cuối | ảnh gốc giải mã một lần | ⛔ chưa làm (A2 hoãn: rủi ro khác pixel/bộ nhớ) |
+| AC-6 | giữ ô film look 0,3 s rồi thả ngoài dải | — | recipe không đổi, History không thêm bước | ⛔ chờ chốt D2 (đụng menu nhấn-giữ của ô look) |
+| AC-7 | như AC-6, thả trên ô | — | look áp, một bước History | ⛔ chờ chốt D2 |
+| AC-8 | bật tam giác phải, ảnh có vùng 255 | — | lớp đỏ đúng vùng đó | ✅ `ClippingOverlayTests` + iPhone screenshot (4829c507) |
+| AC-9 | tạo snapshot "Ấm", sửa tiếp, đóng, mở lại | chạm "Ấm" | recipe về như lúc tạo | ✅ `EditorSnapshotStoreTests` + iPhone screenshot History sheet (57f8e849); reopen-after-close chưa chụp |
+| AC-10 | nút ◧ | chạm | chia đôi hiện, kéo vạch được | 🟡 iPhone ✅ qua ⋯ (`build/sa-shots/compare-menu/c2-split.png`, 5dcb2172); iPad/Duo chưa chụp |
 | AC-11 | mọi công cụ cũ | dùng | như trước | ⚠️ test hiện có xanh |
 | AC-12 | iPad Pro thật, NR+sharpen bật | kéo Exposure | thời gian mỗi khung giảm so với trước (đo) | ⚠️ đo trên iPad |
