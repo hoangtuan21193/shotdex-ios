@@ -677,7 +677,10 @@ final class AppDependencies {
             actions.hideService = hideService
             actions.onHiddenInShotDex = { [sources] in sources.photosDeleted() }
         }
-        photoLibrary.fileThumbnails.reload(database)
+        Task { [photoLibrary, database, sources] in
+            await photoLibrary.fileThumbnails.reloadInBackground(database)
+            sources.fileThumbnailsReloaded()
+        }
         let openCopies = OpenCopyQueries(database: database)
         photoLibrary.filePhotoURL = { [folderRoots] id in
             guard let copy = try? openCopies.openCopy(photoId: id), copy.kind == "file", let path = copy.relativePath else { return nil }
@@ -687,7 +690,7 @@ final class AppDependencies {
         photoLibrary.keptFileURL = { id in
             (try? kept.item(id: id)).flatMap { keptFiles.file(for: $0) }
         }
-        sources.load()
+        sources.refresh()
     }
 
     /// Refreshes everything the Home and Lock Screen widgets read: the next

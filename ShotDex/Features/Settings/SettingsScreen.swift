@@ -606,7 +606,7 @@ struct SettingsScreen: View {
             Text("Folders, drives and servers are indexed in place. ShotDex never edits file contents; ratings and keywords go to .xmp sidecars.",
                  comment: "Settings → Sources: footer under the list of sources")
         }
-        .onAppear { dependencies.sources.load() }
+        .onAppear { dependencies.sources.refresh() }
     }
 
     // MARK: Photo Library

@@ -38,6 +38,11 @@ final class SourcesModel {
     @ObservationIgnored private let readControl = SourceReadControl()
     /// Bumped after every read, so the grid and the tabs reload what changed.
     private(set) var readCount = 0
+    /// Bumped when the grid's file-thumbnail index has been rebuilt off the
+    /// main actor (launch), so the library redraws its server/folder tiles.
+    private(set) var fileThumbnailsVersion = 0
+
+    func fileThumbnailsReloaded() { fileThumbnailsVersion += 1 }
     /// Add, Remove… or Grant Access… did not go through; Settings says why.
     struct Failure: Equatable {
         var title: String
@@ -63,9 +68,31 @@ final class SourcesModel {
         self.photoLibrary = photoLibrary
     }
 
+    /// Synchronous: the reads run on the caller. Tests only — on a 55k
+    /// library the counts scan every copy, and the Collections tab called
+    /// this on each appear, a hitch on every tab switch (iPad 2026-11-14).
     func load() {
         apply(Self.snapshot(database))
     }
+
+    /// What screens call on appear: `reload()` in a task, one at a time; a
+    /// request during a read runs once more after it.
+    func refresh() {
+        guard refreshTask == nil else {
+            refreshesAgain = true
+            return
+        }
+        refreshTask = Task {
+            repeat {
+                refreshesAgain = false
+                await reload()
+            } while refreshesAgain
+            refreshTask = nil
+        }
+    }
+
+    @ObservationIgnored private var refreshTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshesAgain = false
 
     /// `load()` with the reads off the main actor — the read path runs it at a
     /// read's start and end, the moments a click is waiting (55k photos:
@@ -228,7 +255,7 @@ final class SourcesModel {
             try? store.setWhenUnplugged(choice, sourceId: source.id)
         }
         readCount += 1
-        load()
+        refresh()
     }
 
     func read(sourceId: String, isAdding: Bool = false) async {
@@ -294,7 +321,7 @@ final class SourcesModel {
         if isSource, existing ?? nil == nil {
             guard let id = try? store.addServer(name: connection.name, connectionId: connection.id) else { return }
             readingSourceId = id
-            load()
+            await reload()
             _ = await servers.rescan(sourceId: id)
             readingSourceId = nil
             readCount += 1
@@ -302,7 +329,7 @@ final class SourcesModel {
             try? store.remove(sourceId: id)
             readCount += 1
         }
-        load()
+        await reload()
     }
 
     /// Remove… (Mac Settings › Sources, FS-18.04 §3 AC-72): the source's
@@ -318,7 +345,7 @@ final class SourcesModel {
                                     comment: "Sources: Remove failed"))
         }
         readCount += 1
-        load()
+        await reload()
     }
 
     /// Grant Access…: the folder picked again; its files are read back to
@@ -329,7 +356,7 @@ final class SourcesModel {
         } catch {
             failure = .error(String(localized: "ShotDex could not keep access to “\(folder.lastPathComponent)”: \(error.localizedDescription)",
                                     comment: "Sources: Grant Access failed"))
-            load()
+            await reload()
             return
         }
         await read(sourceId: sourceId)
@@ -378,20 +405,20 @@ final class SourcesModel {
     /// behind it (Cull): the Library reloads what went, the rows recount.
     func photosDeleted() {
         readCount += 1
-        load()
+        refresh()
     }
 
     /// A file opened from the cloud is down and read (FS-19.01b §4): the
     /// grid swaps its cloud tile for the photo, the rows recount.
     func cloudFileDownloaded() {
         readCount += 1
-        load()
+        refresh()
     }
 
     /// Rescan in a server source's browser, or Try Again on its row.
     func rescanServer(sourceId: String) async {
         if let summary = await servers.rescan(sourceId: sourceId), summary.photos > 0 { readCount += 1 }
-        load()
+        await reload()
     }
 
     /// On launch and each return to the foreground (FS-19.01 §5): what
@@ -407,13 +434,13 @@ final class SourcesModel {
         if await runner.readAll(skipping: paused.map { [$0] } ?? []) { readCount += 1 }
         // Servers are listed by the on-server check, within each
         // connection's Backup rules (FS-19.07 §6): `serverListingChanged`.
-        load()
+        await reload()
     }
 
     /// A server source's listing found new or changed photos.
     func serverListingChanged() {
         readCount += 1
-        load()
+        refresh()
     }
 
     #if DEBUG

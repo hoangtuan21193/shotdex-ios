@@ -215,7 +215,7 @@ struct AlbumsScreen: View {
         .task {
             dependencies.fileServerCatalog.reload()
             dependencies.serverShortcuts.reload()
-            dependencies.sources.load()
+            dependencies.sources.refresh()
         }
         .alert("Rename", isPresented: Binding(get: { renamingShortcut != nil }, set: { if !$0 { renamingShortcut = nil } }), presenting: renamingShortcut) { shortcut in
             TextField("Name", text: $shortcutName)

@@ -46,7 +46,7 @@ struct SourcesGroup: View {
         }
         .padding(.horizontal)
         .onAppear {
-            dependencies.sources.load()
+            dependencies.sources.refresh()
             #if DEBUG
             dependencies.cards.seedIfAsked()
             #endif

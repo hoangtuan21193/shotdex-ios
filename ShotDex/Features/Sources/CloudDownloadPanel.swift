@@ -195,9 +195,11 @@ struct CloudDownloadPanel: View {
 
     private func start() {
         model.start(runner: dependencies.folderSources, downloader: CloudDownloadModel.downloader) {
-            dependencies.photoLibrary.fileThumbnails.reload(dependencies.database)
-            dependencies.sources.cloudFileDownloaded()
-            onDownloaded()
+            Task {
+                await dependencies.photoLibrary.fileThumbnails.reloadInBackground(dependencies.database)
+                dependencies.sources.cloudFileDownloaded()
+                onDownloaded()
+            }
         }
     }
 }

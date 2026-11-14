@@ -200,10 +200,10 @@ struct RootTabView: View {
                 NavigationStack { LibraryScreen(model: libraryModel) }
             }
             Tab(AppTab.albums.title, systemImage: AppTab.albums.systemImage, value: .albums) {
-                NavigationStack(path: $albumsPath) { AlbumsScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
+                NavigationStack(path: $albumsPath) { IndexingReader(library: libraryModel) { AlbumsScreen(model: albumsModel, isLibraryIndexing: $0) } }
             }
             Tab(AppTab.utilities.title, systemImage: AppTab.utilities.systemImage, value: .utilities) {
-                NavigationStack(path: $utilitiesPath) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
+                NavigationStack(path: $utilitiesPath) { IndexingReader(library: libraryModel) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: $0) } }
             }
             Tab(value: .search, role: .search) {
                 NavigationStack {
@@ -278,7 +278,12 @@ struct RootTabView: View {
         }
         // A folder or drive read added or changed photos (FS-19.01 §4).
         .onChange(of: dependencies.sources.readCount) { _, _ in
-            dependencies.photoLibrary.fileThumbnails.reload(dependencies.database)
+            Task {
+                await dependencies.photoLibrary.fileThumbnails.reloadInBackground(dependencies.database)
+                libraryModel?.reload()
+            }
+        }
+        .onChange(of: dependencies.sources.fileThumbnailsVersion) { _, _ in
             libraryModel?.reload()
         }
         .onChange(of: navigation.pendingLibraryFilter) { _, pending in
@@ -424,10 +429,10 @@ struct RootTabView: View {
                 tabStack(.library) { LibraryScreen(model: libraryModel) }
             }
             if mountedLegacyTabs.contains(.albums) {
-                tabStack(.albums, path: $albumsPath) { AlbumsScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
+                tabStack(.albums, path: $albumsPath) { IndexingReader(library: libraryModel) { AlbumsScreen(model: albumsModel, isLibraryIndexing: $0) } }
             }
             if mountedLegacyTabs.contains(.utilities) {
-                tabStack(.utilities, path: $utilitiesPath) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
+                tabStack(.utilities, path: $utilitiesPath) { IndexingReader(library: libraryModel) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: $0) } }
             }
         }
     }
@@ -706,4 +711,17 @@ struct SearchSheet: View {
     RootTabView()
         .environment(AppDependencies.preview())
         .environment(AppDependencies.preview().photoLibrary)
+}
+
+
+/// Reads `LibraryModel.isIndexing` in its own body, so the flag — which
+/// flips several times per index run — re-renders the tab that shows it and
+/// not the whole root, with its TabView and every modifier chain.
+private struct IndexingReader<Content: View>: View {
+    let library: LibraryModel?
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        content(library?.isIndexing ?? false)
+    }
 }

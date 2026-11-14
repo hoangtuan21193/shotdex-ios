@@ -23,6 +23,14 @@ final class FileThumbnailIndex: @unchecked Sendable {
         images.countLimit = 600
     }
 
+    /// `reload` off the main actor. It reads every non-Photos copy and checks
+    /// each one's thumbnail file on disk — tens of thousands of `fileExists`
+    /// on a large share, which on the main actor froze the app each time it
+    /// came back and a read finished (iPad 2026-11-14).
+    func reloadInBackground(_ database: AppDatabase) async {
+        await Task.detached(priority: .userInitiated) { self.reload(database) }.value
+    }
+
     /// Photos with no Photos copy, and the copy whose thumbnail they show —
     /// the first in copy order that has one written.
     func reload(_ database: AppDatabase) {

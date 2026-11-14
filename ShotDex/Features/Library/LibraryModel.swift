@@ -630,7 +630,9 @@ final class LibraryModel {
     /// `limit` takes the leading slice of the sort — the end the grid anchors
     /// to — for the first-paint phase; the capped DB read can miss overlays for
     /// assets indexed out of date order, which the full phase corrects.
-    private static func photoKitGridItems(
+    /// `nonisolated`: the 55k-row `byId` map below was built on the main
+    /// actor because this static lives in a `@MainActor` class.
+    private nonisolated static func photoKitGridItems(
         sort: SortOption,
         libraryQueries: LibraryQueries,
         limit: Int? = nil

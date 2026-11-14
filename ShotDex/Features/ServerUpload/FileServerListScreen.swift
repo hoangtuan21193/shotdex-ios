@@ -157,7 +157,7 @@ private struct DeleteConnectionAlert: ViewModifier {
             failure = error.localizedDescription
         }
         dependencies.fileServerCatalog.reload()
-        dependencies.sources.load()
+        dependencies.sources.refresh()
         dependencies.onServerCheck.onBatch?()
         onDelete()
     }
