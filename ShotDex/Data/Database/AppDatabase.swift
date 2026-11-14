@@ -30,6 +30,12 @@ final class AppDatabase: Sendable {
     static var sharedConfiguration: Configuration {
         var configuration = Configuration()
         configuration.busyMode = .timeout(10)
+        // Eight readers, not GRDB's five: an Also on Server album, its
+        // progress line and the check itself each hold a reader for seconds
+        // at 55,000 photos, and the viewer's metadata read on the main
+        // thread queued behind them — "opening a photo takes seconds"
+        // (user 2026-11-14).
+        configuration.maximumReaderCount = 8
         return configuration
     }
 

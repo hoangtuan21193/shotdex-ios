@@ -99,8 +99,23 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
         let url = directory.appendingPathComponent("\(UUID().uuidString)-\(file.filename)")
         let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = true
+        // The iCloud download happens before the first chunk is handed over,
+        // so chunk counting alone said "Zero KB of 24 MB" for the whole
+        // download and then jumped to done. PhotoKit's own fraction covers
+        // the network part; the larger of the two is reported, so the figure
+        // never goes back when the chunks start from zero.
+        let size = (resource.value(forKey: "fileSize") as? NSNumber)?.int64Value ?? 0
+        var report: (@Sendable (Int64) -> Void)?
+        if let progress { report = Self.monotonic(progress) }
+        if let report, size > 0 {
+            let total = Double(size)
+            options.progressHandler = { fraction in
+                let clamped = min(max(fraction, 0), 1)
+                report(Int64((clamped * total).rounded()))
+            }
+        }
         do {
-            try await Self.stream(resource, to: url, options: options, progress: progress)
+            try await Self.stream(resource, to: url, options: options, progress: report)
         } catch {
             try? FileManager.default.removeItem(at: url)
             if Task.isCancelled { throw CancellationError() }
@@ -111,6 +126,19 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
             throw error
         }
         return url
+    }
+
+    /// `progress` fed only increasing values, from any thread.
+    private static func monotonic(_ progress: @escaping @Sendable (Int64) -> Void) -> @Sendable (Int64) -> Void {
+        let reported = OSAllocatedUnfairLock(initialState: Int64(0))
+        return { bytes in
+            let advanced = reported.withLock { current -> Bool in
+                guard bytes > current else { return false }
+                current = bytes
+                return true
+            }
+            if advanced { progress(bytes) }
+        }
     }
 
     /// The original, streamed to `url` chunk by chunk, and cancelled with the

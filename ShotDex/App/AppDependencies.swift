@@ -613,6 +613,7 @@ final class AppDependencies {
             // Only the Mac hashes everything for the other devices (FS-19.07 §12.1).
             hashesEverything: { false },
             indexShare: indexShare,
+            gate: indexInteractionGate,
             listingChanged: { await sources.serverListingChanged() }
         ))
         let originalPresenceCheck = OriginalPresenceCheck(environment: .live(database: database, gate: indexInteractionGate))

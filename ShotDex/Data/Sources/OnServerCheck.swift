@@ -373,6 +373,7 @@ extension OnServerCheck.Environment {
     static func live(database: AppDatabase, servers: FileServerStore, refresh: ServerSourceRefresh,
                      connectionLock: ConnectionLock, hashesEverything: @escaping @Sendable () -> Bool,
                      indexShare: IndexShareService? = nil,
+                     gate: IndexInteractionGate? = nil,
                      listingChanged: @escaping @Sendable () async -> Void) -> Self {
         // Monitors of its own: the shared ones have a single handler slot.
         let network = NetworkMonitor()
@@ -431,6 +432,10 @@ extension OnServerCheck.Environment {
             hashPhotos: { now in
                 var pass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
                 pass.hashesEverything = hashesEverything()
+                // A photo open in the viewer gets the iCloud bandwidth: the
+                // next original waits, as the index pass does (user
+                // 2026-11-14: "opening a photo takes seconds").
+                if let gate { pass.shouldYield = { gate.shouldPauseIndexing } }
                 #if os(macOS)
                 // A Mac library is usually on disk: four originals at once.
                 pass.concurrentDownloads = 4

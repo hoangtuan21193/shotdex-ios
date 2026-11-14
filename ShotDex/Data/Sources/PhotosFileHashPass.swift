@@ -23,6 +23,9 @@ struct PhotosFileHashPass: Sendable {
     /// library is usually on disk, reads several (user 2026-11-08: "use
     /// more than one thread").
     var concurrentDownloads = 1
+    /// True while someone is looking at a photo: no new original starts
+    /// downloading until it is false again (the one in flight finishes).
+    var shouldYield: (@Sendable () -> Bool)?
     /// The Mac hashing for every device (FS-19.07 §12.1): every file, not
     /// only those with a file of the same size on a server.
     var hashesEverything = false
@@ -141,6 +144,7 @@ struct PhotosFileHashPass: Sendable {
                 }
                 return true
             }
+            await waitWhileYielding()
             while inFlight < max(1, concurrentDownloads), launchNext() {}
             var wasCancelled = false
             while inFlight > 0, let outcome = try await group.next() {
@@ -157,7 +161,10 @@ struct PhotosFileHashPass: Sendable {
                     reserved -= size
                     wasCancelled = true
                 }
-                if !wasCancelled && !Task.isCancelled { _ = launchNext() }
+                if !wasCancelled && !Task.isCancelled {
+                    await waitWhileYielding()
+                    _ = launchNext()
+                }
             }
             if wasCancelled || Task.isCancelled { throw CancellationError() }
         }
@@ -166,6 +173,15 @@ struct PhotosFileHashPass: Sendable {
 }
 
 extension PhotosFileHashPass {
+    /// Holds the next download while the viewer is open — polled, like the
+    /// index pass; the gate releases itself after 90 s without activity.
+    func waitWhileYielding() async {
+        guard let shouldYield else { return }
+        while shouldYield(), !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+    }
+
     enum ListError: Error { case missingAsset }
 
     /// One file read here on its own — the random check (FS-19.07 §12.4).
