@@ -1,0 +1,295 @@
+{
+ "title": "Sửa ảnh mượt như Lightroom",
+ "context": "Bạn muốn trình sửa ảnh của ShotDex mượt như Lightroom, không bỏ chức năng nào.\nClaude đã đọc chuỗi trong module Develop của Lightroom Classic 15.6 (204 file Lua). Bằng chứng chính: khi đang kéo, Lightroom vẽ một ảnh nháp nhỏ (makeProxyImage, lowQuality) và hoãn bản nét tới lúc thả tay (allowGPUAndCPURendersOnTrackingStop), huỷ các lần vẽ cũ (cancelDirtyRenders), histogram tính riêng từng lần một; lịch sử đặt tên từng bước, có Snapshot; rê chuột lên preset là xem thử sau một nhịp (presetV2LoupePreviewDelay). Chi tiết: docs/_research/2026-11-14-lightroom-develop-re.md.\nShotDex đã có: hoàn tác theo cử chỉ, danh sách History có tên, giữ để so sánh, chạm đúp để reset, reset theo nhóm, histogram có dấu cháy sáng.\nShotDex còn thiếu: lúc kéo vẫn vẽ đủ khử nhiễu/làm nét/lens blur ở 2400px và tính histogram mỗi nhịp; mỗi lần thả tay giải mã lại file gốc; không xem thử preset; không Snapshot; so sánh chia đôi có code nhưng không có nút; không có lớp hiện vùng cháy trên ảnh.\nThiết bị: iPhone, iPad, Duo (Mac chưa có trình sửa ảnh). Trang cuối là phần kỹ thuật Claude tự quyết.",
+ "pages": [
+  {
+   "id": "feel",
+   "title": "Lúc kéo và chọn look",
+   "intro": "Cảm giác tay khi chỉnh.",
+   "decisions": [
+    {
+     "id": "D1",
+     "title": "Lúc đang kéo thanh trượt, ảnh hiện thế nào?",
+     "image": "d1-drag.svg",
+     "why": "Bật khử nhiễu hay làm nét rồi kéo Exposure thì ảnh trễ theo tay — cảm giác lag.",
+     "proposal": "Như Lightroom: đang kéo thì vẽ bản nháp nhỏ hơn (khoảng nửa kích thước màn hình) và tạm bỏ khử nhiễu, làm nét, lens blur, hạt film; thả tay là vẽ lại bản nét đủ trong khoảng 0,1 giây. Mask, màu, đường cong vẫn hiện đúng khi kéo.",
+     "options": [
+      {
+       "id": "proxy",
+       "label": "Bản nháp khi kéo, nét khi thả",
+       "pros": [
+        "Ảnh theo tay",
+        "Giống Lightroom"
+       ],
+       "cons": [
+        "Lúc kéo ảnh hơi mềm, thiếu khử nhiễu/nét"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "full",
+       "label": "Giữ như cũ",
+       "pros": [
+        "Luôn thấy đúng chi tiết"
+       ],
+       "cons": [
+        "Trễ tay khi bật các hiệu ứng nặng"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "PhotoEditorController.scheduleInteractiveRender :3416; PhotoRenderService render chain :399-420 thiếu cờ interactive. Thêm RenderQuality.interactive: scale 0.5 displayEdge, bỏ NR/sharpen/lensBlur/grain.",
+     "tasks": [
+      "RenderQuality trong ShotDexKit + test",
+      "Controller truyền quality theo cử chỉ"
+     ]
+    },
+    {
+     "id": "D2",
+     "title": "Xem thử một look/preset trước khi áp?",
+     "image": "d2-preset.svg",
+     "why": "Hiện chạm là áp; muốn so vài look phải áp rồi Undo liên tục.",
+     "proposal": "Giữ ngón trên ô look (Film, My Looks, LUT) khoảng 0,3 s: ảnh lớn đổi theo look đó, rê sang ô khác là đổi theo; thả ngón trên ô = áp, kéo ra ngoài dải rồi thả = huỷ. Chạm nhanh vẫn áp ngay như cũ.",
+     "options": [
+      {
+       "id": "hold",
+       "label": "Giữ để xem thử",
+       "pros": [
+        "So look nhanh, không đụng Undo"
+       ],
+       "cons": [
+        "Cử chỉ mới cần học"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "tap",
+       "label": "Như cũ: chạm là áp",
+       "pros": [
+        "Không đổi gì"
+       ],
+       "cons": [
+        "Thử nhiều look phải Undo"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "EditorToolPanels :660-716, :310, :544 → previewRecipe trên controller (không ghi history), render interactive.",
+     "tasks": [
+      "previewLook(begin/move/end) trên controller",
+      "Long-press + drag trên dải look"
+     ]
+    },
+    {
+     "id": "D3",
+     "title": "Hiện vùng cháy sáng / tắt đen ngay trên ảnh?",
+     "image": "d3-clip.svg",
+     "why": "Chỉ có dấu trên histogram thì không biết chỗ nào trong ảnh bị cháy.",
+     "proposal": "Như Lightroom mobile: chạm hai tam giác ở góc histogram để bật lớp đỏ (cháy sáng) / xanh (tắt đen) đè lên ảnh; chạm lại tắt.",
+     "options": [
+      {
+       "id": "toggle",
+       "label": "Bật bằng tam giác ở histogram",
+       "pros": [
+        "Rõ, không che khi không cần"
+       ],
+       "cons": [
+        "Thêm một nút nhỏ"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "auto",
+       "label": "Thêm: tự hiện khi đang kéo Exposure/Whites/Blacks",
+       "pros": [
+        "Như giữ Option trên Mac"
+       ],
+       "cons": [
+        "Có thể làm rối khi kéo"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "none",
+       "label": "Không",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Thiếu so với Lightroom"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "Overlay tính từ preview đã vẽ (CIColorKernel ngưỡng 254/1), ngoài main thread, chỉ khi bật.",
+     "tasks": [
+      "ClippingOverlay + toggle trong EditorHistogramCard"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "history",
+   "title": "So sánh, lịch sử, snapshot",
+   "intro": "Quay lại và so.",
+   "decisions": [
+    {
+     "id": "D4",
+     "title": "Thêm Snapshot (lưu một trạng thái có tên)?",
+     "image": "d4-snap.svg",
+     "why": "Muốn giữ bản 'ấm' và bản 'đen trắng' để so mà không mất bản nào.",
+     "proposal": "Trong sheet History thêm mục Snapshots: nút '+ Snapshot' đặt tên trạng thái hiện tại; chạm một snapshot để quay về (thành một bước History). Snapshot lưu theo ảnh, mở lại vẫn còn.",
+     "options": [
+      {
+       "id": "snap",
+       "label": "Có, lưu theo ảnh",
+       "pros": [
+        "So nhiều hướng chỉnh"
+       ],
+       "cons": [
+        "Bảng mới trong DB"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "no",
+       "label": "Không",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Thiếu so với Lightroom"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "Bảng editor_snapshot(assetId, name, recipe JSON, createdAt) — dữ liệu người dùng, bảng riêng (không vào photo_metadata).",
+     "tasks": [
+      "Migration + SnapshotStore + test",
+      "Mục Snapshots trong EditorHistorySheet"
+     ]
+    },
+    {
+     "id": "D5",
+     "title": "So sánh trước/sau kiểu chia đôi?",
+     "image": "d5-split.svg",
+     "why": "Giữ ngón để xem gốc thì không thấy cùng lúc hai bên.",
+     "proposal": "Thêm nút ◧ trên thanh lệnh (cạnh Undo/Redo): bật chế độ chia đôi, kéo vạch giữa để so; giữ ngón trên ảnh vẫn xem bản gốc như cũ. Code chia đôi đã có sẵn, chỉ thiếu nút.",
+     "options": [
+      {
+       "id": "split",
+       "label": "Có nút chia đôi",
+       "pros": [
+        "So rõ từng chỗ"
+       ],
+       "cons": [
+        "Thêm một nút"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "hold",
+       "label": "Chỉ giữ để so",
+       "pros": [
+        "Như cũ"
+       ],
+       "cons": [
+        "Không so song song được"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tech": "EditorImageStage :787-830 showsSplitCompare không có chỗ bật; thêm vào command band + phím B (iPad bàn phím).",
+     "tasks": [
+      "Nút + trạng thái trong EditorChromeModel"
+     ]
+    },
+    {
+     "id": "D6",
+     "title": "Lịch sử chỉnh sửa có còn sau khi đóng trình sửa?",
+     "image": "d6-history.svg",
+     "why": "Lightroom giữ lịch sử mãi; ShotDex hiện mất khi đóng (chỉnh sửa trên ảnh vẫn còn).",
+     "proposal": "Giữ như nay: lịch sử theo phiên sửa. Snapshot (D4) đã lưu theo ảnh nên các mốc quan trọng không mất.",
+     "options": [
+      {
+       "id": "session",
+       "label": "Theo phiên (như nay)",
+       "pros": [
+        "Không lệch khi ảnh được sửa ở app khác"
+       ],
+       "cons": [
+        "Mở lại không thấy các bước cũ"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "persist",
+       "label": "Lưu theo ảnh",
+       "pros": [
+        "Giống Lightroom"
+       ],
+       "cons": [
+        "Lệch khi Photos app sửa ảnh; tốn chỗ"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tech": "PhotoEditHistory in-memory, cleared :703.",
+     "tasks": [
+      "Không đổi nếu giữ theo phiên"
+     ]
+    }
+   ]
+  }
+ ],
+ "auto": [
+  {
+   "id": "A1",
+   "title": "Histogram không tính mỗi nhịp kéo",
+   "choice": "Histogram cập nhật khi thả tay (và tối đa ~5 lần/giây khi kéo), từng lần một, không chặn ảnh.",
+   "tech": "Hiện tính mỗi frame trên cùng actor với preview (:3609). Tách task, bỏ qua nếu đang có task (_startRenderingHistograms.ABORT)."
+  },
+  {
+   "id": "A2",
+   "title": "Không giải mã lại file gốc mỗi lần thả tay",
+   "choice": "Ảnh gốc đã giải mã được giữ lại cho lần vẽ nét kế tiếp.",
+   "tech": "PhotoRenderService :1416-1437 settle decode lại; cache base theo kích thước settle."
+  },
+  {
+   "id": "A3",
+   "title": "Huỷ lần vẽ cũ đang chạy",
+   "choice": "Kéo tiếp thì lần vẽ cũ dừng ngay thay vì chạy hết rồi bỏ.",
+   "tech": "Generation check :3431 chỉ bỏ kết quả; thêm kiểm tra huỷ giữa các tầng render."
+  },
+  {
+   "id": "A4",
+   "title": "Bớt vẽ lại giao diện mỗi nhịp",
+   "choice": "Chỉ phần ảnh đổi mỗi nhịp; thanh, nút, histogram không vẽ lại theo.",
+   "tech": "isRendering bật/tắt mỗi frame (:3532,:3620) → chỉ ghi khi đổi; histogram observable riêng."
+  },
+  {
+   "id": "A5",
+   "title": "Heal 'Visualize Spots' ra khỏi luồng chính",
+   "choice": "Lớp hiện vết bụi tính ngoài luồng chính.",
+   "tech": "SpotVisualizer.map + createCGImage trên MainActor (:580-590)."
+  },
+  {
+   "id": "A6",
+   "title": "Giữ mọi chức năng",
+   "choice": "Mọi công cụ, mask, heal, markup, preset, LUT, film, batch, save/copy, HDR, lens blur giữ nguyên; chỉ đổi cách vẽ và thêm D1–D5.",
+   "tech": ""
+  },
+  {
+   "id": "A7",
+   "title": "Quy trình",
+   "choice": "Intent → spec FS-03.18 có tiêu chí → board PH/IP/DI sáng+tối → code mỗi tiêu chí một commit → đo thời gian vẽ trên sim + iPad thật.",
+   "tech": "docs/PROCESS.md"
+  }
+ ]
+}
