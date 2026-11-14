@@ -1092,8 +1092,29 @@ public enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
     case sixteenNine
     case fourFive
     case nineSixteen
+    /// The portrait sides of 3:2, 4:3 and 5:4 — what the Mac's ⇅ turns a
+    /// landscape frame into (FS-18.03 §1b).
+    case twoThree
+    case threeFour
+    case fiveFour
 
     public var id: String { rawValue }
+
+    /// The same ratio on its other side (3:2 ↔ 2:3); nil for a ratio that
+    /// has none (Free, Original, 1:1).
+    public var swapped: CropAspect? {
+        switch self {
+        case .free, .original, .square: nil
+        case .fourThree: .threeFour
+        case .threeFour: .fourThree
+        case .threeTwo: .twoThree
+        case .twoThree: .threeTwo
+        case .sixteenNine: .nineSixteen
+        case .nineSixteen: .sixteenNine
+        case .fourFive: .fiveFour
+        case .fiveFour: .fourFive
+        }
+    }
 
     public var displayName: String {
         switch self {
@@ -1105,6 +1126,9 @@ public enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
         case .sixteenNine: "16:9"
         case .fourFive: "4:5"
         case .nineSixteen: "9:16"
+        case .twoThree: "2:3"
+        case .threeFour: "3:4"
+        case .fiveFour: "5:4"
         }
     }
 
@@ -1117,6 +1141,9 @@ public enum CropAspect: String, Codable, CaseIterable, Identifiable, Sendable {
         case .sixteenNine: 16 / 9
         case .fourFive: 4 / 5
         case .nineSixteen: 9 / 16
+        case .twoThree: 2 / 3
+        case .threeFour: 3 / 4
+        case .fiveFour: 5 / 4
         }
     }
 }

@@ -35,8 +35,8 @@ bố cục Mac, cách lưu và sheet xuất.
   thư viện Photos: Edit mờ, tooltip "Photos library pictures can't be edited here yet" (row 40). Editor thay cả vùng chi
   tiết (sidebar đã ẩn từ viewer), các ảnh của viewer thành filmstrip. ◀ / ⌘[ / Esc về viewer trên ảnh đang sửa; chọn
   nơi khác ở sidebar cũng lưu rồi đóng editor.
-- Toolbar: ◀ · tên file + dòng phụ "nguồn · máy · ống · 12 of 226" · **Adjust** · Crop · Mask · Heal · Markup (bốn
-  cái sau mờ, tooltip "comes in a later version", rows 32–36) · Undo (⌘Z) · Redo (⇧⌘Z) · Before and After (`\`, chữ
+- Toolbar: ◀ · tên file + dòng phụ "nguồn · máy · ống · 12 of 226" · **Adjust** · Crop · Mask · Heal · Markup (Crop
+  ở §1b; ba cái sau mờ, tooltip "comes in a later version", rows 34–36) · Undo (⌘Z) · Redo (⇧⌘Z) · Before and After (`\`, chữ
   "Original" trên ảnh; chỉnh gì là tự tắt) · Fit ▾ (Actual Size mờ tới khi có render 1:1) · inspector (⌥⌘I) · "✓ Edited
   · Saved" / "Saving…" / "Couldn't Save — Try Again" (bấm để ghi lại) · **Revert to Original…** (hỏi lại; ⌘Z lấy
   lại). Presets and History, ▶, Export chưa hiện (rows 37, 39).
@@ -59,6 +59,39 @@ bố cục Mac, cách lưu và sheet xuất.
   ổ/server không nối · ảnh Photos (Done là row 40). Demo: ảnh demo sửa được như ảnh thư mục.
 - Chưa có: Auto của Light, ⌥⌘O cửa sổ riêng, bố cục icon dưới 1100pt, Done cho ảnh Photos, Actual Size, phím ←/→ đổi
   ảnh, Return mở editor từ viewer, Edit trong menu chuột phải / menu Photo.
+
+### 1b. Crop (row 32, 2026-11-15, board `MAC_EditCrop`)
+
+`ShotDexMac/Editor/MacEditorCrop.swift`, toán ở `ShotDex/Domain/Editing/CropFrameEditing.swift` (test
+`CropFrameEditingTests`). Cùng recipe với iPhone (`PhotoCropRecipe`, `PhotoUprightRecipe`, các slider Geo).
+
+- **Crop** trong capsule công cụ bật chế độ Crop; **Adjust** hoặc **Esc** (ở đâu cũng được) về Adjust. Không có
+  Done/Cancel: mỗi thay đổi tự lưu như mọi chỉnh khác, ⌘Z lùi từng bước (một lần kéo = một bước).
+- Canvas: cả ảnh đã xoay/lật/nghiêng (khung crop không áp; mask và lớp chữ tạm ẩn vì nằm trong toạ độ đã cắt),
+  ngoài khung tối 55%, lưới 1/3, góc chữ L 20×3 và thanh 20×3 giữa mỗi cạnh. Kéo góc: góc đối diện đứng yên; kéo
+  cạnh: cạnh đối diện đứng yên; kéo trong khung: dời khung. Con trỏ đổi theo chỗ đặt. Khung không bao giờ ra ngoài
+  ảnh — kể cả khi ảnh đang nghiêng (kéo dừng ở mép ảnh). Kéo khung không vẽ lại ảnh.
+- Inspector, nhóm **Crop**: Aspect ▾ (Free · Original · 3:2 … — "Original · 3:2" khi tỉ lệ ảnh có tên) ·
+  🔒 khoá tỉ lệ (mở = Free; khoá lại giữ đúng tỉ lệ khung đang có nếu nó có tên, không thì tỉ lệ đã chọn trước, mặc
+  định Original — khoá không làm khung nhảy) · ⇅ đổi chiều (3:2 ↔ 2:3, 16:9 ↔ 9:16, 4:5 ↔ 5:4, 4:3 ↔ 3:4; Free xoay
+  khung quanh tâm; 1:1 và Original của ảnh vuông mờ). Chọn tỉ lệ = khung đổi dáng quanh tâm, giữ diện tích
+  (khác iPhone: Original không trả về cả ảnh). Dòng **Size** "354 × 354 px" + "93% of original". ↺ Rotate Left / ↻
+  Rotate Right (khung xoay theo, tỉ lệ khoá đổi chiều theo), Flip Horizontal, Flip Vertical. ↺ nhóm: cả ảnh, không
+  xoay/lật, Free; góc nghiêng giữ — ↺ chỉ hiện khi còn gì để trả. Lật ảnh đang nghiêng đổi dấu góc (chân trời giữ
+  thẳng). Bấm Crop là Fit.
+- **Straighten**: Angle ±45° (slider + ô số "+2.4°", đọc được cả "2,4" theo locale); khung tự co vào trong ảnh và
+  lớn lại khi góc về (khung trước khi nghiêng được nhớ tới khi chính khung đổi); tỉ lệ khoá giữ đúng theo pixel.
+  **Straighten Tool**: kéo một đường dọc theo thứ phải nằm ngang (hoặc đứng) trên ảnh, thả tay là ảnh xoay cho đường
+  đó thẳng, công cụ tự tắt. **Auto**: pass Level của Upright đọc ảnh gốc (ngoài main), ghi vào góc; nút có vòng
+  quay khi đang đọc; không thấy đường nào: "No level line found in this photo."; góc đã đúng: "Already level."; không
+  đọc được ảnh: "ShotDex couldn't read this photo. Try again." ↺ nhóm: góc về 0.
+- **Upright** Mode ▾: Off · Auto · Level · Vertical · Full (Guided chưa có trên Mac). Đọc ảnh gốc 1024px ngoài main,
+  có vòng quay nhỏ; không thấy gì: "No straight lines found in this photo."; Off xoá và dừng lượt đang đọc. Đọc trên
+  queue riêng, không giữ luồng của pool; đổi ảnh huỷ lượt đang chạy. Đổi ảnh cũng tắt Straighten Tool.
+- **Geometry**: Vertical · Horizontal · Rotate · Aspect · Scale · Offset X · Offset Y + **Constrain Crop**, lấy từ
+  `EditorAdjustmentCatalog` như iPhone (cùng thang, Scale ghi 0 = 100%). ↺ nhóm.
+- Kit: `CropAspect` thêm `twoThree`, `threeFour`, `fiveFour` và `swapped` — iPhone thấy chúng trong More.
+- Chưa có: Upright Guided, Return chốt crop (Return trong ô số đang dùng để áp số), phím tắt R/A cho công cụ.
 
 ## 2. Hai kiểu lưu (D16)
 

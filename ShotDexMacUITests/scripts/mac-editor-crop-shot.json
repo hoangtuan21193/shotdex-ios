@@ -1,0 +1,19 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexDemoLibrary", "-ShotDexSection", "viewer"]},
+  {"action": "waitFor", "label": "Rating and Flag", "type": "staticText", "seconds": 20},
+  {"action": "wait", "seconds": 2},
+  {"action": "key", "text": "e", "modifiers": "cmd"},
+  {"action": "waitFor", "label": "editor.slider.exposure", "seconds": 20},
+  {"action": "wait", "seconds": 2},
+  {"action": "click", "label": "editor.tool.crop"},
+  {"action": "waitFor", "label": "editor.crop.aspect", "seconds": 10},
+  {"action": "wait", "seconds": 2},
+  {"action": "click", "label": "Angle value"},
+  {"action": "key", "text": "a", "modifiers": "cmd"},
+  {"action": "typeText", "text": "2.4\r"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "crop-final"},
+  {"action": "dump", "name": "crop-final"}
+ ]
+}

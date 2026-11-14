@@ -35,8 +35,23 @@ struct MacEditorPage: View {
         .toolbar {
             MacEditorToolbar(model: model, showsInspector: $showsInspector, zoom: $zoom, close: close, asksRevert: $asksRevert)
         }
-        .onExitCommand { leave() }
+        // In Crop, Esc puts the frame down and go back to Adjust;
+        // nothing is undone — ⌘Z is there for that.
+        .onExitCommand { if model.tool == .crop { model.tool = .adjust } else { leave() } }
+        // Esc wherever the keys are (a checkbox, a menu just closed): Crop
+        // gives way to Adjust.
+        .background {
+            if model.tool == .crop {
+                Button("") { model.tool = .adjust }
+                    .keyboardShortcut(.cancelAction)
+                    .opacity(0)
+                    .frame(width: 0, height: 0)
+                    .accessibilityHidden(true)
+            }
+        }
         .task { model.open() }
+        // The frame is drawn over the fitted photo.
+        .onChange(of: model.tool) { _, tool in if tool == .crop { zoom = .fit } }
         .onDisappear { model.flushSave() }
         // ⌘Q with an edit not written yet: written before the app goes.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in model.flushNow() }
@@ -73,7 +88,7 @@ struct MacEditorToolbar: ToolbarContent {
             .accessibilityIdentifier("editor.back")
         }
         ToolbarItem(placement: .principal) {
-            MacEditorTools()
+            MacEditorTools(model: model)
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button(action: model.undo) { Label(String(localized: "Undo", comment: "Mac editor toolbar"), systemImage: "arrow.uturn.backward") }
@@ -122,13 +137,15 @@ struct MacEditorToolbar: ToolbarContent {
     }
 }
 
-/// Adjust · Crop · Mask · Heal · Markup (316): Adjust here; the others are
-/// rows 32–36 of the Mac loop.
+/// Adjust · Crop · Mask · Heal · Markup (316): Adjust and Crop here; the
+/// others are rows 34–36 of the Mac loop.
 private struct MacEditorTools: View {
+    @Bindable var model: MacEditorModel
+
     var body: some View {
         HStack(spacing: 2) {
-            tool(String(localized: "Adjust", comment: "Mac editor tool"), isOn: true)
-            tool(String(localized: "Crop", comment: "Mac editor tool"), isOn: false)
+            live(.adjust, String(localized: "Adjust", comment: "Mac editor tool"))
+            live(.crop, String(localized: "Crop", comment: "Mac editor tool"))
             tool(String(localized: "Mask", comment: "Mac editor tool"), isOn: false)
             tool(String(localized: "Heal", comment: "Mac editor tool"), isOn: false)
             tool(String(localized: "Markup", comment: "Mac editor tool"), isOn: false)
@@ -139,6 +156,22 @@ private struct MacEditorTools: View {
         .frame(width: 316)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(localized: "Tools", comment: "Mac editor: the tool switcher"))
+    }
+
+    private func live(_ tool: MacEditorModel.Tool, _ title: String) -> some View {
+        let isOn = model.tool == tool
+        return Button { model.tool = tool } label: {
+            Text(title)
+                .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+                .foregroundStyle(isOn ? MacTheme.Editor.label : MacTheme.Editor.secondaryText)
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .background(isOn ? MacTheme.Editor.pressed : Color.clear, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(model.load != .ready)
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
+        .accessibilityIdentifier("editor.tool.\(tool.rawValue)")
     }
 
     private func tool(_ title: String, isOn: Bool) -> some View {
@@ -220,13 +253,24 @@ private struct MacEditorCanvas: View {
                             if zoom == .actual {
                                 ScrollView([.horizontal, .vertical]) {
                                     image.resizable().overlay { clipping }
+                                        .accessibilityLabel(canvasLabel)
                                         // The original's size, whichever preview is up (a drag's is smaller).
                                         .frame(width: model.sourceSize.width / 2, height: model.sourceSize.height / 2)
                                 }
                             } else {
-                                image.resizable().aspectRatio(contentMode: .fit)
-                                    .overlay { clipping }
-                                    .padding(EdgeInsets(top: 36, leading: 35, bottom: 28, trailing: 35))
+                                let rect = Self.fitRect(preview, in: geometry.size)
+                                ZStack(alignment: .topLeading) {
+                                    image.resizable()
+                                        .overlay { if model.tool != .crop { clipping } }
+                                        .accessibilityLabel(canvasLabel)
+                                        .frame(width: rect.width, height: rect.height)
+                                        .offset(x: rect.minX, y: rect.minY)
+                                    if model.tool == .crop, !model.showsBefore {
+                                        MacEditorCropOverlay(model: model, imageRect: rect)
+                                    }
+                                }
+                                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+                                .coordinateSpace(name: MacEditorCropOverlay.space)
                             }
                         }
                         .overlay(alignment: .topLeading) {
@@ -238,10 +282,7 @@ private struct MacEditorCanvas: View {
                                     .padding(40)
                             }
                         }
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(model.showsBefore
-                                            ? String(localized: "\(model.details.fileName), original", comment: "Mac editor canvas, VoiceOver")
-                                            : String(localized: "\(model.details.fileName), edited", comment: "Mac editor canvas, VoiceOver"))
+
                     } else {
                         ProgressView().controlSize(.small)
                     }
@@ -249,6 +290,20 @@ private struct MacEditorCanvas: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
+    }
+
+    private var canvasLabel: String {
+        model.showsBefore
+            ? String(localized: "\(model.details.fileName), original", comment: "Mac editor canvas, VoiceOver")
+            : String(localized: "\(model.details.fileName), edited", comment: "Mac editor canvas, VoiceOver")
+    }
+
+    /// The photo fitted in the canvas, 36 top · 35 sides · 28 bottom (board).
+    static func fitRect(_ image: CGImage, in size: CGSize) -> CGRect {
+        let area = CGRect(x: 35, y: 36, width: max(1, size.width - 70), height: max(1, size.height - 64))
+        let scale = min(area.width / CGFloat(max(1, image.width)), area.height / CGFloat(max(1, image.height)))
+        let width = CGFloat(image.width) * scale, height = CGFloat(image.height) * scale
+        return CGRect(x: area.midX - width / 2, y: area.midY - height / 2, width: width, height: height)
     }
 
     @ViewBuilder

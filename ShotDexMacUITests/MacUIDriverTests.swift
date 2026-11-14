@@ -85,6 +85,9 @@ final class MacUIDriverTests: XCTestCase {
         /// For `x`/`y` clicks and `screenshot`: the window whose title starts
         /// with this; the first window (often a floating panel) otherwise.
         var window: String?
+        /// For `drag`: how far the pointer goes, in points.
+        var dx: Double?
+        var dy: Double?
     }
 
     private struct Script: Decodable { let steps: [Step] }
@@ -148,6 +151,15 @@ final class MacUIDriverTests: XCTestCase {
                 default: point.click()
                 }
             }
+            return describe(step) + " pressAt=\(Self.clock.string(from: pressAt!))"
+        case "drag":
+            // Press on the element (or `x`/`y`), move by `dx`/`dy` points, let go.
+            let start = try windowPoint(step) ?? pressPoint(for: step)
+            let end = start.withOffset(CGVector(dx: step.dx ?? 0, dy: step.dy ?? 0))
+            Thread.sleep(forTimeInterval: 0.3)
+            pressAt = Date()
+            // A paced mouse drag: moves in between, which SwiftUI's DragGesture needs.
+            start.click(forDuration: 0.2, thenDragTo: end, withVelocity: XCUIGestureVelocity(400), thenHoldForDuration: 0.1)
             return describe(step) + " pressAt=\(Self.clock.string(from: pressAt!))"
         case "hover":
             if let point = try windowPoint(step) { point.hover() } else { try element(step).hover() }

@@ -171,6 +171,11 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-156 | 03 §1a sửa và lưu | như AC-155 | gõ 0.65 vào Exposure, Return; −30 vào Highlights; Undo; Redo | ảnh sáng hơn; "Edited · Saved"; Undo/Redo đổi số và ảnh | ✅ `mac-editor.json` |
 | AC-157 | 03 §1a so sánh, clipping, nhóm | như AC-156 | Before and After bật/tắt; clipping sáng bật/tắt; mở Color, Tone Curve; ↺ Light; ẩn/hiện inspector | chữ "Original" khi bật; Color có Saturation; Tone Curve ghi "later version"; Light về 0 | ✅ `mac-editor.json` |
 | AC-158 | 03 §1a filmstrip, Revert, Back | như AC-156 | bấm ô 13; Contrast 0.4; Revert to Original… › Revert to Original; Back | ảnh 13 mở; Revert hỏi rồi bỏ hết sửa (không còn "Edited · Saved"); Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor.json` |
+| AC-159 | 03 §1b khung crop | demo `-ShotDexSection viewer`, ⌘E | Crop; kéo góc dưới phải; dời khung; kéo cạnh trái, cạnh trên; ⌘Z ×4 | Size đổi khỏi "354 × 354 px" khi kéo; ⌘Z trả về 354 × 354 | ✅ `mac-editor-crop.json` |
+| AC-160 | 03 §1b tỉ lệ, xoay, lật | như AC-159 | Aspect › 16:9; ⇅; 🔒 ×2; Rotate Right; Rotate Left; Flip H; Flip V; ↺ Crop | 16:9 → 9:16 → Free → 9:16; Rotate Right → 16:9, Left → 9:16; ↺ về Free, 354 × 354 | ✅ `mac-editor-crop.json` |
+| AC-161 | 03 §1b Straighten | như AC-159 | gõ 5 vào Angle; ↺; Straighten Tool, kéo một đường; Auto | "+5.0°", khung co; ↺ về "0.0°"; đường thả xong góc đổi, gợi ý trên ảnh biến mất; Auto ra góc hoặc dòng "No level line…" | ✅ `mac-editor-crop.json` |
+| AC-162 | 03 §1b Upright, Geometry, Esc | như AC-159 | Upright › Level; Off; Vertical 20; Constrain Crop; ↺ Geometry; Esc; Crop, Adjust; Back | Level giữ trong popup; ↺ hiện rồi mất; Esc về Adjust (Light hiện); Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-crop.json` |
+| AC-163 | 03 §1b toán khung | — | góc/cạnh/dời có khoá tỉ lệ; ảnh nghiêng 5°/8°; xoay ¼ ×4; size; tỉ lệ đổi chiều | góc đối diện đứng yên; tỉ lệ px giữ; khung trong ảnh; xoay 4 lần về chỗ cũ; 3000 × 4000 = 50% | ✅ `CropFrameEditingTests` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

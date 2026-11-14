@@ -142,5 +142,15 @@ extension MacTheme {
         static let histogramRed = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255).opacity(0.6)
         static let histogramGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255).opacity(0.55)
         static let histogramBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255).opacity(0.6)
+
+        // The crop frame (board `MAC_EditCrop`).
+        /// Over the photo outside the frame.
+        static let cropDim = Color.black.opacity(0.62)
+        /// The thirds; brighter while a handle is held.
+        static let cropGrid = Color.white.opacity(0.38)
+        static let cropGridActive = Color.white.opacity(0.55)
+        static let cropOutline = Color.white.opacity(0.9)
+        /// Icon buttons and wide buttons in the inspector.
+        static let controlRadius: CGFloat = 6
     }
 }

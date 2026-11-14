@@ -1,0 +1,527 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.crop.aspect",
+   "seconds": 10
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.size",
+   "text": "354 × 354 px"
+  },
+  {
+   "action": "screenshot",
+   "name": "crop-open"
+  },
+  {
+   "action": "drag",
+   "label": "editor.crop.corner.bottomRight",
+   "dx": -150,
+   "dy": -120
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertMissing",
+   "label": "354 × 354 px",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "after-corner"
+  },
+  {
+   "action": "drag",
+   "label": "editor.crop.frame",
+   "dx": 60,
+   "dy": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "label": "editor.crop.left",
+   "dx": 40,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "label": "editor.crop.top",
+   "dx": 0,
+   "dy": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "dump",
+   "name": "after-move"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.corner.topLeft"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.size",
+   "text": "354 × 354 px"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.aspect"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "16:9",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "16:9"
+  },
+  {
+   "action": "assertExists",
+   "label": "Unlock Aspect"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.swap"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "9:16"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.lock"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "Free"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.lock"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "9:16"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.rotateRight"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "16:9"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.rotateLeft"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "9:16"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.flipH"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.flipV"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "crop-flipped"
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.aspect",
+   "text": "Free"
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.size",
+   "text": "354 × 354 px"
+  },
+  {
+   "action": "click",
+   "label": "Angle value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "5\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Angle value",
+   "text": "+5.0°"
+  },
+  {
+   "action": "assertMissing",
+   "label": "354 × 354 px",
+   "type": "staticText"
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.straighten"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "Angle value",
+   "text": "0.0°"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.straightenTool"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "Drag along something that should be level",
+   "type": "staticText"
+  },
+  {
+   "action": "drag",
+   "label": "editor.straighten.canvas",
+   "dx": 240,
+   "dy": 24
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Drag along something that should be level",
+   "type": "staticText"
+  },
+  {
+   "action": "assertMissing",
+   "label": "0.0°",
+   "type": "textField"
+  },
+  {
+   "action": "screenshot",
+   "name": "crop-ruler"
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.straighten"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.auto"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "after-auto"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.upright"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Level",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "after-upright"
+  },
+  {
+   "action": "click",
+   "label": "editor.crop.upright"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Off",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.crop.upright",
+   "text": "Off"
+  },
+  {
+   "action": "click",
+   "label": "Vertical value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "20\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.reset.geometry"
+  },
+  {
+   "action": "click",
+   "label": "Constrain Crop",
+   "type": "checkBox"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.geometry"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.reset.geometry"
+  },
+  {
+   "action": "dump",
+   "name": "after-geometry"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.crop.aspect"
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.adjust"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 5
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

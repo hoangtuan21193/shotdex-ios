@@ -52,13 +52,18 @@ struct MacEditorInspector: View {
                 MacEditorHistogramCard(model: model)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                look
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                Divider()
-                ForEach(Section.allCases) { section in
-                    group(section)
+                if model.tool == .crop {
+                    MacEditorCropSections(model: model)
+                        .padding(.top, 8)
+                } else {
+                    look
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     Divider()
+                    ForEach(Section.allCases) { section in
+                        group(section)
+                        Divider()
+                    }
                 }
             }
         }
@@ -177,7 +182,7 @@ struct MacEditorSliderRow: View {
                 .toggleStyle(.checkbox)
                 .font(.system(size: 13))
                 .padding(.horizontal, 16)
-                .frame(height: 24, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
         } else {
             HStack(spacing: 8) {
                 Text(title)
