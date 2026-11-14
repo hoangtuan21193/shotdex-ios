@@ -33,6 +33,11 @@
    on-server, ảnh gốc, backup, Keep in Photos chạy lần lượt sau 2 s, cách nhau 2 s, huỷ nếu app xuống nền lại.
    *Vì* trace iPad 14/11: sáu truy vấn quét toàn thư viện (0,5–0,8 s CPU mỗi cái) chạy cùng lúc trên sáu lõi ngay
    lúc app quay lại.
+13. **Lưới ảnh không nhận focus bàn phím.** `allowsFocus = false` và `focusItems(in:)` rỗng trên lưới. *Vì* iPad có
+   bàn phím/trackpad: UIKit coi mỗi ô là ứng viên focus, mỗi lần cập nhật focus (timer lặp lại khi cuộn/tải lại) duyệt
+   từng ô và từng subview — 45% main thread, đơ 1–3 s khi chuyển tab (trace 14/11). Lưới không có điều hướng
+   phím mũi tên nên không mất gì.
+14. **Không tạo `URL(fileURLWithPath:)` trong đường cuộn** (badge đuôi file): cắt chuỗi.
 
 ## 2. Mốc quy mô
 

@@ -142,6 +142,15 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
         }
         collectionView.backgroundColor = .systemBackground
+        // No keyboard focus on the tiles (the grid has no arrow-key
+        // navigation; Tab moves between the bars). With a keyboard or
+        // trackpad attached, UIKit otherwise treats every visible cell as a
+        // focus candidate and, on each focus update — a timer that fires
+        // over and over while the grid scrolls or reloads — walks every
+        // cell and every subview of it and checks them for occlusion. That
+        // was 45% of the main thread on an iPad with a keyboard: second-long
+        // stalls on tab switches and taps (trace 2026-11-14).
+        collectionView.allowsFocus = false
         // A bottom-anchored grid has the newest photos at the END, so the
         // system's "scroll to top" (status-bar tap, and re-tapping the
         // selected tab) would send the user to the OLDEST photo — the
@@ -2023,6 +2032,11 @@ private final class GridCollectionView: UICollectionView {
         reportContentWidthIfChanged()
         requestAnchor()
     }
+
+    /// Nothing in the grid takes keyboard focus (see `allowsFocus` in
+    /// `makeUIView`), so the focus engine is told so up front instead of
+    /// asking each cell and each of its subviews on every focus update.
+    override func focusItems(in rect: CGRect) -> [any UIFocusItem] { [] }
 
     override func safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()

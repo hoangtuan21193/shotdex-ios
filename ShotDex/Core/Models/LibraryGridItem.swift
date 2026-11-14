@@ -80,7 +80,12 @@ extension PhotoGridDisplayable {
             return kindBadge
         }
 
-        let fileExtension = URL(fileURLWithPath: filename).pathExtension
+        // Plain string work: `URL(fileURLWithPath:)` resolves the path
+        // against the working directory, and this runs for every tile the
+        // grid configures (1.3 s of main thread in an iPad trace, 2026-11-14).
+        let name = filename.split(separator: "/").last ?? Substring(filename)
+        guard let dot = name.lastIndex(of: "."), dot != name.startIndex else { return kindBadge }
+        let fileExtension = String(name[name.index(after: dot)...])
         return FileTypeBadge.text(forExtension: fileExtension) ?? kindBadge
     }
 }
