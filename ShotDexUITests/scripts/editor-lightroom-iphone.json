@@ -1,0 +1,167 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.48
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "e1-editor"
+  },
+  {
+   "action": "dump",
+   "name": "e1-editor"
+  },
+  {
+   "action": "tap",
+   "label": "Compare Before and After"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "e2-split"
+  },
+  {
+   "action": "dump",
+   "name": "e2-split"
+  },
+  {
+   "action": "tap",
+   "label": "Compare Before and After"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "RGB histogram"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "e3-histogram"
+  },
+  {
+   "action": "dump",
+   "name": "e3-histogram"
+  },
+  {
+   "action": "tap",
+   "label": "Show Highlight Clipping"
+  },
+  {
+   "action": "tap",
+   "label": "Show Shadow Clipping"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "e4-clipping"
+  },
+  {
+   "action": "dump",
+   "name": "e4-clipping"
+  },
+  {
+   "action": "tap",
+   "label": "More editor actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "History"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "e5-history"
+  },
+  {
+   "action": "dump",
+   "name": "e5-history"
+  },
+  {
+   "action": "tap",
+   "label": "Add Snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "label": "",
+   "type": "textField",
+   "index": 0,
+   "text": "Warm"
+  },
+  {
+   "action": "tap",
+   "label": "Save"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "e6-snapshot"
+  },
+  {
+   "action": "dump",
+   "name": "e6-snapshot"
+  }
+ ]
+}

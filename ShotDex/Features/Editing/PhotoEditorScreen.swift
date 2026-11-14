@@ -2265,7 +2265,11 @@ struct PhotoEditorScreen: View {
             // The three left discs plus their two 5pt gaps. The pill starts just
             // right of the Dynamic Island, so the fixed reserve is the run from the
             // end of that cluster to there; the pill then flexes out to the ⋯.
-            let leftClusterWidth = buttonSize * 4 + 5 * 3
+            // Compare rides the band only where no island sits over it: on a
+            // phone with one, the disc after Redo lands at x 137 — under the
+            // cutout, which swallows the touch — so it moves into the ⋯ there.
+            let showsCompareInBand = showsDocumentControls || !hasTopCutout
+            let leftClusterWidth = showsCompareInBand ? buttonSize * 4 + 5 * 3 : buttonSize * 3 + 5 * 2
             // The reserve keeps the histogram pill clear of the Dynamic Island.
             // Gate it on a device that actually has one: an iPad in a narrow
             // Split View takes the phone layout and was leaving 219pt of empty
@@ -2290,7 +2294,9 @@ struct PhotoEditorScreen: View {
                 ) { controller.redo() }
                     .accessibilityLabel("Redo")
 
-                beforeAfterButton(controller)
+                if showsCompareInBand {
+                    beforeAfterButton(controller)
+                }
 
                 if showsDocumentControls {
                     // Fit ⇄ fill, the double tap's visible twin. A gesture
@@ -2363,8 +2369,8 @@ struct PhotoEditorScreen: View {
                 } else {
                     // The phone (FS-03.13a §3): Back · Undo · Redo on the
                     // left, histogram · ⋯ · Save on the right — Save always
-                    // there, even inside a tool. No compare button: a hold on
-                    // the photo shows the original.
+                    // there, even inside a tool. Compare sits after Redo only
+                    // without an island; with one it is in the ⋯.
                     backButton(controller, side: buttonSize)
                     undoRedo
                     // Fixed reserve for the island; keeps the pill clear of the cutout.
@@ -2383,36 +2389,18 @@ struct PhotoEditorScreen: View {
         .background(EditorTheme.background)
     }
 
-    /// Compare (FS-03.18 §6): tap turns the split view on and off — original
-    /// left, edit right, the divider draggable; press and hold shows the
-    /// original, as the photo's own press-and-hold does. White with a black
-    /// glyph while either is on — accent is spent on Save alone (FS-03.12 §6).
+    /// Compare (FS-03.18 §6): turns the split view on and off — original left,
+    /// edit right, the divider draggable. Holding the photo still shows the
+    /// original. A plain button like Undo: every variant that also read a
+    /// hold on the disc lost the tap.
     private func beforeAfterButton(_ controller: PhotoEditorController) -> some View {
-        let size = EditorLayoutMetrics.editorFloatingCommandButtonSize(isRegularWidth: horizontalSizeClass == .regular)
-        let isActive = controller.showsOriginal || chrome.showsSplitCompare
-        return Image(systemName: "rectangle.split.2x1")
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(isActive ? .black : Color.white.opacity(0.9))
-            .frame(width: size, height: size)
-            .background {
-                if isActive {
-                    Circle().fill(.white)
-                } else {
-                    floatingCircleFill
-                }
-            }
-            .contentShape(Circle())
-            .hoverEffect(.lift)
-            .onTapGesture { toggleSplitCompare() }
-            .onLongPressGesture(minimumDuration: 0.3, perform: {}, onPressingChanged: { pressing in
-                controller.showsOriginal = pressing
-            })
-            .accessibilityLabel("Compare Before and After")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityValue(chrome.showsSplitCompare ? Text("Split") : Text("Off"))
-            .accessibilityAction { toggleSplitCompare() }
-            .accessibilityAction(named: Text("Show Original")) { controller.showsOriginal.toggle() }
+        circleCommand("rectangle.split.2x1", isEnabled: true, isActive: chrome.showsSplitCompare) {
+            toggleSplitCompare()
+        }
+        .accessibilityLabel("Compare Before and After")
+        .accessibilityValue(chrome.showsSplitCompare ? Text("Split") : Text("Off"))
     }
+
 
     private func toggleSplitCompare() {
         withAnimation(.easeInOut(duration: 0.2)) { chrome.showsSplitCompare.toggle() }
@@ -2601,6 +2589,14 @@ struct PhotoEditorScreen: View {
                 controller.pasteEdits(from: dependencies.editClipboard)
             } label: {
                 Label("Paste Edits", systemImage: "doc.on.clipboard")
+            }
+        }
+        if hasTopCutout {
+            Toggle(isOn: Binding(
+                get: { chrome.showsSplitCompare },
+                set: { _ in toggleSplitCompare() }
+            )) {
+                Label("Compare Before and After", systemImage: "rectangle.split.2x1")
             }
         }
         Button {

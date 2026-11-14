@@ -35,8 +35,10 @@ Intent [2026-11-14-editor-feel-like-lightroom](../../_intents/2026-11-14-editor-
 - Lưu ở bảng `editor_snapshot` (dữ liệu người dùng), còn sau khi đóng trình sửa và mở lại.
 
 ## 6. So sánh chia đôi (D5)
-- Nút ◧ trên thanh lệnh cạnh Undo/Redo (iPhone, iPad, Duo): bật/tắt chế độ chia đôi; vạch giữa kéo được, trái = gốc,
-  phải = đang sửa. Giữ ngón trên ảnh vẫn xem bản gốc như cũ. Phím `B` trên bàn phím iPad.
+- Nút ◧ trên thanh lệnh cạnh Undo/Redo (iPad, Duo, iPhone không có Dynamic Island): bật/tắt chế độ chia đôi; vạch giữa
+  kéo được, trái = gốc, phải = đang sửa. Giữ ngón trên ảnh vẫn xem bản gốc như cũ. Phím `B` trên bàn phím iPad.
+- iPhone có Dynamic Island: nút đó rơi vào x 137–171, ngay dưới island — hệ thống nuốt cú chạm (đo 14/11). Ở đó Compare
+  là dòng bật/tắt "Compare Before and After" trong menu ⋯ (sau Copy/Paste Edits).
 
 ## 7. Lịch sử (D6)
 Theo phiên như nay.
