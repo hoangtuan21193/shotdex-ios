@@ -168,6 +168,23 @@ final class AlbumsModel {
         isLoading = true
         let deps = dependencies
         Task {
+            // Cold start: the last list the app showed, from disk, before the
+            // per-album counts (300–700 ms, longer on a big library) are
+            // redone. The screen was blank for that long on every launch,
+            // and iPadOS ends a backgrounded app often (user 2026-11-14).
+            if albums.isEmpty, !hasRestoredCache {
+                hasRestoredCache = true
+                let smartStore = deps?.smartAlbumStore
+                if let cached = await Task.detached(priority: .userInitiated, operation: {
+                    AlbumsListCache.restore(smartAlbumStore: smartStore)
+                }).value, albums.isEmpty {
+                    albums = cached.albums
+                    smartQueryAlbums = cached.smartAlbums
+                    onThisDayCount = cached.onThisDayCount
+                    onThisDayCover = cached.onThisDayCover
+                    hasLoadedOnThisDay = true
+                }
+            }
             let snapshot = await Task.detached(priority: .userInitiated) {
                 Self.loadSnapshot()
             }.value
@@ -183,6 +200,11 @@ final class AlbumsModel {
                 )
                 await loadSubjects(libraryQueries: deps.libraryQueries)
             }
+            let saved = AlbumsListCache.Snapshot(
+                albums: albums, smartAlbums: smartQueryAlbums,
+                onThisDayCount: onThisDayCount, onThisDayCover: onThisDayCover
+            )
+            Task.detached(priority: .utility) { AlbumsListCache.save(saved) }
             isLoading = false
             if reloadsAfterCurrentLoad {
                 reloadsAfterCurrentLoad = false
@@ -193,6 +215,8 @@ final class AlbumsModel {
 
     /// Set when `load()` is called during a load (see there).
     @ObservationIgnored private var reloadsAfterCurrentLoad = false
+    /// The disk copy is read once, on the first load of the process.
+    @ObservationIgnored private var hasRestoredCache = false
 
     /// Puts the Panoramas token back into the Media Types row, counted from
     /// ShotDex's index rather than from Photos' album of the same name.
@@ -1126,5 +1150,137 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             try PhotoMetadata.fetchAll(db, keys: ids)
         }
         return Dictionary(uniqueKeysWithValues: rows.map { ($0.assetId, $0) })
+    }
+}
+
+
+/// The Albums list as last shown, kept in Caches so a cold start opens on it
+/// instead of an empty screen while every album is counted again. Only ids,
+/// titles and counts are stored; collections and covers are fetched back by id
+/// in two batched PhotoKit calls. A stale count is replaced by the real load a
+/// moment later; a deleted album simply does not come back.
+enum AlbumsListCache {
+    struct Snapshot: @unchecked Sendable {
+        var albums: [AlbumItem]
+        var smartAlbums: [SmartAlbumTokenItem]
+        var onThisDayCount: Int
+        var onThisDayCover: PHAsset?
+    }
+
+    private struct Stored: Codable {
+        struct Album: Codable {
+            var id: String
+            var title: String
+            var count: Int
+            /// "collection", "allPhotos" or "captured:<subtype>".
+            var kind: String
+            var group: String
+            var symbolName: String?
+            var isSmart: Bool
+            var isShared: Bool
+            var coverId: String?
+        }
+        struct Smart: Codable {
+            var id: String
+            var count: Int
+            var coverId: String?
+        }
+        var version = 1
+        var albums: [Album]
+        var smart: [Smart]
+        var onThisDayCount: Int
+        var onThisDayCoverId: String?
+    }
+
+    private static var url: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("albums-list.json")
+    }
+
+    private static func groupName(_ group: AlbumGroup) -> String {
+        switch group {
+        case .suggested: "suggested"
+        case .mediaType: "mediaType"
+        case .utility: "utility"
+        case .user: "user"
+        case .shared: "shared"
+        }
+    }
+
+    private static func group(named name: String) -> AlbumGroup {
+        switch name {
+        case "suggested": .suggested
+        case "mediaType": .mediaType
+        case "utility": .utility
+        case "shared": .shared
+        default: .user
+        }
+    }
+
+    static func save(_ snapshot: Snapshot) {
+        guard let url else { return }
+        let albums = snapshot.albums.map { item -> Stored.Album in
+            let kind: String
+            switch item.kind {
+            case .allPhotos: kind = "allPhotos"
+            case .collection: kind = "collection"
+            case .capturedKind(let subtype): kind = "captured:" + subtype.rawValue
+            }
+            return Stored.Album(id: item.id, title: item.title, count: item.count, kind: kind,
+                                group: groupName(item.group), symbolName: item.symbolName,
+                                isSmart: item.isSmart, isShared: item.isShared,
+                                coverId: item.coverAsset?.localIdentifier)
+        }
+        let stored = Stored(
+            albums: albums,
+            smart: snapshot.smartAlbums.map { .init(id: $0.album.id, count: $0.count, coverId: $0.coverAsset?.localIdentifier) },
+            onThisDayCount: snapshot.onThisDayCount,
+            onThisDayCoverId: snapshot.onThisDayCover?.localIdentifier
+        )
+        guard let data = try? JSONEncoder().encode(stored) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    static func restore(smartAlbumStore: SmartAlbumStore?) -> Snapshot? {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined,
+              let url, let data = try? Data(contentsOf: url),
+              let stored = try? JSONDecoder().decode(Stored.self, from: data), stored.version == 1
+        else { return nil }
+        let collectionIds = stored.albums.filter { $0.kind == "collection" }.map(\.id)
+        var collections: [String: PHAssetCollection] = [:]
+        if !collectionIds.isEmpty {
+            PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: collectionIds, options: nil)
+                .enumerateObjects { collection, _, _ in collections[collection.localIdentifier] = collection }
+        }
+        let coverIds = stored.albums.compactMap(\.coverId) + stored.smart.compactMap(\.coverId)
+            + [stored.onThisDayCoverId].compactMap { $0 }
+        var covers: [String: PHAsset] = [:]
+        for asset in PhotoLibraryService.fetchAssets(ids: Array(Set(coverIds))) {
+            covers[asset.localIdentifier] = asset
+        }
+        let albums = stored.albums.compactMap { album -> AlbumItem? in
+            let kind: AlbumItem.Kind
+            if album.kind == "allPhotos" {
+                kind = .allPhotos
+            } else if album.kind.hasPrefix("captured:"),
+                      let subtype = PhotoMediaSubtype(rawValue: String(album.kind.dropFirst("captured:".count))) {
+                kind = .capturedKind(subtype)
+            } else if let collection = collections[album.id] {
+                kind = .collection(collection)
+            } else {
+                return nil
+            }
+            return AlbumItem(id: album.id, title: album.title, count: album.count, kind: kind,
+                             coverAsset: album.coverId.flatMap { covers[$0] }, group: group(named: album.group),
+                             symbolName: album.symbolName, isSmart: album.isSmart, isShared: album.isShared)
+        }
+        guard !albums.isEmpty else { return nil }
+        let savedSmart = Dictionary(stored.smart.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let smartAlbums = ((try? smartAlbumStore?.fetchAllOrdered()) ?? []).compactMap { album -> SmartAlbumTokenItem? in
+            guard let saved = savedSmart[album.id] else { return nil }
+            return SmartAlbumTokenItem(album: album, count: saved.count, coverAsset: saved.coverId.flatMap { covers[$0] })
+        }
+        return Snapshot(albums: albums, smartAlbums: smartAlbums, onThisDayCount: stored.onThisDayCount,
+                        onThisDayCover: stored.onThisDayCoverId.flatMap { covers[$0] })
     }
 }

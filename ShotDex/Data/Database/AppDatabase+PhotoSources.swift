@@ -192,6 +192,24 @@ extension AppDatabase {
     /// (NULL while it is there); `isOnline` stays about the source. A photo
     /// whose every copy is missing is an orphan; one whose copies sit on an
     /// unplugged drive is not.
+    /// When a source's listing was last read whole (FS-19.03 §3). Before
+    /// this, "last read" was `MAX(photo_copies.lastSeenAt)`, so every pass
+    /// rewrote `lastSeenAt` on every copy it found unchanged: on a 30,000-file
+    /// share that was 30,000 row writes each time the app came forward, the
+    /// write lock held for the whole pass and every screen observing the
+    /// database reloaded (iPad, 4.3 GB written in 6 h, 2026-11-14). Now one
+    /// row says it, and unchanged copies are not written at all.
+    static func registerSourceLastListed(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v68-sourceLastListedAt") { db in
+            try db.alter(table: "sources") { t in
+                t.add(column: "lastListedAt", .integer)
+            }
+            try db.execute(sql: """
+                UPDATE sources SET lastListedAt = (SELECT MAX(lastSeenAt) FROM photo_copies c WHERE c.sourceId = sources.id)
+                """)
+        }
+    }
+
     static func registerMissingCopies(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v31-missingCopies") { db in
             try db.alter(table: "photo_copies") { t in

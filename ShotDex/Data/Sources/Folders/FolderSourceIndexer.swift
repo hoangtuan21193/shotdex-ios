@@ -60,6 +60,9 @@ struct FolderSourceIndexer: Sendable {
             .mapValues { $0.map { ($0 as NSString).lastPathComponent } }
         var summary = Summary()
         let stamp = Int(now.timeIntervalSince1970)
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET lastListedAt = ? WHERE id = ?", arguments: [stamp, sourceId])
+        }
         // Copies this source knew that are not at their path any more: a
         // renamed or moved file is matched back to one of these by its fast
         // hash and size (FS-19.02 §2); what is left over went missing.

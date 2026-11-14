@@ -54,6 +54,9 @@ struct ServerSourceIndexer: Sendable {
         }
         // Listed: the server is there, whatever it was before.
         try SourceStore(database: database).setOnline(true, sourceId: sourceId)
+        try await database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET lastListedAt = ? WHERE id = ?", arguments: [stamp, sourceId])
+        }
 
         let files = listing.filter { !$0.isSidecar }
         let sidecars = Dictionary(listing.filter(\.isSidecar).map { (FolderSourceIndexer.pathKey($0.relativePath), $0) },

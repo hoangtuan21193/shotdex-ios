@@ -85,7 +85,7 @@ final class SourcesModel {
         let store = SourceStore(database: database)
         let statuses = (try? database.reader.read { db in
             Dictionary(uniqueKeysWithValues: try Row_.fetchAll(db, sql: """
-                SELECT s.id, s.status, (SELECT MAX(lastSeenAt) FROM photo_copies c WHERE c.sourceId = s.id) AS lastRead,
+                SELECT s.id, s.status, COALESCE(s.lastListedAt, (SELECT MAX(lastSeenAt) FROM photo_copies c WHERE c.sourceId = s.id)) AS lastRead,
                        (SELECT transferProtocol FROM file_servers f WHERE f.id = s.connectionId) AS protocol
                 FROM sources s
                 """).map { ($0["id"] as String, (status: $0["status"] as String?, lastRead: $0["lastRead"] as Int?,

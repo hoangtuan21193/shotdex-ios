@@ -99,8 +99,12 @@ enum FileCopyWriter {
 
     /// Seen again, unchanged: online, present, and — Put Back — no orphan.
     static func touch(_ db: Database, existing: Existing, at stamp: Int) throws {
-        try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
-                       arguments: [stamp, existing.id])
+        // Seen again and already in that state: no write. When the source was
+        // last read lives on `sources.lastListedAt` (v68), set once a pass.
+        try db.execute(sql: """
+            UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL
+            WHERE id = ? AND (isOnline IS NOT 1 OR missingSince IS NOT NULL OR lastSeenAt IS NULL)
+            """, arguments: [stamp, existing.id])
         try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ? AND orphanedAt IS NOT NULL",
                        arguments: [existing.photoId])
     }

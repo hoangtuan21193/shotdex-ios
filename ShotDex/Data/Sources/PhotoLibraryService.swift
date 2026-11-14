@@ -167,7 +167,7 @@ final class PhotoLibraryService: NSObject {
     @ObservationIgnored private var pendingEverythingChanged = false
     /// Past this many changed assets in one window, a fresh pass is cheaper
     /// than marking each.
-    private static let changedAssetsCap = 5_000
+    private nonisolated static let changedAssetsCap = 5_000
 
     /// What changed in the library for the original-on-device check
     /// (FS-06.10 AC-8), once per debounced bump: the ids of assets edited
@@ -184,6 +184,9 @@ final class PhotoLibraryService: NSObject {
     /// against and every change would look like an album change.
     @ObservationIgnored
     private var albumsFetchResult: PHFetchResult<PHAssetCollection>?
+    /// Owns the diffing baselines off the main actor (see `LibraryChangeClassifier`).
+    @ObservationIgnored
+    private nonisolated let changeClassifier = LibraryChangeClassifier()
 
     override init() {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -307,6 +310,7 @@ final class PhotoLibraryService: NSObject {
         options.predicate = Self.browsableMediaPredicate
         let result = PHAsset.fetchAssets(with: options)
         allPhotosFetchResult = result
+        changeClassifier.setAllPhotos(result)
         return result
     }
 
@@ -1353,6 +1357,7 @@ final class PhotoLibraryService: NSObject {
             with: .album, subtype: .any, options: nil
         )
         albumsFetchResult = result
+        changeClassifier.setAlbums(result)
         return result
     }
 
@@ -1372,13 +1377,24 @@ final class PhotoLibraryService: NSObject {
 
 extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
+        // The diff runs here, on PhotoKit's own background queue, not on the
+        // main actor: `changeDetails(for:)` over the whole library plus one
+        // per changed asset took the main thread for seconds when an iPad
+        // came back after hours and iCloud delivered its backlog — taps on
+        // the Albums tab went nowhere until it finished (user 2026-11-14).
+        let outcome = changeClassifier.classify(changeInstance, editCap: Self.changedAssetsCap)
         Task { @MainActor in
-            // Both always run: each advances its baseline, and a later
-            // change read against a stale one is lost.
-            let structural = self.isStructural(changeInstance)
-            let collections = self.didAlbumsChange(changeInstance)
-            self.pendingStructuralChange = self.pendingStructuralChange || structural
-            self.pendingCollectionChange = self.pendingCollectionChange || collections
+            self.pendingStructuralChange = self.pendingStructuralChange || outcome.structural
+            self.pendingCollectionChange = self.pendingCollectionChange || outcome.collections
+            if self.onAssetsChanged != nil, !self.pendingEverythingChanged {
+                if outcome.everythingChanged
+                    || self.pendingChangedAssetIds.count + outcome.editedAssetIds.count > Self.changedAssetsCap {
+                    self.pendingEverythingChanged = true
+                    self.pendingChangedAssetIds = []
+                } else {
+                    self.pendingChangedAssetIds.formUnion(outcome.editedAssetIds)
+                }
+            }
             // Both tokens share one trailing-edge debounce: iCloud downloads
             // during an index run fire a change per asset, and a full-library
             // reload per photo is what made the grid flicker and the device
@@ -1414,65 +1430,6 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
         }
     }
 
-    /// Whether a change altered browsable asset membership or order, as opposed
-    /// to only the contents of assets that were already there. Also advances
-    /// the `allPhotosFetchResult` baseline.
-    private func isStructural(_ changeInstance: PHChange) -> Bool {
-        // No baseline (authorization not yet granted when observation started):
-        // can't classify, so assume the list moved.
-        guard let current = allPhotosFetchResult else {
-            pendingEverythingChanged = true
-            return true
-        }
-        // Nil details = this change didn't touch the all-photos fetch result.
-        guard let details = changeInstance.changeDetails(for: current) else { return false }
-        allPhotosFetchResult = details.fetchResultAfterChanges
-        // PhotoKit couldn't compute a diff — treat as "reload everything".
-        guard details.hasIncrementalChanges else {
-            pendingEverythingChanged = true
-            return true
-        }
-        collectEditedAssets(details, in: changeInstance)
-        return details.insertedIndexes?.isEmpty == false
-            || details.removedIndexes?.isEmpty == false
-            || details.hasMoves
-    }
-
-    /// Changed assets whose photo or video content changed — an edit,
-    /// a revert — which decides which originals an asset has. A favorite or
-    /// a hide alone leaves the answer alone. Evictions PhotoKit does not
-    /// report at all, which is why the check also runs on each foreground
-    /// and a full pass once a day (FS-06.10 §4).
-    private func collectEditedAssets(_ details: PHFetchResultChangeDetails<PHAsset>, in changeInstance: PHChange) {
-        guard onAssetsChanged != nil, !pendingEverythingChanged else { return }
-        let changed = details.changedObjects
-        guard !changed.isEmpty else { return }
-        guard pendingChangedAssetIds.count + changed.count <= Self.changedAssetsCap else {
-            pendingEverythingChanged = true
-            return
-        }
-        for asset in changed where changeInstance.changeDetails(for: asset)?.assetContentChanged ?? true {
-            pendingChangedAssetIds.insert(asset.localIdentifier)
-        }
-    }
-
-    /// Whether a change touched the album list — one created, removed, moved,
-    /// or altered (a rename, or photos added to it).
-    ///
-    /// `changedIndexes` matters as much as inserts here: adding the first
-    /// photo to an album does not change *which* albums exist, but it does
-    /// decide whether that album is drawn at all, since an empty one is
-    /// dropped from the tab.
-    private func didAlbumsChange(_ changeInstance: PHChange) -> Bool {
-        guard let current = albumsFetchResult else { return true }
-        guard let details = changeInstance.changeDetails(for: current) else { return false }
-        albumsFetchResult = details.fetchResultAfterChanges
-        guard details.hasIncrementalChanges else { return true }
-        return details.insertedIndexes?.isEmpty == false
-            || details.removedIndexes?.isEmpty == false
-            || details.changedIndexes?.isEmpty == false
-            || details.hasMoves
-    }
 }
 
 /// What the Collections tab watches: the browsable asset list, and the set of
@@ -1501,4 +1458,81 @@ extension PhotoAuthorizationState {
 struct DecodeHopBox<Value>: @unchecked Sendable {
     let value: Value
     init(_ value: Value) { self.value = value }
+}
+
+
+/// The structural / album / edited classification of a `PHChange`, done off
+/// the main actor. Holds the two baselines it diffs against on one serial
+/// queue: the main actor hands new baselines over without waiting, and each
+/// change is classified against the baseline the previous one left.
+final class LibraryChangeClassifier: @unchecked Sendable {
+    struct Outcome: Sendable {
+        /// Membership or order of the browsable photos changed.
+        var structural = false
+        /// The album list changed (one created, removed, renamed, or filled).
+        var collections = false
+        /// No baseline, no incremental diff, or more edits than the cap.
+        var everythingChanged = false
+        /// Assets whose picture changed (an edit, a revert) — not a favourite or a hide.
+        var editedAssetIds: Set<String> = []
+    }
+
+    private let queue = DispatchQueue(label: "com.hoangtuan.shotdex.photokit-changes", qos: .utility)
+    private var allPhotos: PHFetchResult<PHAsset>?
+    private var albums: PHFetchResult<PHAssetCollection>?
+
+    func setAllPhotos(_ result: PHFetchResult<PHAsset>) {
+        queue.async { self.allPhotos = result }
+    }
+
+    func setAlbums(_ result: PHFetchResult<PHAssetCollection>) {
+        queue.async { self.albums = result }
+    }
+
+    /// Both baselines always advance: a later change read against a stale
+    /// one is lost.
+    func classify(_ change: PHChange, editCap: Int) -> Outcome {
+        queue.sync {
+            var outcome = Outcome()
+            if let current = allPhotos {
+                if let details = change.changeDetails(for: current) {
+                    allPhotos = details.fetchResultAfterChanges
+                    if details.hasIncrementalChanges {
+                        outcome.structural = details.insertedIndexes?.isEmpty == false
+                            || details.removedIndexes?.isEmpty == false
+                            || details.hasMoves
+                        let changed = details.changedObjects
+                        if changed.count > editCap {
+                            outcome.everythingChanged = true
+                        } else {
+                            for asset in changed where change.changeDetails(for: asset)?.assetContentChanged ?? true {
+                                outcome.editedAssetIds.insert(asset.localIdentifier)
+                            }
+                        }
+                    } else {
+                        outcome.structural = true
+                        outcome.everythingChanged = true
+                    }
+                }
+            } else {
+                // No baseline yet (authorization not granted when observation
+                // started): cannot classify, so assume the list moved.
+                outcome.structural = true
+                outcome.everythingChanged = true
+            }
+            if let current = albums {
+                if let details = change.changeDetails(for: current) {
+                    albums = details.fetchResultAfterChanges
+                    outcome.collections = !details.hasIncrementalChanges
+                        || details.insertedIndexes?.isEmpty == false
+                        || details.removedIndexes?.isEmpty == false
+                        || details.changedIndexes?.isEmpty == false
+                        || details.hasMoves
+                }
+            } else {
+                outcome.collections = true
+            }
+            return outcome
+        }
+    }
 }

@@ -723,6 +723,7 @@ final class AppDatabase: Sendable {
         registerSearchIndex(&migrator)
         registerFreeTextIndex(&migrator)
         registerEditorSnapshots(&migrator)
+        registerSourceLastListed(&migrator)
 
         return migrator
     }

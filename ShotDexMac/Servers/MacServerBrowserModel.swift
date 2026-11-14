@@ -611,7 +611,10 @@ final class MacServerBrowserModel {
     private func readLastIndexed() async {
         let sourceId = sourceId
         let seen = try? await database.reader.read { db in
-            try Int.fetchOne(db, sql: "SELECT MAX(lastSeenAt) FROM photo_copies WHERE sourceId = ?", arguments: [sourceId])
+            try Int.fetchOne(db, sql: """
+                SELECT COALESCE((SELECT lastListedAt FROM sources WHERE id = ?),
+                                (SELECT MAX(lastSeenAt) FROM photo_copies WHERE sourceId = ?))
+                """, arguments: [sourceId, sourceId])
         }
         lastIndexed = seen.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }

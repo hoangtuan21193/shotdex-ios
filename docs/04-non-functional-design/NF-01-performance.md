@@ -17,6 +17,16 @@
 6. **Cache phải có trần** — bounded theo chunk budget, bị **thay** chứ không tích luỹ, nhả sạch khi
    memory warning.
 7. Mọi `ORDER BY` kết thúc bằng tiebreaker id ảnh — thứ tự không đổi giữa hai lần chạy cùng query.
+8. **Không ghi dòng không đổi.** Lượt quét lặp lại (nguồn server/folder mỗi lần app về trước mặt) chỉ ghi dòng có
+   giá trị thật sự khác: `UPDATE … WHERE cột IS NOT ?`, upsert có `WHERE` ở `DO UPDATE`. "Lần đọc cuối" của nguồn là
+   một cột `sources.lastListedAt` (v68), không phải `MAX(lastSeenAt)` buộc ghi mọi bản sao. *Vì* một UPDATE trúng
+   dòng là ghi đĩa và đánh thức mọi observer của bảng dù giá trị y hệt — iPad 14/11: 4,3 GB ghi trong 6 giờ, app đơ
+   mỗi lần mở lại. Test `ServerSourceIndexTests.unchangedPassWritesNoFileRows`.
+9. **Diff thay đổi PhotoKit không chạy trên main.** `changeDetails(for:)` của cả thư viện và của từng asset đổi chạy
+   trong `LibraryChangeClassifier` (hàng đợi riêng); main chỉ nhận kết quả. *Vì* backlog iCloud sau nhiều giờ
+   khoá main vài giây — bấm Albums không ăn (14/11).
+10. **Màn danh sách mở ngay từ cache.** Albums giữ bản danh sách lần trước trong Caches (`albums-list.json`: id,
+   tên, số, id ảnh bìa) và hiện nó ngay khi khởi động lạnh, rồi đếm lại ở nền và thay. Không màn trống chờ đếm.
 
 ## 2. Mốc quy mô
 

@@ -239,6 +239,7 @@ struct CopyFileStore: Sendable {
                     attempts = CASE WHEN \(Self.sameFile) THEN attempts ELSE 0 END,
                     lastError = CASE WHEN \(Self.sameFile) THEN lastError END,
                     triedAt = CASE WHEN \(Self.sameFile) THEN triedAt END
+                WHERE NOT (\(Self.sameFile) AND role IS excluded.role)
                 """, arguments: [copyId, file.fileKey, role.rawValue, file.size, file.modifiedAt])
         }
         let keys = String(data: try JSONEncoder().encode(files.map(\.fileKey)), encoding: .utf8)

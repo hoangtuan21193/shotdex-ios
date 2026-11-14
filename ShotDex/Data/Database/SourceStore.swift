@@ -103,8 +103,14 @@ struct SourceStore: Sendable {
     /// orphan, and nothing about its photos is forgotten.
     func setOnline(_ online: Bool, sourceId: String) throws {
         try database.writer.write { db in
-            try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ?", arguments: [online ? "online" : "offline", sourceId])
-            try db.execute(sql: "UPDATE photo_copies SET isOnline = ? WHERE sourceId = ?", arguments: [online, sourceId])
+            // Only rows whose value changes: an UPDATE that matches a row
+            // rewrites it (and wakes every observer of the table) even when
+            // the value is the same, and this runs on every foreground pass.
+            let status = online ? "online" : "offline"
+            try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ? AND status IS NOT ?",
+                           arguments: [status, sourceId, status])
+            try db.execute(sql: "UPDATE photo_copies SET isOnline = ? WHERE sourceId = ? AND isOnline IS NOT ?",
+                           arguments: [online, sourceId, online])
         }
     }
 

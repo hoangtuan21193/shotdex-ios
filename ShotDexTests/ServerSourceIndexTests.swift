@@ -73,6 +73,53 @@ import Testing
         #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).count == 27)
     }
 
+    /// A pass over an unchanged share writes one row — the source's
+    /// `lastListedAt` — and nothing per file. It used to rewrite every copy's
+    /// `lastSeenAt`, `isOnline` and file rows on each foreground: 4.3 GB of
+    /// writes in 6 h on an iPad, and every database observer woke each time
+    /// (2026-11-14).
+    @Test func unchangedPassWritesNoFileRows() async throws {
+        let client = InMemoryRemoteFileClient()
+        for n in 1...12 {
+            client.put("Photos/IMG_\(n).ARW", try Self.raw(padding: 1_024, seed: UInt8(n)))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "NAS", connectionId: "C1")
+        let first = Date(timeIntervalSince1970: 1_800_000_000)
+        _ = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: true, now: first)
+
+        let before = try await database.writer.write { $0.totalChangesCount }
+        let later = first.addingTimeInterval(3_600)
+        let summary = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: true, now: later)
+        let after = try await database.writer.write { $0.totalChangesCount }
+
+        #expect(summary.unchanged == 12)
+        #expect(after - before == 1)
+        let listed = try await database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT lastListedAt FROM sources WHERE id = ?", arguments: [source])
+        }
+        #expect(listed == Int(later.timeIntervalSince1970))
+    }
+
+    /// Going offline and back flips only the rows that differ; saying
+    /// "online" again of an online source writes nothing.
+    @Test func setOnlineWritesOnlyChanges() async throws {
+        let client = InMemoryRemoteFileClient()
+        client.put("Photos/IMG_1.ARW", try Self.raw(padding: 1_024, seed: 1))
+        let database = try AppDatabase.makeEmpty()
+        let store = SourceStore(database: database)
+        let source = try store.addServer(name: "NAS", connectionId: "C1")
+        _ = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: true)
+
+        let before = try await database.writer.write { $0.totalChangesCount }
+        try store.setOnline(true, sourceId: source)
+        let unchanged = try await database.writer.write { $0.totalChangesCount }
+        #expect(unchanged == before)
+        try store.setOnline(false, sourceId: source)
+        let flipped = try await database.writer.write { $0.totalChangesCount }
+        #expect(flipped - unchanged == 2)
+    }
+
     /// AC-38: another computer adds 5 files to NAS Home/Photos/2026. Rescan
     /// adds 5 photos and opens none of the files it already had — they are
     /// matched by size and write time from the listing alone.
