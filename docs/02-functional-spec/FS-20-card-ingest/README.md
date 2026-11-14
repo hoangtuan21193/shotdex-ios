@@ -177,7 +177,33 @@ Màn `MAC_Ingest` là một trang trong cửa sổ chính (không mở cửa s�
     lựa chọn sang lần sau.
   - Mọi lựa chọn trên (trừ Grid/List, lưu riêng) nằm trong `IngestSettings`, nhớ sang lần sau như §6; preset metadata đã
     lưu đọc lỏng (một preset hỏng không làm mất các preset khác).
-- Tiến độ đầy đủ: hàng 27.
+- **Tiến độ (row 27, 2026-11-14)** — board `MAC_IngestProgress`. Activity là popover (⌥⌘0, nút toolbar), không phải
+  cửa sổ (luật ít cửa sổ); mẻ import đứng đầu popover, trên Background:
+  - Đầu thẻ: `Importing from EOS_DIGITAL`, `412 of 811`, thanh tổng theo byte (cả phần đã chép của ảnh đang chép), dòng
+    `To T7 RAW Archive › RAW/2026 · 12.6 GB of 24.6 GB · 2 min left` (thời gian còn lại theo nhịp của chính mẻ, không tính
+    lúc Pause, chỉ hiện sau 3 s; Pause → `Paused`). Hai nút vuông: **Pause / Resume** (AC-28) và **Stop Import…** (hỏi
+    như trang Import; Keep Importing mở lại popover).
+  - Ba thanh: **Copy** `412 of 811 copied` · **Verify** `398 verified` (ảnh mà mọi file đã đọc lại khớp) · **Backup**
+    `357 on LaCie Backup` (chỉ khi có backup).
+  - Danh sách file: 3 ảnh xong gần nhất, ảnh đang làm (nền accent nhạt), 2 ảnh chờ — không bao giờ cả mẻ. Trạng thái:
+    `Waiting · 31.4 MB` · `Copying · 18%` (thanh nhỏ) · `Verifying…` · `Verified` · `Verified · backing up` ·
+    `Verified · backed up` (xanh) · `Couldn't copy` (đỏ). Runner chép tuần tự từng ảnh, nên không có hai ảnh cùng chạy
+    như board vẽ; `Verifying` không có % (đích đọc lại file một lượt).
+  - Dòng cuối: `N more photos waiting.` + câu kiểm SHA-256 (thêm `.xmp … with the <Creator> metadata` khi có metadata) +
+    `EOS_DIGITAL ejects when every copy is verified.` khi bật Eject.
+  - Pause → `Pausing after this photo…` tới khi runner dừng giữa hai ảnh, rồi `Paused` (thanh xám, đồng hồ thời gian
+    còn lại dừng). Stop → `Stopping…`, hai nút mờ. Hộp hỏi đóng kiểu nào (Keep, Return, Stop) popover cũng mở lại.
+  - Tiêu đề theo loại mẻ: `Importing from X` · `Importing the rest from X` (Import Remaining / Retry Failed) · `Backing
+    up from X` (Back Up Remaining, ẩn Copy/Verify). Ảnh hỏng: dòng cuối có `N photos couldn't be copied — Retry Failed
+    when the import ends.`; `copied` không tính ảnh hỏng; backup hỏng riêng: `Verified · backup failed`.
+  - **Mẻ kết thúc không trọn** (Stop, đích đầy/rút, ảnh hỏng, backup thiếu) ở bất kỳ đâu: toast lời kết của §8 — thẻ và
+    chân sidebar đã biến mất cùng mẻ.
+  - Một con số cho mọi nơi: đầu trang Import, Activity, hàng thẻ % và chân sidebar, tiến độ hệ thống (iOS) đều đọc
+    `liveProgress` (byte đã chép, tính cả ảnh đang chép).
+  - **Chân sidebar** khi mẻ chạy: thẻ `Importing from EOS_DIGITAL 51%` + thanh (`Paused` khi dừng); bấm mở Activity; đứng sau
+    chân upload (upload đang chạy thì chân upload hiện trước).
+  - Runner báo bước của từng ảnh (`stage`: copying/verifying/backingUp) và số byte đã chép tối đa 10 lần/giây; mọi
+    con số đọc từ model, không truy vấn DB khi vẽ.
 
-Kiểm: `ShotDexMacUITests/scripts/mac-ingest.json` (demo `-ShotDexSection ingest -ShotDexSlowIngest`: thẻ giả 23 ảnh
+Kiểm: `ShotDexMacUITests/scripts/mac-ingest.json`, `mac-ingest-activity.json` (demo `-ShotDexSection ingest -ShotDexSlowIngest`: thẻ giả 23 ảnh
 HIF trong thư mục tạm, nguồn đích “T7 RAW Archive”).

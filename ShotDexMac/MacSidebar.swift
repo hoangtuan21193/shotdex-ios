@@ -246,6 +246,9 @@ struct MacSidebar: View {
         if !uploading.isEmpty {
             MacUploadFoot(entries: uploading,
                           indexLine: library?.isIndexing == true ? String(localized: "Indexing…", comment: "Mac sidebar foot: the index is running") : nil)
+        } else if let ingest = dependencies.cards.center.running {
+            // A card import (board `MAC_IngestProgress`): Activity has the detail.
+            MacIngestFoot(model: ingest)
         } else if let busyFooter {
             busyFooter
         } else if let sourcesModel, sourcesModel.hasReadProgress {
@@ -560,7 +563,7 @@ private struct MacCardRowTitle: View {
             Text(card.name).lineLimit(1)
             Spacer(minLength: 4)
             if let model = dependencies.cards.center.models[card.id], model.isRunning {
-                Text(model.progress.fraction.formatted(.percent.precision(.fractionLength(0))))
+                Text(model.liveProgress.fraction.formatted(.percent.precision(.fractionLength(0))))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()

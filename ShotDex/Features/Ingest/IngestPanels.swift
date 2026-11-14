@@ -132,16 +132,16 @@ struct IngestProgressPanel: View {
             VStack(spacing: AppTheme.Spacing.xs) {
                 Text("Importing from \(model.card.name)", tableName: IngestCopy.table, comment: "Card import progress title")
                     .font(.headline)
-                Text(IngestCopy.progressLine(model.progress))
+                Text(IngestCopy.progressLine(model.liveProgress))
                     .font(.subheadline).monospacedDigit().foregroundStyle(.secondary)
             }
             VStack(spacing: AppTheme.Spacing.sm) {
-                bar(String(localized: "Copy", table: IngestCopy.table, comment: "Card import progress row"), model.progress.fraction)
+                bar(String(localized: "Copy", table: IngestCopy.table, comment: "Card import progress row"), model.liveProgress.fraction)
                 bar(String(localized: "Verify", table: IngestCopy.table, comment: "Card import progress row"),
-                    model.progress.total > 0 ? Double(model.progress.done) / Double(model.progress.total) : 0)
+                    model.progress.total > 0 ? Double(model.verifiedCount) / Double(model.progress.total) : 0)
                 if model.settings.backsUp {
                     bar(String(localized: "Backup", table: IngestCopy.table, comment: "Card import progress row"),
-                        model.progress.total > 0 ? Double(model.progress.done) / Double(model.progress.total) : 0)
+                        model.progress.total > 0 ? Double(model.backedUpCount) / Double(model.progress.total) : 0)
                 }
             }
             .padding()

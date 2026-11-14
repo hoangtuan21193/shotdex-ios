@@ -59,6 +59,12 @@ final class MacIngestCards {
             refresh()
             return
         }
+        // A run that ended short — stopped, a drive full or gone, photos that
+        // failed — is said wherever the user is: Activity and the sidebar foot,
+        // where they watched it, are gone with it.
+        if summary.ending != .finished || !summary.failed.isEmpty || summary.backupIncomplete, let line = model.endingMessage {
+            NotificationCenter.default.post(name: .macToast, object: line)
+        }
         guard model.settings.ejectsAfterImport, summary.canEject(backupEnabled: model.settings.backsUp), canEject(id) else { return }
         Task {
             let ejected = await eject(id)

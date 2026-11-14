@@ -41,9 +41,17 @@ struct MacActivityView: View {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    // What ShotDex does on its own, first (user 2026-11-08).
+                    // A card import the user started leads (board `MAC_IngestProgress`).
+                    if let ingest = dependencies.cards.center.running {
+                        MacIngestActivityCard(model: ingest) {
+                            close()
+                            prompts.stoppingIngest = ingest
+                        }
+                    }
+                    // What ShotDex does on its own (user 2026-11-08).
                     MacBackgroundJobs()
-                    if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty && dependencies.uploads.history.isEmpty {
+                    if jobs.isEmpty && watchRows.isEmpty && dependencies.uploads.entries.isEmpty && dependencies.uploads.history.isEmpty
+                        && dependencies.cards.center.running == nil {
                         empty
                     }
                     if !dependencies.uploads.entries.isEmpty || !dependencies.uploads.history.isEmpty { uploads }
@@ -536,6 +544,7 @@ struct MacActivityToolbar: ViewModifier {
 
     private var isRunning: Bool {
         dependencies.commonPhotos.entries.values.contains { $0.isRunning } || dependencies.uploads.isAnyRunning
+            || dependencies.cards.center.running != nil
     }
 
     func body(content: Content) -> some View {
@@ -573,7 +582,12 @@ struct MacActivityToolbar: ViewModifier {
             .onChange(of: prompts.reopens) { _, reopens in
                 guard reopens else { return }
                 prompts.reopens = false
-                isPresented = true
+                // Asked while the dialog is still closing, AppKit drops the
+                // popover without a word: once the sheet has gone.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    isPresented = true
+                }
             }
             .confirmationDialog(String(localized: "Stop gathering “\(prompts.stoppingWatch?.title ?? "")”?", comment: "Mac Activity: confirm Stop Gathering"),
                                 isPresented: Binding(get: { prompts.stoppingWatch != nil }, set: { if !$0 { prompts.stoppingWatch = nil } })) {
@@ -594,6 +608,33 @@ struct MacActivityToolbar: ViewModifier {
                     .keyboardShortcut(.defaultAction)
             } message: {
                 Text(prompts.stopText.message)
+            }
+            .confirmationDialog(String(localized: "Stop importing?", comment: "Mac Import from Card: confirm Stop Import"),
+                                // A run that ends while the question is up: nothing left to stop.
+                                isPresented: Binding(get: { prompts.stoppingIngest?.isRunning == true },
+                                                     set: { isShown in
+                                                         // However it closes — Keep Importing, Return, Stop — the
+                                                         // popover comes back: the run going on, or "Stopping…".
+                                                         guard !isShown, prompts.stoppingIngest != nil else { return }
+                                                         prompts.stoppingIngest = nil
+                                                         prompts.reopens = true
+                                                     }),
+                                presenting: prompts.stoppingIngest) { ingest in
+                Button(String(localized: "Stop Import", comment: "Mac Import from Card: stop the running import"), role: .destructive) {
+                    ingest.stop()
+                }
+                Button(String(localized: "Keep Importing", comment: "Mac Import from Card: cancel Stop Import"), role: .cancel) {
+                    prompts.reopens = true
+                }
+                    .keyboardShortcut(.defaultAction)
+            } message: { ingest in
+                if let name = ingest.destination?.name {
+                    Text("Photos already imported stay in \(name). Import Remaining picks up the rest.",
+                         comment: "Mac Import from Card: what Stop leaves")
+                } else {
+                    Text("Photos already imported stay where they are. Import Remaining picks up the rest.",
+                         comment: "Mac Import from Card: what Stop leaves, destination unknown")
+                }
             }
             .alert(prompts.removeTitle, isPresented: Binding(get: { !prompts.removing.isEmpty }, set: { if !$0 { prompts.removing = [] } })) {
                 Button(String(localized: "Remove", comment: "Mac Activity: remove finished runs from the list")) {
@@ -644,6 +685,8 @@ final class MacActivityPrompts {
     var removesReady = false
     /// Stop Gathering asked for this set.
     var stoppingWatch: CommonPhotosWatchRow?
+    /// Stop Import… asked from the card import's row.
+    var stoppingIngest: IngestModel?
     /// A question was answered Cancel or Keep Going: the popover opens again.
     var reopens = false
 

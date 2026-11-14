@@ -114,8 +114,8 @@ input{font-family:inherit}
 </div>
 <div style="display:flex;flex-direction:column;gap:2px;padding-left:38px">
 <div style="height:20px;display:flex;align-items:center;gap:10px;font-size:12px"><span style="width:52px;flex:none;color:{{t.label2}}">Copy</span><div role="progressbar" aria-label="Copy" aria-valuenow="51" style="flex:1;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:51%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div><span style="width:132px;flex:none;text-align:right;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">412 of 811 copied</span></div>
-<div style="height:20px;display:flex;align-items:center;gap:10px;font-size:12px"><span style="width:52px;flex:none;color:{{t.label2}}">Verify</span><div role="progressbar" aria-label="Verify" aria-valuenow="49" style="flex:1;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:49%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div><span style="width:132px;flex:none;text-align:right;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">398 verified</span></div>
-<div style="height:20px;display:flex;align-items:center;gap:10px;font-size:12px"><span style="width:52px;flex:none;color:{{t.label2}}">Backup</span><div role="progressbar" aria-label="Backup" aria-valuenow="44" style="flex:1;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:44%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div><span style="width:132px;flex:none;text-align:right;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">357 on LaCie Backup</span></div>
+<div style="height:20px;display:flex;align-items:center;gap:10px;font-size:12px"><span style="width:52px;flex:none;color:{{t.label2}}">Verify</span><div role="progressbar" aria-label="Verify" aria-valuenow="51" style="flex:1;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:51%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div><span style="width:132px;flex:none;text-align:right;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">411 verified</span></div>
+<div style="height:20px;display:flex;align-items:center;gap:10px;font-size:12px"><span style="width:52px;flex:none;color:{{t.label2}}">Backup</span><div role="progressbar" aria-label="Backup" aria-valuenow="51" style="flex:1;height:4px;border-radius:2px;background:{{t.track}}"><div style="width:51%;height:4px;border-radius:2px;background:{{t.accent}}"></div></div><span style="width:132px;flex:none;text-align:right;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">411 on LaCie Backup</span></div>
 </div>
 <div role="table" aria-label="Files" style="border-radius:10px;border:1px solid {{t.sep}};background:{{S.box}};overflow:hidden">
 <sc-for list="{{ifiles}}" as="f" hint-placeholder-count="7"><div role="row" style="height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;background:{{f.rowBg}}">
@@ -128,7 +128,7 @@ input{font-family:inherit}
 </div>
 </div></sc-for>
 </div>
-<div style="font-size:11px;line-height:14px;color:{{t.label2}};padding:0 2px">399 more waiting. Each copy is checked with SHA-256 after it lands and gets an .xmp sidecar with the Linh Pham metadata. EOS_DIGITAL ejects when every copy is verified.</div>
+<div style="font-size:11px;line-height:14px;color:{{t.label2}};padding:0 2px">397 more photos waiting. Each copy is checked with SHA-256 after it lands and gets an .xmp sidecar with the Linh Pham metadata. EOS_DIGITAL ejects when every copy is verified.</div>
 </div>
 </section>
 </div>
@@ -352,13 +352,13 @@ class Component extends DCLogic {
       color: kind==='ok' ? S.greenText : (kind==='up' ? t.label : t.label2),
       icon: kind==='ok' ? CHECK : null, bar: bar || null });
     const ifiles = [
+      // One photo in hand at a time: the runner copies, reads back, then backs up (row 27).
       F(0, 'IMG_6293.CR3', 'ok', 'Verified · backed up'),
       F(1, 'IMG_6294.HIF', 'ok', 'Verified · backed up'),
-      F(2, 'IMG_6295.CR3', 'ok', 'Verified · backing up'),
-      F(3, 'IMG_6296.CR3', 'up', 'Verifying · 62%', '62%'),
-      F(4, 'IMG_6297.CR3', 'up', 'Copying · 18%', '18%'),
-      F(5, 'IMG_6298.CR3', 'wait', 'Waiting · 31.4 MB'),
-      F(6, 'IMG_6299.HIF', 'wait', 'Waiting · 9.8 MB')
+      F(2, 'IMG_6295.CR3', 'ok', 'Verified · backed up'),
+      F(3, 'IMG_6296.CR3', 'up', 'Copying · 18%', '18%'),
+      F(4, 'IMG_6297.CR3', 'wait', 'Waiting · 31.4 MB'),
+      F(5, 'IMG_6298.HIF', 'wait', 'Waiting · 9.8 MB')
     ];
     const e = edges(dark);
     return { t, S, groups, sections, ifiles, edge: e.edge, edgeClear: e.edgeClear,

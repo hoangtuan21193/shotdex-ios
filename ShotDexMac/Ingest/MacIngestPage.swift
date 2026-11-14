@@ -329,7 +329,7 @@ private struct MacIngestHeader: View {
             Spacer(minLength: 12)
             VStack(alignment: .trailing, spacing: 2) {
                 if model.isRunning {
-                    Text(IngestCopy.progressLine(model.progress))
+                    Text(IngestCopy.progressLine(model.liveProgress))
                         .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                     Button(String(localized: "Stop Import…", comment: "Mac Import from Card: stop the running import, asks first"), action: stop)

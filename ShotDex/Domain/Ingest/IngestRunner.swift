@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 
 /// Where a card import goes: the destination source's folder and, when
 /// asked, a backup drive (FS-20 §6).
@@ -19,6 +20,21 @@ enum IngestEvent: Sendable, Equatable {
     case failed(itemId: String, IngestFailure)
     case backedUp(itemId: String, paths: [String])
     case progress(IngestProgress)
+    /// What happens to a photo now, for Activity's file list (FS-20 §7,
+    /// board `MAC_IngestProgress`): sent as each file of it starts copying,
+    /// once its bytes are in and the part file is being read back, and as
+    /// its backup copy starts.
+    case stage(itemId: String, IngestFileStage)
+    /// Pause took hold — the photo in hand is done and the run waits — or
+    /// Resume let it go: the time-left clock stops and starts here.
+    case parked(Bool)
+}
+
+/// A photo's step in a run, for the file list.
+enum IngestFileStage: Sendable, Equatable {
+    case copying
+    case verifying
+    case backingUp
 }
 
 struct IngestProgress: Sendable, Equatable {
@@ -75,21 +91,27 @@ actor IngestRunner {
     let primary: IngestTarget
     let backup: IngestTarget?
     private let onEvent: @Sendable (IngestEvent) async -> Void
+    /// Bytes of the photo in hand copied so far (primary copy only), at most
+    /// every 100 ms: called from inside the chunk loop, which cannot wait.
+    private let onCopied: @Sendable (_ itemId: String, _ bytes: Int64) -> Void
     private var isPaused = false
 
     init(card: any CardReader, plan: FileExportPlan, primary: IngestTarget, backup: IngestTarget? = nil,
-         onEvent: @escaping @Sendable (IngestEvent) async -> Void = { _ in }) {
+         onEvent: @escaping @Sendable (IngestEvent) async -> Void = { _ in },
+         onCopied: @escaping @Sendable (_ itemId: String, _ bytes: Int64) -> Void = { _, _ in }) {
         self.card = card
         self.plan = plan
         self.primary = primary
         self.backup = backup
         self.onEvent = onEvent
+        self.onCopied = onCopied
     }
 
     /// Pause (FS-20 AC-28): the file being copied finishes — copy, verify,
     /// rename — and the run waits before the next one.
     func pause() { isPaused = true }
     func resume() { isPaused = false }
+    func setPaused(_ paused: Bool) { isPaused = paused }
     var paused: Bool { isPaused }
 
     /// Runs the plan, or only `ids` of it (Import Remaining, Retry Failed).
@@ -103,7 +125,11 @@ actor IngestRunner {
         let backup = backsUp ? self.backup : nil
         var backupGone = false
         for (index, entry) in entries.enumerated() {
-            while isPaused, !Task.isCancelled { try? await Task.sleep(for: .milliseconds(50)) }
+            if isPaused, !Task.isCancelled {
+                await onEvent(.parked(true))
+                while isPaused, !Task.isCancelled { try? await Task.sleep(for: .milliseconds(50)) }
+                await onEvent(.parked(false))
+            }
             if Task.isCancelled {
                 summary.ending = .stopped
                 summary.remaining = entries[index...].map(\.id)
@@ -117,7 +143,10 @@ actor IngestRunner {
                 }
                 if let backup, !backupGone {
                     do {
+                        await onEvent(.stage(itemId: entry.id, .backingUp))
                         let paths = try await copy(entry, to: backup, report: false)
+                        // Back Up Remaining: the backup is the only copy, so it is what moves the bytes.
+                        if !copiesPrimary { progress.bytesDone += entry.item.originalBytes }
                         summary.backedUp.append(entry.id)
                         await onEvent(.backedUp(itemId: entry.id, paths: paths))
                     } catch let failure as IngestFailure where failure.isDestinationGone {
@@ -170,11 +199,17 @@ actor IngestRunner {
     /// already written for this photo are taken back.
     private func copy(_ entry: FileExportPlan.Entry, to target: IngestTarget, report: Bool) async throws -> [String] {
         var written: [String] = []
+        var base: Int64 = 0
+        let onEvent = self.onEvent
         do {
             for output in entry.outputs {
                 guard let source = output.source else { continue }
                 let file = CardFile(path: source.key, size: source.byteCount, modified: entry.item.captureDate)
-                let (result, sha) = try await copyFile(file, name: output.name, folder: entry.folder, to: target)
+                let meter = report ? ChunkMeter(itemId: entry.id, base: base, send: onCopied) : nil
+                let (result, sha) = try await copyFile(file, name: output.name, folder: entry.folder, to: target, meter: meter,
+                                                       starting: { if report { await onEvent(.stage(itemId: entry.id, .copying)) } },
+                                                       copied: { if report { await onEvent(.stage(itemId: entry.id, .verifying)) } })
+                base += source.byteCount
                 written.append(result.path)
                 if report {
                     await onEvent(.fileVerified(itemId: entry.id, file: file, path: result.path, sha256: sha))
@@ -189,12 +224,18 @@ actor IngestRunner {
 
     /// One file, copied and proven; a mismatch is copied once more from the
     /// card before it counts as failed (FS-20 §8).
-    private func copyFile(_ file: CardFile, name: String, folder: String, to target: IngestTarget) async throws -> (ExportWrittenFile, String) {
+    private func copyFile(_ file: CardFile, name: String, folder: String, to target: IngestTarget,
+                          meter: ChunkMeter? = nil,
+                          starting: @Sendable () async -> Void = {},
+                          copied: @escaping @Sendable () async -> Void = {}) async throws -> (ExportWrittenFile, String) {
         var attempt = 0
         while true {
             attempt += 1
             let card = self.card
             let box = DigestBox()
+            // Each attempt — a mismatch is copied once more — starts the file over.
+            meter?.restart()
+            await starting()
             do {
                 let result = try await target.destination.writeVerified(name: name, in: folder) { part in
                     let handle = try FileHandle(forWritingTo: part)
@@ -204,9 +245,13 @@ actor IngestRunner {
                         try Task.checkCancellation()
                         hasher.update(data: data)
                         try handle.write(contentsOf: data)
+                        meter?.add(Int64(data.count))
                     }
                     let digest = FileChecksum.hex(hasher.finalize())
                     box.value = digest
+                    // The bytes are in; the destination reads the part file back now.
+                    meter?.flush()
+                    await copied()
                     return digest
                 }
                 return (result, box.value ?? "")
@@ -227,6 +272,44 @@ actor IngestRunner {
 
 private final class DigestBox: @unchecked Sendable {
     var value: String?
+}
+
+/// Counts one file's bytes as its chunks land and passes the photo's total
+/// on at most every 100 ms — a 1 MB chunk is a few milliseconds, and the
+/// file list does not need a main-actor hop for each.
+private final class ChunkMeter: Sendable {
+    private struct State {
+        var bytes: Int64 = 0
+        var lastSent: ContinuousClock.Instant?
+    }
+
+    let itemId: String
+    let base: Int64
+    let send: @Sendable (String, Int64) -> Void
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    init(itemId: String, base: Int64, send: @escaping @Sendable (String, Int64) -> Void) {
+        self.itemId = itemId
+        self.base = base
+        self.send = send
+    }
+
+    /// A second attempt after a mismatch starts the file over.
+    func restart() { state.withLock { $0 = State() } }
+
+    /// The last bytes of the file, whatever the 100 ms gate held back.
+    func flush() { send(itemId, base + state.withLock { $0.bytes }) }
+
+    func add(_ count: Int64) {
+        let now = ContinuousClock.now
+        let due: Int64? = state.withLock { state in
+            state.bytes += count
+            if let last = state.lastSent, now - last < .milliseconds(100) { return nil }
+            state.lastSent = now
+            return state.bytes
+        }
+        if let due { send(itemId, base + due) }
+    }
 }
 
 extension IngestFailure {

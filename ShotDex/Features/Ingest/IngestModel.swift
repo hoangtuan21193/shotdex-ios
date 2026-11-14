@@ -67,6 +67,35 @@ final class IngestModel {
     }
     private(set) var progress = IngestProgress()
     private(set) var isPaused = false
+    /// The run's file list (board `MAC_IngestProgress`): the last photos
+    /// done, the one in hand, the next waiting — never the whole batch.
+    private(set) var files = IngestFileList()
+    /// Photos whose every file is in the destination and verified, and
+    /// those whose backup copy is too, this run.
+    private(set) var verifiedCount = 0
+    private(set) var backedUpCount = 0
+    /// Bytes of the photo in hand copied so far: the Copy bar moves inside
+    /// a 50 MB RAW, not only between photos.
+    private(set) var inHandBytes: Int64 = 0
+    /// Pause asked and the runner has stopped between photos: until then
+    /// the photo in hand is still going in ("Pausing…").
+    private(set) var isParked = false
+    /// Stop Import pressed; the runner is finishing the file in hand and
+    /// sweeping part files.
+    private(set) var isStopping = false
+    /// Photos that failed this run, for "2 couldn't be copied".
+    private(set) var failedCount = 0
+    /// What this run is: a fresh import, the rest of one, or only backups.
+    enum RunKind: Equatable { case fresh, rest, backupOnly }
+    private(set) var runKind = RunKind.fresh
+    /// Pause and Resume reach the runner one after another, in the order
+    /// pressed, each with the state at that moment.
+    @ObservationIgnored private var pauseTask: Task<Void, Never>?
+    /// Which run a byte count belongs to: one from a run that ended is dropped.
+    @ObservationIgnored private var runGeneration = 0
+    /// Time spent copying this run, pauses left out, for "2 min left".
+    @ObservationIgnored private var activeSince: ContinuousClock.Instant?
+    @ObservationIgnored private var activeBefore: Duration = .zero
     /// What the last run left: failed photos (Retry Failed), photos never
     /// started (Import Remaining), photos not yet on the backup.
     private(set) var lastSummary: IngestSummary?
@@ -273,17 +302,63 @@ final class IngestModel {
 
     /// Stop Import… → Stop: within a second, part files swept, the card kept.
     func stop() {
+        guard isRunning else { return }
+        isStopping = true
         runTask?.cancel()
     }
 
+    /// A pause asked while the plan is still being made reaches the runner
+    /// when it is made (see `run`).
     func pause() {
         isPaused = true
-        Task { await runner?.pause() }
+        pushPause()
     }
 
     func resume() {
         isPaused = false
-        Task { await runner?.resume() }
+        pushPause()
+    }
+
+    private func pushPause() {
+        let previous = pauseTask
+        pauseTask = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            await self.runner?.setPaused(self.isPaused)
+        }
+    }
+
+    /// The time-left clock runs only while the runner copies.
+    private func park(_ parked: Bool) {
+        isParked = parked
+        if parked {
+            if let activeSince { activeBefore += ContinuousClock.now - activeSince }
+            activeSince = nil
+        } else if activeSince == nil {
+            activeSince = .now
+        }
+    }
+
+    /// Bytes copied so far, the photo in hand included.
+    var copiedBytes: Int64 { progress.bytesDone + inHandBytes }
+
+    /// The progress every surface shows — the page header, Activity, the
+    /// system's — with the photo in hand's bytes in, so they say one number.
+    var liveProgress: IngestProgress {
+        var live = progress
+        live.bytesDone = copiedBytes
+        return live
+    }
+
+    /// About how long the rest takes, from this run's own pace; nil in the
+    /// first seconds and while paused, when a guess would be noise.
+    var secondsLeft: Int? {
+        guard !isPaused, !isParked, let activeSince else { return nil }
+        let active = activeBefore + (ContinuousClock.now - activeSince)
+        let seconds = Double(active.components.seconds) + Double(active.components.attoseconds) / 1e18
+        let copied = copiedBytes
+        guard seconds >= 3, copied > 0, progress.bytesTotal > copied else { return nil }
+        return Int((Double(progress.bytesTotal - copied) / (Double(copied) / seconds)).rounded(.up))
     }
 
     private func run(ids: Set<String>, freshPlan: Bool, copiesPrimary: Bool = true) {
@@ -291,12 +366,27 @@ final class IngestModel {
         phase = .running
         onUserStart?(self)
         isPaused = false
-        progress = IngestProgress(total: ids.count)
+        isParked = false
+        isStopping = false
+        failedCount = 0
+        runKind = !copiesPrimary ? .backupOnly : (freshPlan ? .fresh : .rest)
+        runGeneration += 1
+        let generation = runGeneration
+        let chosenItems = items.filter { ids.contains($0.id) }
+        // The size is known before the first photo: the bar and "of 24.6 GB" from the start.
+        progress = IngestProgress(total: ids.count, bytesTotal: chosenItems.reduce(0) { $0 + $1.byteCount })
+        // Back Up Remaining: every photo of the run is verified already.
+        verifiedCount = copiesPrimary ? 0 : ids.count
+        backedUpCount = 0
+        inHandBytes = 0
+        activeBefore = .zero
+        activeSince = .now
+        files = IngestFileList(order: chosenItems.map { IngestFileList.Entry(id: $0.id, name: $0.primary.name, bytes: $0.byteCount) })
         let reader = self.reader
         let settings = self.settings
         let backupRoot = settings.backsUp ? self.backupRoot : nil
         let backupName = settings.backupFolder?.title ?? ""
-        let chosen = items.filter { ids.contains($0.id) }
+        let chosen = chosenItems
         let existingPlan = freshPlan ? nil : plan
         activeRecorder = makeRecorder()
         let sink = IngestEventSink(model: self)
@@ -319,10 +409,19 @@ final class IngestModel {
                 card: reader, plan: plan,
                 primary: IngestTarget(destination: writer, name: destination.name),
                 backup: backupRoot.map { IngestTarget(destination: LocalFolderWriter(root: $0), name: backupName) },
-                onEvent: { event in await sink.model?.handle(event) }
+                onEvent: { event in await sink.model?.handle(event) },
+                onCopied: { itemId, bytes in
+                    Task { @MainActor in sink.model?.copied(itemId: itemId, bytes: bytes, generation: generation) }
+                }
             )
             self?.plan = plan
             self?.runner = runner
+            // Pause pressed while the plan was being made.
+            if let self { await runner.setPaused(self.isPaused) }
+            // The order the runner goes in, now that the plan is known.
+            let runEntries = plan.writtenEntries.filter { ids.contains($0.id) }
+            self?.files.reorder(runEntries.map(\.id),
+                                folders: Dictionary(runEntries.map { ($0.id, $0.folder) }, uniquingKeysWith: { first, _ in first }))
             let summary = await runner.run(only: ids, copiesPrimary: copiesPrimary, backsUp: backupRoot != nil)
             self?.finish(summary)
         }
@@ -332,14 +431,38 @@ final class IngestModel {
         activeRecorder?.handle(event)
         switch event {
         case .imported(let itemId):
+            verifiedCount += 1
+            inHandBytes = 0
+            files.verified(itemId)
             imported.insert(itemId)
             selection = IngestSelection(items: items, imported: imported, keeping: selection.checked)
             readSourceIfDue()
         case .progress(let progress):
             self.progress = progress
-        case .fileVerified, .backedUp, .failed:
+            inHandBytes = 0
+            files.finishInHand()
+        case .stage(let itemId, let stage):
+            if stage == .copying, files.inHand?.id != itemId { inHandBytes = 0 }
+            files.set(itemId, stage)
+        case .backedUp(let itemId, _):
+            backedUpCount += 1
+            files.backedUp(itemId)
+        case .failed(let itemId, _):
+            failedCount += 1
+            files.failed(itemId)
+        case .parked(let parked):
+            park(parked)
+        case .fileVerified:
             break
         }
+    }
+
+    /// A chunk count from the runner, which may land after the photo is
+    /// done: only the photo still copying takes it.
+    fileprivate func copied(itemId: String, bytes: Int64, generation: Int) {
+        guard generation == runGeneration, phase == .running, let inHand = files.inHand, inHand.id == itemId, case .copying = inHand.state else { return }
+        inHandBytes = min(bytes, inHand.bytes)
+        files.copied(itemId, fraction: inHand.bytes > 0 ? Double(bytes) / Double(inHand.bytes) : 0)
     }
 
     private func makeRecorder() -> IngestRecorder? {
@@ -361,6 +484,12 @@ final class IngestModel {
 
     private func finish(_ summary: IngestSummary) {
         lastSummary = summary
+        if let activeSince { activeBefore += ContinuousClock.now - activeSince }
+        activeSince = nil
+        isParked = false
+        isStopping = false
+        inHandBytes = 0
+        files.finishInHand()
         runner = nil
         runTask = nil
         isPaused = false

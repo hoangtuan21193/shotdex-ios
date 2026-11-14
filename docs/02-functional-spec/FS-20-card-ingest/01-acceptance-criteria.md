@@ -38,6 +38,11 @@ Thuộc [FS-20 Nhập từ thẻ nhớ](README.md). Mục số trong cột Cho/K
 | AC-32 | Mac, ô mẫu `Date _ Original Number` | bấm chip Time; gõ `_Kyoto` sau chip | ô = `Date _ Original Number Time _Kyoto`; popup = Custom; Example theo đó | ✅ `mac-ingest-options.json` (chip Time, gõ `_Kyoto` → `Example: IMG_5880090000_Kyoto.HIF`, popup Custom), `FileNameTemplateTests.segmentsRoundTrip` |
 | AC-33 | Mac, Metadata trống | Creator `Linh Pham`, keyword `Kyoto` Return, `autumn,`; Save as Preset… `Linh`; None; chọn `Linh` | 2 chip keyword; preset `Linh` trong popup; None xoá ba ô; chọn `Linh` điền lại; × xoá một chip | ✅ `mac-ingest-options.json`, `FileNameTemplateTests.metadataPresetsDecodeLossily` |
 | AC-34 | Mac, trang Import ở Grid | bấm List | mỗi ảnh một dòng: ô tick, ảnh nhỏ, tên (+ JPG), giờ, loại, dung lượng / Imported; bấm dòng = tick/bỏ; mở lại trang → vẫn List | ✅ `mac-ingest-options.json` |
+| AC-35 | Mac, mẻ 23 ảnh đang chạy (`-ShotDexSlowIngest`) | Window › Activity | thẻ `Importing from EOS_DIGITAL` đứng đầu: `N of 23`, dòng `To T7 RAW Archive › … · x of y · …`, thanh Copy/Verify, danh sách ≤ 6 ảnh, ảnh đang chép `Copying · N%`; 0 hàng import trong Background | ✅ `mac-ingest-activity.json` (+ `-dark`) |
+| AC-36 | như AC-35 | Pause trên thẻ; chờ 4 s; Resume | nút thành Resume, dòng có `Paused`, chân sidebar `Paused`; Resume → chạy tiếp (AC-28) | ✅ `mac-ingest-activity.json` |
+| AC-37 | như AC-35 | Stop Import… trên thẻ → Keep Importing; rồi Stop Import… → Stop Import | lần 1: popover mở lại, mẻ vẫn chạy; lần 2: popover mở lại với `Stopping…`, mẻ dừng, toast lời kết, trang có Import Remaining, Activity không còn thẻ, chân sidebar hết; Import Remaining → thẻ `Importing the rest from EOS_DIGITAL` | ✅ `mac-ingest-activity.json` |
+| AC-38 | mẻ có backup, ảnh RAW + JPG | chạy hết | thứ tự sự kiện mỗi ảnh: copying → verifying → (lần lượt từng file) → imported → backingUp → backedUp; danh sách cuối toàn `Verified · backed up` | ✅ `IngestFileListTests` |
+| AC-39 | Mac, mẻ đang chạy | nhìn chân sidebar; bấm vào | `Importing from EOS_DIGITAL N%` + thanh; bấm mở Activity | ✅ `mac-ingest-activity.json` |
 
 **Chưa chứng minh được:** xem cột cuối từng dòng. Phần cần thẻ, đầu đọc hoặc máy ảnh thật (AC-10 rút thật, AC-20,
 AC-27 đầu đọc thật) ghi "chưa kiểm (cần máy thật)" — planboard mac-ipad-v2 Q10.

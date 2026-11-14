@@ -31,7 +31,7 @@ struct IngestRecorder: Sendable {
             for (file, path) in zip(item.files, paths) {
                 try? CardImportStore(database: database).recordBackup(originalPath: file.path, cardId: cardId, backupPath: path)
             }
-        case .imported, .failed, .progress:
+        case .imported, .failed, .progress, .stage, .parked:
             break
         }
     }

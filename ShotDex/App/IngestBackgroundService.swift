@@ -67,8 +67,8 @@ final class IngestBackgroundService {
         task.progress.totalUnitCount = 1_000
         Task { @MainActor in
             while let model = center.running {
-                task.progress.completedUnitCount = Int64(model.progress.fraction * 1_000)
-                task.updateTitle(task.title, subtitle: IngestCopy.progressLine(model.progress))
+                task.progress.completedUnitCount = Int64(min(1, model.liveProgress.fraction) * 1_000)
+                task.updateTitle(task.title, subtitle: IngestCopy.progressLine(model.liveProgress))
                 try? await Task.sleep(for: .seconds(1))
             }
             hasContinuedTask = false

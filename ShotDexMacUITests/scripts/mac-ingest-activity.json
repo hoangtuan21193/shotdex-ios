@@ -1,0 +1,257 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "ingest",
+    "-ShotDexSlowIngest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "23 new photos",
+   "type": "staticText",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "Import 23 Photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "click",
+   "label": "ingest.foot"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Importing from EOS_DIGITAL"
+  },
+  {
+   "action": "assertExists",
+   "label": "Copy"
+  },
+  {
+   "action": "assertExists",
+   "label": "Verify"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-activity"
+  },
+  {
+   "action": "dump",
+   "name": "01-activity"
+  },
+  {
+   "action": "click",
+   "label": "ingest.stop"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Stop importing?"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-stop-question"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "ingest.pause"
+  },
+  {
+   "action": "click",
+   "label": "ingest.pause"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "assertExists",
+   "label": "Resume",
+   "type": "button"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-paused"
+  },
+  {
+   "action": "dump",
+   "name": "03-paused"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-foot-paused"
+  },
+  {
+   "action": "click",
+   "label": "ingest.foot"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "ingest.pause"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Pause",
+   "type": "button"
+  },
+  {
+   "action": "click",
+   "label": "ingest.stop"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-stop-question"
+  },
+  {
+   "action": "click",
+   "x": 0.4996,
+   "y": 0.589
+  },
+  {
+   "action": "waitFor",
+   "label": "Import Remaining",
+   "type": "button",
+   "seconds": 20
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "ingest.foot"
+  },
+  {
+   "action": "screenshot",
+   "name": "06-stopped"
+  },
+  {
+   "action": "click",
+   "label": "Activity",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "ingest.pause"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Import Remaining",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "ingest.foot"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertExists",
+   "label": "Importing the rest from EOS_DIGITAL"
+  },
+  {
+   "action": "screenshot",
+   "name": "07-remaining"
+  },
+  {
+   "action": "dump",
+   "name": "07-remaining"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "waitFor",
+   "label": "0 new photos",
+   "type": "staticText",
+   "seconds": 150
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "ingest.foot"
+  },
+  {
+   "action": "screenshot",
+   "name": "08-end"
+  }
+ ]
+}

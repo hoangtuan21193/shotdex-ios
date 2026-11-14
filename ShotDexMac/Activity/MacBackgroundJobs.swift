@@ -4,7 +4,7 @@ import SwiftUI
 /// background — index, hashing…"): every job ShotDex runs on its own, one
 /// row each while it runs or waits — the library index, place lookup, a
 /// source being read, the On Server check (matching photos with server
-/// files by SHA-256), Backup, the originals check, a card import. Read from
+/// files by SHA-256), Backup, the originals check. Read from
 /// the jobs' own observable state, so a row moves with its job and nothing
 /// is queried here.
 struct MacBackgroundJobs: View {
@@ -128,12 +128,7 @@ struct MacBackgroundJobs: View {
                                 : nil,
                             fraction: progress.total > 0 ? min(1, Double(progress.checked) / Double(progress.total)) : nil))
         }
-        if let ingest = dependencies.cards.center.running {
-            rows.append(Row(id: "ingest", symbol: "sdcard",
-                            title: String(localized: "Importing from \(ingest.card.name)", comment: "Mac Activity › Background: a card import"),
-                            detail: IngestCopy.progressLine(ingest.progress), fraction: ingest.progress.fraction,
-                            isWaiting: ingest.isPaused))
-        }
+        // A card import has its own card above (board `MAC_IngestProgress`).
         return rows
     }
 }
