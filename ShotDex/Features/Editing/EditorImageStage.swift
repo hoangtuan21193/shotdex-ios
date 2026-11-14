@@ -272,6 +272,20 @@ struct EditorImageStage: View {
                     .frame(width: container.width, height: container.height)
                     .position(x: stageSize.width / 2, y: stageSize.height / 2)
 
+                // Where the picture clips (FS-03.18 §4), over the image and
+                // under every tool's handles; framing has the uncropped photo.
+                if let clipping = controller.clippingOverlay, controller.selectedTool != .crop {
+                    Image(uiImage: clipping)
+                        .resizable()
+                        .interpolation(.none)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: container.width, height: container.height)
+                        .position(x: stageSize.width / 2, y: stageSize.height / 2)
+                        .opacity(0.85)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+
                 if chrome.showsSplitCompare, let original = controller.originalPreviewImage {
                     splitCompare(original: original, imageRect: imageRect)
                 }

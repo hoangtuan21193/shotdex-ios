@@ -3620,6 +3620,7 @@ final class PhotoEditorController {
             if isVisualizingSpots { refreshSpotMap() }
             colorSamplingImage = preview.cleanImage
             scheduleHistogram(isDragging: usesInteractiveBase)
+            if showsHighlightClipping || showsShadowClipping { refreshClippingOverlay() }
             await resolveMaskDetection()
             if !isContinuousChange {
                 refreshMaskThumbnails()
@@ -3716,6 +3717,37 @@ final class PhotoEditorController {
         histogramTask = Task { [weak self] in
             await self?.updateHistogram()
             self?.histogramTask = nil
+        }
+    }
+
+    // MARK: Clipping layers (FS-03.18 §4)
+
+    var showsHighlightClipping = false {
+        didSet { if oldValue != showsHighlightClipping { refreshClippingOverlay() } }
+    }
+    var showsShadowClipping = false {
+        didSet { if oldValue != showsShadowClipping { refreshClippingOverlay() } }
+    }
+    /// Red / blue where the shown picture clips; nil while both are off.
+    private(set) var clippingOverlay: UIImage?
+    @ObservationIgnored private var clippingTask: Task<Void, Never>?
+
+    /// Built off the main actor from the frame just drawn; a newer frame
+    /// cancels the one in flight.
+    private func refreshClippingOverlay() {
+        clippingTask?.cancel()
+        let highlights = showsHighlightClipping, shadows = showsShadowClipping
+        guard highlights || shadows, let image = colorSamplingImage else {
+            if clippingOverlay != nil { clippingOverlay = nil }
+            return
+        }
+        let box = DecodeHopBox(image)
+        clippingTask = Task { [weak self] in
+            let made = await Task.detached(priority: .userInitiated) {
+                ClippingOverlay.make(from: box.value, highlights: highlights, shadows: shadows).map(DecodeHopBox.init)
+            }.value
+            guard !Task.isCancelled, let self else { return }
+            self.clippingOverlay = made.map { UIImage(cgImage: $0.value) }
         }
     }
 

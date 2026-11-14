@@ -65,6 +65,8 @@ enum EditorTheme {
     static let chipLabel = Font.system(size: 13, weight: .medium)
     static let chipLabelSelected = Font.system(size: 13, weight: .semibold)
     static let clipping = Color(red: 1, green: 0.271, blue: 0.227)
+    /// Shadow clipping's mark and layer (FS-03.18 §4).
+    static let shadowClipping = Color(red: 0.039, green: 0.518, blue: 1)
     static let maskRow = Color(white: 0.102)
     static var activeRow: Color { accent.opacity(0.1) }
     /// Video Studio selection colour, `#57BFD1` (DESIGN.md §3.1): a selected

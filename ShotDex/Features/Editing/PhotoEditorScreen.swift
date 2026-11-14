@@ -1500,7 +1500,11 @@ struct PhotoEditorScreen: View {
                         histogram: controller.histogram,
                         chrome: chrome,
                         bounds: CGRect(origin: .zero, size: proxy.size),
-                        namespace: histogramNamespace
+                        namespace: histogramNamespace,
+                        showsShadowClipping: controller.showsShadowClipping,
+                        showsHighlightClipping: controller.showsHighlightClipping,
+                        toggleShadowClipping: { controller.showsShadowClipping.toggle() },
+                        toggleHighlightClipping: { controller.showsHighlightClipping.toggle() }
                     )
                     .transition(.identity)
                 }

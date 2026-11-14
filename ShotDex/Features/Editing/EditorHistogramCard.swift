@@ -15,6 +15,12 @@ struct EditorHistogramCard: View {
     /// Shared with the collapsed pill in the action bar, so collapsing animates as
     /// one object shrinking into the chrome rather than two views cross-fading.
     let namespace: Namespace.ID
+    /// The clipping layers on the photo (FS-03.18 §4), turned on from the two
+    /// triangles: shadows at the left, highlights at the right.
+    var showsShadowClipping = false
+    var showsHighlightClipping = false
+    var toggleShadowClipping: () -> Void = {}
+    var toggleHighlightClipping: () -> Void = {}
 
     private var size: CGSize {
         EditorLayoutMetrics.histogramSize(collapsed: false)
@@ -76,6 +82,8 @@ struct EditorHistogramCard: View {
 
     private var header: some View {
         HStack(spacing: 8) {
+            clippingTriangle(isOn: showsShadowClipping, color: EditorTheme.shadowClipping,
+                             label: String(localized: "Show Shadow Clipping"), action: toggleShadowClipping)
             HStack(spacing: 2) {
                 ForEach(0..<3, id: \.self) { _ in
                     Circle()
@@ -95,11 +103,28 @@ struct EditorHistogramCard: View {
                     .shadow(color: EditorTheme.clipping, radius: 4)
                     .accessibilityHidden(true)
             }
+            clippingTriangle(isOn: showsHighlightClipping, color: EditorTheme.clipping,
+                             label: String(localized: "Show Highlight Clipping"), action: toggleHighlightClipping)
             closeButton
         }
         .padding(.leading, 9)
         .padding(.trailing, 5)
         .frame(height: 24)
+    }
+
+    /// A triangle that turns one clipping layer on and off: outlined when off,
+    /// filled in its colour when on. 24pt to tap, inside the header row.
+    private func clippingTriangle(isOn: Bool, color: Color, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: isOn ? "triangle.fill" : "triangle")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(isOn ? color : Color.white.opacity(0.75))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     /// Visible affordance for parking the card. Tapping the card anywhere does the
