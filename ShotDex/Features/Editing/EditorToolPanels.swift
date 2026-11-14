@@ -118,7 +118,16 @@ struct EditorFiltersPanel: View {
     /// Rename · Share · Export As ▸ · Delete; Delete only where there is
     /// something of the user's to delete.
     @ViewBuilder
-    private func tileMenu(_ source: LookExportSource, rename target: RenameTarget, delete: (() -> Void)?) -> some View {
+    private func tileMenu(
+        _ source: LookExportSource,
+        rename target: RenameTarget,
+        apply: @escaping () -> Void,
+        delete: (() -> Void)?
+    ) -> some View {
+        Button(action: apply) {
+            Label("Apply", systemImage: "checkmark.circle")
+        }
+        Divider()
         Button {
             startRename(target, name: source.name)
         } label: {
@@ -334,7 +343,13 @@ struct EditorFiltersPanel: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            tileMenu(.look(preset), rename: .look(preset)) { store.delete(preset) }
+            tileMenu(.look(preset), rename: .look(preset), apply: {
+                controller.apply(preset.applied(onto: controller.recipe))
+            }, delete: { store.delete(preset) })
+        } preview: {
+            EditorLookMenuPreview(controller: controller, name: preset.name) { recipe in
+                recipe = preset.applied(onto: recipe)
+            }
         }
         .accessibilityLabel(preset.source == .imported ? "Apply look \(preset.name), Imported" : "Apply look \(preset.name)")
     }
@@ -576,9 +591,16 @@ struct EditorFiltersPanel: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            tileMenu(.lut(id: lut.id, name: lut.displayName, url: lut.url), rename: .lut(lut)) {
+            tileMenu(.lut(id: lut.id, name: lut.displayName, url: lut.url), rename: .lut(lut), apply: {
+                controller.chooseLUT(lut.id)
+            }, delete: {
                 store.delete(lut)
                 controller.scheduleRender()
+            })
+        } preview: {
+            EditorLookMenuPreview(controller: controller, name: lut.displayName) { recipe in
+                recipe.filter = .original
+                recipe.lutID = lut.id
             }
         }
         .accessibilityLabel(lut.displayName)
@@ -600,7 +622,13 @@ struct EditorFiltersPanel: View {
         .buttonStyle(.plain)
         .hoverEffect(.highlight)
         .contextMenu {
-            tileMenu(.look(preset), rename: .look(preset)) { store.delete(preset) }
+            tileMenu(.look(preset), rename: .look(preset), apply: {
+                controller.apply(preset.applied(onto: controller.recipe))
+            }, delete: { store.delete(preset) })
+        } preview: {
+            EditorLookMenuPreview(controller: controller, name: preset.name) { recipe in
+                recipe = preset.applied(onto: recipe)
+            }
         }
         .accessibilityLabel("Apply look \(preset.name)")
     }
@@ -694,7 +722,17 @@ struct EditorFiltersPanel: View {
         // A built-in look: renamed on this panel only, never deleted (D20).
         .contextMenu {
             let name = lookPresets?.displayName(of: filter) ?? filter.displayName
-            tileMenu(.preset(filter, name: name), rename: .preset(filter), delete: nil)
+            tileMenu(.preset(filter, name: name), rename: .preset(filter), apply: {
+                controller.chooseFilter(filter)
+            }, delete: nil)
+        } preview: {
+            EditorLookMenuPreview(
+                controller: controller,
+                name: lookPresets?.displayName(of: filter) ?? filter.displayName
+            ) { recipe in
+                recipe.filter = filter
+                recipe.lutID = nil
+            }
         }
         .accessibilityLabel(lookPresets?.displayName(of: filter) ?? filter.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -1267,5 +1305,50 @@ private extension View {
         return padding(.vertical, slack)
             .contentShape(Rectangle())
             .padding(.vertical, -slack)
+    }
+}
+
+/// The long-press menu's preview of a look (FS-03.18 §2, D2): the photo as it
+/// would be with the look, rendered when the menu opens, under the look's
+/// name. Shows the current edit until the render lands so the card never
+/// opens empty.
+struct EditorLookMenuPreview: View {
+    let controller: PhotoEditorController
+    let name: String
+    let change: (inout PhotoEditRecipe) -> Void
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        let shown = image ?? controller.previewImage
+        let aspect = shown.map { $0.size.width / max($0.size.height, 1) } ?? 1.5
+        VStack(spacing: 0) {
+            ZStack {
+                EditorTheme.background
+                if let shown {
+                    Image(uiImage: shown)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                }
+                if image == nil {
+                    ProgressView()
+                        .tint(.white)
+                }
+            }
+            .aspectRatio(aspect, contentMode: .fit)
+            Text(name)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(EditorTheme.background)
+        }
+        .frame(width: 320)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Preview of \(name)")
+        .task {
+            image = await controller.lookPreview(change)
+        }
     }
 }

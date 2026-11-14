@@ -20,9 +20,12 @@ Intent [2026-11-14-editor-feel-like-lightroom](../../_intents/2026-11-14-editor-
 - Khi kéo: tối đa 5 lần/giây; khi thả: một lần sau khung nét. Mỗi lúc chỉ một lần tính; đang tính thì bỏ qua.
 
 ## 3. Xem thử look (D2)
-- Giữ 0,3 s trên một ô của dải Film, My Looks hoặc LUT: ảnh lớn hiện look đó (chất lượng tương tác), viền ô sáng.
-- Rê sang ô khác: đổi theo. Thả trên một ô: **áp** look đó (một bước History). Thả ngoài dải: **huỷ**, ảnh về như
-  trước. Chạm nhanh: áp ngay như cũ. Không ghi History khi chỉ xem thử.
+- Đổi 14/11 (user chọn "Menu kèm ảnh xem thử"): nhấn giữ một ô Film, My Looks hay LUT vẫn mở menu như cũ (Rename,
+  Share…, Export As, Delete), nhưng menu có thêm **ảnh xem thử** — ảnh đang sửa với look đó, cạnh dài 720, tên look ở
+  dưới — và dòng đầu **Apply**. Lý do: nhấn giữ đã là menu của ô; giữ-để-xem sẽ lấy mất đổi tên/xoá.
+- Đóng menu (chạm ra ngoài): recipe không đổi, History không thêm bước. Apply: áp look, một bước History. Chạm nhanh
+  vào ô: áp ngay như cũ.
+- Board: không vẽ menu đang mở (quy tắc canvas: không thêm board biến thể/menu mở).
 
 ## 4. Vùng cháy trên ảnh (D3)
 - Card histogram có hai tam giác ở hai góc trên: trái = tắt đen, phải = cháy sáng. Chạm bật/tắt lớp phủ trên ảnh:
@@ -52,8 +55,8 @@ Theo phiên như nay.
 | AC-3 | kéo liên tục | mỗi nhịp | preview dùng chất lượng tương tác; thả tay một render cuối | ⚠️ `PhotoEditorControllerRenderTests` |
 | AC-4 | 10 nhịp trong 1 s | histogram | tính ≤ 5 lần + 1 lần sau thả | 🟡 code (throttle 200 ms, một task một lúc, e1f627ac); chưa có test đếm |
 | AC-5 | thả tay 2 lần cùng ảnh | render cuối | ảnh gốc giải mã một lần | ⛔ chưa làm (A2 hoãn: rủi ro khác pixel/bộ nhớ) |
-| AC-6 | giữ ô film look 0,3 s rồi thả ngoài dải | — | recipe không đổi, History không thêm bước | ⛔ chờ chốt D2 (đụng menu nhấn-giữ của ô look) |
-| AC-7 | như AC-6, thả trên ô | — | look áp, một bước History | ⛔ chờ chốt D2 |
+| AC-6 | nhấn giữ ô film look | menu mở | ảnh xem thử look đó trên ảnh đang sửa; recipe không đổi, Undo vẫn tắt | ✅ iPhone `build/sa-shots/look-menu/l2-menu.png` |
+| AC-7 | như AC-6 | chạm Apply | look áp, một bước History (Undo bật) | ✅ iPhone `l3-applied.png` + dump |
 | AC-8 | bật tam giác phải, ảnh có vùng 255 | — | lớp đỏ đúng vùng đó | ✅ `ClippingOverlayTests` + iPhone screenshot (4829c507) |
 | AC-9 | tạo snapshot "Ấm", sửa tiếp, đóng, mở lại | chạm "Ấm" | recipe về như lúc tạo | ✅ `EditorSnapshotStoreTests` + iPhone screenshot History sheet (57f8e849); reopen-after-close chưa chụp |
 | AC-10 | nút ◧ | chạm | chia đôi hiện, kéo vạch được | 🟡 iPhone ✅ qua ⋯ (`build/sa-shots/compare-menu/c2-split.png`, 5dcb2172); iPad/Duo chưa chụp |

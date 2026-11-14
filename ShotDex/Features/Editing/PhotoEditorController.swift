@@ -1163,6 +1163,27 @@ final class PhotoEditorController {
         scheduleRender()
     }
 
+    /// Edge of the long-press preview: big enough to judge a look on a
+    /// phone-width card, small enough to render before the menu finishes
+    /// opening.
+    static let lookPreviewEdge: CGFloat = 720
+
+    /// This photo with a look on it, for the tile's long-press menu
+    /// (FS-03.18 §2): Lightroom previews a preset before it applies, and the
+    /// menu is where ShotDex's long press already goes. Touches neither the
+    /// recipe nor History.
+    func lookPreview(_ change: (inout PhotoEditRecipe) -> Void) async -> UIImage? {
+        guard let loadedSource else { return nil }
+        var candidate = recipe
+        change(&candidate)
+        guard let image = try? await service.renderer.renderPreview(
+            source: loadedSource.info,
+            recipe: candidate,
+            maximumDimension: Self.lookPreviewEdge
+        ) else { return nil }
+        return UIImage(cgImage: image)
+    }
+
     func chooseFilterCategory(_ category: FilmLookCategory) {
         guard selectedFilterCategory != category else { return }
         selectedFilterCategory = category
