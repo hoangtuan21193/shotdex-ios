@@ -17,6 +17,9 @@ struct SourceRowText: Equatable, Sendable {
         case offline
         case needsAccess
         case passwordRejected
+        /// The server answers, the connection's folder is gone (renamed or
+        /// moved on the server).
+        case folderMissing
     }
 
     let kind: Kind
@@ -67,6 +70,9 @@ struct SourceRowText: Equatable, Sendable {
             #endif
         case .passwordRejected:
             return String(localized: "Password rejected", comment: "Sources: the server refused the saved password")
+        case .folderMissing:
+            return String(localized: "Folder not found on the server · \(count) photos kept",
+                          comment: "Sources: the connection's folder was renamed or moved on the server; its photos stay")
         case .online:
             var parts: [String] = []
             if case .photos = kind, let photosAccess { parts.append(photosAccess) }
@@ -86,7 +92,7 @@ struct SourceRowText: Equatable, Sendable {
     }
 
     /// Orange for a source the user has to act on.
-    var needsAttention: Bool { status == .needsAccess || status == .passwordRejected }
+    var needsAttention: Bool { status == .needsAccess || status == .passwordRejected || status == .folderMissing }
 
     /// The status dot: reading or there, grey when away or partly there,
     /// orange when the user has to act.

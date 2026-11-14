@@ -203,8 +203,17 @@ struct ServerSourceIndexer: Sendable {
     }
 
     /// Every photo and sidecar under `folder` (`ServerTreeListing`).
+    /// The SMB client answers a folder that is not there with an empty list
+    /// (other callers want that), so an empty answer for the source's own
+    /// folder is checked: a folder renamed on the server read as "every
+    /// photo deleted" (user 2026-11-14).
     func list(_ folder: String) async throws -> [FolderEnumeration.Entry] {
-        try await ServerTreeListing.list(folder, client: client)
+        let listing = try await ServerTreeListing.list(folder, client: client)
+        if listing.isEmpty, !folder.trimmingCharacters(in: CharacterSet(charactersIn: "/ ")).isEmpty,
+           try await !client.directoryExists(folder) {
+            throw RemoteFileError.folderMissing(folder)
+        }
+        return listing
     }
 
     /// The unit's files for the on-server check (FS-19.07 §5): the primary,
@@ -316,6 +325,8 @@ struct ServerSourceIndexer: Sendable {
             summary.disconnected = true
         case .authenticationFailed:
             try SourceStore(database: database).setPasswordRejected(sourceId: sourceId)
+        case .folderMissing:
+            try SourceStore(database: database).setFolderMissing(sourceId: sourceId)
         default:
             break
         }

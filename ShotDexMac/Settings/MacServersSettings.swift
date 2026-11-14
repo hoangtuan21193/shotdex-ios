@@ -249,6 +249,7 @@ struct MacServersSettings: View {
         }
         switch row.sourceStatus {
         case .passwordRejected: return (String(localized: "Password rejected", comment: "Mac Settings › Servers status"), .red)
+        case .folderMissing: return (String(localized: "Folder not found", comment: "Mac Settings › Servers status: the connection's folder was renamed or moved on the server"), .red)
         case .offline: return (String(localized: "Not reachable", comment: "Mac Settings › Servers status"), .gray)
         case .reading: return (String(localized: "Reading…", comment: "Mac Settings › Servers: its source is being read"), .gray)
         default: return (String(localized: "Source · indexed", comment: "Mac Settings › Servers: a connection read as a source"), .green)

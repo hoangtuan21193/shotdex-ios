@@ -138,6 +138,7 @@ final class SourcesModel {
             case "offline": .offline
             case "needsAccess": .needsAccess
             case "passwordRejected": .passwordRejected
+            case "folderMissing": .folderMissing
             default: .online
             }
             let status: SourceRowText.Status = source.id == readingSourceId ? .reading(done: counts[source.id] ?? 0, total: 0) : stored

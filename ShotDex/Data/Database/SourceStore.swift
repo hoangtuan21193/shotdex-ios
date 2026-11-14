@@ -121,6 +121,10 @@ struct SourceStore: Sendable {
         /// The server refused the saved password; the row offers Edit
         /// Connection… and nothing asks for the password again.
         case passwordRejected
+        /// The connection's folder is not on the server any more — renamed
+        /// or moved there. The photos stay as they are; nothing is marked
+        /// missing until the folder lists again (FS-19.03 §3).
+        case folderMissing
     }
 
     func status(sourceId: String) throws -> Status {
@@ -131,6 +135,13 @@ struct SourceStore: Sendable {
 
     /// A refused password: the photos stay as they are — online or not is
     /// unknown, nothing is missing.
+    func setFolderMissing(sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ? AND status IS NOT ?",
+                           arguments: [Status.folderMissing.rawValue, sourceId, Status.folderMissing.rawValue])
+        }
+    }
+
     func setPasswordRejected(sourceId: String) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ?", arguments: [Status.passwordRejected.rawValue, sourceId])

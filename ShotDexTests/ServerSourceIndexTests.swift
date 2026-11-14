@@ -101,6 +101,57 @@ import Testing
         #expect(listed == Int(later.timeIntervalSince1970))
     }
 
+    /// The connection's folder renamed on the server (user 2026-11-14): the
+    /// pass reports Folder not found, the source says so, no copy is marked
+    /// missing; once the folder is back, the source is online again.
+    @Test func renamedFolderIsReportedNotDeleted() async throws {
+        let client = InMemoryRemoteFileClient()
+        for n in 1...5 {
+            client.put("Media/iCloud Photo/IMG_\(n).ARW", try Self.raw(padding: 1_024, seed: UInt8(n)))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let store = SourceStore(database: database)
+        let source = try store.addServer(name: "WIN", connectionId: "C1")
+        _ = try await Self.indexer(database, client).index(sourceId: source, folder: "Media/iCloud Photo", pairsRawAndJpeg: true)
+
+        let renamed = InMemoryRemoteFileClient()
+        for n in 1...5 {
+            renamed.put("Media/iCloud Photos/IMG_\(n).ARW", try Self.raw(padding: 1_024, seed: UInt8(n)))
+        }
+        let summary = try await Self.indexer(database, renamed).index(sourceId: source, folder: "Media/iCloud Photo", pairsRawAndJpeg: true)
+        #expect(summary.stoppedBy == .folderMissing("Media/iCloud Photo"))
+        #expect(try store.status(sourceId: source) == .folderMissing)
+        let missing = try await database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE sourceId = ? AND missingSince IS NOT NULL", arguments: [source])
+        }
+        #expect(missing == 0)
+
+        let again = try await Self.indexer(database, client).index(sourceId: source, folder: "Media/iCloud Photo", pairsRawAndJpeg: true)
+        #expect(again.unchanged == 5)
+        #expect(try store.status(sourceId: source) == .online)
+    }
+
+    /// Copies an earlier pass marked missing come back when a pass lists
+    /// them unchanged.
+    @Test func missingCopiesComeBackWhenListedAgain() async throws {
+        let client = InMemoryRemoteFileClient()
+        for n in 1...5 {
+            client.put("Photos/IMG_\(n).ARW", try Self.raw(padding: 1_024, seed: UInt8(n)))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "WIN", connectionId: "C1")
+        _ = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: true)
+        try await database.writer.write { db in
+            try db.execute(sql: "UPDATE photo_copies SET missingSince = 1 WHERE sourceId = ?", arguments: [source])
+        }
+        let summary = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: true)
+        #expect(summary.unchanged == 5)
+        let missing = try await database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE sourceId = ? AND missingSince IS NOT NULL", arguments: [source])
+        }
+        #expect(missing == 0)
+    }
+
     /// Going offline and back flips only the rows that differ; saying
     /// "online" again of an online source writes nothing.
     @Test func setOnlineWritesOnlyChanges() async throws {

@@ -37,6 +37,12 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
   **mỗi lần app về trước mặt** ([07 §5](07-on-server-check.md)) · khi server từ "Not reachable" về lại · khi bấm **Rescan** (toolbar màn duyệt, board `MAC_ServerBrowser`).
 - **Không** quét theo giờ khi app đang mở — chỉ ba lúc trên. *Vì* mỗi lượt so là một lệnh liệt kê cả cây trên NAS.
 - File đổi tên/chuyển trên server: hash giữ danh tính như [02 §2](02-identity-and-sidecars.md).
+- **Thư mục của kết nối không còn** (đổi tên/chuyển trên server — user 14/11): lượt so dừng, nguồn báo
+  **"Folder not found on the server · N photos kept"** (chấm cam, cần xử lý; Mac Settings › Servers: "Folder not found"),
+  **không** đánh dấu bản sao nào mất. Sửa Folder trong kết nối (hoặc đổi tên lại) → lượt sau thấy lại đủ, nguồn về online.
+  SMB trả danh sách rỗng cho thư mục không tồn tại, nên danh sách rỗng của thư mục gốc được hỏi lại bằng
+  `directoryExists`.
+- Thư mục còn nhưng rỗng thật (đã xoá hết ảnh trên server) vẫn là "mất" như thường (AC-87).
 
 ## 4. Duyệt nguồn server
 
