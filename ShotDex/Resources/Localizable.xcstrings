@@ -10,6 +10,9 @@
     " · " : {
 
     },
+    " · %@" : {
+
+    },
     " · %lld clips not checked" : {
       "comment" : "Video Studio ducking: after the summary — clips whose sound could not be read (in iCloud with no network), so they lower nothing (plural)"
     },
@@ -338,6 +341,9 @@
         }
       }
     },
+    "%@ copy" : {
+      "comment" : "Duplicated smart album name, e.g. Night copy"
+    },
     "%@ doesn't match the copy uploaded from this device." : {
       "comment" : "Download from server: checksum differs from history"
     },
@@ -464,7 +470,7 @@
       "comment" : "Activity: count"
     },
     "%@ of %@" : {
-      "comment" : "Activity: N of M photos\nActivity: bytes done of total\nActivity: photo N of M\nBackup card: files done of files to copy\nBackup detail: files done of files\nDownload from server: bytes received of total\nExport progress: bytes written of the total\nUpload to Server: bytes sent of total\nViewer: bytes of a cloud file downloaded so far, of its size",
+      "comment" : "Activity: N of M photos\nActivity: bytes done of total\nActivity: photo N of M\nBackup card: files done of files to copy\nBackup detail: files done of files\nDownload from server: bytes received of total\nExport progress: bytes written of the total\nOn-server check popover: bytes done of the file's size\nUpload to Server: bytes sent of total\nViewer: bytes of a cloud file downloaded so far, of its size",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -636,6 +642,9 @@
           }
         }
       }
+    },
+    "%@ photos match" : {
+      "comment" : "Smart album sheet count bar, e.g. 1,284 photos match"
     },
     "%@ photos not checked yet" : {
       "comment" : "Duplicates header: photos a rescan would cover"
@@ -863,6 +872,9 @@
     },
     "%@. Tap Organize to change the folders, the names and where videos and RAW files go." : {
       "comment" : "Backup form footer: an example path"
+    },
+    "%@/s" : {
+      "comment" : "On-server check popover: network speed"
     },
     "%@%% of the short side" : {
       "comment" : "Watermark Size: the height as a share of each photo's short side"
@@ -1112,6 +1124,9 @@
     },
     "%lld incomplete condition won’t be saved." : {
 
+    },
+    "%lld incomplete conditions won’t be saved." : {
+      "comment" : "Smart album count bar note"
     },
     "%lld item" : {
       "extractionState" : "manual",
@@ -1613,6 +1628,9 @@
     "%lld%%" : {
 
     },
+    "%lld%% checked" : {
+      "comment" : "System progress subtitle for the on-server check"
+    },
     "%lld★" : {
 
     },
@@ -1760,6 +1778,9 @@
     "1 goes to Recently Deleted" : {
       "comment" : "Deletion confirmation: one Photos item, first destination"
     },
+    "1 incomplete condition won’t be saved." : {
+      "comment" : "Smart album count bar note"
+    },
     "1 is in an album · kept photo joins it" : {
       "comment" : "Duplicates: floating bar, one marked photo is in an album"
     },
@@ -1771,6 +1792,9 @@
     },
     "1 photo" : {
       "comment" : "Mac index status: one indexed photo\nMac toolbar subtitle"
+    },
+    "1 photo matches" : {
+      "comment" : "Smart album sheet count bar, one photo"
     },
     "1 photo moved to Recently Deleted" : {
       "comment" : "Duplicates: banner after deleting"
@@ -1873,6 +1897,9 @@
     "A folder in Files, or a drive or SSD over USB-C, read in place. An unplugged drive’s photos stay, marked offline." : {
       "comment" : "Add a Source: Folder or Drive option"
     },
+    "A folder in Files, or an external drive or SSD over USB-C, read in place." : {
+      "comment" : "Empty library: folder card"
+    },
     "A folder on any saved connection." : {
       "comment" : "Server export: Other Folder row detail"
     },
@@ -1901,7 +1928,10 @@
       "comment" : "Video Studio colour: why a qualifier cannot be tracked"
     },
     "A smart album named “%@” already exists." : {
-
+      "comment" : "Rename smart album: the name is used"
+    },
+    "A smart album needs a name." : {
+      "comment" : "Rename smart album: empty name"
     },
     "A tile for this folder in Collections. One tap opens its photos." : {
       "comment" : "Add to Collections switch: what it does"
@@ -1976,7 +2006,7 @@
 
     },
     "Add" : {
-      "comment" : "Plex: add the server as a source\nSettings → Movie languages: header over languages not chosen yet"
+      "comment" : "Add a Source: asks for Photos access"
     },
     "Add (%lld)" : {
       "comment" : "Video Studio Media panel: adds the picked items at the playhead, with how many"
@@ -2023,6 +2053,9 @@
     "Add Condition" : {
 
     },
+    "Add Condition Below" : {
+      "comment" : "Smart album condition row: the + button, inserts a condition under this one"
+    },
     "Add Connection" : {
 
     },
@@ -2033,7 +2066,7 @@
 
     },
     "Add Folder or Drive…" : {
-
+      "comment" : "Empty library: opens Add a Source"
     },
     "Add Keyword" : {
       "comment" : "Accessibility label of the keyword field\nCapsule that opens the keyword field\nImport metadata: new keyword field"
@@ -2067,6 +2100,9 @@
     },
     "Add photo slot" : {
 
+    },
+    "Add Photos Library…" : {
+      "comment" : "Empty library: asks for Photos access"
     },
     "Add Preset" : {
 
@@ -2340,6 +2376,9 @@
     "An item with that name already exists." : {
       "comment" : "Cloud folder: rename onto an existing name"
     },
+    "An SMB, SFTP or WebDAV share on a NAS, indexed like a folder." : {
+      "comment" : "Empty library: server card"
+    },
     "An SMB, SFTP or WebDAV share on a NAS, indexed like a folder. Originals download when you open them." : {
       "comment" : "Add a Source: Server option"
     },
@@ -2351,6 +2390,9 @@
     },
     "Animate Out" : {
       "comment" : "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None"
+    },
+    "animated" : {
+      "comment" : "Photo rule value: an animated image (GIF)"
     },
     "another device" : {
       "comment" : "On-server check: stands for a device's name after \"Hashes from\" when the device sent none"
@@ -2389,7 +2431,7 @@
       "comment" : "Settings root, Display value: list item, lowercase mid-sentence"
     },
     "Aperture" : {
-      "comment" : "Info panel row label\nMac filter bar chip key: aperture range\nSettings › Info on Thumbnails field"
+      "comment" : "Info panel row label\nMac filter bar chip key: aperture range\nSearch suggestion kind\nSettings › Info on Thumbnails field"
     },
     "API Key" : {
       "comment" : "AI provider form: key"
@@ -2489,6 +2531,9 @@
     },
     "Autoplay Videos" : {
 
+    },
+    "Autumn" : {
+      "comment" : "Season"
     },
     "Average" : {
       "comment" : "Stack Exposures picker: equal-weight average of every frame"
@@ -2767,6 +2812,9 @@
     "Burn into video" : {
       "comment" : "Video Studio captions: the switch that draws the captions into every exported frame"
     },
+    "burst" : {
+      "comment" : "Photo rule value: a frame of a burst"
+    },
     "Burst" : {
       "comment" : "Duplicates: kind of group — frames shot seconds apart"
     },
@@ -2800,10 +2848,13 @@
       "comment" : "Sync sheet group"
     },
     "Camera" : {
-      "comment" : "File name token chip\nMac filter bar chip key: camera body"
+      "comment" : "File name token chip\nMac filter bar chip key: camera body\nSearch suggestion kind: a camera model"
     },
     "Camera & Lens" : {
       "comment" : "Info panel section title"
+    },
+    "Camera Brand" : {
+      "comment" : "Search suggestion kind"
     },
     "Camera Database" : {
 
@@ -2945,6 +2996,9 @@
     "Chart" : {
 
     },
+    "Chart style" : {
+
+    },
     "Chart Type" : {
 
     },
@@ -2979,7 +3033,7 @@
       "comment" : "Duplicates header: when the last scan ran\nOn-server check: done, and when; e.g. Checked 3 min ago"
     },
     "Checking" : {
-      "comment" : "Backup detail: the copy is read back and compared\nDownload from server: checking the received file"
+      "comment" : "Backup detail: the copy is read back and compared\nDownload from server: checking the received file\nSmart album header: the on-server check has photos left; a progress bar follows"
     },
     "Checking %@ · %@ files" : {
       "comment" : "Backup card: listing what the destination folder already holds, e.g. 'Checking NAS Home · 12,408 files'",
@@ -3005,6 +3059,9 @@
           }
         }
       }
+    },
+    "Checking photos on your server" : {
+      "comment" : "System progress title for the on-server check"
     },
     "checking the copies" : {
       "comment" : "Common photos undo: current step"
@@ -3088,7 +3145,7 @@
 
     },
     "Cinematic" : {
-
+      "comment" : "Photo rule value: a Cinematic mode video"
     },
     "Clarity" : {
       "comment" : "Video Studio Look panel: a photo setting skipped on video"
@@ -3261,7 +3318,7 @@
 
     },
     "Conditions" : {
-
+      "comment" : "Smart album header popover: the saved rules"
     },
     "Connect" : {
 
@@ -3288,7 +3345,7 @@
       "comment" : "Connect As screen title"
     },
     "Connect to Server…" : {
-      "comment" : "Add a Source: opens the server list"
+      "comment" : "Add a Source: opens the server list\nEmpty library: opens the server list"
     },
     "Connect Using" : {
 
@@ -3409,6 +3466,9 @@
     "Couldn't be downloaded from iCloud." : {
       "comment" : "Resize summary: a photo left out"
     },
+    "Couldn’t Change Smart Album" : {
+      "comment" : "Alert title: rename or duplicate failed"
+    },
     "Couldn't compute insights." : {
 
     },
@@ -3519,6 +3579,9 @@
     "Couldn't save rating." : {
       "comment" : "Banner: writing a star rating to Photos failed"
     },
+    "Couldn’t Save Smart Album" : {
+      "comment" : "Alert title: saving a smart album failed"
+    },
     "Couldn't save the password: %@" : {
       "comment" : "File server form: the Keychain refused the password"
     },
@@ -3551,6 +3614,9 @@
     },
     "Couldn’t update the album in Photos. Will try again." : {
       "comment" : "Smart album: a Keep in Photos write failed; it retries"
+    },
+    "Counting…" : {
+      "comment" : "Smart album sheet count bar before the first count"
     },
     "Counts as one of the conditions, so it widens the match rather than narrowing it." : {
 
@@ -3740,8 +3806,11 @@
     "Day Month Year" : {
       "comment" : "Custom date order"
     },
+    "Day of Week" : {
+      "comment" : "Rule field: the weekday of the capture date\nSearch suggestion kind"
+    },
     "days" : {
-
+      "comment" : "Date rule unit: is in the last N days"
     },
     "Deghost" : {
       "comment" : "HDR control: how hard the merge looks for things that moved between frames"
@@ -3767,7 +3836,7 @@
       }
     },
     "Delete “%@”?" : {
-      "comment" : "File Servers: delete connection alert title"
+      "comment" : "Delete smart album prompt\nFile Servers: delete connection alert title"
     },
     "Delete %@" : {
 
@@ -3925,6 +3994,9 @@
     "Delete Provider" : {
       "comment" : "AI provider form: remove it"
     },
+    "Delete Smart Album" : {
+      "comment" : "Delete smart album: confirm\nSmart album ⋯ menu"
+    },
     "Delete Spot" : {
 
     },
@@ -3978,6 +4050,9 @@
     "Diagnostic Log" : {
 
     },
+    "Did you mean “%@”?" : {
+      "comment" : "Search: the nearest library name when nothing matched"
+    },
     "Digital Zoom" : {
       "comment" : "Info panel row label"
     },
@@ -4027,7 +4102,7 @@
       "comment" : "Duplicates tile menu: take the mark away\nVoiceOver action on a tile\nVoiceOver action: take the mark away\nVoiceOver: the ring on a marked tile"
     },
     "Done" : {
-      "comment" : "Close the Selected sheet\nCulling summary: close the pass\nExport: close the summary\nFrame picker: close, keeping the picks as the group's marks\nVideo Studio Video Settings: closes the panel; every change is already applied\nVideo Studio quick strip: closes the slider and shows the chips again\nWatermark screen: close"
+      "comment" : "Close the Selected sheet\nConnect to Server sheet from the empty library: close\nCulling summary: close the pass\nExport: close the summary\nFrame picker: close, keeping the picks as the group's marks\nVideo Studio Video Settings: closes the panel; every change is already applied\nVideo Studio quick strip: closes the slider and shows the chips again\nWatermark screen: close"
     },
     "Done — %@" : {
       "comment" : "Activity: a run that finished"
@@ -4116,6 +4191,9 @@
     "Downloading from iCloud, %lld percent" : {
       "comment" : "VoiceOver: iCloud download ring"
     },
+    "Downloading from iCloud: %@" : {
+      "comment" : "On-server check popover: a Photos original being downloaded to compare it, with its file name"
+    },
     "Downloading from iCloud…" : {
 
     },
@@ -4179,6 +4257,9 @@
     "Drawing" : {
       "comment" : "Watermark preset contents: freehand strokes"
     },
+    "Drop a folder here" : {
+      "comment" : "Empty library: drop zone, VoiceOver"
+    },
     "Drop between clips · back on the grid cancels" : {
       "comment" : "Video Studio Media panel: under its name while an item is being dragged"
     },
@@ -4198,7 +4279,7 @@
       "comment" : "Video Studio: the music command that lowers music under speech"
     },
     "Duplicate" : {
-      "comment" : "Photo command\nVideo Studio colour: copies a node after itself\nVideo Studio: the command that copies the selected item right after it"
+      "comment" : "Photo command\nSmart album tile menu\nSmart album ⋯ menu\nVideo Studio colour: copies a node after itself\nVideo Studio: the command that copies the selected item right after it"
     },
     "Duplicates" : {
 
@@ -4264,7 +4345,10 @@
       "comment" : "Backup: fix the connection"
     },
     "Edit Smart Album" : {
-
+      "comment" : "VoiceOver: the popover's Edit button"
+    },
+    "Edit Smart Album…" : {
+      "comment" : "Smart album ⋯ menu"
     },
     "Edit text full screen" : {
 
@@ -4278,8 +4362,11 @@
     "Edit which version?" : {
       "comment" : "Action sheet title: a photo has a RAW and a JPEG"
     },
+    "Edit…" : {
+      "comment" : "Smart album header popover: opens Edit Smart Album"
+    },
     "edited" : {
-      "comment" : "Duplicates: why a photo was kept — it has an edit"
+      "comment" : "Duplicates: why a photo was kept — it has an edit\nPhoto rule value: Photo is edited in Photos"
     },
     "Edited" : {
       "comment" : "Duplicates: reason chip under the suggested keeper\nExport Version: with the edit made in Photos"
@@ -4538,7 +4625,7 @@
       "comment" : "Video Studio keyboard shortcut (L pressed again: 2×, 4×)"
     },
     "favorite" : {
-      "comment" : "Duplicates: why a photo was kept — it is a favorite"
+      "comment" : "Duplicates: why a photo was kept — it is a favorite\nPhoto rule value: Photo is favorite"
     },
     "Favorite" : {
       "comment" : "Duplicates: caption — this copy is a favorite\nDuplicates: reason chip under the suggested keeper\nInfo panel row label"
@@ -4583,7 +4670,7 @@
       "comment" : "Settings root, Display value: list item, lowercase mid-sentence"
     },
     "File Type" : {
-
+      "comment" : "Search suggestion kind"
     },
     "Filename" : {
       "comment" : "Info panel row label"
@@ -4706,7 +4793,7 @@
       "comment" : "Settings root, Display value: list item, lowercase mid-sentence"
     },
     "Focal Length" : {
-      "comment" : "Info panel row label\nSettings › Info on Thumbnails field"
+      "comment" : "Info panel row label\nSearch suggestion kind\nSettings › Info on Thumbnails field"
     },
     "Focal Length Style" : {
 
@@ -4730,7 +4817,7 @@
       "comment" : "Connection form: Folder footer when the connection is a source"
     },
     "Folder or Drive" : {
-      "comment" : "Add a Source: a folder in Files or a USB-C drive"
+      "comment" : "Add a Source: a folder in Files or a USB-C drive\nEmpty library: the folder card title"
     },
     "Folder Removed" : {
 
@@ -4839,6 +4926,9 @@
     "Freeze Frame" : {
       "comment" : "Video Studio transport: holds the frame under the playhead as a still"
     },
+    "From Files open beside ShotDex" : {
+      "comment" : "Empty library: drop zone detail"
+    },
     "From the date each item was taken. Each menu lists its names as examples; Custom… at the end of Month and Day sets your own order and separator." : {
       "comment" : "Organize footer"
     },
@@ -4946,6 +5036,9 @@
     },
     "Have a memory card?" : {
       "comment" : "Add a Source: memory card hint title"
+    },
+    "Have a memory card? Connect a card reader or the camera over USB-C to import from it." : {
+      "comment" : "Empty library: memory card hint"
     },
     "HDR" : {
       "comment" : "Combine Photos submenu row and screen title: merge a bracketed exposure series into one photo\nServer export: kind of the one file a tool made"
@@ -5131,6 +5224,9 @@
     "iCloud isn't responding — trying again in" : {
 
     },
+    "iCloud isn't sending originals · trying again soon" : {
+      "comment" : "On-server check: iCloud refused every download of a batch; the check waits and tries again"
+    },
     "iCloud not responding" : {
 
     },
@@ -5253,6 +5349,9 @@
     "In Video · %lld" : {
       "comment" : "Video Studio Media panel tab: what of the library is in this video, and how many uses"
     },
+    "In Your Library" : {
+
+    },
     "Include Diagnostic Log" : {
 
     },
@@ -5270,6 +5369,9 @@
     },
     "Index progress" : {
       "comment" : "Settings, Your library card: VoiceOver name of the progress bar"
+    },
+    "Index the photos you already have, in Photos, in folders and drives, and on your NAS." : {
+      "comment" : "Empty library: what ShotDex does, short"
     },
     "indexed" : {
       "comment" : "Settings, Your library card: every photo and video has been read"
@@ -5464,7 +5566,7 @@
       "comment" : "Keep on This iPhone: the device kept copies live on, as in On This iPhone\nVideo Studio captions: the device the speech is recognised on, as in Transcribing on this iPhone"
     },
     "ISO" : {
-      "comment" : "Info panel row label\nMac filter bar chip key: ISO range\nSettings root, Display value: one item of the list of details shown on thumbnails\nSettings › Info on Thumbnails field"
+      "comment" : "Info panel row label\nMac filter bar chip key: ISO range\nSearch suggestion kind\nSettings root, Display value: one item of the list of details shown on thumbnails\nSettings › Info on Thumbnails field"
     },
     "It leaves the library, search, albums and Statistics in ShotDex. Unhide it in Collections › Hidden." : {
 
@@ -5588,7 +5690,7 @@
     "Keep Saving" : {
 
     },
-    "Keep Screen Awake While Indexing" : {
+    "Keep Screen Awake" : {
 
     },
     "Keep Screen On" : {
@@ -5672,7 +5774,7 @@
       "comment" : "Video Studio: title of the card that lists the keyboard shortcuts (phone, Duo)"
     },
     "Keyword" : {
-      "comment" : "Placeholder of the Add Keyword field\nRule field: a Photos keyword"
+      "comment" : "Placeholder of the Add Keyword field\nRule field: a Photos keyword\nSearch suggestion kind"
     },
     "keyword ≠ %@" : {
       "comment" : "Chip: photos without this keyword"
@@ -5754,7 +5856,7 @@
 
     },
     "Lens" : {
-      "comment" : "File name token chip\nInfo panel row label\nMac filter bar chip key: lens"
+      "comment" : "File name token chip\nInfo panel row label\nMac filter bar chip key: lens\nSearch suggestion kind"
     },
     "Lens Blur" : {
       "comment" : "Sync sheet group"
@@ -5837,6 +5939,9 @@
     "Listening for voices…" : {
       "comment" : "Video Studio ducking: the clips' sound is being analysed on the device; also shown while an export waits for it"
     },
+    "Listing files on %@" : {
+      "comment" : "On-server check popover: the server's file list is being read"
+    },
     "Live" : {
       "comment" : "Duplicates: reason chip under the suggested keeper"
     },
@@ -5844,7 +5949,7 @@
 
     },
     "Live Photo" : {
-
+      "comment" : "Photo rule value"
     },
     "Live Photo still not moved" : {
       "comment" : "Common photos log reason: the motion of a Live Photo stays because its still did not move"
@@ -6023,6 +6128,9 @@
     "Match %@ of the conditions" : {
 
     },
+    "Match the following condition" : {
+
+    },
     "Matches %lld photo." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6155,7 +6263,7 @@
 
     },
     "Month" : {
-      "comment" : "Custom date row\nOrganize row: month folder name"
+      "comment" : "Custom date row\nOrganize row: month folder name\nSearch suggestion kind: a month of one year, June 2024"
     },
     "Month Day Year" : {
       "comment" : "Custom date order"
@@ -6166,8 +6274,14 @@
     "Month Folder Name" : {
       "comment" : "Custom date title"
     },
+    "Month of Year" : {
+      "comment" : "Rule field: the calendar month of the capture date, any year\nSearch suggestion kind: June in any year"
+    },
+    "months" : {
+      "comment" : "Date rule unit: is in the last N months"
+    },
     "More" : {
-      "comment" : "On This iPhone: the ⋯ menu"
+      "comment" : "On This iPhone: the ⋯ menu\nSmart album ⋯ button"
     },
     "More actions" : {
       "comment" : "VoiceOver: Compare's overflow menu"
@@ -6328,7 +6442,7 @@
       "comment" : "Video Studio Music panel: header over the user's imported songs"
     },
     "Name" : {
-      "comment" : "AI provider form: name\nExport sheet row: file name template\nServer export: name of the one file a tool made\nServer export: name section\nServer photo browser sort: file name\nVideo Studio Save Look prompt: the look's name field\nVideo Studio colour: the node name field"
+      "comment" : "AI provider form: name\nExport sheet row: file name template\nRename smart album field\nServer export: name of the one file a tool made\nServer export: name section\nServer photo browser sort: file name\nVideo Studio Save Look prompt: the look's name field\nVideo Studio colour: the node name field"
     },
     "name taken%@" : {
       "comment" : "Common photos undo reason: the old path now holds other bytes; the path follows in brackets"
@@ -6424,6 +6538,9 @@
     },
     "Next Photo" : {
       "comment" : "Keyboard shortcut in the culling pass"
+    },
+    "Next: add your Photos Library, a folder or drive, or a server" : {
+      "comment" : "Onboarding: under or above Continue"
     },
     "No" : {
       "comment" : "Smart album Also on Server condition: the photo is checked and missing a copy there"
@@ -6524,6 +6641,9 @@
     "No Photos Access" : {
       "comment" : "Backup card: ShotDex may not read the photo library"
     },
+    "No photos from previous years" : {
+      "comment" : "On This Day row when nothing matches today's date in an earlier year"
+    },
     "No photos in this folder." : {
 
     },
@@ -6540,7 +6660,7 @@
 
     },
     "No photos yet" : {
-      "comment" : "Settings root, People and Pets value with an empty library"
+      "comment" : "Library title before any source is added\nSettings root, People and Pets value with an empty library"
     },
     "No presets yet" : {
 
@@ -6824,7 +6944,7 @@
 
     },
     "Off" : {
-      "comment" : "AI choice: AI Search off\nHDR Deghost level: no deghosting\nImport option: backup off\nSettings root, Notifications value with the reminder off\nSettings sidebar, Notifications value with the reminder off\nSettings: a switch that is off, at the start of its value line\nWatermark row value: no watermark"
+      "comment" : "AI choice: AI Search off\nHDR Deghost level: no deghosting\nImport option: backup off\nSettings root, Notifications value with the reminder off\nSettings sidebar, Notifications value with the reminder off\nSettings, Keep Screen Awake: the screen locks as usual\nSettings: a switch that is off, at the start of its value line\nWatermark row value: no watermark"
     },
     "Off · %@ indexes photos in iCloud for this device" : {
       "comment" : "Settings, Index on This Device value line when off; the argument is the Mac's name"
@@ -7004,6 +7124,9 @@
     "Open" : {
 
     },
+    "Open in Library" : {
+
+    },
     "Open Library" : {
 
     },
@@ -7068,6 +7191,9 @@
     },
     "Optional" : {
       "comment" : "AI provider form: a home server may need no key"
+    },
+    "or drag a folder here" : {
+      "comment" : "Empty library: drop zone"
     },
     "Or drag the clip's edges on the timeline." : {
       "comment" : "Video Studio Trim: the other way to cut a clip"
@@ -7186,6 +7312,9 @@
     "Panel Handle" : {
       "comment" : "VoiceOver: the grabber at the top of the Video Studio panel — drag down to pull the panel down or close it"
     },
+    "panorama" : {
+      "comment" : "Photo rule value"
+    },
     "Panorama" : {
       "comment" : "Combine Photos submenu row: stitch a panorama\nServer export: kind of the one file a tool made"
     },
@@ -7294,7 +7423,7 @@
       "comment" : "Video Studio session footer: the kind of a selected still, after its length — 3.0s · photo"
     },
     "Photo" : {
-      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio media pool: the kind of a still item"
+      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nRule field: what kind of item it is — edited, Live Photo, panorama, burst, screenshot…\nVideo Studio media pool: the kind of a still item"
     },
     "Photo · clip %lld" : {
       "comment" : "Video Studio In Video row: a photo clip and its place on the track"
@@ -7352,6 +7481,9 @@
     },
     "Photo Info" : {
 
+    },
+    "Photo Kind" : {
+      "comment" : "Search suggestion kind: Live Photo, panorama, screenshot…"
     },
     "Photo Location" : {
 
@@ -7441,7 +7573,7 @@
       "comment" : "Import destination footer"
     },
     "Photos Library" : {
-      "comment" : "Add a Source: the Photos library\nBackup source: the Photos library\nServer export destination"
+      "comment" : "Add a Source: the Photos library\nBackup source: the Photos library\nEmpty library: the Photos card title\nServer export destination"
     },
     "Photos move to Recently Deleted." : {
       "comment" : "Burst frame picker: where deleted frames go"
@@ -7453,7 +7585,7 @@
 
     },
     "Photos not checked yet aren’t counted." : {
-
+      "comment" : "Smart album count bar note: the Original check is still running"
     },
     "Photos only" : {
       "comment" : "Backup card: what the job copies"
@@ -7466,6 +7598,9 @@
     },
     "Photos stay where they are. Nothing is copied or moved. Rename, re-index or remove a source in Settings › Sources." : {
       "comment" : "Collections: footer under the Sources group"
+    },
+    "Photos stay where they are. ShotDex never edits file contents." : {
+      "comment" : "Empty library: the promise at the bottom"
     },
     "Photos still stored only in iCloud are counted at their full size." : {
       "comment" : "Settings → Library size footer"
@@ -7539,6 +7674,9 @@
     "Pixels" : {
       "comment" : "Text field placeholder: watermark height in pixels"
     },
+    "Place" : {
+      "comment" : "Search suggestion kind"
+    },
     "Place name needs a network connection. The saved coordinate remains available offline." : {
 
     },
@@ -7609,6 +7747,9 @@
     },
     "Port" : {
 
+    },
+    "portrait" : {
+      "comment" : "Photo rule value: a Portrait mode photo"
     },
     "Portrait" : {
       "comment" : "Angle-of-view group"
@@ -7785,6 +7926,9 @@
     "Reading “%@”" : {
       "comment" : "Source read banner: a source read again"
     },
+    "Reading %@ photos — results may be incomplete." : {
+
+    },
     "Reading %lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -7814,6 +7958,9 @@
     },
     "Reading files…" : {
 
+    },
+    "Reading from the server: %@" : {
+      "comment" : "On-server check popover: a server file being read to compare it, with its file name"
     },
     "Reading original…" : {
 
@@ -7960,6 +8107,9 @@
     "Remove All Layers" : {
 
     },
+    "Remove Condition" : {
+      "comment" : "Smart album condition row: the − button"
+    },
     "Remove everything from this %@?" : {
       "comment" : "On This iPhone: confirm Remove All"
     },
@@ -8018,7 +8168,7 @@
       "comment" : "Common photos: current step"
     },
     "Rename" : {
-      "comment" : "Video Studio colour: confirms the new node name"
+      "comment" : "Rename smart album: confirm\nVideo Studio colour: confirms the new node name"
     },
     "Rename Album" : {
 
@@ -8044,8 +8194,11 @@
     "Rename Signature" : {
 
     },
+    "Rename Smart Album" : {
+      "comment" : "Alert title"
+    },
     "Rename…" : {
-      "comment" : "Video Studio colour: names a node"
+      "comment" : "Smart album tile menu\nSmart album ⋯ menu\nVideo Studio colour: names a node"
     },
     "Rendering %lld of %lld" : {
       "comment" : "Server export: rendering the edit of one photo",
@@ -8461,6 +8614,12 @@
     "Scopes" : {
       "comment" : "Video Studio colour: the measurement displays"
     },
+    "screen recording" : {
+      "comment" : "Photo rule value"
+    },
+    "screenshot" : {
+      "comment" : "Photo rule value"
+    },
     "Screenshots" : {
       "comment" : "Duplicates: kind of group — screenshots"
     },
@@ -8482,6 +8641,9 @@
     "Search for a place" : {
 
     },
+    "Search for these conditions" : {
+      "comment" : "Search: the row that runs what the parser read"
+    },
     "Search lenses" : {
 
     },
@@ -8499,6 +8661,9 @@
     },
     "Searches your library by camera, lens, exposure settings, place or date." : {
 
+    },
+    "Season" : {
+      "comment" : "Rule field: the season of the capture date\nSearch suggestion kind"
     },
     "Seconds per photo" : {
 
@@ -8558,7 +8723,7 @@
       "comment" : "Mac filter bar chip key: sensor format"
     },
     "Sensor Format" : {
-
+      "comment" : "Search suggestion kind"
     },
     "Sent" : {
 
@@ -8573,7 +8738,7 @@
 
     },
     "Server" : {
-      "comment" : "Add a Source: a NAS share\nBackup: a connection whose name is unknown\nSmart album Also on Server condition: the server row\nSources: badge of a server source"
+      "comment" : "Add a Source: a NAS share\nBackup: a connection whose name is unknown\nEmpty library: the server card title\nSmart album Also on Server condition: the server row\nSources: badge of a server source"
     },
     "server error" : {
       "comment" : "Common photos log reason"
@@ -8691,7 +8856,7 @@
     "ShotDex asks for your location only when you allow it here, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else." : {
 
     },
-    "ShotDex asks the first time it opens" : {
+    "ShotDex asks when you add Photos Library" : {
       "comment" : "Settings → Access row, after Not Requested"
     },
     "ShotDex can only open photos you've allowed it to see. Allow access to this photo, or to all photos, in Settings." : {
@@ -8791,6 +8956,9 @@
         }
       }
     },
+    "ShotDex indexes the photos you already have, in Photos, in folders and drives, and on your NAS, so you can find any shot by camera, lens and exposure." : {
+      "comment" : "Empty library: what ShotDex does"
+    },
     "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
 
     },
@@ -8842,6 +9010,12 @@
 
     },
     "Show All Raw Metadata" : {
+
+    },
+    "Show as bars" : {
+
+    },
+    "Show as donut" : {
 
     },
     "Show Calendar" : {
@@ -8956,9 +9130,6 @@
     "Shows details about shutter count availability" : {
 
     },
-    "Shows each status in full" : {
-      "comment" : "Smart album header: the status line opens its details"
-    },
     "Shows every group to jump to" : {
 
     },
@@ -8970,6 +9141,9 @@
     },
     "Shows indexing details" : {
 
+    },
+    "Shows the album's conditions and each status in full" : {
+      "comment" : "Smart album header: the summary line opens its details"
     },
     "Shows the photos that will be deleted" : {
       "comment" : "VoiceOver hint on the Duplicates selection pill"
@@ -9054,6 +9228,9 @@
     },
     "Slideshow" : {
 
+    },
+    "slo-mo" : {
+      "comment" : "Photo rule value"
     },
     "Slo-mo" : {
 
@@ -9165,6 +9342,9 @@
     "Spacing" : {
       "comment" : "Video Studio iPad text inspector: section title over Tracking and Line spacing"
     },
+    "Spatial" : {
+      "comment" : "Photo rule value: spatial photo or video"
+    },
     "Speech in your clips becomes editable text, made on this %@." : {
       "comment" : "Video Studio captions: the note under Auto Captions; the argument is iPhone or iPad"
     },
@@ -9199,6 +9379,9 @@
         }
       }
     },
+    "Spring" : {
+      "comment" : "Season"
+    },
     "SQLite toolkit by Gwendal Roué. MIT License." : {
 
     },
@@ -9230,7 +9413,7 @@
 
     },
     "Starting…" : {
-      "comment" : "System progress subtitle before the first file"
+      "comment" : "System progress subtitle before the first file\nSystem progress subtitle before the on-server check has counts"
     },
     "Statistics" : {
       "comment" : "Settings → Display: section header over Show Insights\nVoiceOver label of the Statistics card in Utilities"
@@ -9325,6 +9508,9 @@
     "Summed from the file sizes the index has read" : {
       "comment" : "Settings → Library size: value line under Photos and Videos"
     },
+    "Summer" : {
+      "comment" : "Season"
+    },
     "Super telephoto" : {
       "comment" : "Angle-of-view group"
     },
@@ -9375,6 +9561,9 @@
     },
     "Tab bar" : {
 
+    },
+    "tagged with GPS" : {
+      "comment" : "Photo rule value: Photo has a location"
     },
     "Tags not kept" : {
       "comment" : "Common photos log, File info column: dates kept, Finder tags lost"
@@ -9553,8 +9742,14 @@
     "The Photos library on this iPhone, iCloud Photos included." : {
       "comment" : "Add a Source: Photos Library option"
     },
+    "The photos stay in your library and in other albums." : {
+      "comment" : "Delete smart album prompt message"
+    },
     "The photos stay in your library." : {
 
+    },
+    "The preview can't play this project. Your clips and edits are kept." : {
+      "comment" : "Video Studio: the preview player failed to load the project"
     },
     "The same file is already in this folder, so these weren't copied again." : {
       "comment" : "Already on list footer"
@@ -9562,8 +9757,11 @@
     "The scan opens every photo in full, so building these again takes a while." : {
 
     },
-    "the screen locks as usual" : {
+    "The screen locks as usual" : {
       "comment" : "Settings, Keep Screen Awake value line when off"
+    },
+    "The screen stays on while ShotDex is open" : {
+      "comment" : "Settings, Keep Screen Awake value line, always"
     },
     "The server is out of space." : {
       "comment" : "File server error"
@@ -9695,7 +9893,7 @@
 
     },
     "This deletes the smart album. The album “%@” stays in Photos." : {
-
+      "comment" : "Delete smart album that is kept in Photos"
     },
     "This device can't write HEIC, so the photo is saved as JPEG." : {
 
@@ -9789,6 +9987,9 @@
     },
     "Time Zone" : {
       "comment" : "Info panel row label"
+    },
+    "time-lapse" : {
+      "comment" : "Photo rule value"
     },
     "Time-lapse" : {
 
@@ -9931,7 +10132,7 @@
 
     },
     "Try Again" : {
-      "comment" : "Banner action: repeat the failed write\nRetry a caption or keyword write\nRetry the bulk write\nVideo Studio: retries writing the video draft"
+      "comment" : "Alert button: save the smart album again\nBanner action: repeat the failed write\nRetry a caption or keyword write\nRetry the bulk write\nVideo Studio: retries writing the video draft"
     },
     "Try again in a few minutes." : {
       "comment" : "Support error recovery"
@@ -10047,6 +10248,9 @@
           }
         }
       }
+    },
+    "Unit" : {
+      "comment" : "Smart album date condition: the days/weeks/months/years menu"
     },
     "Units" : {
 
@@ -10279,7 +10483,7 @@
       "comment" : "Export sheet row: Edited or Original"
     },
     "video" : {
-      "comment" : "Video Studio session footer: the kind of a selected clip, after its length — 6.2s · video"
+      "comment" : "Photo rule value: the item is a video\nVideo Studio session footer: the kind of a selected clip, after its length — 6.2s · video"
     },
     "Video" : {
       "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nServer export: kind of the one file a tool made\nVideo Studio timeline lane: the video and photo clip track"
@@ -10478,8 +10682,20 @@
     "Weather out of date" : {
 
     },
+    "Weekday" : {
+      "comment" : "Day of week condition: Monday to Friday"
+    },
+    "Weekend" : {
+      "comment" : "Day of week condition: Saturday or Sunday"
+    },
+    "weeks" : {
+      "comment" : "Date rule unit: is in the last N weeks"
+    },
     "Weighted" : {
       "comment" : "Focus Stack method: blend every frame by how sharp it is"
+    },
+    "Welcome to ShotDex" : {
+      "comment" : "Empty library: title"
     },
     "What goes with a photo when it leaves ShotDex: Share, Save Copy, Paste Edits, Resize and dragging it into another app. Each of them can choose differently for one time. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip." : {
 
@@ -10517,8 +10733,14 @@
     "Which camera?" : {
 
     },
-    "while indexing runs" : {
-      "comment" : "Settings, Keep Screen Awake value line when on"
+    "While indexing or checking the server" : {
+      "comment" : "Settings, Keep Screen Awake value line, while working"
+    },
+    "While ShotDex Is Open" : {
+      "comment" : "Settings, Keep Screen Awake: the whole time the app is on screen"
+    },
+    "While Working" : {
+      "comment" : "Settings, Keep Screen Awake: while indexing or the on-server check runs"
     },
     "White" : {
       "comment" : "Video Studio Video Settings: the white background swatch"
@@ -10575,6 +10797,9 @@
     },
     "Windows & Qualifiers" : {
       "comment" : "Video Studio colour: masked, local grades"
+    },
+    "Winter" : {
+      "comment" : "Season"
     },
     "Wipe" : {
 
@@ -10637,7 +10862,7 @@
 
     },
     "Year" : {
-      "comment" : "Custom date row\nImport folders token\nOrganize row: year folder name"
+      "comment" : "Custom date row\nImport folders token\nOrganize row: year folder name\nSearch suggestion kind"
     },
     "Year › Date" : {
       "comment" : "Organize levels"
@@ -10650,6 +10875,9 @@
     },
     "Year Month Day" : {
       "comment" : "Custom date order"
+    },
+    "years" : {
+      "comment" : "Date rule unit: is in the last N years"
     },
     "Yellow" : {
       "comment" : "Video Studio iPad text inspector: the yellow caption colour"
@@ -10710,6 +10938,15 @@
     },
     "Your photos are not affected. ShotDex reads the camera and exposure data again the next time it scans your library." : {
 
+    },
+    "Your Photos library, iCloud Photos included. iOS asks for access next — choose Allow Full Access." : {
+      "comment" : "Empty library: Photos card"
+    },
+    "Your Photos library, iCloud Photos included. iOS asks for access." : {
+      "comment" : "Empty library: Photos card, short"
+    },
+    "Your Photos library, iCloud Photos included. iPadOS asks you to allow access." : {
+      "comment" : "Empty library: Photos card, iPad"
     },
     "Your Project Is %@" : {
       "comment" : "Video Studio iPad Export Video: the section title over Fit on Background · Fill (Crop)"
