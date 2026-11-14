@@ -4194,6 +4194,17 @@
     "Downloading from iCloud: %@" : {
       "comment" : "On-server check popover: a Photos original being downloaded to compare it, with its file name"
     },
+    "Downloading from iCloud: %@ and %lld more" : {
+      "comment" : "On-server check popover: several Photos originals downloading at once — the newest file name and how many others",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading from iCloud: %1$@ and %2$lld more"
+          }
+        }
+      }
+    },
     "Downloading from iCloud…" : {
 
     },
