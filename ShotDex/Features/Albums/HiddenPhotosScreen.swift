@@ -183,7 +183,8 @@ struct HiddenPhotosScreen: View {
             onUserScroll: {},
             trailingFooterText: footer(model),
             removal: model.lastRemoval,
-            viewerLink: viewerLink
+            viewerLink: viewerLink,
+            assetLoadSignal: model.assetLoadSignal
         )
         .ignoresSafeArea(edges: .bottom)
     }

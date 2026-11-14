@@ -28,6 +28,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var keptPhotosAlbum = false
     /// When the database signal last reloaded the grid (throttle, §3c A1).
     @State private var lastLiveReload = Date.distantPast
+    @State private var lastLiveReloadDuration: TimeInterval = 0
     /// When the original check last reloaded the grid (throttle, FS-06.10).
     @State private var lastOriginalReload = Date.distantPast
 
@@ -250,12 +251,18 @@ struct SmartAlbumDetailScreen: View {
                 guard let model else { return }
                 for await _ in DatabaseChangeSignal.changes(in: dependencies.database,
                                                             tables: ["photo_metadata", "smart_albums", "photo_flag", "pending_photo_rating"]) {
-                    let wait = 2 - Date().timeIntervalSince(lastLiveReload)
+                    // At least 2 s apart, and at least four times as long as
+                    // the last read took: an Also on Server album at 55,000
+                    // photos reads for seconds, and re-reading it after every
+                    // index batch kept the reader pool and the screen busy.
+                    let spacing = max(2, lastLiveReloadDuration * 4)
+                    let wait = spacing - Date().timeIntervalSince(lastLiveReload)
                     if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
                     guard !Task.isCancelled else { return }
                     if isSelecting { continue }
                     lastLiveReload = Date()
                     await refreshFromStore(model)
+                    lastLiveReloadDuration = Date().timeIntervalSince(lastLiveReload)
                 }
             }
             .formSheet(isPresented: $isEditingAlbum) {
@@ -577,7 +584,8 @@ struct SmartAlbumDetailScreen: View {
             contextMenuProvider: { item in
                 tileMenu(assetId: item.assetId).makeMenu()
             },
-            viewerLink: viewerLink
+            viewerLink: viewerLink,
+            assetLoadSignal: model.assetLoadSignal
         )
         .ignoresSafeArea(edges: .bottom)
     }

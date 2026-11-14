@@ -38,6 +38,8 @@ final class SmartAlbumDetailModel {
     /// Bumped when an async PHAsset chunk becomes available; visible cells
     /// reconfigure in place without rebuilding/re-anchoring the grid.
     private(set) var contentRefreshGeneration = 0
+    /// Tells the grid that PhotoKit assets for some rows have arrived.
+    @ObservationIgnored let assetLoadSignal = GridAssetLoadSignal()
     /// Latest in-place deletion, published in the same update as the pruned
     /// list so the grid animates the tiles out instead of reloading.
     private(set) var lastRemoval: PhotoGridRemoval?
@@ -90,8 +92,10 @@ final class SmartAlbumDetailModel {
             }
         )
         self.assetCache = assetCache
+        // Straight to the grid's tiles that lack an asset — not a version
+        // bump, which re-ran the screen and every visible tile per chunk.
         assetCache.onChunkLoaded = { [weak self] in
-            self?.contentRefreshGeneration &+= 1
+            self?.assetLoadSignal.fire()
         }
     }
 
@@ -182,10 +186,16 @@ final class SmartAlbumDetailModel {
     }
 
     func load() async {
-        isLoading = true
+        // Every observed write re-renders the screen, and the live refresh
+        // calls this every few seconds: write only what changed.
+        if !isLoading { isLoading = true }
         loadToken &+= 1
         let token = loadToken
-        sourceNames = Dictionary(((try? sourceStore.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
+        let sourceStore = self.sourceStore
+        let names = await Task.detached(priority: .userInitiated) {
+            Dictionary(((try? sourceStore.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
+        }.value
+        if names != sourceNames { sourceNames = names }
         var filters: [LibraryQueries.IndexFilter] = [.query(query)]
         if let advanced = filter.advancedQuery {
             filters.append(.query(advanced))
@@ -213,9 +223,12 @@ final class SmartAlbumDetailModel {
         // the token an older load finishing last would put stale rows back.
         guard token == loadToken, requested == (filter, sortOrder) else { return }
         isLoading = false
-        unfilteredCount = total
+        if unfilteredCount != total { unfilteredCount = total }
         // The library-change reload after our own delete returns the list we
         // already pruned: refresh tiles in place, keep the scroll position.
+        // The live refresh mostly finds nothing new: then nothing changes —
+        // no observed write, no re-render of the screen or its tiles.
+        if rows == items { return }
         let sameList = rows.count == items.count
             && zip(rows, items).allSatisfy { $0.assetId == $1.assetId }
         items = rows

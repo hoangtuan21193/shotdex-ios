@@ -19,6 +19,8 @@ final class HiddenPhotosModel {
     private(set) var sourceNames: [String] = []
     private(set) var contentGeneration = 0
     private(set) var contentRefreshGeneration = 0
+    /// Tells the grid that PhotoKit assets for some rows have arrived.
+    @ObservationIgnored let assetLoadSignal = GridAssetLoadSignal()
     private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoaded = false
 
@@ -42,8 +44,10 @@ final class HiddenPhotosModel {
             }
         )
         self.assetCache = assetCache
+        // Straight to the grid's tiles that lack an asset — not a version
+        // bump, which re-ran the screen and every visible tile per chunk.
         assetCache.onChunkLoaded = { [weak self] in
-            self?.contentRefreshGeneration &+= 1
+            self?.assetLoadSignal.fire()
         }
     }
 

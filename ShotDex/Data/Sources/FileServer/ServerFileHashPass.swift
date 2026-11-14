@@ -232,11 +232,13 @@ struct ServerFileHashPass: Sendable {
                     // temporary file it deletes — never the file in memory.
                     let clock = ContinuousClock()
                     let began = clock.now
-                    OnServerActivity.shared.begin(.reading, fileName: (file.relativePath as NSString).lastPathComponent,
+                    let activityKey = "server|\(file.copyId)|\(file.fileKey)"
+                    OnServerActivity.shared.begin(.reading, key: activityKey,
+                                                  fileName: (file.relativePath as NSString).lastPathComponent,
                                                   bytesTotal: file.size)
-                    defer { OnServerActivity.shared.end() }
+                    defer { OnServerActivity.shared.end(activityKey) }
                     let sha = try await client.sha256(of: ServerUploadPath.join(folder, file.relativePath),
-                                                      progress: { OnServerActivity.shared.progress($0) })
+                                                      progress: { OnServerActivity.shared.progress(activityKey, $0) })
                     OnServerTrace.log("  server file \(OnServerTrace.megabytes(file.size)) · read+hash \(OnServerTrace.seconds(began.duration(to: clock.now)))s")
                     try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
                     summary.hashed += 1

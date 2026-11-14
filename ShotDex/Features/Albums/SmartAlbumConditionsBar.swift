@@ -317,6 +317,9 @@ struct OnServerActivityView: View {
         switch now.kind {
         case .listing(let source):
             String(localized: "Listing files on \(source)", comment: "On-server check popover: the server's file list is being read")
+        case .downloading where now.otherFiles > 0:
+            String(localized: "Downloading from iCloud: \(now.fileName ?? "") and \(now.otherFiles) more",
+                   comment: "On-server check popover: several Photos originals downloading at once — the newest file name and how many others")
         case .downloading:
             String(localized: "Downloading from iCloud: \(now.fileName ?? "")",
                    comment: "On-server check popover: a Photos original being downloaded to compare it, with its file name")

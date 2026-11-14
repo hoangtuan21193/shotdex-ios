@@ -120,9 +120,11 @@ struct PhotosFileHashPass: Sendable {
                     let clock = ContinuousClock()
                     let began = clock.now
                     // The file key reads `1:IMG_9537.HEIC`: the name after the type.
-                    OnServerActivity.shared.begin(.downloading, fileName: String(file.fileKey.drop { $0 != ":" }.dropFirst()),
+                    let activityKey = OnServerActivity.downloadKey(assetId: file.assetId, fileKey: file.fileKey)
+                    OnServerActivity.shared.begin(.downloading, key: activityKey,
+                                                  fileName: String(file.fileKey.drop { $0 != ":" }.dropFirst()),
                                                   bytesTotal: file.size)
-                    defer { OnServerActivity.shared.end() }
+                    defer { OnServerActivity.shared.end(activityKey) }
                     do {
                         let url = try await download(file.assetId, file.fileKey, workDirectory)
                         defer { try? FileManager.default.removeItem(at: url) }
@@ -182,8 +184,9 @@ extension PhotosFileHashPass {
     static func liveDownloader() -> @Sendable (String, String, URL) async throws -> URL {
         { assetId, fileKey, directory in
             let file = AssetUploadFile(key: fileKey, filename: "original", isRAW: false, role: .original, estimatedBytes: 0)
+            let activityKey = OnServerActivity.downloadKey(assetId: assetId, fileKey: fileKey)
             return try await PhotoKitOriginalExporter().export(assetId: assetId, file: file, into: directory,
-                                                               progress: { OnServerActivity.shared.progress($0) })
+                                                               progress: { OnServerActivity.shared.progress(activityKey, $0) })
         }
     }
 
