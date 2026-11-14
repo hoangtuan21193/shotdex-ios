@@ -122,5 +122,25 @@ extension MacTheme {
         static let rejectedShade = Color.black.opacity(0.55)
         /// `#EB9526`.
         static let accent = Color(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255)
+
+        // The photo editor (board `MAC_Edit`).
+        /// `#0E0E0E`: the inspector's ground.
+        static let inspector = Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x0E / 255)
+        /// `#1C1C1C`: a card in the inspector (the histogram).
+        static let control = Color(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1C / 255)
+        /// A value field: its ground and its edge.
+        static let field = Color(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255)
+        static let fieldStroke = Color.white.opacity(0.10)
+        /// `#2A2A2A`: a slider's rail.
+        static let sliderTrack = Color(red: 0x2A / 255, green: 0x2A / 255, blue: 0x2A / 255)
+        /// A pressed or on control.
+        static let pressed = Color.white.opacity(0.12)
+        /// The toolbar's glass capsule.
+        static let glass = Color(red: 30 / 255, green: 30 / 255, blue: 32 / 255).opacity(0.74)
+        static let glassStroke = Color.white.opacity(0.10)
+        /// The histogram's channels, screened over each other.
+        static let histogramRed = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255).opacity(0.6)
+        static let histogramGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255).opacity(0.55)
+        static let histogramBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255).opacity(0.6)
     }
 }

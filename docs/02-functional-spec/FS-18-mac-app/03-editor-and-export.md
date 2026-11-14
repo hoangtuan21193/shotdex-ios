@@ -27,6 +27,39 @@ bố cục Mac, cách lưu và sheet xuất.
 - Cửa sổ dưới 1100 rộng: segmented thành 5 icon có tooltip, inspector đè lên mép phải ảnh khi mở; cửa sổ không
   tự nới ([01](01-window-and-navigation.md) §4). ⌥⌘O đưa Editor sang cửa sổ riêng.
 
+### 1a. Đã dựng (row 31, 2026-11-15)
+
+`ShotDexMac/Editor/` (`MacEditorModel`, `MacEditorPage`, `MacEditorInspector`):
+
+- Mở bằng **Edit** / ⌘E trên viewer — chỉ bật cho ảnh có bản file (thư mục, ổ, NAS) và ảnh demo; ảnh chỉ có trong
+  thư viện Photos: Edit mờ, tooltip "Photos library pictures can't be edited here yet" (row 40). Editor thay cả vùng chi
+  tiết (sidebar đã ẩn từ viewer), các ảnh của viewer thành filmstrip. ◀ / ⌘[ / Esc về viewer trên ảnh đang sửa; chọn
+  nơi khác ở sidebar cũng lưu rồi đóng editor.
+- Toolbar: ◀ · tên file + dòng phụ "nguồn · máy · ống · 12 of 226" · **Adjust** · Crop · Mask · Heal · Markup (bốn
+  cái sau mờ, tooltip "comes in a later version", rows 32–36) · Undo (⌘Z) · Redo (⇧⌘Z) · Before and After (`\`, chữ
+  "Original" trên ảnh; chỉnh gì là tự tắt) · Fit ▾ (Actual Size mờ tới khi có render 1:1) · inspector (⌥⌘I) · "✓ Edited
+  · Saved" / "Saving…" / "Couldn't Save — Try Again" (bấm để ghi lại) · **Revert to Original…** (hỏi lại; ⌘Z lấy
+  lại). Presets and History, ▶, Export chưa hiện (rows 37, 39).
+- Canvas đen; vẽ bằng `PhotoRenderService` của kit, mỗi lúc một lần vẽ, yêu cầu mới nhất thắng: trong lúc kéo slider
+  ảnh 1000px qua base đã giải mã, thả tay 90 ms sau vẽ 2400px, histogram tính từ ảnh sạch. Vẽ lỗi: giữ khung cũ, dòng
+  "ShotDex can't show this edit. Undo or change it to try again." Clipping: hai nút góc thẻ histogram, lớp đỏ/xanh `ClippingOverlay`
+  làm ngoài main.
+- Inspector 320: thẻ histogram (ba kênh, ISO · tiêu cự · khẩu · tốc) · **Look** (các look của `PhotoFilter`) +
+  **Amount** · nhóm theo thứ tự board. Có slider: Light (mở sẵn), Color, Effects, Detail, Optics (Lens Profile +
+  Manual + Defringe) — lấy từ `EditorAdjustmentCatalog` chung với iPhone, cùng thang và cách ghi số. Tone Curve,
+  Color Mixer, Point Color, Grading, Lens Blur, Calibration: mở ra ghi "This group comes in a later version." (row 33…).
+  Nút ↺ cạnh tên nhóm khi nhóm có giá trị khác mặc định.
+- Hàng slider 24: tên · rãnh 3pt (tô từ điểm 0 ra, vạch ở 0, núm 12pt, trung tính) · ô số có khung (Return hoặc rời ô
+  là áp; không phải số thì trả lại). Kéo dịch giá trị theo quãng kéo (nhấp không đổi gì); nhấp đúp về mặc định (tooltip
+  ghi đúng câu đó); chuột phải Reset · Enter Value…. Một lần kéo là một bước Undo; Undo giữ riêng cho từng ảnh suốt phiên.
+- Filmstrip 84×56: ảnh đang sửa viền trắng, ảnh đã sửa có huy hiệu, ảnh lưu lỗi có dấu ⚠; "12 of 226". Bấm ô khác:
+  lưu ảnh đang mở rồi mở ảnh kia.
+- **Lưu**: ảnh thư mục/ổ/NAS tự lưu 400 ms sau thay đổi cuối và ngay khi rời ảnh/editor (`PhotoRecipeStore` +
+  sidecar), ghi lần lượt theo thứ tự; ⌘Q ghi ngay. Lý do không sửa được, nói trên canvas: ảnh iCloud Drive chưa tải ·
+  ổ/server không nối · ảnh Photos (Done là row 40). Demo: ảnh demo sửa được như ảnh thư mục.
+- Chưa có: Auto của Light, ⌥⌘O cửa sổ riêng, bố cục icon dưới 1100pt, Done cho ảnh Photos, Actual Size, phím ←/→ đổi
+  ảnh, Return mở editor từ viewer, Edit trong menu chuột phải / menu Photo.
+
 ## 2. Hai kiểu lưu (D16)
 
 | Ảnh | Toolbar | Lưu |

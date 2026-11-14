@@ -49,6 +49,14 @@ struct MacRootWindow: View {
     @State private var isLeavingRunPage = false
     /// A culling pass open as the window's page (board `MAC_Cull`, FS-18.02 §7).
     @State private var cullRequest: MacCullRequest?
+    /// The editor (board `MAC_Edit`): opened from the viewer, Back returns there.
+    @State private var editor: MacEditorModel?
+    @State private var editorZoom = MacViewerZoom.fit
+    @State private var editorShowsInspector = true
+    @State private var asksEditorRevert = false
+    /// The viewer's photo can be edited here (a file photo, or the demo's):
+    /// a Photos library picture waits for row 40.
+    @State private var viewerEditable = false
     /// The sidebar as it was before the pass hid it; put back when it closes.
     @State private var columnsBeforeCull: NavigationSplitViewVisibility?
     /// The pass being ordered off the main actor: a second ⌥⌘P waits for it.
@@ -173,15 +181,23 @@ struct MacRootWindow: View {
                                                       chooseDate: selection == .onThisDay ? { showsDatePicker = true } : nil))
             // A photo in full screen has the screen (board `MAC_ViewerFullScreen`): no toolbar
             // over it — the HUD carries its commands, the menu bar comes at the top edge.
-            .toolbar(viewerId != nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
+            // The editor keeps its toolbar in full screen (Back, Undo, Revert).
+            .toolbar(viewerId != nil && editor == nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
     }
 
     private var root: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
+            if let editor {
+                MacEditorPage(model: editor, showsInspector: $editorShowsInspector, zoom: $editorZoom, asksRevert: $asksEditorRevert) { id in
+                    // Back on the photo the editor ended on.
+                    viewerId = id
+                    self.editor = nil
+                }
+                .id(ObjectIdentifier(editor))
             // A culling pass: a page over the place it came from (Back returns to it).
-            if let cullRequest {
+            } else if let cullRequest {
                 MacCullPage(request: cullRequest, menu: photoMenu, picture: Self.demoPicture,
                             asset: { library?.asset(for: $0) },
                             removal: library?.lastRemoval,
@@ -240,6 +256,16 @@ struct MacRootWindow: View {
         }
         .tint(MacTheme.accent)
         .modifier(MacActivityToolbar())
+        .confirmationDialog(String(localized: "Revert to the original?", comment: "Mac editor: confirm Revert to Original"),
+                            isPresented: $asksEditorRevert) {
+            Button(String(localized: "Revert to Original", comment: "Mac editor: drop every edit of this photo"), role: .destructive) {
+                editor?.revert()
+            }
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+        } message: {
+            Text("Every edit of this photo goes. ⌘Z brings it back while the editor is open; the original file was never changed.",
+                 comment: "Mac editor: what Revert to Original does")
+        }
         .modifier(MacSupportSheetHost())
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
@@ -275,6 +301,11 @@ struct MacRootWindow: View {
             cullRequest = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
+            // Another place: the editor saves and goes with the viewer it came from.
+            if let editor {
+                editor.flushSave()
+                self.editor = nil
+            }
             // Statistics opened any way but Back from its photos: the dashboard, not a camera page.
             if new != .allPhotos, !(new == .statistics && returnsToStatisticsPage) { statisticsCamera = nil }
             returnsToStatisticsPage = false
@@ -1192,6 +1223,14 @@ struct MacRootWindow: View {
                 // The viewer moved on or closed: a download for the photo it left stops (it
                 // restarts on the way back). Here, not in the photo view, which full screen swaps.
                 .onChange(of: viewerId) { old, _ in if let old { dependencies.cloudDownloads.leave(old) } }
+                // Edit is offered where the editor can save: file photos (and the demo's).
+                .task(id: viewerId) {
+                    guard let id = viewerId else { viewerEditable = false; return }
+                    #if DEBUG
+                    if MacDemoLibrary.isOn { viewerEditable = true; return }
+                    #endif
+                    viewerEditable = !(await MacEditorModel.isPhotosOnly(id, database: dependencies.database))
+                }
                 .onChange(of: viewerId != nil && isFullScreen) { _, isFullScreenViewer in
                     if isFullScreenViewer {
                         inspectorBeforeFullScreen = showsInspector
@@ -1772,6 +1811,15 @@ struct MacRootWindow: View {
         }
     }
 
+    /// ⌘E / Edit in the viewer (FS-18.03 §1): the editor over the window,
+    /// stepping through the photos the viewer steps through.
+    private func openEditor() {
+        guard let viewerId, editor == nil else { return }
+        let model = MacEditorModel(ids: viewerOrder, start: viewerId, dependencies: dependencies)
+        editorZoom = .fit
+        editor = model
+    }
+
     /// The viewer's toolbar (board `MAC_Viewer`): back to the grid, then
     /// Fit ▾ · Favorite · Rotate · Share · inspector · Edit.
     @ToolbarContentBuilder
@@ -1818,12 +1866,15 @@ struct MacRootWindow: View {
         }
         // Edit on its own at the right edge (board): navigation, not a command.
         ToolbarItemGroup(placement: .primaryAction) {
-            Button { } label: {
+            Button { openEditor() } label: {
                 Label(String(localized: "Edit", comment: "Mac viewer toolbar: open the editor"), systemImage: "slider.horizontal.3")
                     .labelStyle(.titleAndIcon)
             }
-            .disabled(true)
-            .help(String(localized: "The Mac editor comes in a later version", comment: "Mac viewer toolbar: Edit is not built yet"))
+            .keyboardShortcut("e", modifiers: .command)
+            .disabled(!viewerEditable)
+            .help(viewerEditable ? String(localized: "Edit this photo (⌘E)", comment: "Mac viewer toolbar: open the editor")
+                                 : String(localized: "Photos library pictures can't be edited here yet", comment: "Mac viewer toolbar: Edit is off for a Photos picture"))
+            .accessibilityIdentifier("viewer.edit")
         }
     }
 

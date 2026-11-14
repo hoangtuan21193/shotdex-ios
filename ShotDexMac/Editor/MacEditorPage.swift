@@ -1,0 +1,367 @@
+import AppKit
+import ShotDexKit
+import SwiftUI
+
+/// The editor (board `MAC_Edit`, FS-18.03 §1): the photo on a dark canvas,
+/// the inspector of 320 on the right, the filmstrip under it. Always dark,
+/// chrome included (D10); the accent only on what commits.
+struct MacEditorPage: View {
+    @Bindable var model: MacEditorModel
+    @Binding var showsInspector: Bool
+    @Binding var zoom: MacViewerZoom
+    @Binding var asksRevert: Bool
+    /// ◀ and Esc: back to the viewer on the photo open.
+    let close: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                MacEditorCanvas(model: model, zoom: zoom)
+                MacEditorFilmstrip(model: model)
+            }
+            if showsInspector {
+                Divider()
+                MacEditorInspector(model: model)
+                    .frame(width: 320)
+            }
+        }
+        .background(Color.black)
+        .preferredColorScheme(.dark)
+        // Popups and switches stay neutral here; the accent is for what commits (D10).
+        .tint(MacTheme.Editor.label)
+        .navigationTitle(model.details.fileName)
+        .navigationSubtitle(MacEditorWords.subtitle(model))
+        // The page's own toolbar: the window's is the grid's, not drawn while the editor is up.
+        .toolbar {
+            MacEditorToolbar(model: model, showsInspector: $showsInspector, zoom: $zoom, close: close, asksRevert: $asksRevert)
+        }
+        .onExitCommand { leave() }
+        .task { model.open() }
+        .onDisappear { model.flushSave() }
+        // ⌘Q with an edit not written yet: written before the app goes.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in model.flushNow() }
+    }
+
+    private func leave() {
+        model.flushSave()
+        close(model.currentId)
+    }
+}
+
+// MARK: - Toolbar
+
+/// Sidebar · ◀ ▶ · title | Adjust · Crop · Mask · Heal · Markup | Undo ·
+/// Redo · Before and After · Fit ▾ · Export · inspector · ✓ Edited · Saved ·
+/// Revert to Original… (board `MAC_Edit`).
+struct MacEditorToolbar: ToolbarContent {
+    @Bindable var model: MacEditorModel
+    @Binding var showsInspector: Bool
+    @Binding var zoom: MacViewerZoom
+    let close: (String) -> Void
+    @Binding var asksRevert: Bool
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            Button {
+                model.flushSave()
+                close(model.currentId)
+            } label: {
+                Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left")
+            }
+            .keyboardShortcut("[", modifiers: .command)
+            .help(String(localized: "Back to the photo (⌘[ or Esc)", comment: "Mac editor toolbar: leave the editor"))
+            .accessibilityIdentifier("editor.back")
+        }
+        ToolbarItem(placement: .principal) {
+            MacEditorTools()
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button(action: model.undo) { Label(String(localized: "Undo", comment: "Mac editor toolbar"), systemImage: "arrow.uturn.backward") }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(!model.canUndo)
+                .help(String(localized: "Undo (⌘Z)", comment: "Mac editor toolbar"))
+                .accessibilityIdentifier("editor.undo")
+            Button(action: model.redo) { Label(String(localized: "Redo", comment: "Mac editor toolbar"), systemImage: "arrow.uturn.forward") }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!model.canRedo)
+                .help(String(localized: "Redo (⇧⌘Z)", comment: "Mac editor toolbar"))
+                .accessibilityIdentifier("editor.redo")
+            Toggle(isOn: $model.showsBefore) {
+                Label(String(localized: "Before and After", comment: "Mac editor toolbar"), systemImage: "square.split.2x1")
+            }
+            .keyboardShortcut("\\", modifiers: [])
+            .help(String(localized: "Show the original (\\)", comment: "Mac editor toolbar: Before and After"))
+            .accessibilityIdentifier("editor.before")
+            Menu {
+                Picker(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"), selection: $zoom) {
+                    Text(MacViewerZoom.fit.title).tag(MacViewerZoom.fit)
+                }
+                .pickerStyle(.inline)
+                // 1:1 needs a full-resolution render of the visible part: not yet.
+                Button(MacViewerZoom.actual.title) {}.disabled(true)
+            } label: {
+                Text(zoom.title)
+            }
+            .fixedSize()
+            .help(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"))
+            Button { showsInspector.toggle() } label: {
+                Label(String(localized: "Inspector", comment: "Mac editor toolbar"), systemImage: "sidebar.right")
+            }
+            .keyboardShortcut("i", modifiers: [.command, .option])
+            .help(String(localized: "Show or hide the adjustments (⌥⌘I)", comment: "Mac editor toolbar"))
+            .accessibilityIdentifier("editor.inspector")
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            MacEditorSaveStatus(state: model.saveState, retry: model.retrySave)
+            Button(String(localized: "Revert to Original…", comment: "Mac editor toolbar: drop every edit of this photo")) {
+                asksRevert = true
+            }
+            .disabled(model.recipe == .identity || model.load != .ready)
+            .accessibilityIdentifier("editor.revert")
+        }
+    }
+}
+
+/// Adjust · Crop · Mask · Heal · Markup (316): Adjust here; the others are
+/// rows 32–36 of the Mac loop.
+private struct MacEditorTools: View {
+    var body: some View {
+        HStack(spacing: 2) {
+            tool(String(localized: "Adjust", comment: "Mac editor tool"), isOn: true)
+            tool(String(localized: "Crop", comment: "Mac editor tool"), isOn: false)
+            tool(String(localized: "Mask", comment: "Mac editor tool"), isOn: false)
+            tool(String(localized: "Heal", comment: "Mac editor tool"), isOn: false)
+            tool(String(localized: "Markup", comment: "Mac editor tool"), isOn: false)
+        }
+        .padding(2)
+        .background(MacTheme.Editor.glass, in: Capsule())
+        .overlay(Capsule().strokeBorder(MacTheme.Editor.glassStroke))
+        .frame(width: 316)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "Tools", comment: "Mac editor: the tool switcher"))
+    }
+
+    private func tool(_ title: String, isOn: Bool) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+            .foregroundStyle(isOn ? MacTheme.Editor.label : MacTheme.Editor.secondaryText.opacity(0.7))
+            .frame(maxWidth: .infinity, minHeight: 32)
+            .background(isOn ? MacTheme.Editor.pressed : Color.clear, in: Capsule())
+            .help(isOn ? "" : String(localized: "\(title) comes in a later version", comment: "Mac editor: a tool not built yet"))
+            .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : [])
+            .accessibilityValue(isOn ? "" : String(localized: "Not available yet", comment: "Mac editor: a tool not built yet, VoiceOver"))
+    }
+}
+
+private struct MacEditorSaveStatus: View {
+    let state: MacEditorModel.SaveState
+    let retry: () -> Void
+
+    var body: some View {
+        switch state {
+        case .unchanged:
+            EmptyView()
+        case .saving:
+            HStack(spacing: 4) {
+                ProgressView().controlSize(.mini)
+                Text("Saving…", comment: "Mac editor toolbar: the edit is being written").foregroundStyle(.secondary)
+            }
+            .font(.system(size: 12))
+        case .saved:
+            Label(String(localized: "Edited · Saved", comment: "Mac editor toolbar: the edit is in the sidecar"), systemImage: "checkmark")
+                .labelStyle(.titleAndIcon)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("editor.saved")
+        case .failed:
+            Button(action: retry) {
+                Label(String(localized: "Couldn't Save — Try Again", comment: "Mac editor toolbar: the edit was not written; a click writes it again"),
+                      systemImage: "exclamationmark.triangle")
+                    .labelStyle(.titleAndIcon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(MacTheme.redText)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("editor.retrySave")
+        }
+    }
+}
+
+// MARK: - Canvas
+
+private struct MacEditorCanvas: View {
+    let model: MacEditorModel
+    let zoom: MacViewerZoom
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color.black
+                switch model.load {
+                case .loading:
+                    ProgressView().controlSize(.small)
+                case .unavailable(let reason):
+                    VStack(spacing: 8) {
+                        Image(systemName: "photo").font(.system(size: 28)).foregroundStyle(.secondary)
+                        Text(reason).multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 360)
+                    }
+                    .accessibilityElement(children: .combine)
+                case .ready:
+                    if model.renderFailed {
+                        Text("ShotDex can't show this edit. Undo or change it to try again.", comment: "Mac editor: the render failed")
+                            .font(.caption).padding(8)
+                            .background(.black.opacity(0.7), in: Capsule())
+                            .frame(maxHeight: .infinity, alignment: .top).padding(.top, 12)
+                            .zIndex(1)
+                    }
+                    if let preview = model.preview {
+                        let image = Image(decorative: preview, scale: 1)
+                        Group {
+                            if zoom == .actual {
+                                ScrollView([.horizontal, .vertical]) {
+                                    image.resizable().overlay { clipping }
+                                        // The original's size, whichever preview is up (a drag's is smaller).
+                                        .frame(width: model.sourceSize.width / 2, height: model.sourceSize.height / 2)
+                                }
+                            } else {
+                                image.resizable().aspectRatio(contentMode: .fit)
+                                    .overlay { clipping }
+                                    .padding(EdgeInsets(top: 36, leading: 35, bottom: 28, trailing: 35))
+                            }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            if model.showsBefore {
+                                Text("Original", comment: "Mac editor: Before and After shows the original")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(.black.opacity(0.6), in: Capsule())
+                                    .padding(40)
+                            }
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(model.showsBefore
+                                            ? String(localized: "\(model.details.fileName), original", comment: "Mac editor canvas, VoiceOver")
+                                            : String(localized: "\(model.details.fileName), edited", comment: "Mac editor canvas, VoiceOver"))
+                    } else {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+    }
+
+    @ViewBuilder
+    private var clipping: some View {
+        if let clipping = model.clipping, !model.showsBefore {
+            Image(decorative: clipping, scale: 1).resizable().allowsHitTesting(false)
+        }
+    }
+}
+
+// MARK: - Filmstrip
+
+/// 84×56 tiles, the photo open in a white ring, edited ones badged; "3 of 48".
+private struct MacEditorFilmstrip: View {
+    let model: MacEditorModel
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 6) {
+                        ForEach(model.ids.indices, id: \.self) { index in
+                            let id = model.ids[index]
+                            Button { model.open(at: index) } label: {
+                                MacEditorStripTile(photoId: id)
+                                    .frame(width: 84, height: 56)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .overlay(RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(index == model.index ? Color.white : Color.clear, lineWidth: 2))
+                                    .overlay(alignment: .bottomTrailing) {
+                                        if model.failedIds.contains(id) {
+                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                .font(.system(size: 9))
+                                                .foregroundStyle(MacTheme.redText)
+                                                .frame(width: 16, height: 16)
+                                                .background(.black.opacity(0.6), in: Circle())
+                                                .padding(4)
+                                                .accessibilityLabel(String(localized: "Not saved", comment: "Mac editor filmstrip: a photo whose edit failed to save"))
+                                        } else if model.editedIds.contains(id) {
+                                            Image(systemName: "slider.horizontal.3")
+                                                .font(.system(size: 8, weight: .bold))
+                                                .foregroundStyle(.white)
+                                                .frame(width: 16, height: 16)
+                                                .background(.black.opacity(0.6), in: Circle())
+                                                .padding(4)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                            .id(id)
+                            .accessibilityLabel(String(localized: "Photo \(index + 1)", comment: "Mac editor filmstrip tile, VoiceOver"))
+                            .accessibilityValue(model.editedIds.contains(id) ? String(localized: "Edited", comment: "Mac editor filmstrip tile, VoiceOver") : "")
+                            .accessibilityAddTraits(index == model.index ? .isSelected : [])
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .onAppear { proxy.scrollTo(model.currentId, anchor: .center) }
+                .onChange(of: model.index) { withAnimation { proxy.scrollTo(model.currentId, anchor: .center) } }
+            }
+            Text(String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor filmstrip: position"))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .padding(.trailing, 16)
+        }
+        .frame(height: 84)
+        .background(MacTheme.Editor.panelSolid)
+        .overlay(alignment: .top) { Rectangle().fill(MacTheme.Editor.hairline).frame(height: 1) }
+    }
+}
+
+/// A strip tile: the demo's picture, a file photo's thumbnail, or Photos'.
+private struct MacEditorStripTile: View {
+    let photoId: String
+    @Environment(MacDependencies.self) private var dependencies
+    @State private var image: CGImage?
+    @State private var tried = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(decorative: image, scale: 1).resizable().scaledToFill()
+            } else if tried {
+                MacAssetCover(assetId: photoId, side: 168)
+            } else {
+                MacTheme.fill2
+            }
+        }
+        .task(id: photoId) {
+            if let picture = MacRootWindow.demoPicture?(photoId) { image = picture; tried = true; return }
+            let thumbnails = dependencies.photoLibrary.fileThumbnails, id = photoId
+            let found = await Task.detached(priority: .utility) {
+                thumbnails.image(for: id)?.cgImage(forProposedRect: nil, context: nil, hints: nil).map(StripImage.init)
+            }.value
+            image = found?.image
+            tried = true
+        }
+    }
+}
+
+private struct StripImage: @unchecked Sendable {
+    let image: CGImage
+}
+
+// MARK: - Words
+
+enum MacEditorWords {
+    /// "2026 Japan · Fujifilm X-T5 · XF56mmF1.2 R WR · 3 of 48".
+    @MainActor
+    static func subtitle(_ model: MacEditorModel) -> String {
+        [model.details.sourceName, model.details.camera, model.details.lens,
+         String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor: position in the strip")]
+            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+}

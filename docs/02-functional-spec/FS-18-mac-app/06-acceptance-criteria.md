@@ -167,6 +167,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-152 | 04 §2 biểu đồ mới | như AC-151 | + › New Chart…; Donut; Name "Cameras Share"; Save; ⋯ › Edit Chart…; Esc | thẻ Donut "Cameras Share" thêm cuối, màn cuộn tới nó; sheet chưa đổi đóng ngay, không hỏi | ✅ `mac-chart-editor.json` |
 | AC-153 | 04 §2 sửa biểu đồ, 45k | demo 55k | Edit Top Lens; Columns; Donut; Line; Number; Esc; Return | không khung ShotDex nào ≥ 50 ms trên main | ✅ `mac-chart-editor-perf.json` (`MAC_UI_SAMPLE=1`) |
 | AC-154 | 04 §2 Bars/Columns | `ChartSpec` có/không `drawsColumns` | mã hoá rồi giải; giải dòng cũ | giữ `true`; dòng cũ → nil (theo trục) | ✅ `ChartDrawsColumnsTests` |
+| AC-155 | 03 §1a mở editor | demo `-ShotDexSection viewer` | ⌘E | editor: canvas, inspector có Histogram, Light mở với 8 slider, filmstrip "12 of 226"; toolbar Adjust · … · Revert to Original… | ✅ `mac-editor.json` |
+| AC-156 | 03 §1a sửa và lưu | như AC-155 | gõ 0.65 vào Exposure, Return; −30 vào Highlights; Undo; Redo | ảnh sáng hơn; "Edited · Saved"; Undo/Redo đổi số và ảnh | ✅ `mac-editor.json` |
+| AC-157 | 03 §1a so sánh, clipping, nhóm | như AC-156 | Before and After bật/tắt; clipping sáng bật/tắt; mở Color, Tone Curve; ↺ Light; ẩn/hiện inspector | chữ "Original" khi bật; Color có Saturation; Tone Curve ghi "later version"; Light về 0 | ✅ `mac-editor.json` |
+| AC-158 | 03 §1a filmstrip, Revert, Back | như AC-156 | bấm ô 13; Contrast 0.4; Revert to Original… › Revert to Original; Back | ảnh 13 mở; Revert hỏi rồi bỏ hết sửa (không còn "Edited · Saved"); Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,
