@@ -46,6 +46,7 @@ struct EditorHistorySheet: View {
     var body: some View {
         NavigationStack {
             List {
+                snapshotSection
                 Section {
                     ForEach(steps) { step in
                         Button {
@@ -95,6 +96,59 @@ struct EditorHistorySheet: View {
         .preferredColorScheme(.dark)
     }
 
+    @State private var isNamingSnapshot = false
+    @State private var snapshotName = ""
+
+    /// Named states kept with the photo (FS-03.18 §5), above this session's
+    /// steps: tap to go back, swipe to delete.
+    private var snapshotSection: some View {
+        Section {
+            ForEach(controller.snapshots) { snapshot in
+                Button {
+                    controller.applySnapshot(snapshot)
+                    dismiss()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(snapshot.name)
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                        Text(snapshot.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 12))
+                            .foregroundStyle(EditorTheme.secondaryText)
+                    }
+                }
+                .swipeActions {
+                    Button(role: .destructive) { controller.deleteSnapshot(snapshot) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Snapshots")
+                Spacer()
+                Button {
+                    snapshotName = ""
+                    isNamingSnapshot = true
+                } label: {
+                    Label("Snapshot", systemImage: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .tint(EditorTheme.accent)
+                .accessibilityLabel("Add Snapshot")
+            }
+        } footer: {
+            if controller.snapshots.isEmpty {
+                Text("Keep the photo as it looks now under a name, and come back to it later — even after closing the editor.")
+            }
+        }
+        .alert("New Snapshot", isPresented: $isNamingSnapshot) {
+            TextField("Name", text: $snapshotName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { controller.addSnapshot(named: snapshotName) }
+        }
+    }
+
     /// The step thumbnails are the current preview: rendering one image per step
     /// would mean a full Core Image pass per row, which is not worth it in a list
     /// the user scrolls quickly.
@@ -133,8 +187,12 @@ struct EditorHistoryPanel: View {
 
     private var steps: [EditorHistoryStep] { EditorHistoryStep.steps(of: controller) }
 
+    @State private var isNamingSnapshot = false
+    @State private var snapshotName = ""
+
     var body: some View {
         VStack(spacing: 0) {
+            snapshotRows
             ForEach(steps) { step in
                 Button {
                     controller.jumpToHistoryStep(step.id)
@@ -195,6 +253,63 @@ struct EditorHistoryPanel: View {
                 .foregroundStyle(EditorTheme.dimText)
                 .padding(.horizontal, AppTheme.Spacing.lg)
                 .padding(.top, AppTheme.Spacing.md)
+        }
+    }
+
+    /// Snapshots (FS-03.18 §5) above the steps: a header with + Snapshot, one
+    /// row each — tap to go back, long-press to delete.
+    private var snapshotRows: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("SNAPSHOTS")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                Spacer()
+                Button {
+                    snapshotName = ""
+                    isNamingSnapshot = true
+                } label: {
+                    Label("Snapshot", systemImage: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(EditorTheme.accent)
+                        .frame(minHeight: AppTheme.Size.minTouch)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add Snapshot")
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            ForEach(controller.snapshots) { snapshot in
+                Button {
+                    controller.applySnapshot(snapshot)
+                } label: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(snapshot.name)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white)
+                        Text(snapshot.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 11))
+                            .foregroundStyle(EditorTheme.secondaryText)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(minHeight: AppTheme.Size.minTouch)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .hoverEffect(.highlight)
+                .contextMenu {
+                    Button(role: .destructive) { controller.deleteSnapshot(snapshot) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+        }
+        .alert("New Snapshot", isPresented: $isNamingSnapshot) {
+            TextField("Name", text: $snapshotName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { controller.addSnapshot(named: snapshotName) }
         }
     }
 

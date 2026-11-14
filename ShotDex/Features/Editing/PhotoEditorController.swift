@@ -1453,6 +1453,48 @@ final class PhotoEditorController {
         !recipe.upright.isIdentity
     }
 
+    // MARK: Snapshots (FS-03.18 §5)
+
+    /// Set by the screen; nil in previews and tests without a database.
+    @ObservationIgnored var snapshotStore: EditorSnapshotStore?
+    private(set) var snapshots: [EditorSnapshot] = []
+
+    func loadSnapshots() {
+        guard let snapshotStore else { return }
+        let photoId = origin.id
+        snapshots = (try? snapshotStore.snapshots(photoId: photoId)) ?? []
+    }
+
+    /// Keeps the current recipe under `name` (a date when empty).
+    func addSnapshot(named name: String) {
+        guard let snapshotStore else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = trimmed.isEmpty ? Date().formatted(date: .abbreviated, time: .shortened) : trimmed
+        if (try? snapshotStore.add(name: title, recipe: recipe, photoId: origin.id)) != nil {
+            loadSnapshots()
+        }
+    }
+
+    /// Goes back to a snapshot — one History step, so it can be undone. The
+    /// photo's own source fields stay what they are now.
+    func applySnapshot(_ snapshot: EditorSnapshot) {
+        recordHistory()
+        let source = recipe.source
+        let filename = recipe.sourceFilename
+        let sourceAssetIdentifier = recipe.sourceAssetIdentifier
+        recipe = snapshot.recipe
+        recipe.source = source
+        recipe.sourceFilename = filename
+        recipe.sourceAssetIdentifier = sourceAssetIdentifier
+        repairSelection()
+        scheduleRender()
+    }
+
+    func deleteSnapshot(_ snapshot: EditorSnapshot) {
+        try? snapshotStore?.delete(id: snapshot.id)
+        loadSnapshots()
+    }
+
     func jumpToHistoryStep(_ index: Int) {
         guard let recipe = history.jump(to: index, current: recipe) else { return }
         self.recipe = recipe

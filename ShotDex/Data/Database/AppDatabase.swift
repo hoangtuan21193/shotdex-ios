@@ -722,6 +722,7 @@ final class AppDatabase: Sendable {
         registerPhotoKindFacts(&migrator)
         registerSearchIndex(&migrator)
         registerFreeTextIndex(&migrator)
+        registerEditorSnapshots(&migrator)
 
         return migrator
     }

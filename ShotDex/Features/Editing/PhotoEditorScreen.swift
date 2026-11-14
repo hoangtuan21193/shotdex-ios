@@ -471,6 +471,8 @@ struct PhotoEditorScreen: View {
         // Every session opens on Adjust: the tab the user left last time is
         // rarely the one they want on a different photo.
         newController.selectedTool = .adjust
+        newController.snapshotStore = EditorSnapshotStore(database: dependencies.database)
+        newController.loadSnapshots()
         // What *Edit which version?* chose is for the photo it was asked on.
         if target.id == origin.id { newController.requestedSource = editSource }
         if let assetId = target.asset?.localIdentifier {
