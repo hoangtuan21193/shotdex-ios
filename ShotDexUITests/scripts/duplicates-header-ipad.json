@@ -9,7 +9,6 @@
     { "action": "wait", "seconds": 5 },
     { "action": "screenshot", "name": "01-header" },
     { "action": "dump", "name": "01-header" },
-    { "action": "tap", "label": "Burst 2" },
     { "action": "wait", "seconds": 2 },
     { "action": "screenshot", "name": "02-similar" },
     { "action": "tap", "label": "Sort groups" },

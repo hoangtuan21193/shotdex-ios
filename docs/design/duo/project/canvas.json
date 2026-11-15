@@ -317,7 +317,7 @@
     },
     "DC_Duplicates.dc.html": {
       "h": 678,
-      "title": "Duo ngoài · Duplicates mở ra là danh sách ngay, không dải Quick clean (16/11: Quick Clean / Suggested Picks là hàng trong menu sort ⇅); (v3): 1 cột 350, hàng lọc cuộn ngang, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thẻ chỉ có ảnh, luôn hiện đủ ảnh; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
+      "title": "Duo ngoài · Duplicates mở ra là danh sách ngay, không dải Quick clean (16/11: Quick Clean / Suggested Picks là hàng trong menu sort ⇅); (v3): 1 cột 350, hàng lọc cuộn ngang, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thẻ chỉ có ảnh, luôn hiện đủ ảnh; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10 · 16/11 (ảnh to): mỗi hàng min(mật độ, số ảnh) ô — nhóm 2 ảnh là 2 ô to; ô ≥110 có tên file + độ phân giải · dung lượng bên dưới",
       "w": 466,
       "x": 9282,
       "y": 1609
@@ -1010,7 +1010,7 @@
     },
     "DI_Duplicates.dc.html": {
       "h": 669,
-      "title": "Duo trong · Duplicates mở ra là danh sách ngay, không dải Quick clean (16/11: Quick Clean / Suggested Picks là hàng trong menu sort ⇅); (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, thẻ chỉ có ảnh, luôn hiện đủ ảnh, chỉ thẻ Exact (bracket/focus stack là nhóm Burst), thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10 · 16/11: không còn dải lọc/trạng thái dưới thanh tiêu đề — hàng lọc 340 căn giữa ngay trên hàng tiêu đề, trạng thái 2 dòng (Checked… / Every photo checked) ngay bên phải, thẻ bắt đầu ngay dưới thanh",
+      "title": "Duo trong · Duplicates mở ra là danh sách ngay, không dải Quick clean (16/11: Quick Clean / Suggested Picks là hàng trong menu sort ⇅); (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, thẻ chỉ có ảnh, luôn hiện đủ ảnh, chỉ thẻ Exact (bracket/focus stack là nhóm Burst), thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10 · 16/11: không còn dải lọc/trạng thái dưới thanh tiêu đề — hàng lọc 340 căn giữa ngay trên hàng tiêu đề, trạng thái 2 dòng (Checked… / Every photo checked) ngay bên phải, thẻ bắt đầu ngay dưới thanh · 16/11 (ảnh to): mỗi hàng min(mật độ, số ảnh) ô — nhóm 2 ảnh là 2 ô to; ô ≥110 có tên file + độ phân giải · dung lượng bên dưới",
       "w": 951,
       "x": 19589,
       "y": 560

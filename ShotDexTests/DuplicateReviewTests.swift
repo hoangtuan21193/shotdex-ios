@@ -248,10 +248,31 @@ struct DuplicateReviewTests {
         let step = metrics.tile + DuplicateCardMetrics.copyGap
         #expect(metrics.origin(at: 0) == .zero)
         #expect(metrics.origin(at: 2) == CGPoint(x: 2 * step, y: 0))
-        #expect(metrics.origin(at: 3) == CGPoint(x: 0, y: step))
-        #expect(metrics.gridHeight(photoCount: 2) == metrics.tile)
-        #expect(metrics.gridHeight(photoCount: 4) == metrics.tile + step)
+        #expect(metrics.origin(at: 3) == CGPoint(x: 0, y: metrics.rowStep))
         #expect((0..<7).allSatisfy { metrics.origin(at: $0).x + metrics.tile <= 346 })
+        // Tiles of 112pt carry the file name and size lines underneath.
+        #expect(metrics.showsInfo)
+        let withInfo = metrics.tile + DuplicateCardMetrics.infoGap + DuplicateCardMetrics.infoHeight
+        #expect(metrics.gridHeight(photoCount: 3) == withInfo)
+        #expect(metrics.gridHeight(photoCount: 4) == metrics.rowStep + withInfo)
+        // Small tiles (pinched to 6 per row): no lines, rows touch as before.
+        let dense = DuplicateCardMetrics(innerWidth: 346, copyColumns: 5)
+        #expect(!dense.showsInfo)
+        #expect(dense.gridHeight(photoCount: 7) == dense.tile * 2 + DuplicateCardMetrics.copyGap)
+    }
+
+    /// The usual two-photo group fills the card: two half-width tiles, not
+    /// two thirds of a three-column row (user, 2026-11-16).
+    @Test func twoPhotosFillTheCard() {
+        let phone = DuplicateCardMetrics(innerWidth: 346, copyColumns: 2)
+        let pair = phone.fitting(photoCount: 2)
+        #expect(pair.gridColumns == 2)
+        #expect(pair.tile == 171)
+        #expect(pair.origin(at: 1).x + pair.tile <= 346)
+        #expect(phone.fitting(photoCount: 5) == phone)
+        // A pinched density below the count still wins.
+        let wide = DuplicateCardMetrics(innerWidth: 346, copyColumns: 1)
+        #expect(wide.fitting(photoCount: 4).gridColumns == 2)
     }
 
     /// AC-Q2: not scored yet → the file rule, and the chip says so honestly.

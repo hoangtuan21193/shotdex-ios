@@ -761,7 +761,7 @@
   },
   "PH_Duplicates.dc.html": {
    "h": 874,
-   "title": "iPhone · Duplicates 1/5 · Mở ra là danh sách ngay, không màn tóm tắt (v3 §7.2–7.4, 06b §3). Không còn dải Quick clean đầu danh sách (16/11): Quick Clean · N copies… và Suggested Picks · N photos… là hàng trong menu sort ⇅, chỉ hiện khi có việc; thẻ nhóm bắt đầu ngay dưới dòng trạng thái. Hàng lọc theo loại Exact · Similar · Burst (luôn chọn đúng một, không có All), thanh trên chỉ có hai nút: sort ⇅ (Easiest first · Most space · Newest · Oldest) và quét lại ↻ (Check Again); không ⋯, không Ignored, không Clear Selection, không \"~GB to free\" (22/10). Thẻ (thẻ chỉ có ảnh, luôn hiện đủ ảnh): chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh); thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
+   "title": "iPhone · Duplicates 1/5 · Mở ra là danh sách ngay, không màn tóm tắt (v3 §7.2–7.4, 06b §3). Không còn dải Quick clean đầu danh sách (16/11): Quick Clean · N copies… và Suggested Picks · N photos… là hàng trong menu sort ⇅, chỉ hiện khi có việc; thẻ nhóm bắt đầu ngay dưới dòng trạng thái. Hàng lọc theo loại Exact · Similar · Burst (luôn chọn đúng một, không có All), thanh trên chỉ có hai nút: sort ⇅ (Easiest first · Most space · Newest · Oldest) và quét lại ↻ (Check Again); không ⋯, không Ignored, không Clear Selection, không \"~GB to free\" (22/10). Thẻ (thẻ chỉ có ảnh, luôn hiện đủ ảnh): chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh); thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos · 16/11 (ảnh to): mỗi hàng min(mật độ, số ảnh) ô — nhóm 2 ảnh là 2 ô to; ô ≥110 có tên file + độ phân giải · dung lượng bên dưới",
    "w": 402,
    "x": 8676,
    "y": 560
@@ -783,7 +783,7 @@
   },
   "PH_DuplicatesPinched.dc.html": {
    "h": 874,
-   "title": "iPhone · Duplicates 3/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
+   "title": "iPhone · Duplicates 3/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được · 16/11 (ảnh to): mỗi hàng min(mật độ, số ảnh) ô — nhóm 2 ảnh là 2 ô to; ô ≥110 có tên file + độ phân giải · dung lượng bên dưới",
    "w": 402,
    "x": 9640,
    "y": 560

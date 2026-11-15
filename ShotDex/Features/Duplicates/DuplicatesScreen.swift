@@ -709,11 +709,18 @@ private struct DuplicateDecisionCard: View {
         // Only photos and the words on them (2026-10-21): no title, no
         // "to free", no notes, and every photo shown — no Show all. Every
         // photo the same size, in the group's own order (2026-11-10).
+        let metrics = metrics.fitting(photoCount: group.count)
         ZStack(alignment: .topLeading) {
             ForEach(Array(group.members.enumerated()), id: \.element.id) { index, member in
                 let origin = metrics.origin(at: index)
-                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, keeper: keeper)
-                    .offset(x: origin.x, y: origin.y)
+                VStack(alignment: .leading, spacing: DuplicateCardMetrics.infoGap) {
+                    tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, keeper: keeper)
+                    if metrics.showsInfo {
+                        info(member)
+                            .frame(width: metrics.tile, height: DuplicateCardMetrics.infoHeight, alignment: .topLeading)
+                    }
+                }
+                .offset(x: origin.x, y: origin.y)
             }
         }
         .frame(height: metrics.gridHeight(photoCount: group.count), alignment: .topLeading)
@@ -737,6 +744,29 @@ private struct DuplicateDecisionCard: View {
             return [String(localized: "Checking…", comment: "Duplicates: chip on the kept photo while the group is being compared")]
         }
         return Array(model.reasons(for: group, keeper: keeper).map(\.title).prefix(1))
+    }
+
+    /// File name over "4032 × 3024 · 2.3 MB" under a big tile — what tells
+    /// two copies apart at a glance (Immich does the same).
+    private func info(_ member: HashedPhoto) -> some View {
+        // A line the index does not know (a PhotoKit burst frame has no
+        // file name) is left out, not drawn as a dash.
+        let size = facts(member)
+        return VStack(alignment: .leading, spacing: 1) {
+            if let name = member.originalFilename, !name.isEmpty {
+                Text(name)
+                    .font(.footnote.weight(.semibold))
+                    .truncationMode(.middle)
+            }
+            if size != "—" {
+                Text(size)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .lineLimit(1)
+        .accessibilityHidden(true)
     }
 
     private func facts(_ member: HashedPhoto) -> String {

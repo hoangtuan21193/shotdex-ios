@@ -429,8 +429,16 @@ struct DuplicateCardMetrics: Equatable {
     static let minimumCardWidth: CGFloat = 400
     static let cardSpacing: CGFloat = 16
 
+    /// File name and size lines under a tile (Immich-style, user
+    /// 2026-11-16) only when the tile is at least this big.
+    static let infoMinimumTile: CGFloat = 110
+    static let infoGap: CGFloat = 6
+    static let infoHeight: CGFloat = 34
+    static let infoRowGap: CGFloat = 8
+
     let tile: CGFloat
     let copyColumns: Int
+    let innerWidth: CGFloat
 
     /// - Parameters:
     ///   - innerWidth: card width minus its two paddings.
@@ -441,21 +449,38 @@ struct DuplicateCardMetrics: Equatable {
         let usable = innerWidth - Self.copyGap * CGFloat(cells - 1)
         self.tile = max(24, (usable / CGFloat(cells)).rounded(.down))
         self.copyColumns = columns
+        self.innerWidth = innerWidth
+    }
+
+    /// The layout for one group: never more photos per row than it has, so
+    /// the common two-photo group fills the card with two big tiles
+    /// (user, 2026-11-16: "most duplicates are two photos — make them bigger").
+    func fitting(photoCount: Int) -> DuplicateCardMetrics {
+        let columns = min(copyColumns, max(1, photoCount - 1))
+        return columns == copyColumns ? self : DuplicateCardMetrics(innerWidth: innerWidth, copyColumns: columns)
     }
 
     /// Photos per row.
     var gridColumns: Int { copyColumns + 1 }
 
+    /// Whether each tile carries its file name and size underneath.
+    var showsInfo: Bool { tile >= Self.infoMinimumTile }
+
+    /// Vertical distance from one row of tiles to the next.
+    var rowStep: CGFloat {
+        showsInfo ? tile + Self.infoGap + Self.infoHeight + Self.infoRowGap : tile + Self.copyGap
+    }
+
     /// Top-left corner of the photo at `index`, left to right, row by row.
     func origin(at index: Int) -> CGPoint {
-        let step = tile + Self.copyGap
-        return CGPoint(x: CGFloat(index % gridColumns) * step, y: CGFloat(index / gridColumns) * step)
+        CGPoint(x: CGFloat(index % gridColumns) * (tile + Self.copyGap), y: CGFloat(index / gridColumns) * rowStep)
     }
 
     /// Height of a group's grid.
     func gridHeight(photoCount: Int) -> CGFloat {
         let rows = max(1, (photoCount + gridColumns - 1) / gridColumns)
-        return CGFloat(rows) * tile + CGFloat(rows - 1) * Self.copyGap
+        let last = showsInfo ? tile + Self.infoGap + Self.infoHeight : tile
+        return CGFloat(rows - 1) * rowStep + last
     }
 
     /// Card columns for a content width: one on compact, as many ≥ 400pt

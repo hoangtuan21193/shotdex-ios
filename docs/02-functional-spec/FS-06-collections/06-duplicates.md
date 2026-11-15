@@ -208,12 +208,17 @@ tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người
 Thẻ bo `r-lg`, đệm 12:
 
 - **Thẻ chỉ có ảnh và chữ nhỏ trên ảnh** (người dùng 2026-10-21): không tên loại, không *"~MB to free"*, không dòng ngày,
-  không dòng ghi chú dưới lưới (*"N kept: …"*, *"New photo since…"*). Loại nhóm đã có ở hàng lọc. VoiceOver vẫn đọc tên nhóm (*"Similar, 9 photos"*). Không có chữ nào ngoài ảnh;
+  không dòng ghi chú dưới lưới (*"N kept: …"*, *"New photo since…"*). Loại nhóm đã có ở hàng lọc. VoiceOver vẫn đọc tên nhóm (*"Similar, 9 photos"*). Ngoài ảnh chỉ có tên file và cỡ dưới ô to (2026-11-16);
   cổng "giữ ít nhất một" đã bỏ (2026-10-24, [06b §1](06b-duplicates-marks-merge-delete.md)).
 - **Mọi ảnh cùng một cỡ** (người dùng 2026-11-10: "không để ảnh keep to hơn nữa"): lưới ô vuông `N + 1` cột, khe 4,
   ảnh theo thứ tự cố định của nhóm, trái→phải (`DuplicateCardMetrics`; iPhone 3 ảnh/hàng, màn rộng 4). Ô bản giữ to 2×2
   trước đây đổi chỗ mỗi khi bản đề xuất đổi, chạm trúng ảnh khác ảnh định chạm. Trên bản giữ: nhãn **✓ Keep** và tối đa
   **1 chip lý do** (§6 hoặc D3).
+- **Nhóm ít ảnh thì ảnh to** (người dùng 2026-11-16: *"thường duplicate chỉ có 2 ảnh, làm ảnh to ra"*, tham khảo Immich):
+  số cột của một thẻ = **min(mật độ đang chọn, số ảnh)** — nhóm 2 ảnh là 2 ô nửa bề ngang (iPhone ~171pt thay vì 112),
+  nhóm nhiều ảnh giữ mật độ như trên. `DuplicateCardMetrics.fitting(photoCount:)`.
+- **Tên file và cỡ dưới ô** (theo Immich): ô ≥ 110pt thì dưới ô, cách 6, hai dòng: tên file (footnote đậm, cắt giữa)
+  và *"4032×3024 · 2.3 MB"* (caption, phụ). Hàng ô kế cách 8. Ô nhỏ hơn (đã pinch dày) không có dòng nào.
 - **Chú thích dưới mỗi bản sao** (D10): tối đa **2 dòng chữ trắng trên nền đen 55%** trong ảnh, góc dưới trái:
   - dòng 1 — điều bản này **thua** bản giữ, bằng lời, theo ưu tiên: *Eyes closed* · *Soft* · *Blown highlights* · *Smaller
     copy* · *Not edited* · *JPEG only* · *Still photo*;
