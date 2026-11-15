@@ -43,4 +43,5 @@ sim photo permission on 26.5 needs reset + one tap; screenshot before every tap 
 | 9 | AC-I4, I5, I6 | content checksum (SHA-256 stream) for exact candidates | todo | | |
 | 10 | AC-I1, I2, I3, I16 | feature-print candidate search in day×camera buckets, T_fp 0.3 | todo | | needs real device for final T_fp |
 | 12 | — | follow-up from review: `DuplicateQuality.better` is non-transitive (sharpness 0.9 ratio), keeper on a scored group depends on member order — pre-existing | todo | | anchor the sharpness band on the group max like `fileOrder` |
+| 13 | AC-I12 Mac | Mac Duplicates screen (own code): Keep/Trash pill + Suggested + focus ring + shortcut hint per board `MAC_Duplicates` | todo | | board already drawn 2026-11-15 |
 | 11 | AC-I7, I8, I9 | auto-check new photos after first Check; Low Power / thermal yield | todo | | |
