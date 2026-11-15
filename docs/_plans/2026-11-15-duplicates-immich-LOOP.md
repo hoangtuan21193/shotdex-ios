@@ -35,7 +35,7 @@ sim photo permission on 26.5 needs reset + one tap; screenshot before every tap 
 | 1 | AC-I10 | keeper tiebreak: size within 1% → more photo-info fields; chip *More photo info* | done | bae2725d | 3 reviews: pairwise 1% band was non-transitive → set-based `fileOrder`; info counts photo_metadata only. Chip not seen on sim (demo library has no size-tie group) |
 | 2 | AC-D9, D10 | inherit highest rating (iOS 27 Photos / pending queue below 27) | done | 90cd7f8b | 3 reviews: one mixed write, shared-library/gone ids refused + counted on the delete banner. Not run on a sim with a real delete (needs a rated demo group) |
 | 3 | AC-D11, D12 | inherit caption lines + keywords (iOS 27), failure alert | done | b0c6ddfc | 2 reviews: keeper caption only appended to, never rewritten; unread/changed-during-dialog keepers skipped + counted; paged reads; recount after banner. Failure is a banner line, not an alert. No real iOS 27 write on sim yet |
-| 4 | AC-I13, I14 | `PhotoDifference` (only differing fields, first 5 + Show N more) | todo | | |
+| 4 | AC-I13, I14 | `PhotoDifference` (only differing fields, first 5 + Show N more) | done | (this row) | 2 reviews: one basis — rows differ when they read differently (keywords case-folded, date to the second); settings via `MetadataFormatter`; lists via `.list` format; stars clamped |
 | 5 | AC-I13 UI | Compare: *What differs · N* button + sheet (iPhone/Duo), table under filmstrip (iPad) | todo | | |
 | 6 | AC-I12 | Keep/Trash pill replaces the mark ring; *Suggested* chip | todo | | |
 | 7 | AC-I11 | *Suggested picks* band for Similar (scoreGap ≥ 0.2, A2, review sheet) | todo | | |

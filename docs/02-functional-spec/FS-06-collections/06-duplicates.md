@@ -486,8 +486,9 @@ Immich: liệt kê thông tin từng bản, **chỉ các dòng khác nhau**, 5 d
   cho Duplicates, làm khi có): mỗi cột một ảnh đang ở A/B, mỗi dòng một trường **khác nhau
   giữa A và B**.
 - Trường theo thứ tự: ngày chụp · dung lượng · kích thước · định dạng (RAW/HEIC/JPEG/…) · máy · ống kính · thông số chụp ·
-  toạ độ (có/không + tên nơi) · album · sao · keyword · đã chỉnh · nguồn (WhatsApp, bản xuất của…). So sánh sau khi chuẩn
-  hoá (ngày đến giây, khẩu 1 số lẻ, toạ độ 4 số lẻ — như Immich).
+  toạ độ (có/không + tên nơi) · album · sao · keyword · đã chỉnh · nguồn (WhatsApp, bản xuất của…). Hai giá trị khác nhau khi **đọc** khác nhau
+  trên màn (ngày so đến giây; khẩu f/1.8; dung lượng theo MB; toạ độ = có/không + tên nơi; keyword gấp hoa-thường) — cùng
+  ý Immich làm tròn trước khi so, nhưng một gốc duy nhất: không có dòng nào hai bên chữ giống hệt.
 - 5 dòng đầu, còn lại sau nút *Show 3 more* / *Show less*. Không dòng nào khác: *"Same photo info"*.
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): Compare của thư viện ([FS-01.08](../FS-01-library/08-compare.md)) dùng cùng `PhotoCompareScreen` — có hiện
   bảng ở đó không. Đề xuất **có** (một màn, một hành vi).
@@ -523,7 +524,7 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
 | AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
-| AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | ⚠️ chưa có — `PhotoDifferenceTests.onlyDifferingFieldsAreListed` + ảnh sim |
-| AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | ⚠️ chưa có — `PhotoDifferenceTests.firstFiveThenShowMore` |
+| AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | `PhotoDifferenceTests.onlyDifferingFieldsAreListed` ✅ + ảnh sim ⚠️ chưa có (row 5) |
+| AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | `PhotoDifferenceTests.firstFiveThenShowMore` ✅ |
 | AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | ⚠️ chưa có — `UIKeyCommand` test trong `DuplicatesKeyCommandsTests` + ảnh sim iPad |
 | AC-I16 | (§14.1, đường hỏng) đang đề cử bằng print trên 30.000 ảnh | chạm *Cancel* | dừng ≤ 0.5 s; print đã đọc được giữ; danh sách cũ không đổi | ⚠️ chưa có — `DuplicateQualityPassTests` mở rộng |
