@@ -2,7 +2,7 @@
 
 `FS-06.06` · `Features/Duplicates/` · `Features/Bursts/` · `Domain/Duplicates/` · bảng `perceptual_hash` · `duplicate_groups`
 · `duplicate_quality` · `duplicate_review` · test `DuplicateGrouperTests`, `DuplicateSeriesTests`, `DuplicateReviewTests`,
-`DuplicateQualityTests`, `DuplicateReviewStoreTests` · cập nhật 2026-10-17 (v3)
+`DuplicateQualityTests`, `DuplicateReviewStoreTests` · cập nhật 2026-10-17 (v3) · **bổ sung 2026-11-15 từ Immich: §14** (chưa code)
 
 **Một câu:** tìm ảnh trùng và gần giống, **nói cho người chụp biết tấm nào tốt hơn và vì sao**, và để họ tự chọn tấm nào
 phải đi — nhanh với phần chắc chắn, kỹ với phần cần mắt người.
@@ -22,7 +22,7 @@ Màn chọn khung dùng chung: §8 (thay phần màn hình của [FS-02.05](../F
 - **Mỗi nhóm luôn còn ít nhất một ảnh không bị đánh dấu** ([06b §1](06b-duplicates-marks-merge-delete.md)).
 - **Không ghi gì vào Photos trước hộp xác nhận xoá của hệ thống** ([06b §3](06b-duplicates-marks-merge-delete.md)).
 - **Ảnh nguyên liệu không phải rác.** Bracket và focus stack được gọi đúng tên, có nút ghép, không có nút đỏ (§5).
-- **Mở màn chỉ đọc cache** — không băm lại, không gom lại. Không tự quét khi thư viện đổi; ngoại lệ: chưa từng quét.
+- **Mở màn chỉ đọc cache** — không băm lại, không gom lại. **Lượt đầu** chỉ chạy khi người dùng chạm *Check Library*; sau lượt đầu, ảnh mới/đổi được tự kiểm sau mỗi lô index (§14.3, người dùng 2026-11-15).
 - Chỉ ảnh, **không video**.
 - Mọi phân tích chạy trên máy; không ảnh nào rời máy.
 
@@ -34,7 +34,7 @@ một dòng **rỗng**, chỉ thử lại ở lượt quét được phép dùng
 
 ## 3. Lượt quét
 
-**Không bao giờ tự chạy** (người dùng 2026-11-10: lượt quét tự động lần đầu cho quá nhiều nhóm sai). Mở màn chỉ đọc kết
+**Lượt đầu không bao giờ tự chạy** (người dùng 2026-11-10: lượt quét tự động lần đầu cho quá nhiều nhóm sai); sau lượt đầu, ảnh mới tự kiểm theo §14.3 (2026-11-15). Mở màn chỉ đọc kết
 quả đã lưu; lần đầu là *"Not Checked Yet"* + **Check Library**. Lượt kiểm tra là **ba bước**, mỗi bước một vạch tiến độ
 trong ô trạng thái dưới hàng lọc: **Step 1 of 3 · Reading photos** (N of M) → **Step 2 of 3 · Grouping** (vạch chạy) →
 **Step 3 of 3 · Comparing matches** (N of M · list updates when done). Mọi việc nặng chạy ngoài main thread; tiến độ đẩy
@@ -221,7 +221,7 @@ Thẻ bo `r-lg`, đệm 12:
   - thông số chụp chỉ khi **khác nhau trong nhóm**: *−2 EV*, *35mm*, *1/60 s*.
   - Không có gì để nói → không có chú thích (ô sạch). Pixel và MB chỉ ở màn xem to.
   - Chữ **không đỏ** (đỏ chỉ nghĩa là "ảnh sẽ mất").
-- **Chạm ảnh = mở to** (D7): mở Compare của nhóm tại ảnh đó (§7.6). **Vòng 26pt ở góc trên phải (vùng chạm 44)** = đánh dấu / bỏ dấu:
+- **Chạm ảnh = mở to** (D7): mở Compare của nhóm tại ảnh đó (§7.6). *(2026-11-15: vòng dưới đây được thay bằng viên Keep/Trash — §14.6.)* **Vòng 26pt ở góc trên phải (vùng chạm 44)** = đánh dấu / bỏ dấu:
   có dấu thì đĩa thùng rác trắng trên đỏ, viền đỏ 3pt, ảnh mờ còn 45% (như v2).
 - Menu giữ lâu: **Keep just this one** · **Remove** / **Don't remove** · **Compare** · — · **Keep all** (giữ cả nhóm phiên
   này; đang giữ thì ghi *Keeping all*, chạm để bỏ) · **Not duplicates** (không bao giờ hiện lại).
@@ -380,3 +380,147 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-P2 | (A5) quyền bị từ chối | mở Duplicates | banner *ShotDex can't see your photos* + *Settings*; *Check Again* mờ kèm lý do; không lượt quét nào chạy | ⚠️ chưa có |
 | AC-P3 | (A4) quét 38.000 ảnh, sau lô đầu đã có 40 nhóm | nhìn màn trong lúc quét | *Checking 1,200 of 38,000 · 40 found so far*; 40 nhóm đã mở được; *Cancel* màu accent | ⚠️ chưa có |
 | AC-P4 | (A4) máy tắt mạng, 148 ảnh chỉ có trên iCloud | quét xong | dòng *148 photos only in iCloud — will check on Wi-Fi*; không yêu cầu mạng nào | `PerceptualHashStoreTests.unreadableThumbnailsAreCounted` ✅ (số đếm); ảnh sim ⚠️ chưa có |
+
+## 14. Bổ sung 2026-11-15 — học từ Immich
+
+Nguồn: intent [duplicates-immich-detection](../../_intents/2026-11-15-duplicates-immich-detection.md) và
+[duplicates-immich-review](../../_intents/2026-11-15-duplicates-immich-review.md) (người dùng duyệt 2026-11-15, nhận mọi
+phương án mặc định). Mã Immich đọc ở commit `e5d6eb7`. Phần thừa hưởng nằm ở [06b §2](06b-duplicates-marks-merge-delete.md).
+Board phải vẽ trước khi code (luật canvas): `*_Duplicates` (nhãn Keep/Trash, dải Similar), `*_DuplicatesCompare`
+(bảng *What differs*), trên cả 4 canvas, sáng + tối.
+
+### 14.1 Feature print đề cử, không chỉ xác nhận
+
+Immich: mỗi ảnh một vector CLIP; với từng ảnh lấy **64 vector gần nhất** cùng loại, giữ những cái cách ≤ **0.01** (cosine).
+ShotDex không có CLIP; dùng feature print Vision rev 2 đã có (§4a).
+
+- Thêm một nguồn đề cử **thứ hai** cho Similar: hai ảnh có feature print cách nhau ≤ **T_fp** là ứng viên, dù dấu vân tay
+  lệch bao nhiêu bit. Mọi luật chặn khác của Similar giữ nguyên (tiêu cự ±10%, ảnh chụp màn hình chỉ với ảnh chụp màn hình,
+  liên kết đầy đủ ≤ 0.4 của §4a) — riêng luật **tỷ lệ khung ±2%** được nới cho ứng viên từ feature print, để bản **cắt**
+  vào được nhóm.
+- **Không so mọi cặp** trên 55k ảnh: chia **thùng** theo ngày chụp (±1 ngày) × model máy; so mọi cặp trong thùng; mỗi ảnh
+  giữ tối đa **64** ứng viên gần nhất (như Immich). Ảnh không có ngày chụp: một thùng riêng theo model.
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất) — **T_fp = 0.3** để bắt đầu, spike chốt số cuối. Số đo §4a: bản lưu lại 0.08–0.15, cắt 6% + 0.25 EV 0.16–0.23, ảnh khác nhau
+  ≥ 0.64. Đề xuất bắt đầu **0.3**, chốt bằng spike trên bộ fixture tự sinh (cắt 10/20/30%, B&W, film look, xuất lại 1280px)
+  + máy thật; ghi số vào đây. Simulator không đo được (print hằng, §4a).
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): **feature print cho cả thư viện**. Hôm nay print chỉ đọc cho ảnh đã nằm trong nhóm (§3 bước 3). Đề cử
+  bằng print cần print của **mọi** ảnh — đọc 512px cho 55k ảnh, cỡ 20 ms/ảnh chấm + thời gian lấy ảnh (≈ 30–60 phút trên
+  iPhone, chưa đo). Phương án: (a) đọc print ở **bước 1** cùng dấu vân tay, chỉ cho ảnh chưa có, nhường theo NF-01 luật 5
+  — lượt đầu chậm hơn nhiều; (b) chỉ đọc cho ảnh có cùng thùng ngày × máy với ≥ 1 ảnh khác (bỏ ảnh đơn lẻ trong ngày);
+  (c) chỉ cho ảnh **mới** từ nay. Đề xuất **(b)**.
+- Bộ nhớ: print giữ dạng nén trong `duplicate_quality.featurePrint`; mỗi lần chỉ giải nén **một thùng**
+  ([NF-02](../../04-non-functional-design/NF-02-memory-and-resources.md)).
+
+### 14.2 Exact chứng minh bằng checksum
+
+Immich: SHA-1 của file, khoá duy nhất (chủ, checksum). ShotDex hôm nay đoán Exact bằng hash + kích thước + giây + dung lượng
++ tên file (§4).
+
+- Thêm **checksum SHA-256 của dữ liệu ảnh gốc** (CryptoKit, đọc luồng qua `PHAssetResourceManager`, không giữ cả file trong
+  RAM). Hai ảnh có **checksum bằng nhau** là Exact — **bất kể tên file và giờ chụp** (AirDrop đổi tên `IMG_1234.HEIC` →
+  `photo.heic` vẫn là Exact).
+- Chỉ băm **ứng viên**: ảnh cùng dấu vân tay, cùng kích thước pixel và **cùng dung lượng đúng từng byte** — không băm cả
+  thư viện. Kết quả lưu theo id ảnh + ngày sửa (bảng kết quả quét, không phải dữ liệu người dùng — §10).
+- Ảnh gốc chỉ có trên iCloud: chỉ băm khi lượt quét được dùng mạng (cùng chính sách index); không thì Exact vẫn theo luật
+  §4 như hôm nay.
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): nhóm Exact **chưa băm được** (gốc trên iCloud, không mạng) có vào **Quick clean** không. (a) vào như hôm nay
+  (luật §4 đã chặt); (b) không vào, chờ băm. Đề xuất **(a)** — Quick clean vẫn qua sheet xem trước và hộp xác nhận hệ thống.
+- Hai ảnh luật §4 gọi là Exact nhưng **checksum khác nhau** → vẫn Exact (cùng pixel, khác metadata — vd một bản đã sửa
+  ngày trong Photos) — checksum chỉ **thêm** Exact, không bớt.
+
+### 14.3 Tự kiểm ảnh mới
+
+Immich: mỗi ảnh mới được kiểm ngay sau khi có vector; mỗi ảnh có mốc `duplicatesDetectedAt`.
+
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): **trái §1 và §3** — *"Không bao giờ tự chạy"* (người dùng 2026-11-10: lượt quét tự động **lần đầu** cho quá
+  nhiều nhóm sai). Đề xuất: lượt **đầu tiên** vẫn chỉ chạy khi chạm **Check Library**; **sau** lượt đầu, mỗi lô index xong
+  (ảnh mới hoặc ngày sửa đổi) thì app tự băm + so **chỉ các ảnh đó** với thư viện (thùng §14.1, bảng dấu vân tay), gom
+  lại nhóm bị chạm, ghi cache. §1 và §3 đã sửa theo.
+- Không tự chạy khi: Low Power Mode, máy nóng (`.serious` trở lên), đang trong editor/video studio, chưa từng Check.
+- Mở Duplicates vẫn **chỉ đọc cache**; ảnh mới đã nằm sẵn trong nhóm. Dòng trạng thái §7.3: *"Checked 2 min ago"* tính cả
+  lượt tự động. Số ở Utilities (§7.1) cập nhật theo cache.
+- Thứ tự đứng yên (§7.3) giữ: nhóm mới nối cuối; nhóm cũ có thêm ảnh giữ chỗ.
+
+### 14.4 Bản giữ: hoà thì chọn bản đủ thông tin hơn
+
+Immich: file lớn nhất → **nhiều trường EXIF khác rỗng nhất**. ShotDex D3: đã chỉnh → favorite → file lớn hơn → nhiều pixel hơn.
+
+- D3 mới: đã chỉnh → favorite → file lớn hơn (**lệch ≤ 1% coi là bằng**) → **nhiều trường thông tin hơn** → nhiều pixel hơn.
+- "Trường thông tin" = các cột index trong `photo_metadata` khác NULL: hãng, model, ống kính, tiêu cự, khẩu, tốc độ, ISO,
+  bù sáng, ngày chụp EXIF, toạ độ, phần mềm. Đếm, không cân trọng số.
+- Chip lý do khi tiêu chí này quyết: *More photo info* (§6 bảng nhãn; không thêm chip nếu tiêu chí trước đã quyết).
+
+### 14.5 Dọn nhanh cho Similar
+
+Immich: *Deduplicate all* áp bản giữ đề xuất cho mọi nhóm sau một lần xác nhận. ShotDex: Quick clean chỉ Exact (§7.2).
+
+- Khi bộ lọc là **Similar**: dải cùng hình học Quick clean (§7.2), chữ *"Suggested picks"* · *"84 photos · 610 MB"* ·
+  *"Keeps the best of each group. Favorites, edits and album photos stay."* · **Review…**.
+- Nhóm vào dải chỉ khi bản giữ **được quyết rõ**: đã chấm (§6) và khoảng cách điểm giữa bản giữ và bản kế ≥ ngưỡng của
+  *Easiest first* (A7), **hoặc** chưa chấm nhưng D3 quyết ở tiêu chí *đã chỉnh* / *favorite* / *file lớn hơn > 1%*. Nhóm
+  hoà ở mọi tiêu chí: không vào.
+- Ngưỡng khoảng cách điểm: ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất) **0.2** (thang 0–1 của `scoreGap`), chốt sau khi xem phân bố trên máy thật.
+- A2 giữ nguyên; sheet xem trước, *Select N photos*, thanh xoá, hộp xác nhận hệ thống như §7.2 — **chưa xoá gì** khi chạm Review.
+- Burst không có dải (chọn khung là việc của mắt người, §8).
+
+### 14.6 Nhãn Keep / Trash trên từng ô
+
+Immich: mỗi bản có nút bật **Keep / To trash** bằng chữ.
+
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất); board vẽ trước khi code: thay **vòng 26pt góc trên phải** (§7.4, D7) bằng **viên chữ** ở góc dưới phải ô: *Keep*
+  (nền kính, chữ trắng) / *Trash* (nền đỏ, chữ trắng, ảnh mờ 45% như hôm nay); chạm viên = đổi; vùng chạm ≥ 44×44.
+  Chú thích D10 đang ở góc **dưới trái** — viên chiếm góc dưới phải, chú thích co còn bề ngang ô − viên − 8.
+  Ô nhỏ (mật độ 5–6 ảnh/hàng, ô < 64pt): viên thu còn icon (✓ / 🗑) để chữ không bị cắt. Board quyết trước khi code.
+- Mở màn **không** có ô nào *Trash* (§1 "không tự chọn hộ" giữ nguyên) — mọi ô *Keep* cho tới khi người dùng chạm.
+- Nhãn **✓ Keep** trên bản giữ đề xuất (§7.4) đổi thành chip *Suggested* để khỏi trùng chữ với viên *Keep*.
+- Áp cho thẻ Similar, Exact, Burst (thẻ Burst chạm ảnh vẫn mở Choose frames) và bộ nguyên liệu.
+
+### 14.7 Bảng *What differs* trong Compare
+
+Immich: liệt kê thông tin từng bản, **chỉ các dòng khác nhau**, 5 dòng đầu rồi *Show N more*.
+
+- Compare (§7.6) thêm bảng dưới hai ô (iPhone: kéo sheet lên từ dưới filmstrip; iPad/Duo trong: cột phải 320pt khi bề
+  ngang ≥ 1000pt, còn lại như iPhone; Mac: panel Info bên phải): mỗi cột một ảnh đang ở A/B, mỗi dòng một trường **khác nhau
+  giữa A và B**.
+- Trường theo thứ tự: ngày chụp · dung lượng · kích thước · định dạng (RAW/HEIC/JPEG/…) · máy · ống kính · thông số chụp ·
+  toạ độ (có/không + tên nơi) · album · sao · keyword · đã chỉnh · nguồn (WhatsApp, bản xuất của…). So sánh sau khi chuẩn
+  hoá (ngày đến giây, khẩu 1 số lẻ, toạ độ 4 số lẻ — như Immich).
+- 5 dòng đầu, còn lại sau nút *Show 3 more* / *Show less*. Không dòng nào khác: *"Same photo info"*.
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): Compare của thư viện ([FS-01.08](../FS-01-library/08-compare.md)) dùng cùng `PhotoCompareScreen` — có hiện
+  bảng ở đó không. Đề xuất **có** (một màn, một hành vi).
+
+### 14.8 Phím tắt (iPad có bàn phím, Mac, Duo có bàn phím)
+
+Immich: A giữ hết · D bỏ hết · ⇧C xong nhóm · ←/→ nhóm trước/sau.
+
+- Danh sách có **nhóm đang chọn** (viền accent 2pt quanh thẻ, chỉ hiện khi đã bấm phím lần đầu):
+  ↑/↓ nhóm trước/sau · **K** đặt mọi ô của nhóm là Keep (= *Keep all*) · **R** đặt mọi bản **trừ bản giữ đề xuất** là
+  Trash (A2 vẫn chặn) · **Space** mở Compare của nhóm · **⌘⌫** Delete N (như thanh xoá, vẫn hộp xác nhận hệ thống).
+- Trong Compare: ←/→ đổi ảnh ở B · **K** / **⌫** Keep / Delete ảnh B · Esc đóng.
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): phím **một chữ không modifier** (như Immich/Photos Mac) hay bắt buộc ⌘. Đề xuất một chữ (màn không có ô
+  gõ chữ); mọi phím có trong bảng ⌘-giữ (`UIKeyCommand` có `discoverabilityTitle`). Chữ khác Immich (K/R thay A/D) vì
+  *Keep*/*Remove* là chữ trên màn (§11).
+
+### 14.9 Tiêu chí nghiệm thu (§14)
+
+Fixture tự sinh như §13. Feature print không đo được trên simulator (§4a): AC-I1/I2 chứng minh bằng test với print giả lập
++ một lần chạy máy thật.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-I1 | (§14.1) ảnh gốc 4032×3024 và bản **cắt 20%** của nó (3226×2419, tỷ lệ 4:3 → 4:3 cắt lệch tâm, dấu vân tay lệch 18 bit), print cách 0.22, cùng ngày, cùng máy | gom nhóm | hai ảnh một nhóm Similar | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintNominatesACrop` (print giả lập) + máy thật |
+| AC-I2 | (§14.1) hai ảnh khác cảnh cùng ngày cùng máy, print cách 0.64, dấu vân tay lệch 30 bit | gom nhóm | không chung nhóm | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintKeepsDifferentScenesApart` |
+| AC-I3 | (§14.1) 3.000 ảnh trong 1 ngày, 1 máy; 52.000 ảnh rải 4 năm | đề cử bằng print | số cặp được so ≤ 3.000×2.999/2 + tổng các thùng khác (không có cặp nào khác ngày > 1); mỗi ảnh ≤ 64 ứng viên; RAM đỉnh của bước ≤ 60 MB | ⚠️ chưa có — `FeaturePrintCandidatesTests.bucketsBoundThePairs` + Instruments |
+| AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | ⚠️ chưa có — `DuplicateGrouperTests.equalChecksumIsExactWhateverTheName` + `ContentChecksumTests.streamsWithoutLoadingTheFile` |
+| AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa có — `ContentChecksumTests.iCloudOnlyIsSkippedOffline` |
+| AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | ⚠️ chưa có — `ContentChecksumTests.onlyCandidatesAreHashed` |
+| AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ⚠️ chưa có — `DuplicateAutoCheckTests.newCopiesJoinWithoutATap` + route `duplicates-autocheck.json` |
+| AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ⚠️ chưa có — `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck` |
+| AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
+| AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | ⚠️ chưa có — `DuplicateReviewTests.fullerInfoBreaksASizeTie` |
+| AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
+| AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44×44 trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
+| AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | ⚠️ chưa có — `PhotoDifferenceTests.onlyDifferingFieldsAreListed` + ảnh sim |
+| AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | ⚠️ chưa có — `PhotoDifferenceTests.firstFiveThenShowMore` |
+| AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | ⚠️ chưa có — `UIKeyCommand` test trong `DuplicatesKeyCommandsTests` + ảnh sim iPad |
+| AC-I16 | (§14.1, đường hỏng) đang đề cử bằng print trên 30.000 ảnh | chạm *Cancel* | dừng ≤ 0.5 s; print đã đọc được giữ; danh sách cũ không đổi | ⚠️ chưa có — `DuplicateQualityPassTests` mở rộng |

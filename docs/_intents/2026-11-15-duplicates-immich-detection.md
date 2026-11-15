@@ -5,9 +5,9 @@
 | Tác giả | Claude (from the user's request, 2026-11-15) |
 | Ngày | 2026-11-15 |
 | Trạng thái | accepted (user, 2026-11-15 — every proposed default in Open questions accepted) |
-| Tiến độ | **chưa làm** (2026-11-15) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-15) — spec FS-06.06 §14.1–14.3, 10 AC (AC-I1…I9, I16) |
 | Nguồn | so sánh với Immich (self-host, mã nguồn mở) — người dùng chọn cả 3 ý phát hiện |
-| Spec sinh ra từ đây | (điền khi sang Design) — dự kiến sửa FS-06.06 `docs/02-functional-spec/FS-06-collections/06-duplicates.md` |
+| Spec sinh ra từ đây | [FS-06.06 §14](../02-functional-spec/FS-06-collections/06-duplicates.md) |
 
 Companion intent: [`2026-11-15-duplicates-immich-review.md`](2026-11-15-duplicates-immich-review.md) (resolve rules + UI).
 

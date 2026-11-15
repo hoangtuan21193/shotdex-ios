@@ -5,9 +5,9 @@
 | Tác giả | Claude (from the user's request, 2026-11-15) |
 | Ngày | 2026-11-15 |
 | Trạng thái | accepted (user, 2026-11-15 — every proposed default in Open questions accepted) |
-| Tiến độ | **chưa làm** (2026-11-15) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-15) — spec FS-06.06 §14.4–14.8 + 06b §2, 10 AC (AC-I10…I15, AC-D9…D12) |
 | Nguồn | so sánh với Immich (self-host, mã nguồn mở) — người dùng chọn 3 ý resolve + 3 ý giao diện |
-| Spec sinh ra từ đây | (điền khi sang Design) — dự kiến sửa FS-06.06 `docs/02-functional-spec/FS-06-collections/06-duplicates.md` + boards trên 4 canvas |
+| Spec sinh ra từ đây | [FS-06.06 §14](../02-functional-spec/FS-06-collections/06-duplicates.md) · [06b §2](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md) |
 
 Companion intent: [`2026-11-15-duplicates-immich-detection.md`](2026-11-15-duplicates-immich-detection.md) (how groups are found).
 

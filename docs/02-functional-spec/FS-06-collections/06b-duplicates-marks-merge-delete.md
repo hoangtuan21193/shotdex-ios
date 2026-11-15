@@ -38,6 +38,19 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
   - **toạ độ**: nếu bản giữ không có và một bản bị xoá có;
   - **ngày chụp sớm nhất**: **chỉ ở Exact** (cùng khoảnh khắc thật; từ 2026-10-21 nhóm có bản nhỏ là Similar nên không còn kế thừa ngày); Similar / Burst không
     chép ngày.
+  - **sao** (2026-11-15, theo Immich): sao **cao nhất** trong nhóm, nếu cao hơn sao của bản giữ. iOS 27+: ghi sao Photos
+    ([FS-01.12](../FS-01-library/12-rating-and-flags.md)); iOS 17–26: ghi vào hàng chờ sao (`pending_photo_rating`) như khi
+    người dùng tự chấm;
+  - **caption** (2026-11-15, iOS 27+): các dòng caption của mọi bản, **giữ thứ tự, bỏ dòng trùng** (so sau khi cắt khoảng
+    trắng), bản giữ đứng đầu ([FS-02.07](../FS-02-photo-detail/07-caption-and-keywords.md));
+  - **keyword** (2026-11-15, iOS 27+): hợp mọi keyword, gộp trùng theo khoá gấp hoa-thường, giữ cách viết của bản giữ.
+  - Dưới iOS 27 app không ghi được caption/keyword Photos: bỏ qua, **không** báo lỗi (người dùng không thấy chúng trong
+    app ở bản iOS đó). ✅ Đã quyết (người dùng 2026-11-15): **không** ghi — câu hỏi cũ: có nên ghi một dòng *"Captions and keywords stay on the deleted copy"* ở viên kính thanh
+    xoá khi bản bị xoá có caption/keyword và máy dưới iOS 27 không — app không đọc được chúng dưới 27 nên không biết
+    chắc; đề xuất **không**.
+  - **Không đổi**: ẩn (ảnh ẩn không bao giờ vào nhóm — fetch không lấy ảnh ẩn, nên câu hỏi "ẩn" của intent không phát sinh);
+    luật toạ độ giữ nguyên ("bản giữ không có thì lấy") — **không** theo Immich ("chỉ khi mọi bản cùng toạ độ"), người dùng
+    2026-11-15.
 - Nhóm còn ≥ 2 bản không mang dấu: không có "bản giữ" duy nhất → không thừa hưởng gì (người dùng đang giữ nhiều khung).
 - Thừa hưởng và xoá đi **trong cùng một khối thay đổi** của thư viện, sau **một** hộp xác nhận của hệ thống: người dùng huỷ
   → không có gì được ghi, không album nào đổi. Hỏng → không gì đổi, alert *"Couldn't delete N photos"* + lý do của lỗi
@@ -98,3 +111,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 | AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | iPad 13 dọc: cột 492pt ✅ (route `duplicates-v3-frames-ipad.json`); ngang 437pt, Duo trong, iOS 18.6 ⚠️ chưa đo |
 | AC-W2 | (D2, sửa 2026-10-18) có nhóm bản sao chưa quyết | mở Duplicates trên iPad ngang | dải Quick clean ≤ 720pt giữa màn, trên các cột thẻ | ⚠️ chưa chụp |
 | AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |
+| AC-D9 | (2026-11-15) nhóm Exact {K sao 2; C1 sao 5; C2 sao 0}; iOS 27 | đánh dấu C1, C2, Delete, xác nhận | K sao 5 trong Photos | ⚠️ chưa có — `DuplicateInheritanceTests.keeperTakesTheHighestRating` |
+| AC-D10 | như AC-D9, iOS 18.6 | như AC-D9 | `pending_photo_rating` của K = 5; không lỗi | ⚠️ chưa có — `DuplicateInheritanceTests.belowIOS27RatingGoesToThePendingQueue` |
+| AC-D11 | (iOS 27) K caption *"Hội An\nfilm"*; C caption *"film\nKodak Gold"*; K keyword *Travel*; C keyword *travel*, *Kodak* | đánh dấu C, Delete, xác nhận | K caption *"Hội An\nfilm\nKodak Gold"*; keyword *Travel*, *Kodak* (không *travel* thứ hai) | ⚠️ chưa có — `DuplicateInheritanceTests.captionLinesAndKeywordsAreMerged` |
+| AC-D12 | (iOS 27) như AC-D11, ghi caption bị Photos từ chối | xoá xong | C trong Recently Deleted; alert *"Couldn't update 1 kept photo"* + lý do; album/favorite/sao đã ghi vẫn giữ | ⚠️ chưa có — `DuplicateInheritanceTests` với store giả lỗi |
