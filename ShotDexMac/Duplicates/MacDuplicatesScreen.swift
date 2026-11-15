@@ -7,12 +7,14 @@ import SwiftUI
 /// last check in the toolbar, sort / Check Again / the selection / Delete
 /// beside it, the kind filter and one fixed-height status line over a grid
 /// of cards. Every photo in a card is the same size (user, 2026-11-10); the
-/// kept one carries a Keep badge. A click on a photo marks it; the right
+/// suggested one carries "Suggested", each photo a Keep / Trash pill. A click on a photo marks it; the right
 /// click has Keep Just This One, Keep All and Not Duplicates.
 struct MacDuplicatesScreen: View {
     @Environment(MacDependencies.self) private var dependencies
     @State private var showsQuickClean = false
     @State private var containerWidth: CGFloat = 0
+    /// The group ↑/↓ moves to (FS-06.06 §14.8); nil until the first arrow.
+    @State private var keyboardGroupId: String?
 
     private var model: DuplicatesModel { dependencies.duplicates }
 
@@ -44,6 +46,7 @@ struct MacDuplicatesScreen: View {
             model.startScoring()
         }
         .onDisappear { model.stopScoring() }
+        .onChange(of: model.filter) { keyboardGroupId = nil }
         .sheet(isPresented: $showsQuickClean) {
             MacQuickCleanSheet(model: model)
         }
@@ -135,9 +138,86 @@ struct MacDuplicatesScreen: View {
                 .frame(maxWidth: 520, alignment: .leading)
                 .frame(height: 44, alignment: .top)
         }
+        .overlay(alignment: .topTrailing) {
+            // Wide windows only: the hint must never sit on the picker.
+            if !model.sortedGroups.isEmpty, containerWidth >= 900 { shortcutHint }
+        }
         .padding(.horizontal, Self.margin)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: Keyboard (§14.8)
+
+    /// ↑ ↓ Group · K Keep all · R Trash others · ⌘⌫ Delete, in key caps on
+    /// the filter row (board `MAC_Duplicates`).
+    private var shortcutHint: some View {
+        HStack(spacing: 10) {
+            hint(["⌥↑", "⌥↓"], String(localized: "Group", comment: "Mac Duplicates shortcut hint: arrows move between groups"))
+            hint(["⌥K"], String(localized: "Keep all", comment: "Mac Duplicates shortcut hint"))
+            hint(["⌥R"], String(localized: "Trash others", comment: "Mac Duplicates shortcut hint: mark all but the suggested photo"))
+            hint(["⌘⌫"], String(localized: "Delete", comment: "Mac Duplicates shortcut hint"))
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
+        .padding(.top, 4)
+        .accessibilityHidden(true)
+    }
+
+    private func hint(_ keys: [String], _ title: String) -> some View {
+        HStack(spacing: 4) {
+            ForEach(keys, id: \.self) { key in
+                Text(key)
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 4)
+                    .frame(minWidth: 16, minHeight: 16)
+                    .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(MacTheme.separator))
+            }
+            Text(title)
+        }
+    }
+
+    /// The iPad's keys (§14.8) with ⌥ held: on the Mac the sidebar list has
+    /// the focus, and a bare arrow moves its selection while a bare letter
+    /// jumps to the row it starts (R → RAW). Read at the moment of the press.
+    private func keyboardCommands(proxy: ScrollViewProxy) -> some View {
+        func current() -> DuplicateGroup? { model.sortedGroups.first { $0.id == keyboardGroupId } }
+        func move(_ step: Int) {
+            let groups = model.sortedGroups
+            guard !groups.isEmpty else { return }
+            let index = current().flatMap { groups.firstIndex(of: $0) }.map { $0 + step } ?? 0
+            let next = groups[min(max(index, 0), groups.count - 1)]
+            keyboardGroupId = next.id
+            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(next.id, anchor: .center) }
+        }
+        /// The selected group; a first K or R only selects (ring first, so a
+        /// key never marks a group the user did not see chosen).
+        func target() -> DuplicateGroup? {
+            if let group = current() { return group }
+            move(0)
+            return nil
+        }
+        return Group {
+            if !showsQuickClean, model.notice == nil, !model.isBusy {
+                Button(String(localized: "Next Group", comment: "Duplicates keyboard shortcut: move to the next group")) { move(1) }
+                    .keyboardShortcut(.downArrow, modifiers: .option)
+                Button(String(localized: "Previous Group", comment: "Duplicates keyboard shortcut: move to the previous group")) { move(-1) }
+                    .keyboardShortcut(.upArrow, modifiers: .option)
+                Button(String(localized: "Keep All in Group", comment: "Duplicates keyboard shortcut: keep every photo of the selected group")) {
+                    guard let group = target(), !model.isKeptAll(group) else { return }
+                    model.toggleKeepAll(group)
+                }
+                .keyboardShortcut("k", modifiers: .option)
+                Button(String(localized: "Move Others to Trash", comment: "Duplicates keyboard shortcut: mark every photo of the selected group but the suggested one")) {
+                    guard let group = target() else { return }
+                    model.markOthers(in: group)
+                }
+                .keyboardShortcut("r", modifiers: .option)
+            }
+        }
+        .opacity(0)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 
     // MARK: List
@@ -148,17 +228,20 @@ struct MacDuplicatesScreen: View {
             emptyState
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ScrollView {
-                VStack(spacing: Self.cardSpacing) {
-                    if model.offersQuickClean, case .kind(let kind) = model.filter, kind.isCopy {
-                        MacQuickCleanBand(model: model) { showsQuickClean = true }
-                            .frame(maxWidth: 720)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: Self.cardSpacing) {
+                        if model.offersQuickClean, case .kind(let kind) = model.filter, kind.isCopy {
+                            MacQuickCleanBand(model: model) { showsQuickClean = true }
+                                .frame(maxWidth: 720)
+                        }
+                        cards
                     }
-                    cards
+                    .padding(Self.margin)
                 }
-                .padding(Self.margin)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
+                .background { keyboardCommands(proxy: proxy) }
             }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         }
     }
 
@@ -172,11 +255,22 @@ struct MacDuplicatesScreen: View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: Self.cardSpacing, alignment: .top), count: count)
         return LazyVGrid(columns: columns, alignment: .leading, spacing: Self.cardSpacing) {
             ForEach(model.sortedGroups) { group in
-                if model.isCollapsed(group) {
-                    MacDuplicateFoldedRow(group: group, model: model)
-                } else {
-                    MacDuplicateCard(group: group, model: model, metrics: metrics)
+                Group {
+                    if model.isCollapsed(group) {
+                        MacDuplicateFoldedRow(group: group, model: model)
+                    } else {
+                        MacDuplicateCard(group: group, model: model, metrics: metrics)
+                    }
                 }
+                .overlay {
+                    if keyboardGroupId == group.id {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(MacTheme.accentFill, lineWidth: 2)
+                            .padding(-2)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .id(group.id)
             }
         }
     }
@@ -401,8 +495,9 @@ private struct MacQuickCleanSheet: View {
 
 // MARK: - Card
 
-/// One group: every photo the same size, in the group's own order; the one
-/// to keep has a Keep badge, a marked one a red frame and a trash disc.
+/// One group: every photo the same size, in the group's own order; each
+/// photo says Keep or Trash top right, the suggested one carries
+/// "Suggested", a marked one a red frame (§14.6).
 private struct MacDuplicateCard: View {
     let group: DuplicateGroup
     let model: DuplicatesModel
@@ -443,14 +538,14 @@ private struct MacDuplicateCard: View {
         }
         .help(isMarked
               ? String(localized: "Click to keep this photo", comment: "Mac Duplicates tile tooltip, marked")
-              : String(localized: "Click to delete this photo", comment: "Mac Duplicates tile tooltip"))
+              : String(localized: "Click to move this photo to the Trash", comment: "Mac Duplicates tile tooltip"))
         .contextMenu {
             Button(String(localized: "Keep Just This One", comment: "Duplicates tile menu: keep this photo, mark the rest")) {
                 model.keepOnly(member.assetId, in: group)
             }
             Button(isMarked
-                   ? String(localized: "Don't Delete", comment: "Mac Duplicates tile menu: take the mark away")
-                   : String(localized: "Delete", comment: "Mac Duplicates tile menu: mark for deletion")) {
+                   ? String(localized: "Keep", comment: "Duplicates tile menu: take the Trash mark away, keep the photo")
+                   : String(localized: "Move to Trash", comment: "Duplicates tile menu: mark the photo for deletion")) {
                 model.toggleMark(member.assetId, in: group)
             }
             Divider()
@@ -468,8 +563,8 @@ private struct MacDuplicateCard: View {
                             ? String(localized: "Suggested to keep", comment: "VoiceOver: the photo the Duplicates card suggests keeping")
                             : String(localized: "Copy", comment: "VoiceOver: a copy on a Duplicates card"))
         .accessibilityValue(isMarked
-                            ? String(localized: "will be deleted", comment: "VoiceOver: a tile marked for deletion")
-                            : String(localized: "won't be deleted", comment: "VoiceOver: a tile not marked"))
+                            ? String(localized: "Trash", comment: "VoiceOver: state of a tile marked for deletion")
+                            : String(localized: "Keep", comment: "VoiceOver: state of a tile that stays"))
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -500,23 +595,35 @@ private struct MacDuplicateTile: View {
                     .strokeBorder(isMarked ? Color.red : MacTheme.separator, lineWidth: isMarked ? 2.5 : 1)
             }
             .overlay(alignment: .topTrailing) {
-                Image(systemName: isMarked ? "trash.circle.fill" : "circle")
-                    .symbolRenderingMode(isMarked ? .palette : .monochrome)
-                    .foregroundStyle(.white, .red)
-                    .font(.system(size: 18))
-                    .shadow(color: .black.opacity(0.35), radius: 1.5)
-                    .opacity(isMarked || isHovered ? 1 : 0.85)
-                    .padding(6)
+                // Keep / Trash in words (§14.6); the click on the tile flips it.
+                HStack(spacing: 3) {
+                    Image(systemName: isMarked ? "trash" : "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                    if side >= 76 {
+                        Text(isMarked
+                             ? String(localized: "Trash", comment: "Duplicates: pill on a photo marked for deletion; tap to keep it")
+                             : String(localized: "Keep", comment: "Duplicates: pill on a photo that stays; tap to mark it for deletion"))
+                            .font(.system(size: 11, weight: .semibold))
+                            .fixedSize()
+                    }
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, side >= 76 ? 7 : 0)
+                .frame(minWidth: 22, minHeight: 22, maxHeight: 22)
+                .background(isMarked ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color.black.opacity(0.55)), in: Capsule())
+                .shadow(color: .black.opacity(0.35), radius: 1.5)
+                .opacity(isMarked || isHovered ? 1 : 0.9)
+                .padding(6)
             }
             .overlay(alignment: .bottomLeading) {
                 HStack(spacing: 4) {
                     if showsKeep {
-                        Label(String(localized: "Keep", comment: "Duplicates: badge on the photo to keep"), systemImage: "checkmark")
+                        Text(String(localized: "Suggested", comment: "Duplicates: chip on the photo the app suggests keeping"))
                             .font(.system(size: 11, weight: .semibold))
                             .padding(.horizontal, 7)
                             .frame(height: 20)
-                            .foregroundStyle(MacTheme.onAccentFill)
-                            .background(MacTheme.accentFill, in: Capsule())
+                            .foregroundStyle(.white)
+                            .background(Color.black.opacity(0.55), in: Capsule())
                     } else if let caption {
                         Text(caption)
                             .font(.system(size: 10, weight: .semibold))

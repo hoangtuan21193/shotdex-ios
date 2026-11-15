@@ -507,6 +507,10 @@ Immich: liệt kê thông tin từng bản, **chỉ các dòng khác nhau**, 5 d
 
 ### 14.8 Phím tắt (iPad có bàn phím, Mac, Duo có bàn phím)
 
+**Mac (2026-11-16):** cùng phím nhưng giữ **⌥** (⌥↑/⌥↓, ⌥K, ⌥R): sidebar giữ focus, phím trần đổi mục sidebar và chữ
+trần nhảy tới mục bắt đầu bằng chữ đó (R → RAW). Mac không có Compare nên không có Space. ⌥K/⌥R lần đầu chỉ chọn nhóm
+(vòng hiện trước), lần sau mới làm.
+
 Immich: A giữ hết · D bỏ hết · ⇧C xong nhóm · ←/→ nhóm trước/sau.
 
 - Danh sách có **nhóm đang chọn** (viền accent 2pt quanh thẻ, chỉ hiện khi đã bấm phím lần đầu):
