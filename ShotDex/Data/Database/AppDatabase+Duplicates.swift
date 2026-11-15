@@ -78,4 +78,18 @@ extension AppDatabase {
             }
         }
     }
+
+    /// SHA-256 of an original's bytes (FS-06.06 §14.2), read only for photos
+    /// that could be byte-identical to another. A scan result keyed by the
+    /// photo's modification date: an edit re-queues it.
+    static func registerContentChecksum(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v69-contentChecksum") { db in
+            try db.create(table: "content_checksum") { t in
+                t.primaryKey("assetId", .text)
+                t.column("modificationDate", .integer)
+                // NULL: the read was tried and failed (iCloud-only offline…).
+                t.column("sha256", .text)
+            }
+        }
+    }
 }

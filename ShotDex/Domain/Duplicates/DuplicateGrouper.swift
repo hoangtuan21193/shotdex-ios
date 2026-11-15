@@ -26,6 +26,16 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     var originalFilename: String? = nil
     /// "1/60 s" — for the caption when shutter speeds differ in a group.
     var shutterDisplay: String? = nil
+    /// SHA-256 of the original's bytes, when it was read (FS-06.06 §14.2) —
+    /// only for photos that could be byte-identical to another.
+    var contentChecksum: String? = nil
+    /// A checksum read was tried at this modification date (it may have
+    /// failed: iCloud-only with the network off, a refused read).
+    var checksumTried = false
+    /// Photos holds an edit, or the photo is Live: its original's bytes do
+    /// not say what the user sees or keeps (the render, the movie), so two
+    /// such photos never join on the checksum (§14.2, review 2026-11-16).
+    var isEditedOrLive = false
     /// How many photo-info fields the index read from the file (camera,
     /// lens, settings, location — `photo_metadata` only: the scoring pass's
     /// columns exist for scored copies only and would tilt a half-scored group) — breaks a file-size tie in favour of the fuller
@@ -194,6 +204,13 @@ enum DuplicateGrouper {
             // Twelve gradients saved in one second share a flat hash, a size
             // and a second; only the byte count still tells them apart.
             let isLowDetail = PerceptualHash(bits: hash).isLowDetail
+            // Equal bytes are one picture whatever the name or the clock
+            // says (§14.2, after Immich's checksum).
+            var byChecksum: [String: Int] = [:]
+            for index in indices where !photos[index].isEditedOrLive {
+                guard let checksum = photos[index].contentChecksum else { continue }
+                if let first = byChecksum[checksum] { copies.union(first, index) } else { byChecksum[checksum] = index }
+            }
             var leads: [CopyKey: [Int]] = [:]
             for index in indices {
                 let photo = photos[index]

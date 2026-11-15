@@ -425,6 +425,10 @@ Immich: SHA-1 của file, khoá duy nhất (chủ, checksum). ShotDex hôm nay �
   §4 như hôm nay.
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): nhóm Exact **chưa băm được** (gốc trên iCloud, không mạng) có vào **Quick clean** không. (a) vào như hôm nay
   (luật §4 đã chặt); (b) không vào, chờ băm. Đề xuất **(a)** — Quick clean vẫn qua sheet xem trước và hộp xác nhận hệ thống.
+- (Review 2026-11-16) Ảnh **đã chỉnh** hoặc **Live** không bao giờ băm, không bao giờ nối bằng checksum: byte gốc giống nhau
+  mà thứ người dùng thấy (bản render, đoạn phim) khác. Băm đúng resource mà index đã đo dung lượng. Mỗi lần đọc dừng sau
+  60 s; Cancel dừng cả lần tải đang chạy; đọc hỏng được ghi (NULL) để chỉ thử lại khi lượt quét được dùng mạng; ảnh đổi
+  sau khi index bị bỏ qua. Kết quả ghi mỗi 20 ảnh. Chưa có vạch tiến độ riêng cho bước này (nằm trong "Grouping").
 - Hai ảnh luật §4 gọi là Exact nhưng **checksum khác nhau** → vẫn Exact (cùng pixel, khác metadata — vd một bản đã sửa
   ngày trong Photos) — checksum chỉ **thêm** Exact, không bớt.
 
@@ -519,9 +523,9 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I1 | (§14.1) ảnh gốc 4032×3024 và bản **cắt 20%** của nó (3226×2419, tỷ lệ 4:3 → 4:3 cắt lệch tâm, dấu vân tay lệch 18 bit), print cách 0.22, cùng ngày, cùng máy | gom nhóm | hai ảnh một nhóm Similar | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintNominatesACrop` (print giả lập) + máy thật |
 | AC-I2 | (§14.1) hai ảnh khác cảnh cùng ngày cùng máy, print cách 0.64, dấu vân tay lệch 30 bit | gom nhóm | không chung nhóm | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintKeepsDifferentScenesApart` |
 | AC-I3 | (§14.1) 3.000 ảnh trong 1 ngày, 1 máy; 52.000 ảnh rải 4 năm | đề cử bằng print | số cặp được so ≤ 3.000×2.999/2 + tổng các thùng khác (không có cặp nào khác ngày > 1); mỗi ảnh ≤ 64 ứng viên; RAM đỉnh của bước ≤ 60 MB | ⚠️ chưa có — `FeaturePrintCandidatesTests.bucketsBoundThePairs` + Instruments |
-| AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | ⚠️ chưa có — `DuplicateGrouperTests.equalChecksumIsExactWhateverTheName` + `ContentChecksumTests.streamsWithoutLoadingTheFile` |
-| AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa có — `ContentChecksumTests.iCloudOnlyIsSkippedOffline` |
-| AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | ⚠️ chưa có — `ContentChecksumTests.onlyCandidatesAreHashed` |
+| AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | `ContentChecksumTests.equalChecksumIsExactWhateverTheName`, `.streamsWithoutLoadingTheFile`, `.editedOrLivePhotosNeverJoinOnTheChecksum`, `PerceptualHashStoreTests.checksumFollowsTheModificationDate` ✅ |
+| AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa chứng minh được: `isNetworkAccessAllowed` theo chính sách quét (đọc code); cần máy thật bật Optimize Storage |
+| AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | `ContentChecksumTests.onlyCandidatesAreHashed` ✅ |
 | AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ⚠️ chưa có — `DuplicateAutoCheckTests.newCopiesJoinWithoutATap` + route `duplicates-autocheck.json` |
 | AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ⚠️ chưa có — `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck` |
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |

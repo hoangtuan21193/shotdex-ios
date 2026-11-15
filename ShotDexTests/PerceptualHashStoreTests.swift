@@ -113,6 +113,18 @@ struct PerceptualHashStoreTests {
         #expect(Dictionary(uniqueKeysWithValues: cached.map { ($0.assetId, $0.infoFieldCount) }) == ["full": 8, "empty": 0])
     }
 
+    /// §14.2: a checksum reads back only while the photo is unchanged; an
+    /// edit (new modification date) leaves it unread again.
+    @Test func checksumFollowsTheModificationDate() throws {
+        let (metadata, hashes) = try makeStores()
+        try metadata.upsert(makeRecord("a"))
+        try hashes.upsert([PerceptualHashRecord(assetId: "a", hash: PerceptualHash(bits: 1), modificationDate: 1_700_000_000, computedAt: 1)])
+        try hashes.upsertChecksums([(assetId: "a", modificationDate: 1_700_000_000, sha256: "abc")])
+        #expect(try hashes.hashedPhotos().first?.contentChecksum == "abc")
+        try hashes.upsertChecksums([(assetId: "a", modificationDate: 1_600_000_000, sha256: "old")])
+        #expect(try hashes.hashedPhotos().first?.contentChecksum == nil)
+    }
+
     @Test func hashedPhotosJoinMetadataFacts() throws {
         let (metadata, hashes) = try makeStores()
         for record in [makeRecord("a")] { try metadata.upsert(record) }

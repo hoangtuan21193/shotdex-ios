@@ -724,6 +724,7 @@ final class AppDatabase: Sendable {
         registerFreeTextIndex(&migrator)
         registerEditorSnapshots(&migrator)
         registerSourceLastListed(&migrator)
+        registerContentChecksum(&migrator)
 
         return migrator
     }

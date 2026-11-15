@@ -880,10 +880,24 @@ final class DuplicatesModel {
     private func regroupAndCache() async {
         phase = .grouping
         let store = dependencies.perceptualHashStore
-        await Task.detached(priority: .userInitiated) {
-            guard let photos = try? store.hashedPhotos() else { return }
+        let allowNetwork = allowNetworkForScanning
+        // Detached work does not inherit cancellation: pass it on, so a
+        // Cancel stops the checksum reads (and the download in flight).
+        let work = Task.detached(priority: .userInitiated) {
+            guard var photos = try? store.hashedPhotos() else { return }
+            // §14.2: read in full only what could be byte-identical and is
+            // not read yet; then group with the checksums.
+            let unread = ContentChecksum.candidates(photos, missingOnly: true, retryingFailed: allowNetwork)
+            if !unread.isEmpty {
+                await ContentChecksumReader.read(unread, allowNetwork: allowNetwork) { batch in
+                    try? store.upsertChecksums(batch)
+                }
+                if let fresh = try? store.hashedPhotos() { photos = fresh }
+            }
+            guard !Task.isCancelled else { return }
             try? store.replaceGroups(DuplicateGrouper.groups(from: photos), scannedAt: Date())
-        }.value
+        }
+        await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
 
     // MARK: Marks

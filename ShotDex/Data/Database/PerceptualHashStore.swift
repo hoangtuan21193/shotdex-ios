@@ -83,11 +83,26 @@ struct PerceptualHashStore: Sendable {
             try db.execute(
                 sql: "DELETE FROM perceptual_hash WHERE assetId NOT IN (SELECT assetId FROM photo_metadata)"
             )
-            return db.changesCount
+            let pruned = db.changesCount
+            try db.execute(sql: "DELETE FROM content_checksum WHERE assetId NOT IN (SELECT assetId FROM photo_metadata)")
+            return pruned
         }
     }
 
     // MARK: Writes
+
+    /// Stores the original's SHA-256 against the date it was read at (§14.2).
+    func upsertChecksums(_ records: [(assetId: String, modificationDate: Int?, sha256: String?)]) throws {
+        guard !records.isEmpty else { return }
+        try database.writer.write { db in
+            for record in records {
+                try db.execute(
+                    sql: "INSERT OR REPLACE INTO content_checksum (assetId, modificationDate, sha256) VALUES (?, ?, ?)",
+                    arguments: [record.assetId, record.modificationDate, record.sha256]
+                )
+            }
+        }
+    }
 
     func upsert(_ records: [PerceptualHashRecord]) throws {
         guard !records.isEmpty else { return }
@@ -115,10 +130,12 @@ struct PerceptualHashStore: Sendable {
                 db,
                 sql: """
                     SELECT p.assetId, h.hash, p.width, p.height, p.fileSize, p.creationDate, p.isFavorite, p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, p.originalFilename, p.shutterSpeedDisplay, q.exposureBias, q.software,
-                           ((NULLIF(p.cameraManufacturer, '') IS NOT NULL) + (NULLIF(p.cameraModel, '') IS NOT NULL) + (NULLIF(p.lensModel, '') IS NOT NULL) + (p.focalLength IS NOT NULL) + (p.aperture IS NOT NULL) + (p.shutterSpeedSeconds IS NOT NULL) + (p.iso IS NOT NULL) + (p.latitude IS NOT NULL)) AS infoFieldCount
+                           ((NULLIF(p.cameraManufacturer, '') IS NOT NULL) + (NULLIF(p.cameraModel, '') IS NOT NULL) + (NULLIF(p.lensModel, '') IS NOT NULL) + (p.focalLength IS NOT NULL) + (p.aperture IS NOT NULL) + (p.shutterSpeedSeconds IS NOT NULL) + (p.iso IS NOT NULL) + (p.latitude IS NOT NULL)) AS infoFieldCount, c.sha256 AS contentChecksum, (c.assetId IS NOT NULL) AS checksumTried,
+                           (COALESCE(p.hasAdjustments, 0) OR (COALESCE(p.mediaSubtypes, 0) & \(Int(PHAssetMediaSubtype.photoLive.rawValue))) != 0) AS isEditedOrLive
                     FROM perceptual_hash h
                     JOIN photo_metadata p ON p.assetId = h.assetId
                     LEFT JOIN duplicate_quality q ON q.assetId = h.assetId
+                    LEFT JOIN content_checksum c ON c.assetId = h.assetId AND c.modificationDate IS p.modificationDate
                     WHERE h.hash IS NOT NULL AND p.mediaType = ?
                     """,
                 arguments: [MediaKind.photo.storedValue]
@@ -204,11 +221,13 @@ struct PerceptualHashStore: Sendable {
                 sql: """
                     SELECT g.groupId, g.kind, p.assetId, h.hash, p.width, p.height, p.fileSize, p.creationDate, p.isFavorite,
                            p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, p.originalFilename, p.shutterSpeedDisplay, q.exposureBias, q.software,
-                           ((NULLIF(p.cameraManufacturer, '') IS NOT NULL) + (NULLIF(p.cameraModel, '') IS NOT NULL) + (NULLIF(p.lensModel, '') IS NOT NULL) + (p.focalLength IS NOT NULL) + (p.aperture IS NOT NULL) + (p.shutterSpeedSeconds IS NOT NULL) + (p.iso IS NOT NULL) + (p.latitude IS NOT NULL)) AS infoFieldCount
+                           ((NULLIF(p.cameraManufacturer, '') IS NOT NULL) + (NULLIF(p.cameraModel, '') IS NOT NULL) + (NULLIF(p.lensModel, '') IS NOT NULL) + (p.focalLength IS NOT NULL) + (p.aperture IS NOT NULL) + (p.shutterSpeedSeconds IS NOT NULL) + (p.iso IS NOT NULL) + (p.latitude IS NOT NULL)) AS infoFieldCount, c.sha256 AS contentChecksum, (c.assetId IS NOT NULL) AS checksumTried,
+                           (COALESCE(p.hasAdjustments, 0) OR (COALESCE(p.mediaSubtypes, 0) & \(Int(PHAssetMediaSubtype.photoLive.rawValue))) != 0) AS isEditedOrLive
                     FROM duplicate_groups g
                     JOIN photo_metadata p ON p.assetId = g.assetId
                     JOIN perceptual_hash h ON h.assetId = g.assetId
                     LEFT JOIN duplicate_quality q ON q.assetId = g.assetId
+                    LEFT JOIN content_checksum c ON c.assetId = g.assetId AND c.modificationDate IS p.modificationDate
                     WHERE g.sourceId = ? AND h.hash IS NOT NULL
                     """,
                 arguments: [sourceId]
@@ -257,6 +276,9 @@ struct PerceptualHashStore: Sendable {
             software: row["software"],
             originalFilename: row["originalFilename"],
             shutterDisplay: row["shutterSpeedDisplay"],
+            contentChecksum: row["contentChecksum"],
+            checksumTried: row["checksumTried"] ?? false,
+            isEditedOrLive: row["isEditedOrLive"] ?? false,
             infoFieldCount: row["infoFieldCount"] ?? 0
         )
     }
