@@ -35,6 +35,8 @@ final class SelectionCompareModel: PhotoCompareSource {
     @ObservationIgnored private let metadataById: [String: PhotoMetadata]
     @ObservationIgnored private let deleter: RejectedDeleter
     @ObservationIgnored private let sourceRequestFor: @MainActor ([String]) -> DeletionTargetQueries.Request?
+    /// *What differs* (FS-06.06 §14.7) — one screen, one behaviour.
+    @ObservationIgnored var factsLoader: PhotoFactsLoader?
 
     init(
         ids: [String],
@@ -57,7 +59,7 @@ final class SelectionCompareModel: PhotoCompareSource {
         let rows = (try? dependencies.libraryQueries.metadata(assetIds: ids)) ?? [:]
         var assets: [String: PHAsset] = [:]
         for asset in PhotoLibraryService.fetchAssets(ids: ids) { assets[asset.localIdentifier] = asset }
-        return SelectionCompareModel(
+        let model = SelectionCompareModel(
             ids: ids,
             assets: assets,
             metadata: rows,
@@ -68,6 +70,8 @@ final class SelectionCompareModel: PhotoCompareSource {
                     .request(photoIds: ids, selection: .rejected)
             }
         )
+        model.factsLoader = PhotoFactsLoader(database: dependencies.database, marks: dependencies.photoMarks)
+        return model
     }
 
     // MARK: PhotoCompareSource

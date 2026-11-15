@@ -86,3 +86,30 @@ struct PhotoDifferenceTests {
         #expect(PhotoDifference.rows(dup, facts(albums: ["A"])).map(\.field) == [.keywords])
     }
 }
+
+/// What Compare reads for one photo (FS-06.06 §14.7).
+struct PhotoFactsLoaderTests {
+    @Test func factsComeFromTheIndexRow() {
+        var row = PhotoMetadata(
+            assetId: "a", creationDate: 1_772_373_731, modificationDate: 1, mediaType: MediaKind.photo.storedValue,
+            cameraManufacturer: "Apple", cameraModel: "iPhone 17 Pro", normalizedCameraModel: "iPhone 17 Pro",
+            normalizedCameraManufacturer: "Apple", lensManufacturer: nil, lensModel: "back camera",
+            normalizedLensModel: nil, originalFilename: "IMG_0001.jpg", iso: 64, aperture: 1.78,
+            shutterSpeedSeconds: 1.0 / 120, shutterSpeedDisplay: "1/120", focalLength: 6.9, focalLengthIn35mm: 24,
+            calculatedEquivalentFocalLength: nil, equivalentFocalLength: 24, sensorFormat: nil, cropFactor: nil,
+            width: 4032, height: 3024, fileSize: 5_100_000, latitude: 15.877, longitude: 108.326, isFavorite: false,
+            indexedAt: 1, exifStatus: ExifStatus.indexed.rawValue)
+        row.hasAdjustments = true
+        let facts = PhotoFactsLoader.facts(metadata: row, place: ResolvedPlace(locality: "Hội An"),
+                                           keywords: ["Kodak"], albums: ["Client"], rating: 4)
+        #expect(facts.format == "JPEG")
+        #expect(facts.placeName == "Hội An")
+        #expect(facts.hasLocation)
+        #expect(facts.lens == "back camera")
+        #expect(facts.isEdited)
+        #expect(facts.rating == 4)
+        #expect(facts.albums == ["Client"])
+        #expect(PhotoFactsLoader.format(of: nil) == nil)
+        #expect(PhotoFactsLoader.format(of: "DSC0001.ARW") == "ARW")
+    }
+}

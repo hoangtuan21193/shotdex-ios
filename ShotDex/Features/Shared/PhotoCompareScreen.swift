@@ -23,6 +23,13 @@ protocol PhotoCompareSource {
     func setMarked(_ marked: Bool, _ id: String)
     /// The top bar's Delete, when the deletion happens here.
     var deletion: PhotoCompareDeletion? { get }
+    /// Reads the facts *What differs* sets side by side (FS-06.06 §14.7);
+    /// nil hides it.
+    var factsLoader: PhotoFactsLoader? { get }
+}
+
+extension PhotoCompareSource {
+    var factsLoader: PhotoFactsLoader? { nil }
 }
 
 /// Delete N on the top bar (FS-01.08 §4).
@@ -56,6 +63,10 @@ struct PhotoCompareScreen: View {
     @State private var heldPane: Int?
     @State private var dropTargeted = false
     @State private var isDeleting = false
+    /// What *What differs* compares, read once per set of photos.
+    @State private var facts: [String: PhotoFacts] = [:]
+    @State private var showsDifferences = false
+    @State private var differencesExpanded = false
 
     private var isGone: Bool { source.ids.count < CompareSession.minimumCount }
 
@@ -82,6 +93,21 @@ struct PhotoCompareScreen: View {
                         topBar(all)
                         panes(all, ids: ids, isWide: isWide)
                         filmstrip(all, ids: ids, side: isWide ? 64 : 56)
+                        // Only once both photos' facts are read: "no rows"
+                        // must mean "nothing differs", never "not known yet".
+                        if let rows = differenceRows(ids) {
+                            // iPad has height to spare: the table stays open.
+                            // iPhone and the Duo (669pt tall) open it on demand.
+                            Group {
+                                if isWide && !isDuoInner {
+                                    differencesTable(rows, all: all, ids: ids, columns: 2)
+                                        .padding(.horizontal, AppTheme.Spacing.lg)
+                                } else {
+                                    differencesButton(count: rows.count)
+                                }
+                            }
+                            .transition(.opacity)
+                        }
                         Text(String(localized: "Tap a photo for B, drag it onto A · swipe a photo to step",
                                     comment: "Duplicates compare: how to put photos into the two panes"))
                             .font(.caption)
@@ -95,6 +121,194 @@ struct PhotoCompareScreen: View {
         }
         .preferredColorScheme(.dark)
         .onChange(of: isGone) { _, gone in if gone { dismiss() } }
+        .task(id: source.ids) {
+            guard let loader = source.factsLoader else { return }
+            let loaded = await loader.load(ids: source.ids)
+            withAnimation(AppTheme.Motion.standard) { facts = loaded }
+        }
+        .overlay(alignment: .bottom) {
+            if showsDifferences, !isGone {
+                differencesPanel
+                    .transition(.move(edge: .bottom))
+            }
+        }
+        .animation(AppTheme.Motion.standard, value: showsDifferences)
+    }
+
+    // MARK: What differs (FS-06.06 §14.7)
+
+    /// Nil until both photos' facts are read.
+    private func differenceRows(_ ids: [String]) -> [PhotoDifference.Row]? {
+        guard ids.count == 2, let a = facts[ids[0]], let b = facts[ids[1]] else { return nil }
+        return PhotoDifference.rows(a, b)
+    }
+
+    @ScaledMetric(relativeTo: .footnote) private var labelColumn: CGFloat = 110
+
+    private func differencesButton(count: Int) -> some View {
+        Button {
+            differencesExpanded = false
+            showsDifferences = true
+        } label: {
+            Label {
+                Text(count == 0
+                     ? String(localized: "Same photo info", comment: "Compare: A and B differ in no listed field; opens the list")
+                     : String(localized: "What differs · \(count)", comment: "Compare: opens the list of fields that differ between A and B, with how many"))
+            } icon: {
+                Image(systemName: "info.circle")
+            }
+            .labelStyle(SpacedLabelStyle(spacing: 6))
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(minWidth: 160, minHeight: 36)
+            .editorGlass(Capsule())
+        }
+        .buttonStyle(.plain)
+        .minimumHitTarget(drawnHeight: 36)
+    }
+
+    /// iPhone and Duo: the list rises from the bottom over the lower pane —
+    /// an in-screen panel like every tier-D panel (DESIGN.md §2), not a
+    /// system sheet. Drag down or tap the dim to close.
+    private var differencesPanel: some View {
+        let all = source.ids
+        let ids = shown(all)
+        return ZStack(alignment: .bottom) {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { showsDifferences = false }
+                .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 6)
+                    .padding(.bottom, AppTheme.Spacing.sm)
+                    .accessibilityHidden(true)
+                ScrollView {
+                    differencesTable(differenceRows(ids) ?? [], all: all, ids: ids, columns: 1)
+                        .padding(.horizontal, AppTheme.Spacing.lg)
+                        .padding(.bottom, AppTheme.Spacing.lg)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: isDuoInner ? 300 : 404)
+            .background(
+                UnevenRoundedRectangle(topLeadingRadius: AppTheme.Radius.lg, topTrailingRadius: AppTheme.Radius.lg, style: .continuous)
+                    .fill(EditorTheme.panelSolid)
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            // Simultaneous: the rows scroll, and a pull down still closes.
+            .simultaneousGesture(DragGesture(minimumDistance: 12).onEnded { value in
+                if value.translation.height > 60 { showsDifferences = false }
+            })
+            .accessibilityAction(.escape) { showsDifferences = false }
+            .accessibilityAddTraits(.isModal)
+        }
+    }
+
+    /// The table: title, how many fields differ, the A/B header, the rows —
+    /// in one column on a phone, split into two side by side on iPad.
+    private func differencesTable(_ rows: [PhotoDifference.Row], all: [String], ids: [String], columns: Int) -> some View {
+        let shownRows = PhotoDifference.visible(rows, expanded: differencesExpanded)
+        let hidden = PhotoDifference.hiddenCount(rows)
+        let split = columns > 1 ? (shownRows.count + 1) / 2 : shownRows.count
+        let parts = [Array(shownRows.prefix(split)), Array(shownRows.dropFirst(split))].filter { !$0.isEmpty }
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(String(localized: "What differs", comment: "Compare: title of the list of fields that differ between A and B"))
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.white)
+            Text(rows.isEmpty
+                 ? String(localized: "Same photo info", comment: "Compare: A and B differ in no listed field")
+                 : String(localized: "\(rows.count) of \(PhotoDifference.Field.allCases.count) fields differ",
+                          comment: "Compare: how many of the listed fields differ between A and B"))
+                .font(.footnote)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .padding(.bottom, AppTheme.Spacing.md)
+            if !rows.isEmpty {
+                HStack(alignment: .top, spacing: AppTheme.Spacing.xl) {
+                    ForEach(parts.indices, id: \.self) { index in
+                        VStack(spacing: 0) {
+                            differenceHeader(all: all, ids: ids)
+                            ForEach(parts[index]) { row in
+                                differenceRow(label: row.field.title, a: row.a, b: row.b)
+                            }
+                        }
+                    }
+                }
+                if hidden > 0 {
+                    Button {
+                        withAnimation(AppTheme.Motion.standard) { differencesExpanded.toggle() }
+                    } label: {
+                        Label(
+                            differencesExpanded
+                                ? String(localized: "Show less", comment: "Compare: fold the list of fields that differ back to five")
+                                : String(localized: "Show \(hidden) more", comment: "Compare: unfold the fields that differ beyond the first five"),
+                            systemImage: differencesExpanded ? "chevron.up" : "chevron.down"
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(EditorTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minHeight: AppTheme.Size.minTouch)
+                }
+            }
+        }
+        .padding(columns > 1 ? AppTheme.Spacing.lg : 0)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            if columns > 1 {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous).fill(EditorTheme.panelSolid)
+            }
+        }
+    }
+
+    /// "Ⓐ 1 of 5 · keep" | "Ⓑ 3 of 5 · delete" — the panes' own A/B discs.
+    private func differenceHeader(all: [String], ids: [String]) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Color.clear.frame(width: labelColumn, height: 1)
+            ForEach(0..<2, id: \.self) { slot in
+                let id = ids[slot]
+                let position = (all.firstIndex(of: id) ?? 0) + 1
+                let marked = source.isMarked(id)
+                HStack(spacing: 6) {
+                    Text(Self.paneLetter(slot))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(.white))
+                    Text(marked
+                         ? String(localized: "\(position) of \(all.count) · delete", comment: "Compare: What differs column header, the photo's place in the group and that it is marked for deletion")
+                         : String(localized: "\(position) of \(all.count) · keep", comment: "Compare: What differs column header, the photo's place in the group and that it is kept"))
+                        .foregroundStyle(marked ? Color.red : .white)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .font(.footnote.weight(.semibold))
+        .frame(minHeight: 32)
+        .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.hairline).frame(height: 1) }
+    }
+
+    private func differenceRow(label: String, a: String, b: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.sm) {
+            Text(label)
+                .font(.footnote)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .frame(width: labelColumn, alignment: .leading)
+            Text(a).frame(maxWidth: .infinity, alignment: .leading)
+            Text(b).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.subheadline.monospacedDigit())
+        .foregroundStyle(.white)
+        .lineLimit(3)
+        .frame(minHeight: 36)
+        .padding(.vertical, AppTheme.Spacing.xs)
+        .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Top bar
@@ -516,6 +730,7 @@ struct DuplicateCompareSource: PhotoCompareSource {
     }
 
     var deletion: PhotoCompareDeletion? { nil }
+    var factsLoader: PhotoFactsLoader? { model.factsLoader }
 }
 
 /// The whole label, or its icon alone where the words do not fit.
@@ -527,6 +742,17 @@ private struct TitleOrIconLabelStyle: LabelStyle {
             Label(configuration)
         } else {
             configuration.icon
+        }
+    }
+}
+
+/// A Label with a set gap between icon and title (the board's 6pt).
+private struct SpacedLabelStyle: LabelStyle {
+    let spacing: CGFloat
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: spacing) {
+            configuration.icon
+            configuration.title
         }
     }
 }

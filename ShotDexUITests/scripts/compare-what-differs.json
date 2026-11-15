@@ -1,0 +1,181 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "00-library"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.17,
+      "y": 0.42
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.42
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.58
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Compare"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-compare"
+    },
+    {
+      "action": "dump",
+      "name": "Compare"
+    },
+    {
+      "action": "tap",
+      "x": 0.43,
+      "y": 0.835
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "01b-compare-b3"
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.905
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-sheet"
+    },
+    {
+      "action": "dump",
+      "name": "Sheet"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.53,
+      "direction": "down",
+      "distance": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-dragged-closed"
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.905
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.2
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-dim-closed"
+    },
+    {
+      "action": "tap",
+      "x": 0.85,
+      "y": 0.758
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.905
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "05-panel-marked"
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.2
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.6,
+      "y": 0.758
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "06-kept-again"
+    },
+    {
+      "action": "tap",
+      "label": "Close"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "07-closed"
+    }
+  ]
+}

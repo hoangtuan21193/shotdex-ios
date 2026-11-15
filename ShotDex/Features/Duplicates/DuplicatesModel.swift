@@ -957,6 +957,11 @@ final class DuplicatesModel {
         return false
     }
 
+    /// What Compare's *What differs* reads (FS-06.06 §14.7).
+    var factsLoader: PhotoFactsLoader {
+        PhotoFactsLoader(database: dependencies.database, marks: dependencies.photoMarks)
+    }
+
     func clearMarks(in group: DuplicateGroup) {
         session.setMarked(group.members.map(\.assetId), false)
     }

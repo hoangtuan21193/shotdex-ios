@@ -1,0 +1,93 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "00-start"
+    },
+    {
+      "action": "tap",
+      "label": "Continue"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Add Photos Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "systemTap",
+      "label": "Allow Full Access"
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "screenshot",
+      "name": "01-library"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 5
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 9
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "02-selected"
+    },
+    {
+      "action": "tap",
+      "label": "Compare"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "03-compare-table"
+    },
+    {
+      "action": "dump",
+      "name": "CompareiPad"
+    }
+  ]
+}
