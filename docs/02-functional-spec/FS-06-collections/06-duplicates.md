@@ -442,11 +442,21 @@ Immich: mỗi ảnh mới được kiểm ngay sau khi có vector; mỗi ảnh c
 
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): **trái §1 và §3** — *"Không bao giờ tự chạy"* (người dùng 2026-11-10: lượt quét tự động **lần đầu** cho quá
   nhiều nhóm sai). Đề xuất: lượt **đầu tiên** vẫn chỉ chạy khi chạm **Check Library**; **sau** lượt đầu, mỗi lô index xong
-  (ảnh mới hoặc ngày sửa đổi) thì app tự băm + so **chỉ các ảnh đó** với thư viện (thùng §14.1, bảng dấu vân tay), gom
-  lại nhóm bị chạm, ghi cache. §1 và §3 đã sửa theo.
+  (ảnh mới hoặc ngày sửa đổi) thì app tự băm **chỉ các ảnh đó** (ảnh chưa có dấu vân tay hoặc lệch ngày sửa), đọc checksum
+  chỉ ứng viên chưa đọc, rồi gom lại từ bảng dấu vân tay và ghi cache. §1 và §3 đã sửa theo.
+- Cách chạy (review 2026-11-16): gom lại **cả bảng** chứ không chỉ nhóm bị chạm — kết quả như nhau (gom nhóm là hàm của cả
+  bảng), đơn giản hơn và không lệch. Phần đắt (đọc ảnh, checksum) vẫn chỉ cho ảnh mới. Chi phí gom ở 55k ảnh **chưa đo
+  trên máy thật** — quá ~10 s thì chuyển sang gom phần bị chạm.
+- Không chặn index: lô index chỉ ghi "có thay đổi" rồi đi tiếp. Lượt tự kiểm bắt đầu sau **30 s yên** kể từ lô cuối — nhiều
+  lô liền nhau tính một lượt; thay đổi đến khi đang chạy thì chạy thêm một lượt, không mất. Một lần gom lại một lúc cho cả
+  app (nút Check, sửa cache khi mở, tự kiểm). Chạm **Check Library** thì lượt tự kiểm dừng và nhường.
+- Low Power / máy nóng / editor-Video Studio mở được kiểm lại trước mỗi lô 200 ảnh và trước khi gom; gặp thì dừng, lô index
+  kế (hoặc nút Check) làm tiếp.
 - Không tự chạy khi: Low Power Mode, máy nóng (`.serious` trở lên), đang trong editor/video studio, chưa từng Check.
-- Mở Duplicates vẫn **chỉ đọc cache**; ảnh mới đã nằm sẵn trong nhóm. Dòng trạng thái §7.3: *"Checked 2 min ago"* tính cả
-  lượt tự động. Số ở Utilities (§7.1) cập nhật theo cache.
+- Mở Duplicates vẫn **chỉ đọc cache**; ảnh mới đã nằm sẵn trong nhóm. Màn đang mở thì đọc lại cache khi lượt tự kiểm xong
+  (trừ lúc đang Check hoặc đang xoá); dấu Keep/Trash theo ảnh nên giữ nguyên. Dòng trạng thái §7.3: *"Checked 2 min ago"*
+  tính cả lượt tự động. Số ở Utilities (§7.1) cập nhật lần mở Duplicates kế (cache chưa xác nhận bằng Vision thì không đếm).
+- Mac: chưa tự kiểm (không có observer lô index) — chỉ nút Check.
 - Thứ tự đứng yên (§7.3) giữ: nhóm mới nối cuối; nhóm cũ có thêm ảnh giữ chỗ.
 
 ### 14.4 Bản giữ: hoà thì chọn bản đủ thông tin hơn
@@ -534,9 +544,9 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | `ContentChecksumTests.equalChecksumIsExactWhateverTheName`, `.streamsWithoutLoadingTheFile`, `.editedOrLivePhotosNeverJoinOnTheChecksum`, `PerceptualHashStoreTests.checksumFollowsTheModificationDate` ✅ |
 | AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa chứng minh được: `isNetworkAccessAllowed` theo chính sách quét (đọc code); cần máy thật bật Optimize Storage |
 | AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | `ContentChecksumTests.onlyCandidatesAreHashed` ✅ |
-| AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ⚠️ chưa có — `DuplicateAutoCheckTests.newCopiesJoinWithoutATap` + route `duplicates-autocheck.json` |
-| AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ⚠️ chưa có — `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck` |
-| AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
+| AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ✅ `DuplicateAutoCheckTests.newCopiesJoinWithoutATap`, `aBurstOfIndexRunsIsOneCheck` (store + actor). ⚠️ chưa e2e trên sim: index sim rỗng (`photo_metadata` 0 dòng); vị trí thẻ không đo |
+| AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ✅ `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck`, `idleBeforeTheFirstCheck`; sim iPhone 17 26.5 `duplicates-autocheck.json` → *Not Checked Yet* |
+| AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ✅ `DuplicateAutoCheckTests.yieldsToLowPowerAndHeat`, `waitsWhileAToolIsOpen`, `anOpenEditorSkipsTheCheck` (policy; Low Power thật chưa bật trên máy) |
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
 | AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | `SuggestedPicksTests.measuredWinDecides`, `.unmeasuredNeedsAClearFileRule`, `.itemsSkipTiesProtectedAndBursts` ✅; ảnh sim ⚠️ không làm được (simulator không tạo nhóm Similar: feature print hằng, §4a) |
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | route `duplicates-keep-trash.json` ✅ 2026-11-16 (iPhone 17 26.5, `-ShotDexFakeBursts`: Keep → Trash → Keep, *1 selected* + *Delete 1*, sheet Selected; ô < 76pt chỉ còn biểu tượng) |

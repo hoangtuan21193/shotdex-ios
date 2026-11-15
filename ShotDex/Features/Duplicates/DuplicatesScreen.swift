@@ -70,6 +70,10 @@ struct DuplicatesScreen: View {
         .task {
             if model == nil { model = DuplicatesModel(dependencies: dependencies) }
         }
+        // §14.3: the automatic check rewrote the cache while the list is open.
+        .onReceive(NotificationCenter.default.publisher(for: .duplicateGroupsDidChange)) { _ in
+            model?.reloadAfterAutomaticCheck()
+        }
     }
 
     @ViewBuilder

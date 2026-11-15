@@ -224,7 +224,10 @@ struct PhotoEditorScreen: View {
             }
             await openCurrentPhoto()
         }
+        // FS-06.06 §14.3: no automatic duplicate check while editing.
+        .onAppear { dependencies.duplicateAutoCheck?.toolOpened() }
         .onDisappear {
+            dependencies.duplicateAutoCheck?.toolClosed()
             flushAutosave()
             preloader?.cancel()
             controller?.close()

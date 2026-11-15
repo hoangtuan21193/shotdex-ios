@@ -177,7 +177,10 @@ struct VideoStudioScreen: View {
             textInputMonitor.start { [weak newModel] typing in newModel?.isTypingText = typing }
             await newModel.load()
         }
+        // FS-06.06 §14.3: no automatic duplicate check in Video Studio.
+        .onAppear { dependencies.duplicateAutoCheck?.toolOpened() }
         .onDisappear {
+            dependencies.duplicateAutoCheck?.toolClosed()
             textInputMonitor.stop()
             model?.close()
             levelMeter.cancelDecoding()

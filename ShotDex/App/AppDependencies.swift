@@ -57,6 +57,9 @@ final class AppDependencies {
     let onThisDayNotifications: OnThisDayNotificationService
     let perceptualHashStore: PerceptualHashStore
     let duplicateScanPipeline: DuplicateScanPipeline
+    /// FS-06.06 §14.3 — checks new photos after index runs, once the user
+    /// ran the first Check. The editor and Video Studio pause it.
+    let duplicateAutoCheck: DuplicateAutoCheck?
     /// Scores grouped photos for Duplicates (FS-06.06 §6); yields to a
     /// person looking at a photo, like the index.
     let duplicateQualityPass: DuplicateQualityPass
@@ -490,6 +493,13 @@ final class AppDependencies {
             await Task.detached(priority: .utility) { try? orphans.markGoneFromLibrary(ids: ids) }.value
             photoMarks.forget(ids)
         }
+        // FS-06.06 §14.3: new photos join their duplicates without a tap,
+        // once the user has checked the library the first time.
+        let duplicateAutoCheck = DuplicateAutoCheck(store: perceptualHashStore, pipeline: duplicateScanPipeline) {
+            await MainActor.run { NotificationCenter.default.post(name: .duplicateGroupsDidChange, object: nil) }
+        }
+        self.duplicateAutoCheck = duplicateAutoCheck
+        indexPipeline.runObservers.add { changes in await duplicateAutoCheck.handle(changes) }
         indexPipeline.runObservers.add { changes in
             let ids = OrphanRetention.orphanIds(after: changes)
             guard !ids.isEmpty else { return }

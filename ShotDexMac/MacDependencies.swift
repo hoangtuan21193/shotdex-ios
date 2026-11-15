@@ -490,6 +490,8 @@ extension MacDependencies: DuplicatesServices {
     /// The Mac has no app banner: the Duplicates footer shows the model's
     /// `lastDeleteSummary` instead.
     func showDuplicatesDeleted(_ text: String) {}
+    /// The Mac checks only when asked (no index-run observer here yet).
+    var duplicateAutoCheck: DuplicateAutoCheck? { nil }
 }
 
 /// No bursts at all: the demo library's stand-in for PhotoKit's.

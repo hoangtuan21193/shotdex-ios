@@ -31,6 +31,8 @@ protocol DuplicatesServices: AnyObject {
     var photoMarks: PhotoMarks { get }
     /// Photos' caption and keywords (iOS 27; nil below) — inherited too.
     var captionKeywords: CaptionKeywordService? { get }
+    /// Checks new photos after index runs (§14.3); nil where there is none.
+    var duplicateAutoCheck: DuplicateAutoCheck? { get }
     /// "37 photos moved to Recently Deleted…" after a delete went through.
     func showDuplicatesDeleted(_ text: String)
 }
@@ -771,9 +773,12 @@ final class DuplicatesModel {
                 self.phase = .scanning(progress)
             }
         }
+        let autoCheck = dependencies.duplicateAutoCheck
         scanTask = Task { [weak self] in
             defer { self?.scanTask = nil }
             do {
+                // The automatic check (§14.3) gives the pipeline up first.
+                await autoCheck?.cancel()
                 let summary = try await pipeline.run(allowNetwork: allowNetwork, onProgress: report)
                 guard let self else { return }
                 if summary.didNotStart || summary.wasCancelled {
@@ -879,31 +884,16 @@ final class DuplicatesModel {
     /// Groups every stored hash once, into kinds, and writes the cache.
     private func regroupAndCache() async {
         phase = .grouping
-        let store = dependencies.perceptualHashStore
-        let allowNetwork = allowNetworkForScanning
-        // Detached work does not inherit cancellation: pass it on, so a
-        // Cancel stops the checksum reads (and the download in flight).
-        let work = Task.detached(priority: .userInitiated) {
-            guard var photos = try? store.hashedPhotos() else { return }
-            // §14.2: read in full only what could be byte-identical and is
-            // not read yet; then group with the checksums.
-            let unread = ContentChecksum.candidates(photos, missingOnly: true, retryingFailed: allowNetwork)
-            if !unread.isEmpty {
-                await ContentChecksumReader.read(unread, allowNetwork: allowNetwork) { batch in
-                    try? store.upsertChecksums(batch)
-                }
-                if let fresh = try? store.hashedPhotos() { photos = fresh }
-            }
-            guard !Task.isCancelled else { return }
-            var groups = DuplicateGrouper.groups(from: photos)
-            // §14.1: the print nominates what the hash missed — only where
-            // prints can tell pictures apart (never on the simulator, §4a).
-            if DuplicateQualityReader.printsTellPicturesApart {
-                groups += FeaturePrintCandidates.nominate(photos, grouped: Set(groups.flatMap(\.memberIds)))
-            }
-            try? store.replaceGroups(groups, scannedAt: Date())
-        }
-        await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
+        // One regroup at a time across the app; cancelling this task (Cancel)
+        // stops the checksum reads and the download in flight.
+        await dependencies.duplicateScanPipeline.regroup(allowNetwork: allowNetworkForScanning, priority: .userInitiated)
+    }
+
+    /// The automatic check (§14.3) rewrote the cache: read it again, unless
+    /// a check or a delete owns the list. Marks are per photo and survive.
+    func reloadAfterAutomaticCheck() {
+        guard hasLoadedOnce, !isScanning, !isDeleting, scanTask == nil else { return }
+        loadCache()
     }
 
     // MARK: Marks

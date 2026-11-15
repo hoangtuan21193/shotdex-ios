@@ -33,6 +33,8 @@ actor DuplicateScanPipeline {
     private let store: PerceptualHashStore
     private let reader: any PerceptualHashReading
     private var isRunning = false
+    /// The last regroup asked for; the next waits for it (see `regroup`).
+    private var regroupTail: Task<Bool, Never>?
 
     init(store: PerceptualHashStore, reader: any PerceptualHashReading) {
         self.store = store
@@ -41,9 +43,13 @@ actor DuplicateScanPipeline {
 
     /// Runs one scan. Cancel by cancelling the calling task; the batch in
     /// flight finishes and is written, then the run returns `wasCancelled`.
+    /// - Parameter keepsGoing: asked before each batch; false stops the run
+    ///   as a cancel would (the automatic check yields to Low Power, heat
+    ///   and an open editor, FS-06.06 §14.3).
     func run(
         allowNetwork: Bool,
-        onProgress: @escaping @Sendable (DuplicateScanProgress) -> Void
+        onProgress: @escaping @Sendable (DuplicateScanProgress) -> Void,
+        keepsGoing: @Sendable () -> Bool = { true }
     ) async throws -> DuplicateScanSummary {
         guard !isRunning else {
             return DuplicateScanSummary(hashed: 0, failed: 0, pruned: 0, wasCancelled: false, didNotStart: true)
@@ -58,7 +64,7 @@ actor DuplicateScanPipeline {
         onProgress(DuplicateScanProgress(processed: 0, total: pending.count))
 
         for batchStart in stride(from: 0, to: pending.count, by: Self.batchSize) {
-            if Task.isCancelled {
+            if Task.isCancelled || !keepsGoing() {
                 summary.wasCancelled = true
                 break
             }
@@ -72,6 +78,25 @@ actor DuplicateScanPipeline {
             onProgress(DuplicateScanProgress(processed: processed, total: pending.count))
         }
         return summary
+    }
+
+    /// Groups every stored hash and writes the cache (`DuplicateRegroup`),
+    /// one regroup at a time: the Check button, the cache repair on open and
+    /// the automatic check (§14.3) all come through here, so none writes
+    /// groups built from a snapshot older than another's checksums
+    /// (review 2026-11-16). Cancelling the caller cancels its own regroup.
+    /// - Returns: whether the cache was written.
+    @discardableResult
+    func regroup(allowNetwork: Bool, priority: TaskPriority) async -> Bool {
+        let previous = regroupTail
+        let store = self.store
+        let work = Task.detached(priority: priority) { () -> Bool in
+            _ = await previous?.value
+            guard !Task.isCancelled else { return false }
+            return await DuplicateRegroup.run(store: store, allowNetwork: allowNetwork)
+        }
+        regroupTail = work
+        return await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
 
     private func hashBatch(_ assets: [PHAsset], allowNetwork: Bool) async -> [PerceptualHashRecord] {
