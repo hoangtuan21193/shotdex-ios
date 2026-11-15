@@ -126,6 +126,7 @@ struct PhotoCompareScreen: View {
             let loaded = await loader.load(ids: source.ids)
             withAnimation(AppTheme.Motion.standard) { facts = loaded }
         }
+        .background { if !isGone { compareKeys } }
         .overlay(alignment: .bottom) {
             if showsDifferences, !isGone {
                 differencesPanel
@@ -133,6 +134,47 @@ struct PhotoCompareScreen: View {
             }
         }
         .animation(AppTheme.Motion.standard, value: showsDifferences)
+    }
+
+    // MARK: Keyboard (FS-06.06 §14.8)
+
+    /// ←/→ step pane B, K keeps it, ⌫ marks it, Esc closes (or closes
+    /// What differs first).
+    private var compareKeys: some View {
+        // Read A/B when the key is pressed, not when the button was built.
+        func panes() -> [String]? {
+            let all = source.ids
+            return all.count < CompareSession.minimumCount ? nil : shown(all)
+        }
+        func stepB(_ step: Int) {
+            guard let ids = panes() else { return }
+            let others = source.ids.filter { $0 != ids[0] }
+            guard let index = others.firstIndex(of: ids[1]) else { return }
+            chosen[1] = others[(index + step + others.count) % others.count]
+        }
+        return Group {
+            Button(String(localized: "Next Photo in B", comment: "Compare keyboard shortcut")) { stepB(1) }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+            Button(String(localized: "Previous Photo in B", comment: "Compare keyboard shortcut")) { stepB(-1) }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+            Button(String(localized: "Keep Photo B", comment: "Compare keyboard shortcut: keep the photo in pane B")) {
+                guard let ids = panes() else { return }
+                withAnimation(AppTheme.Motion.standard) { source.setMarked(false, ids[1]) }
+            }
+            .keyboardShortcut("k", modifiers: [])
+            Button(String(localized: "Mark Photo B for Deletion", comment: "Compare keyboard shortcut: mark the photo in pane B; nothing is deleted yet")) {
+                guard let ids = panes() else { return }
+                withAnimation(AppTheme.Motion.standard) { source.setMarked(true, ids[1]) }
+            }
+            .keyboardShortcut(.delete, modifiers: [])
+            Button(String(localized: "Close Compare", comment: "Compare keyboard shortcut: close What differs, else the comparison")) {
+                if showsDifferences { showsDifferences = false } else { dismiss() }
+            }
+            .keyboardShortcut(.escape, modifiers: [])
+        }
+        .opacity(0)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 
     // MARK: What differs (FS-06.06 §14.7)

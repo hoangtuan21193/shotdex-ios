@@ -1,0 +1,119 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexFakeBursts"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 45
+    },
+    {
+      "action": "screenshot",
+      "name": "00-list"
+    },
+    {
+      "action": "key",
+      "text": "down"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "key",
+      "text": "down"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "01-focus-second"
+    },
+    {
+      "action": "key",
+      "text": "r"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-r-marks-others"
+    },
+    {
+      "action": "key",
+      "text": "up"
+    },
+    {
+      "action": "key",
+      "text": "k"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-k-keep-all"
+    },
+    {
+      "action": "key",
+      "text": "space"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "04-space-open"
+    },
+    {
+      "action": "key",
+      "text": "escape"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "05-escape"
+    },
+    {
+      "action": "dump",
+      "name": "End"
+    }
+  ]
+}

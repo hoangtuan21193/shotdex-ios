@@ -506,7 +506,7 @@ Immich: A giữ hết · D bỏ hết · ⇧C xong nhóm · ←/→ nhóm trư�
   Trash (A2 vẫn chặn) · **Space** mở Compare của nhóm · **⌘⌫** Delete N (như thanh xoá, vẫn hộp xác nhận hệ thống).
 - Trong Compare: ←/→ đổi ảnh ở B · **K** / **⌫** Keep / Delete ảnh B · Esc đóng.
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): phím **một chữ không modifier** (như Immich/Photos Mac) hay bắt buộc ⌘. Đề xuất một chữ (màn không có ô
-  gõ chữ); mọi phím có trong bảng ⌘-giữ (`UIKeyCommand` có `discoverabilityTitle`). Chữ khác Immich (K/R thay A/D) vì
+  gõ chữ); mọi phím có trong bảng ⌘-giữ (nút SwiftUI ẩn + `.keyboardShortcut`, tên gọi theo việc làm: *Keep All in Group*, *Move Others to Trash*, *Mark Photo B for Deletion*…). Phím của danh sách tắt khi Compare, Choose frames hay một sheet đang mở. ↑/↓ đi theo thứ tự đọc (lưới nhiều cột không đi theo cột) — ghi nhận 2026-11-16. Chữ khác Immich (K/R thay A/D) vì
   *Keep*/*Remove* là chữ trên màn (§11).
 
 ### 14.9 Tiêu chí nghiệm thu (§14)
@@ -530,5 +530,5 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | route `duplicates-keep-trash.json` ✅ 2026-11-16 (iPhone 17 26.5, `-ShotDexFakeBursts`: Keep → Trash → Keep, *1 selected* + *Delete 1*, sheet Selected; ô < 76pt chỉ còn biểu tượng) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | `PhotoDifferenceTests.onlyDifferingFieldsAreListed` ✅ + route `compare-what-differs.json` (iPhone 17 26.5) và `compare-what-differs-ipad.json` (iPad 13) ✅ 2026-11-16; Duo trong ⚠️ chưa chụp |
 | AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | `PhotoDifferenceTests.firstFiveThenShowMore` ✅ |
-| AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | ⚠️ chưa có — `UIKeyCommand` test trong `DuplicatesKeyCommandsTests` + ảnh sim iPad |
+| AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | route `duplicates-keyboard-ipad.json` ✅ 2026-11-16 (iPad 13 26.5: ↓ vòng chọn, R đánh dấu, K, Space mở Choose frames; ⌘⌫ là phím có sẵn của thanh xoá); bảng ⌘-giữ ⚠️ chưa chụp |
 | AC-I16 | (§14.1, đường hỏng) đang đề cử bằng print trên 30.000 ảnh | chạm *Cancel* | dừng ≤ 0.5 s; print đã đọc được giữ; danh sách cũ không đổi | ⚠️ chưa có — `DuplicateQualityPassTests` mở rộng |

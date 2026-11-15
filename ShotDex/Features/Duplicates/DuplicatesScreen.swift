@@ -32,6 +32,9 @@ struct DuplicatesScreen: View {
     /// The Quick clean or Suggested picks preview, when open.
     @State private var cleanupSheet: DuplicatesCleanup?
     @State private var showsSelected = false
+    /// The group a hardware keyboard moves with ↑/↓ (FS-06.06 §14.8); nil
+    /// until the first arrow, so touch users never see the ring.
+    @State private var keyboardGroupId: String?
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
@@ -73,6 +76,7 @@ struct DuplicatesScreen: View {
     private func content(_ model: DuplicatesModel) -> some View {
         @Bindable var model = model
         let hasMarks = model.markedCount > 0
+        ScrollViewReader { proxy in
         ScrollView {
             cardList(model)
                 .padding(.horizontal, AppTheme.Size.screenMargin)
@@ -81,6 +85,8 @@ struct DuplicatesScreen: View {
             if #unavailable(iOS 26.0) {
                 Color.clear.frame(height: hasMarks ? 0 : 90)
             }
+        }
+        .background { keyboardCommands(model, proxy: proxy) }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         .simultaneousGesture(pinch)
@@ -251,6 +257,15 @@ struct DuplicatesScreen: View {
         return LazyVGrid(columns: columns, alignment: .leading, spacing: AppTheme.Spacing.md) {
             ForEach(model.sortedGroups) { group in
                 groupView(group, model: model, metrics: metrics)
+                    .overlay {
+                        if keyboardGroupId == group.id {
+                            RoundedRectangle.app(AppTheme.Radius.lg)
+                                .strokeBorder(Color.accentColor, lineWidth: 2)
+                                .padding(-2)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .id(group.id)
             }
         }
     }
@@ -264,6 +279,63 @@ struct DuplicatesScreen: View {
         } else {
             DuplicateDecisionCard(group: group, model: model, metrics: metrics)
         }
+    }
+
+    // MARK: Keyboard (§14.8)
+
+    /// iPad with a keyboard, after Immich: ↑/↓ move between groups, K keeps
+    /// the group, R moves all but the suggested keeper to Trash (protected
+    /// photos stay, A2), Space opens it; ⌘⌫ is the Delete bar's own. Plain
+    /// letters: the screen has no text field. Each is listed when ⌘ is held.
+    private func keyboardCommands(_ model: DuplicatesModel, proxy: ScrollViewProxy) -> some View {
+        // Each action reads the list and the selection when the key is
+        // pressed — a key command can keep the closure it was first built
+        // with (PhotoMarkMenus' trap).
+        func current() -> DuplicateGroup? { model.sortedGroups.first { $0.id == keyboardGroupId } }
+        func move(_ step: Int) {
+            let groups = model.sortedGroups
+            guard !groups.isEmpty else { return }
+            let index = current().flatMap { groups.firstIndex(of: $0) }.map { $0 + step } ?? 0
+            let next = groups[min(max(index, 0), groups.count - 1)]
+            keyboardGroupId = next.id
+            withAnimation(AppTheme.Motion.standard) { proxy.scrollTo(next.id, anchor: .center) }
+        }
+        /// The selected group, or the first one when nothing is selected yet.
+        func target() -> DuplicateGroup? {
+            if let group = current() { return group }
+            move(0)
+            return current()
+        }
+        // Nothing reaches the list while Compare, Choose frames or a sheet
+        // is up: R behind a cover would mark photos out of sight.
+        let isFront = model.comparePresentation == nil && model.framePicker == nil
+            && cleanupSheet == nil && !showsSelected
+        return Group {
+            if isFront {
+                Button(String(localized: "Next Group", comment: "Duplicates keyboard shortcut: move to the next group")) { move(1) }
+                    .keyboardShortcut(.downArrow, modifiers: [])
+                Button(String(localized: "Previous Group", comment: "Duplicates keyboard shortcut: move to the previous group")) { move(-1) }
+                    .keyboardShortcut(.upArrow, modifiers: [])
+                Button(String(localized: "Keep All in Group", comment: "Duplicates keyboard shortcut: keep every photo of the selected group")) {
+                    guard let group = target(), !model.isKeptAll(group) else { return }
+                    withAnimation(AppTheme.Motion.standard) { model.toggleKeepAll(group) }
+                }
+                .keyboardShortcut("k", modifiers: [])
+                Button(String(localized: "Move Others to Trash", comment: "Duplicates keyboard shortcut: mark every photo of the selected group but the suggested one")) {
+                    guard let group = target() else { return }
+                    withAnimation(AppTheme.Motion.standard) { model.markOthers(in: group) }
+                }
+                .keyboardShortcut("r", modifiers: [])
+                Button(String(localized: "Open Group", comment: "Duplicates keyboard shortcut: open the selected group in Compare or Choose frames")) {
+                    guard let group = target() else { return }
+                    if group.kind == .burst { model.openFrames(group) } else { model.compare(group) }
+                }
+                .keyboardShortcut(.space, modifiers: [])
+            }
+        }
+        .opacity(0)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 
     // MARK: Pinch
