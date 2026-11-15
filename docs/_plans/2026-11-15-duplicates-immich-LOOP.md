@@ -33,7 +33,7 @@ sim photo permission on 26.5 needs reset + one tap; screenshot before every tap 
 | # | AC | What | Status | Commit | Note |
 |---|---|---|---|---|---|
 | 1 | AC-I10 | keeper tiebreak: size within 1% → more photo-info fields; chip *More photo info* | done | bae2725d | 3 reviews: pairwise 1% band was non-transitive → set-based `fileOrder`; info counts photo_metadata only. Chip not seen on sim (demo library has no size-tie group) |
-| 2 | AC-D9, D10 | inherit highest rating (iOS 27 Photos / pending queue below 27) | todo | | |
+| 2 | AC-D9, D10 | inherit highest rating (iOS 27 Photos / pending queue below 27) | done | (this row) | 3 reviews: one mixed write, shared-library/gone ids refused + counted on the delete banner. Not run on a sim with a real delete (needs a rated demo group) |
 | 3 | AC-D11, D12 | inherit caption lines + keywords (iOS 27), failure alert | todo | | |
 | 4 | AC-I13, I14 | `PhotoDifference` (only differing fields, first 5 + Show N more) | todo | | |
 | 5 | AC-I13 UI | Compare: *What differs · N* button + sheet (iPhone/Duo), table under filmstrip (iPad) | todo | | |

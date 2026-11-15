@@ -58,8 +58,13 @@ extension PhotoPropertyWriting {
 struct PhotoKitPropertyWriter: PhotoPropertyWriting {
     func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult {
         guard !ratings.isEmpty else { return .empty }
-        let assets = PhotoLibraryService.fetchAssets(ids: Array(ratings.keys))
-        guard !assets.isEmpty else { return .empty }
+        let found = PhotoLibraryService.fetchAssets(ids: Array(ratings.keys))
+        // A shared-library or shared-album asset refuses property edits, and
+        // one refusal would sink the whole block: leave it out, say so.
+        let assets = found.filter { $0.canPerform(.properties) }
+        // An id no longer in the library did not take the stars either.
+        let refused = Set(ratings.keys).subtracting(assets.map(\.localIdentifier))
+        guard !assets.isEmpty else { return PropertyWriteResult(dates: [:], refused: refused) }
         let before = Self.modificationDates(assets)
         try await PHPhotoLibrary.shared().performChanges {
             for asset in assets {
@@ -72,7 +77,7 @@ struct PhotoKitPropertyWriter: PhotoPropertyWriting {
         for (id, date) in before {
             dates[id] = PropertyWriteResult.Dates(before: date, after: after[id] ?? date)
         }
-        return PropertyWriteResult(dates: dates)
+        return PropertyWriteResult(dates: dates, refused: refused)
     }
 
     func applyCaptionKeywords(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {

@@ -27,6 +27,8 @@ protocol DuplicatesServices: AnyObject {
     var duplicateQualityPass: DuplicateQualityPass { get }
     var duplicateReview: DuplicateReviewSession { get }
     var bursts: any BurstLibrary { get }
+    /// Where ratings live — a kept photo inherits the highest (06b §2).
+    var photoMarks: PhotoMarks { get }
     /// "37 photos moved to Recently Deleted…" after a delete went through.
     func showDuplicatesDeleted(_ text: String)
 }
@@ -1003,7 +1005,10 @@ final class DuplicatesModel {
         defer { isDeleting = false }
         let affected = groups.filter { !$0.memberIds.isDisjoint(with: ids) }
         await loadAllTraits(affected)
-        let plans = DuplicateInheritance.plan(groups: affected, deleting: ids, traits: traits)
+        // Stars are read before the delete: a deleted copy's rating is gone
+        // from Photos once it sits in Recently Deleted.
+        let ratings = await dependencies.photoMarks.ratings(for: affected.flatMap(\.memberIds))
+        let plans = DuplicateInheritance.plan(groups: affected, deleting: ids, traits: traits, ratings: ratings)
         let donors = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
         let keepers = Dictionary(uniqueKeysWithValues: plans.compactMap { plan in
             assetsById[plan.keeperId].map { (plan.keeperId, $0) }
@@ -1029,7 +1034,8 @@ final class DuplicatesModel {
         didDelete(ids: ids)
         recordFreed(bytes)
         let missedAlbums = await inherit(plans, keepers: keepers, donors: donors)
-        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums)
+        let missedRatings = await DuplicateInheritance.applyRatings(plans, marks: dependencies.photoMarks)
+        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums, missedRatings: missedRatings)
         deleteSuccessCount += 1
         return true
     }
@@ -1124,7 +1130,7 @@ final class DuplicatesModel {
     /// "37 photos moved to Recently Deleted · 210 MB freed · kept for 30
     /// days" + Open Photos (06b §3). No Undo: an app cannot read Recently
     /// Deleted back.
-    private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int) {
+    private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int, missedRatings: Int = 0) {
         let size = Self.byteFormatter.string(fromByteCount: Int64(bytes))
         var text = count == 1
             ? String(localized: "1 photo moved to Recently Deleted", comment: "Duplicates: banner after deleting")
@@ -1138,6 +1144,15 @@ final class DuplicatesModel {
                          comment: "Duplicates: banner, inheritance could not be written for one kept photo")
                 : String(localized: "\(missedAlbums) kept photos couldn't take their copies' albums or favorite",
                          comment: "Duplicates: banner, inheritance could not be written for several kept photos"))
+        }
+        if missedRatings > 0 {
+            // The stars lived only on the deleted copy: say so, the banner
+            // must not promise more than happened (06b §2).
+            text += "\n" + (missedRatings == 1
+                ? String(localized: "1 kept photo couldn't take its copies' rating",
+                         comment: "Duplicates: banner, the inherited star rating could not be written for one kept photo")
+                : String(localized: "\(missedRatings) kept photos couldn't take their copies' rating",
+                         comment: "Duplicates: banner, the inherited star rating could not be written for several kept photos"))
         }
         lastDeleteSummary = text.replacingOccurrences(of: "\n", with: " · ")
         dependencies.showDuplicatesDeleted(text)
@@ -1173,5 +1188,19 @@ final class DuplicatesModel {
         session.forget(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
         UserDefaults.standard.set(totalFreeBytes, forKey: SettingsKeys.duplicateFreeBytes)
+    }
+}
+
+extension DuplicateInheritance {
+    /// Gives each kept photo the rating it inherits (06b §2), through the same
+    /// store as a rating the user sets — Photos on iOS 27, the pending queue
+    /// below it — in **one** write. Returns how many kept photos did not get
+    /// their stars (a failed write, a shared-library photo), for the banner.
+    @MainActor
+    static func applyRatings(_ plans: [DuplicateInheritance], marks: PhotoMarks) async -> Int {
+        var ratings: [String: Int] = [:]
+        for plan in plans { if let rating = plan.rating { ratings[plan.keeperId] = rating } }
+        guard !ratings.isEmpty else { return 0 }
+        return await marks.setRatings(ratings).count
     }
 }

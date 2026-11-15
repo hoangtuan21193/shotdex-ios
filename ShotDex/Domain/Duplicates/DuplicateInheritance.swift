@@ -1,7 +1,8 @@
 import Foundation
 
 /// What a group's kept photo takes from the copies deleted beside it
-/// (FS-06.06b §2, replacing v2's Merge): their albums, the favorite, and —
+/// (FS-06.06b §2, replacing v2's Merge): their albums, the favorite, the
+/// highest rating (2026-11-15, after Immich), and —
 /// read off the assets at write time — a location and, for copies of the
 /// same moment only, the earliest capture date.
 struct DuplicateInheritance: Equatable, Sendable {
@@ -15,8 +16,11 @@ struct DuplicateInheritance: Equatable, Sendable {
     /// Copies and smaller copies are one moment: the earliest date wins.
     /// A look-alike or a frame of a run keeps its own date.
     var takesEarliestDate: Bool
+    /// The highest rating among the deleted copies, when it beats the
+    /// keeper's own; `nil` leaves the keeper's stars alone.
+    var rating: Int? = nil
 
-    var isEmpty: Bool { albumIds.isEmpty && !favorite && donorIds.isEmpty }
+    var isEmpty: Bool { albumIds.isEmpty && !favorite && donorIds.isEmpty && rating == nil }
 
     /// Plans for every group losing photos in this delete. A group left with
     /// two or more unmarked photos has no single keeper — the user is keeping
@@ -24,7 +28,8 @@ struct DuplicateInheritance: Equatable, Sendable {
     static func plan(
         groups: [DuplicateGroup],
         deleting: Set<String>,
-        traits: [String: DuplicateMemberTraits]
+        traits: [String: DuplicateMemberTraits],
+        ratings: [String: Int] = [:]
     ) -> [DuplicateInheritance] {
         groups.compactMap { group in
             let gone = group.members.filter { deleting.contains($0.assetId) }
@@ -39,14 +44,15 @@ struct DuplicateInheritance: Equatable, Sendable {
             }
             let favorite = !(keeperTraits.isFavorite || keeper.isFavorite)
                 && gone.contains { traits[$0.assetId]?.isFavorite == true || $0.isFavorite }
-            let plan = DuplicateInheritance(
+            let best = gone.compactMap { ratings[$0.assetId] }.max() ?? 0
+            return DuplicateInheritance(
                 keeperId: keeper.assetId,
                 albumIds: albumIds,
                 favorite: favorite,
                 donorIds: gone.sorted(by: DuplicateGrouper.oldestFirst).map(\.assetId),
-                takesEarliestDate: group.kind.isCopy
+                takesEarliestDate: group.kind.isCopy,
+                rating: best > (ratings[keeper.assetId] ?? 0) ? best : nil
             )
-            return plan
         }
     }
 }

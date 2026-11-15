@@ -42,3 +42,86 @@ struct DuplicateInheritanceTests {
         #expect(DuplicateInheritance.plan(groups: [group], deleting: ["C"], traits: traits).first?.albumIds == ["a2"])
     }
 }
+
+/// FS-06.06b §2 (2026-11-15, after Immich): the kept photo takes the highest
+/// rating in the group, written where every other rating goes.
+@MainActor
+struct DuplicateRatingInheritanceTests {
+    private func photo(_ id: String) -> HashedPhoto {
+        HashedPhoto(assetId: id, hash: PerceptualHash(bits: 0), width: 6000, height: 4000, fileSize: 1,
+                    creationDate: 1_700_000_000, isFavorite: false)
+    }
+
+    private var group: DuplicateGroup {
+        DuplicateGroup(members: [photo("K"), photo("C1"), photo("C2")], kind: .exact)
+    }
+
+    /// AC-D9 (plan): K 2★, C1 5★, C2 unrated → K takes 5.
+    @Test func keeperTakesTheHighestRating() {
+        let plan = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:],
+                                             ratings: ["K": 2, "C1": 5, "C2": 0]).first
+        #expect(plan?.rating == 5)
+        #expect(plan?.isEmpty == false)
+    }
+
+    /// A keeper rated as high or higher keeps its own; nothing to write.
+    @Test func higherRatedKeeperIsLeftAlone() {
+        let plans = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:],
+                                              ratings: ["K": 5, "C1": 3])
+        #expect(plans.first?.rating == nil)
+    }
+
+    /// AC-D9: on iOS 27 the stars go to Photos in one write.
+    @Test func ratingGoesToPhotosOnIOS27() async throws {
+        let store = PhotoMarksStore(database: try AppDatabase.makeEmpty())
+        let writer = FakePropertyWriter(modificationDate: 1_700_000_000)
+        let marks = PhotoMarks(store: store, ratingWriter: writer, readPhotosRatings: { _ in ["K": 2, "C1": 5] })
+        let ratings = await marks.ratings(for: ["K", "C1", "C2"])
+        #expect(ratings == ["K": 2, "C1": 5, "C2": 0])
+        let plans = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:], ratings: ratings)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(writer.ratings == ["K": 5])
+        #expect(writer.blocks == [1])
+    }
+
+    /// Two groups inheriting different stars are still one write to Photos.
+    @Test func severalKeepersAreOneWrite() async throws {
+        let store = PhotoMarksStore(database: try AppDatabase.makeEmpty())
+        let writer = FakePropertyWriter(modificationDate: 1_700_000_000)
+        let marks = PhotoMarks(store: store, ratingWriter: writer)
+        let plans = [
+            DuplicateInheritance(keeperId: "K1", albumIds: [], favorite: false, donorIds: ["a"], takesEarliestDate: true, rating: 5),
+            DuplicateInheritance(keeperId: "K2", albumIds: [], favorite: false, donorIds: ["b"], takesEarliestDate: true, rating: 3),
+        ]
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(writer.ratings == ["K1": 5, "K2": 3])
+        #expect(writer.blocks == [2])
+    }
+
+    /// The write fails: the count reaches the banner, the keeper keeps its
+    /// old stars, nothing claims they moved.
+    @Test func failedWriteIsCountedForTheBanner() async throws {
+        let store = PhotoMarksStore(database: try AppDatabase.makeEmpty())
+        let writer = FakePropertyWriter(modificationDate: 1_700_000_000)
+        writer.failure = CocoaError(.fileWriteUnknown)
+        let marks = PhotoMarks(store: store, ratingWriter: writer, readPhotosRatings: { _ in ["K": 2] })
+        let plans = [DuplicateInheritance(keeperId: "K", albumIds: [], favorite: false, donorIds: ["C"],
+                                          takesEarliestDate: true, rating: 5)]
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 1)
+        #expect(marks.rating(for: "K", photosRating: 2) == 2)
+    }
+
+    /// AC-D10: below iOS 27 the stars wait in the pending queue, like any
+    /// rating set there.
+    @Test func belowIOS27RatingGoesToThePendingQueue() async throws {
+        let store = PhotoMarksStore(database: try AppDatabase.makeEmpty())
+        let marks = PhotoMarks(store: store)
+        await marks.setRating(2, ids: ["K"])
+        await marks.setRating(5, ids: ["C1"])
+        let ratings = await marks.ratings(for: ["K", "C1", "C2"])
+        let plans = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:], ratings: ratings)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(try store.allPendingRatings()["K"] == 5)
+        #expect(marks.rating(for: "K") == 5)
+    }
+}

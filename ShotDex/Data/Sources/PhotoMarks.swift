@@ -97,6 +97,16 @@ final class PhotoMarks {
         pendingRatings[assetId] ?? writtenRatings[assetId] ?? fileRatings[assetId] ?? photosRating ?? 0
     }
 
+    /// The rating the app shows for each id, reading Photos' own stars (iOS
+    /// 27) off the main actor — for a caller with ids but no assets in hand.
+    func ratings(for ids: [String]) async -> [String: Int] {
+        let read = readPhotosRatings
+        let known: [String: Int] = if ratingWriter == nil { [:] } else {
+            await Task.detached(priority: .userInitiated) { read(ids) }.value
+        }
+        return Dictionary(ids.map { ($0, rating(for: $0, photosRating: known[$0])) }, uniquingKeysWith: { first, _ in first })
+    }
+
     func summary(for assetId: String, photosRating: Int? = nil) -> PhotoMarkSummary {
         PhotoMarkSummary(rating: rating(for: assetId, photosRating: photosRating), flag: flags[assetId])
     }
@@ -224,8 +234,13 @@ final class PhotoMarks {
     /// at once; on success the filter column, the modification date and any
     /// pending rows of these photos follow; on failure every photo goes back
     /// to what it showed and the failure is kept for Try Again.
-    private func writeToPhotos(_ ratings: [String: Int], previous: [String: Int]) async {
-        guard let ratingWriter, !ratings.isEmpty else { return }
+    /// Returns the ids whose stars did not land: all of them when the write
+    /// failed, the refused ones (shared library, gone) when it went through.
+    /// A refused id keeps showing the new stars here, as it always has for
+    /// the cull and viewer; `setRatings(_:)` undoes that for its caller.
+    @discardableResult
+    private func writeToPhotos(_ ratings: [String: Int], previous: [String: Int]) async -> Set<String> {
+        guard let ratingWriter, !ratings.isEmpty else { return [] }
         let removedPending = pendingRatings.filter { ratings[$0.key] != nil }
         for (id, rating) in ratings {
             writtenRatings[id] = rating
@@ -242,13 +257,56 @@ final class PhotoMarks {
                 try? metadataStore?.recordRatingWrite(ratings, result: result)
                 try? store.deletePendingRatings(ids: ids)
             }.value
+            return result.refused
         } catch {
             for (id, rating) in previous { writtenRatings[id] = rating }
             for (id, rating) in removedPending { pendingRatings[id] = rating }
             failedRatingWrite = FailedRatingWrite(ratings: ratings)
             version += 1
             onRatingWriteFailed?()
+            return Set(ratings.keys)
         }
+    }
+
+    /// Sets each id to its own rating — one write to Photos however many
+    /// values — and returns the ids whose stars were not kept, for a caller
+    /// that has to say so itself (Duplicates' inherited stars, 06b §2: the
+    /// only other copy of those stars was just deleted).
+    func setRatings(_ ratings: [String: Int]) async -> Set<String> {
+        let ratings = ratings.mapValues(StarRating.clamped)
+        // What each id showed before anything moved, file copies included.
+        let read = readPhotosRatings
+        let allIds = Array(ratings.keys)
+        let known: [String: Int] = if ratingWriter == nil { [:] } else {
+            await Task.detached(priority: .userInitiated) { read(allIds) }.value
+        }
+        var previous: [String: Int] = [:]
+        for id in allIds { previous[id] = rating(for: id, photosRating: known[id]) }
+        let toPhotos = Set(await setFileRatings(ratings))
+        let photos = ratings.filter { toPhotos.contains($0.key) }
+        guard !photos.isEmpty else { return [] }
+        if ratingWriter != nil {
+            let missed = await writeToPhotos(photos, previous: previous)
+            // Stars Photos would not take are not shown as taken — unless a
+            // newer write has set this id since.
+            var reverted = false
+            for id in missed where writtenRatings[id] == photos[id] {
+                writtenRatings[id] = previous[id]
+                reverted = true
+            }
+            if reverted { version += 1 }
+            return missed
+        }
+        for (id, rating) in photos { pendingRatings[id] = rating == 0 ? nil : rating }
+        version += 1
+        let store = store
+        let byValue = Dictionary(grouping: photos.keys) { photos[$0] ?? 0 }
+        await Task.detached(priority: .userInitiated) {
+            for (rating, ids) in byValue {
+                if rating == 0 { try? store.deletePendingRatings(ids: ids) } else { try? store.setPendingRating(rating, ids: ids) }
+            }
+        }.value
+        return []
     }
 
     /// Try Again on a failed write: the same photos, the same stars.
