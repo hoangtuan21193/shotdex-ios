@@ -18,6 +18,8 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     /// The file carries a camera's EXIF (a camera model). A copy sent through
     /// WhatsApp or Zalo has it stripped, and its date is the day it arrived.
     var hasCameraEXIF = true
+    /// The camera model, for the print buckets (§14.1).
+    var cameraModel: String? = nil
     /// Exposure compensation in EV, from the scoring pass's EXIF read
     /// (`duplicate_quality`). `nil` until read, or when the file has none.
     var exposureBias: Double? = nil

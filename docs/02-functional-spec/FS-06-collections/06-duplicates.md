@@ -398,9 +398,13 @@ ShotDex không có CLIP; dùng feature print Vision rev 2 đã có (§4a).
   lệch bao nhiêu bit. Mọi luật chặn khác của Similar giữ nguyên (tiêu cự ±10%, ảnh chụp màn hình chỉ với ảnh chụp màn hình,
   liên kết đầy đủ ≤ 0.4 của §4a) — riêng luật **tỷ lệ khung ±2%** được nới cho ứng viên từ feature print, để bản **cắt**
   vào được nhóm.
-- **Không so mọi cặp** trên 55k ảnh: chia **thùng** theo ngày chụp (±1 ngày) × model máy; so mọi cặp trong thùng; mỗi ảnh
-  giữ tối đa **64** ứng viên gần nhất (như Immich). Ảnh không có ngày chụp: một thùng riêng theo model.
-- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất) — **T_fp = 0.3** để bắt đầu, spike chốt số cuối. Số đo §4a: bản lưu lại 0.08–0.15, cắt 6% + 0.25 EV 0.16–0.23, ảnh khác nhau
+- **Không so mọi cặp** trên 55k ảnh. Sửa 2026-11-16 sau review hiệu năng: thùng = **cùng giây chụp × cùng máy** (× ảnh
+  chụp màn hình hay không), tối đa 60 ảnh; bản cắt / bản xuất lại giữ giờ chụp của bản gốc. Thùng ngày × máy (đã chốt)
+  đưa gần cả thư viện vào bước chấm — ước 1–2,5 giờ chấm và ~250 MB print mỗi lần mở màn. Bản lưu lại đổi giờ chụp
+  (WhatsApp…) không bắt được bằng đường này — đường bản nhỏ (§4) vẫn bắt khi lệch ≤ 6 bit. Ảnh không ngày chụp: không đề cử.
+  Thùng là bracket/focus stack (§5) không đề cử (nếu không sẽ lọt qua bước Vision). Đề cử được lưu như nhóm Similar chưa
+  xác nhận; bước chấm §3 đọc print của mọi thành viên; §4a (mọi cặp ≤ 0.4) mới cho hiện.
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất) — **T_fp = 0.3** để bắt đầu, spike chốt số cuối. (Build 2026-11-16 dùng luôn ngưỡng xác nhận §4a 0.4 cho đề cử — chưa có spike; thùng một giây đã giữ phạm vi hẹp.) Số đo §4a: bản lưu lại 0.08–0.15, cắt 6% + 0.25 EV 0.16–0.23, ảnh khác nhau
   ≥ 0.64. Đề xuất bắt đầu **0.3**, chốt bằng spike trên bộ fixture tự sinh (cắt 10/20/30%, B&W, film look, xuất lại 1280px)
   + máy thật; ghi số vào đây. Simulator không đo được (print hằng, §4a).
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất): **feature print cho cả thư viện**. Hôm nay print chỉ đọc cho ảnh đã nằm trong nhóm (§3 bước 3). Đề cử
@@ -520,9 +524,9 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-I1 | (§14.1) ảnh gốc 4032×3024 và bản **cắt 20%** của nó (3226×2419, tỷ lệ 4:3 → 4:3 cắt lệch tâm, dấu vân tay lệch 18 bit), print cách 0.22, cùng ngày, cùng máy | gom nhóm | hai ảnh một nhóm Similar | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintNominatesACrop` (print giả lập) + máy thật |
-| AC-I2 | (§14.1) hai ảnh khác cảnh cùng ngày cùng máy, print cách 0.64, dấu vân tay lệch 30 bit | gom nhóm | không chung nhóm | ⚠️ chưa có — `DuplicateGrouperTests.featurePrintKeepsDifferentScenesApart` |
-| AC-I3 | (§14.1) 3.000 ảnh trong 1 ngày, 1 máy; 52.000 ảnh rải 4 năm | đề cử bằng print | số cặp được so ≤ 3.000×2.999/2 + tổng các thùng khác (không có cặp nào khác ngày > 1); mỗi ảnh ≤ 64 ứng viên; RAM đỉnh của bước ≤ 60 MB | ⚠️ chưa có — `FeaturePrintCandidatesTests.bucketsBoundThePairs` + Instruments |
+| AC-I1 | (§14.1) ảnh gốc 4032×3024 và bản **cắt 20%** của nó (3226×2419, tỷ lệ 4:3 → 4:3 cắt lệch tâm, dấu vân tay lệch 18 bit), print cách 0.22, cùng ngày, cùng máy | gom nhóm | hai ảnh một nhóm Similar | `FeaturePrintCandidatesTests.featurePrintNominatesACrop` (print giả lập) ✅; máy thật ⚠️ chưa có (simulator: print hằng) |
+| AC-I2 | (§14.1) hai ảnh khác cảnh cùng ngày cùng máy, print cách 0.64, dấu vân tay lệch 30 bit | gom nhóm | không chung nhóm | `FeaturePrintCandidatesTests.featurePrintKeepsDifferentScenesApart` ✅ |
+| AC-I3 | (§14.1) 3.000 ảnh trong 1 ngày, 1 máy; 52.000 ảnh rải 4 năm | đề cử bằng print | số cặp được so ≤ 3.000×2.999/2 + tổng các thùng khác (không có cặp nào khác ngày > 1); mỗi ảnh ≤ 64 ứng viên; RAM đỉnh của bước ≤ 60 MB | `FeaturePrintCandidatesTests.bucketsBoundThePairs` ✅ (thùng một giây, ≤ 60); Instruments trên máy thật ⚠️ chưa có |
 | AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | `ContentChecksumTests.equalChecksumIsExactWhateverTheName`, `.streamsWithoutLoadingTheFile`, `.editedOrLivePhotosNeverJoinOnTheChecksum`, `PerceptualHashStoreTests.checksumFollowsTheModificationDate` ✅ |
 | AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa chứng minh được: `isNetworkAccessAllowed` theo chính sách quét (đọc code); cần máy thật bật Optimize Storage |
 | AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | `ContentChecksumTests.onlyCandidatesAreHashed` ✅ |

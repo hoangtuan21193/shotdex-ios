@@ -895,7 +895,13 @@ final class DuplicatesModel {
                 if let fresh = try? store.hashedPhotos() { photos = fresh }
             }
             guard !Task.isCancelled else { return }
-            try? store.replaceGroups(DuplicateGrouper.groups(from: photos), scannedAt: Date())
+            var groups = DuplicateGrouper.groups(from: photos)
+            // §14.1: the print nominates what the hash missed — only where
+            // prints can tell pictures apart (never on the simulator, §4a).
+            if DuplicateQualityReader.printsTellPicturesApart {
+                groups += FeaturePrintCandidates.nominate(photos, grouped: Set(groups.flatMap(\.memberIds)))
+            }
+            try? store.replaceGroups(groups, scannedAt: Date())
         }
         await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }

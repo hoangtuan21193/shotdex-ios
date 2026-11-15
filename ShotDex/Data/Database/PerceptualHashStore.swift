@@ -272,6 +272,7 @@ struct PerceptualHashStore: Sendable {
             focalLength: row["focalLength"],
             isScreenshot: subtypes.map { $0 & Int(PHAssetMediaSubtype.photoScreenshot.rawValue) != 0 } ?? false,
             hasCameraEXIF: !(cameraModel ?? "").isEmpty,
+            cameraModel: cameraModel,
             exposureBias: row["exposureBias"],
             software: row["software"],
             originalFilename: row["originalFilename"],
