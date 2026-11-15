@@ -1,0 +1,88 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "01-pager"
+    },
+    {
+      "action": "dump",
+      "name": "01-pager"
+    },
+    {
+      "action": "tap",
+      "label": "Next"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-next"
+    },
+    {
+      "action": "tap",
+      "label": "Previous"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "All Trash"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-all-trash"
+    },
+    {
+      "action": "tap",
+      "label": "All Keep"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-all-keep"
+    }
+  ]
+}

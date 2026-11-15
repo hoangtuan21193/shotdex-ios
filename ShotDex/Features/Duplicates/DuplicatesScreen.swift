@@ -24,6 +24,9 @@ struct DuplicatesScreen: View {
 
     @State private var model: DuplicatesModel?
     @State private var containerWidth: CGFloat = 0
+    @State private var containerHeight: CGFloat = 0
+    /// Wide screens show one group at a time (FS-06.06 §7.4a); this is its place.
+    @State private var pageIndex = 0
     /// Magnification at the last density step of the pinch in progress.
     @State private var pinchAnchor: CGFloat = 1
     @State private var isPinching = false
@@ -92,7 +95,7 @@ struct DuplicatesScreen: View {
         }
         .background { keyboardCommands(model, proxy: proxy) }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { containerWidth = $0.width; containerHeight = $0.height }
         .simultaneousGesture(pinch)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
@@ -123,14 +126,16 @@ struct DuplicatesScreen: View {
                     .allowsHitTesting(false)
             }
         }
+        // Wide screens delete from the group card (§7.4a): no bottom bar,
+        // and the tab bar stays so the header never jumps.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if hasMarks {
+            if hasMarks && !isRegular {
                 deleteBar(model)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .toolbar(hasMarks ? .hidden : .automatic, for: .tabBar)
-        .onChange(of: hasMarks) { navigation.hidesTabBar = hasMarks }
+        .toolbar(hasMarks && !isRegular ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: hasMarks) { navigation.hidesTabBar = hasMarks && !isRegular }
         .onDisappear {
             navigation.hidesTabBar = false
             model.stopScoring()
@@ -249,8 +254,50 @@ struct DuplicatesScreen: View {
             emptyState(model)
                 .frame(maxWidth: .infinity)
                 .padding(.top, AppTheme.Spacing.xxl)
+        } else if isRegular {
+            pager(model)
         } else {
             cards(model)
+        }
+    }
+
+    /// Wide screens (iPad, Duo inner): one group at a time, its photos big,
+    /// facts under each, Previous / Next (FS-06.06 §7.4a — user 2026-11-16,
+    /// after Immich's duplicates screen). The keyboard's ↑/↓ and ←/→ turn
+    /// the page; K, R and Space act on the group shown.
+    private func pager(_ model: DuplicatesModel) -> some View {
+        let groups = model.sortedGroups
+        let index = min(max(pageIndex, 0), groups.count - 1)
+        let group = groups[index]
+        let width = min(containerWidth - AppTheme.Size.screenMargin * 2, DuplicatePagerCard.maximumWidth)
+        func go(_ step: Int) {
+            let next = min(max(index + step, 0), groups.count - 1)
+            withAnimation(AppTheme.Motion.standard) { pageIndex = next }
+            keyboardGroupId = groups[next].id
+        }
+        return VStack(spacing: AppTheme.Spacing.lg) {
+            DuplicatePagerCard(
+                group: group,
+                model: model,
+                width: width,
+                photoHeightBudget: max(160, containerHeight - DuplicatePagerCard.chromeHeight),
+                onResolved: {
+                    // A delete takes the group out of the list: the same
+                    // index is already the next group. Keep All leaves it in.
+                    if model.sortedGroups.contains(where: { $0.id == group.id }) { go(1) }
+                }
+            )
+            .id(group.id)
+            .transition(.opacity)
+            DuplicatePagerFooter(index: index, count: groups.count, previous: { go(-1) }, next: { go(1) })
+                .frame(width: width)
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear { keyboardGroupId = group.id }
+        .onChange(of: keyboardGroupId) { _, id in
+            if let id, let found = model.sortedGroups.firstIndex(where: { $0.id == id }), found != pageIndex {
+                pageIndex = found
+            }
         }
     }
 
@@ -338,6 +385,12 @@ struct DuplicatesScreen: View {
                     .keyboardShortcut(.downArrow, modifiers: [])
                 Button(String(localized: "Previous Group", comment: "Duplicates keyboard shortcut: move to the previous group")) { move(-1) }
                     .keyboardShortcut(.upArrow, modifiers: [])
+                if isRegular {
+                    Button(String(localized: "Next Group", comment: "Duplicates keyboard shortcut: move to the next group")) { move(1) }
+                        .keyboardShortcut(.rightArrow, modifiers: [])
+                    Button(String(localized: "Previous Group", comment: "Duplicates keyboard shortcut: move to the previous group")) { move(-1) }
+                        .keyboardShortcut(.leftArrow, modifiers: [])
+                }
                 Button(String(localized: "Keep All in Group", comment: "Duplicates keyboard shortcut: keep every photo of the selected group")) {
                     guard let group = target(), !model.isKeptAll(group) else { return }
                     withAnimation(AppTheme.Motion.standard) { model.toggleKeepAll(group) }
@@ -1210,5 +1263,248 @@ struct KeepTrashPill: View {
         .frame(minWidth: height, minHeight: height, maxHeight: height)
         .background(isTrash ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color.black.opacity(0.55)), in: Capsule())
         .shadow(color: .black.opacity(0.35), radius: 2)
+    }
+}
+
+
+// MARK: - Wide-screen pager (FS-06.06 §7.4a)
+
+/// One group on a wide screen: All Keep / All Trash on the left, the
+/// resolving button on the right, the photos side by side as big as the
+/// screen allows, and under each the facts that tell copies apart.
+private struct DuplicatePagerCard: View {
+    static let maximumWidth: CGFloat = 1100
+    static let padding: CGFloat = 16
+    static let photoGap: CGFloat = 12
+    static let infoRowHeight: CGFloat = 32
+    /// Everything on screen that is not photo: bars, card top bar, info
+    /// panel, footer, paddings.
+    static let chromeHeight: CGFloat = 44 + 16 + 4 * infoRowHeight + 16 + 44 + 16 * 4 + 24
+
+    let group: DuplicateGroup
+    let model: DuplicatesModel
+    let width: CGFloat
+    let photoHeightBudget: CGFloat
+    let onResolved: () -> Void
+
+    private var columns: Int { min(max(group.count, 1), 4) }
+
+    private var tile: CGFloat {
+        let inner = width - Self.padding * 2
+        let byWidth = (inner - Self.photoGap * CGFloat(columns - 1)) / CGFloat(columns)
+        return max(80, min(byWidth, photoHeightBudget).rounded(.down))
+    }
+
+    private var markedIds: [String] {
+        group.members.map(\.assetId).filter { model.isMarked($0) }
+    }
+
+    var body: some View {
+        let keeper = model.keeper(of: group)
+        VStack(alignment: .leading, spacing: Self.padding) {
+            topBar
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(tile), spacing: Self.photoGap, alignment: .top), count: columns),
+                      spacing: Self.photoGap) {
+                ForEach(group.members) { member in
+                    VStack(spacing: 0) {
+                        photo(member, keeper: keeper)
+                        DuplicatePagerFacts(member: member, model: model, isMarked: model.isMarked(member.assetId))
+                            .padding(.top, 8)
+                    }
+                    .frame(width: tile)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(Self.padding)
+        .frame(width: width)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
+        .onAppear { model.loadTraits(for: group) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "\(group.kind.title), \(group.count) photos",
+                                   comment: "VoiceOver: the Duplicates group shown on a wide screen"))
+    }
+
+    private var topBar: some View {
+        let marked = markedIds
+        let everyKept = marked.isEmpty
+        let everyTrashed = marked.count == group.count
+        return HStack(spacing: AppTheme.Spacing.md) {
+            HStack(spacing: 0) {
+                selectButton(String(localized: "All Keep", comment: "Duplicates wide card: take every Trash mark off this group"),
+                             symbol: "checkmark", isOn: everyKept) {
+                    withAnimation(AppTheme.Motion.standard) { model.keepEvery(in: group) }
+                }
+                selectButton(String(localized: "All Trash", comment: "Duplicates wide card: mark every photo of this group for Trash"),
+                             symbol: "trash", isOn: everyTrashed) {
+                    withAnimation(AppTheme.Motion.standard) { model.markAll(in: group) }
+                }
+            }
+            .background(Color(.tertiarySystemFill), in: Capsule())
+            Spacer(minLength: 0)
+            if marked.isEmpty {
+                Button {
+                    if !model.isKeptAll(group) { model.toggleKeepAll(group) }
+                    onResolved()
+                } label: {
+                    Label(String(localized: "Keep All", comment: "Duplicates wide card: keep every photo of this group and go to the next"),
+                          systemImage: "checkmark")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, AppTheme.Spacing.lg)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+            } else {
+                Button(role: .destructive) {
+                    let ids = Set(marked)
+                    Task { if await model.delete(ids: ids) { onResolved() } }
+                } label: {
+                    Label(String(localized: "Delete \(marked.count)", comment: "Duplicates wide card: delete this group's photos marked Trash"),
+                          systemImage: "trash")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, AppTheme.Spacing.lg)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .tint(.red)
+                .disabled(model.isDeleting)
+            }
+        }
+        .frame(height: 44)
+    }
+
+    private func selectButton(_ title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(minHeight: 44)
+                .background(isOn ? Color(.systemFill) : .clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    private func photo(_ member: HashedPhoto, keeper: HashedPhoto?) -> some View {
+        let isKeeper = member.assetId == keeper?.assetId
+        let isMarked = model.isMarked(member.assetId)
+        return DuplicateThumbnail(
+            asset: model.assetsById[member.assetId],
+            side: tile,
+            radius: AppTheme.Radius.md,
+            isMarked: isMarked,
+            showsKeep: isKeeper && !isMarked,
+            onToggleMark: { withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) } },
+            factLines: isKeeper ? [] : model.caption(of: member, in: group, keeper: keeper),
+            chips: isKeeper && !isMarked ? Array(model.reasons(for: group, keeper: keeper).map(\.title).prefix(1)) : [],
+            isKeeper: isKeeper
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if group.kind == .burst {
+                model.openFrames(group, at: member.assetId)
+            } else {
+                model.compare(group, from: member.assetId)
+            }
+        }
+    }
+}
+
+/// The rows under a photo on the wide card: what tells two copies apart.
+private struct DuplicatePagerFacts: View {
+    let member: HashedPhoto
+    let model: DuplicatesModel
+    let isMarked: Bool
+
+    var body: some View {
+        let albums = model.traits(of: member.assetId).albums
+        VStack(spacing: 0) {
+            row("doc", String(localized: "File", comment: "Duplicates wide card: file name row"), member.originalFilename ?? "—")
+            Divider()
+            row("aspectratio", String(localized: "Size", comment: "Duplicates wide card: dimensions and file size row"), size)
+            Divider()
+            row("calendar", String(localized: "Date", comment: "Duplicates wide card: capture date row"), date)
+            Divider()
+            row("rectangle.stack", String(localized: "Albums", comment: "Duplicates wide card: albums row"),
+                albums.isEmpty
+                    ? String(localized: "None", comment: "Duplicates wide card: the photo is in no album")
+                    : albums.count == 1 ? albums[0]
+                    : String(localized: "In \(albums.count) albums", comment: "Duplicates wide card: number of albums the photo is in"))
+        }
+        .background(isMarked ? Color.red.opacity(0.1) : Color(.tertiarySystemGroupedBackground),
+                    in: RoundedRectangle.app(AppTheme.Radius.sm))
+    }
+
+    private var size: String {
+        var parts: [String] = []
+        if let dimensions = DuplicateReview.dimensions(member) { parts.append(dimensions) }
+        if let bytes = member.fileSize { parts.append(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))) }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private var date: String {
+        guard let seconds = member.creationDate else { return "—" }
+        return Date(timeIntervalSince1970: TimeInterval(seconds)).formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func row(_ symbol: String, _ label: String, _ value: String) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+            Text(label)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: AppTheme.Spacing.sm)
+            Text(value)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .monospacedDigit()
+        }
+        .font(.footnote)
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .frame(height: DuplicatePagerCard.infoRowHeight)
+    }
+}
+
+/// Previous · "12 / 164" · Next under the wide card.
+private struct DuplicatePagerFooter: View {
+    let index: Int
+    let count: Int
+    let previous: () -> Void
+    let next: () -> Void
+
+    var body: some View {
+        HStack {
+            Button(action: previous) {
+                Label(String(localized: "Previous", comment: "Duplicates wide screen: show the previous group"), systemImage: "chevron.left")
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .disabled(index == 0)
+            Spacer()
+            Text("\((index + 1).formatted()) / \(count.formatted())")
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(minHeight: 36)
+                .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+            Spacer()
+            Button(action: next) {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    Text(String(localized: "Next", comment: "Duplicates wide screen: show the next group"))
+                    Image(systemName: "chevron.right")
+                }
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .disabled(index >= count - 1)
+        }
+        .font(.subheadline.weight(.semibold))
     }
 }

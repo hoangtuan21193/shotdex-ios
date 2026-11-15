@@ -1061,6 +1061,18 @@ final class DuplicatesModel {
         session.setMarked(group.members.map(\.assetId), false)
     }
 
+    /// Wide-screen card's *All Trash*: every photo of the group marked, the
+    /// group no longer kept whole (FS-06.06 §7.4a).
+    func markAll(in group: DuplicateGroup) {
+        session.setKeptAll(group.memberIds, false)
+        session.setMarked(group.members.map(\.assetId), true)
+    }
+
+    /// Wide-screen card's *All Keep*: no photo of the group marked.
+    func keepEvery(in group: DuplicateGroup) {
+        clearMarks(in: group)
+    }
+
     func markedCount(in group: DuplicateGroup) -> Int {
         group.members.filter { session.marks.contains($0.assetId) }.count
     }

@@ -244,6 +244,24 @@ Thẻ bo `r-lg`, đệm 12:
   "giữ ít nhất một"; `.success` khi xoá xong.
 - Pinch đổi mật độ 1…5 (2…6 ảnh mỗi hàng; HUD *"3 per row"*).
 
+### 7.4a Màn rộng: từng nhóm một (người dùng 2026-11-16, theo màn Duplicates của Immich)
+
+iPad và Duo trong (regular width) **không** còn lưới nhiều thẻ: mỗi lần **một nhóm**, ảnh to, lật trang.
+
+- Thẻ giữa màn, rộng `min(màn − 32, 1100)`, nền `.secondarySystemGroupedBackground`, `r-lg`, đệm 16.
+- **Thanh trên thẻ** (44pt): trái là cặp nút dính *✓ All Keep* | *🗑 All Trash* (chỉ đặt dấu Keep/Trash cho cả nhóm,
+  chưa xoá; nút khớp trạng thái hiện tại được tô). Phải là nút chính: nhóm có ảnh mang dấu Trash → *Delete N* đỏ (hộp
+  xác nhận hệ thống như 06b §3, xong sang nhóm kế); không có dấu → *Keep All* nền accent (giữ cả nhóm, sang nhóm kế).
+- **Ảnh**: một hàng, số cột = min(số ảnh, 4), ô vuông, khe 12, cạnh = min(bề ngang chia đều, phần cao còn lại của màn)
+  — nhóm 2 ảnh trên iPad dọc mỗi ảnh ~470pt; Duo trong bị chiều cao giới hạn. Nhãn Keep/Trash, chip *Suggested*, viền
+  đỏ giữ như §7.4/§14.6. Chạm ảnh mở Compare (burst: Choose frames).
+- **Bảng thông tin dưới mỗi ảnh** (cùng bề ngang, `r-sm`, nền `.tertiarySystemGroupedBackground`, đỏ 10% khi ảnh mang
+  dấu Trash): 4 dòng 32pt, biểu tượng + nhãn trái, giá trị phải, cắt giữa: *File* tên file · *Size* `4032×3024 · 2.3 MB`
+  · *Date* ngày giờ chụp · *Albums* tên album / *In N albums* / *None*.
+- **Chân**: *‹ Previous* (viền, mờ ở nhóm đầu) · ô *12 / 164* · *Next ›* (nền accent, mờ ở nhóm cuối). Phím ←/→ và ↑/↓
+  lật trang; K, R, Space tác động lên nhóm đang hiện (§14.8).
+- iPhone, Duo ngoài giữ danh sách thẻ (§7.4). Board `IP_Duplicates`, `DI_Duplicates`.
+
 ### 7.5 Thẻ bộ nguyên liệu
 
 Như §7.4 (chỉ ảnh, không tên, không hàng nút) nhưng: trên mỗi khung là thông số khác nhau (*−2 EV*); không có bản giữ

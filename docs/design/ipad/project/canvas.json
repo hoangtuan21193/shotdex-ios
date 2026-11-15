@@ -110,7 +110,7 @@
   },
   "IP_Duplicates.dc.html": {
    "h": 1032,
-   "title": "iPad · Ảnh trùng v3: mở ra là danh sách ngay (không màn tóm tắt), không dải Quick clean (16/11: Quick Clean / Suggested Picks là hàng trong menu sort ⇅); (ẩn sidebar) 3 cột 437 — hàng lọc theo loại, Easiest first, thẻ v3 (vòng 26/44, chip lý do, chú thích 2 dòng), thẻ chỉ có ảnh, luôn hiện đủ ảnh, chỉ thẻ Exact (bracket/focus stack là nhóm Burst), thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thanh 37 selected · 210 MB + Delete 37 — FS-06.06 §7.3–7.5, 06b §3–4, 17/10 code chưa có · 16/11: không còn dải lọc/trạng thái dưới thanh tiêu đề — hàng lọc 340 căn giữa ngay trên hàng tiêu đề, trạng thái 2 dòng (Checked… / Every photo checked) ngay bên phải, thẻ bắt đầu ngay dưới thanh · 16/11 (ảnh to): mỗi hàng min(mật độ, số ảnh) ô — nhóm 2 ảnh là 2 ô to; ô ≥110 có tên file + độ phân giải · dung lượng bên dưới",
+   "title": "iPad · Duplicates (16/11, theo Immich): một nhóm mỗi màn. Thanh tiêu đề giữ nguyên (segment Exact/Similar/Burst giữa, trạng thái 2 dòng bên phải, ⇅ ↻). Thẻ 1100 giữa màn, r-lg, đệm 16: trái All Keep | All Trash, phải Delete N (đỏ, khi có ảnh đánh Trash) hoặc Keep All (accent); ảnh một hàng min(số ảnh, 4) cột, ô vuông cách 12 (2 ảnh: 528 ngang, ~470 dọc); dưới mỗi ảnh bảng File · Size · Date · Albums (đỏ 10% khi Trash). Chân trang ‹ Previous · 12 / 164 · Next ›. Bỏ lưới nhiều thẻ, hàng Keeping all và thanh “37 selected · Delete 37” — FS-06.06",
    "w": 1376,
    "x": 33488,
    "y": 560
