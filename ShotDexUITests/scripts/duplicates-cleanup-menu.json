@@ -1,0 +1,23 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "scrollTo", "label": "Duplicates" },
+    { "action": "tap", "label": "Duplicates" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "01-list-no-band" },
+    { "action": "dump", "name": "01-list-no-band" },
+    { "action": "tap", "label": "Sort groups" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-menu" },
+    { "action": "dump", "name": "02-menu" },
+    { "action": "tap", "label": "Quick Clean" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "03-quick-clean-sheet" },
+    { "action": "tap", "label": "Cancel" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "04-back" }
+  ]
+}

@@ -103,7 +103,11 @@ struct DuplicatesScreen: View {
                         .frame(maxWidth: .infinity)
                         .background(.bar)
                 }
-                DuplicatesHeaderBand(model: model, isRegular: isRegular)
+                // Regular width: the filter and the status ride the
+                // navigation bar instead (user, 2026-11-16 on the iPad board).
+                if !isRegular {
+                    DuplicatesHeaderBand(model: model, isRegular: false)
+                }
             }
         }
         .overlay(alignment: .top) {
@@ -160,6 +164,11 @@ struct DuplicatesScreen: View {
             .environment(photoLibrary)
         }
         .toolbar {
+            if isRegular {
+                ToolbarItem(placement: .principal) {
+                    DuplicatesHeaderBand(model: model, isRegular: true).toolbarRow
+                }
+            }
             // Sort, then Check Again — the only two controls up top (user,
             // 2026-10-22: no ⋯, no Ignored, no Clear Selection), each its own
             // glass button, not one shared capsule (user, 2026-10-23).
@@ -192,6 +201,26 @@ struct DuplicatesScreen: View {
                     Text(sort.title).tag(sort)
                 }
             }
+            // Quick clean and Suggested picks live here, not in a band over
+            // the cards (user, 2026-11-16: the band was too much).
+            let cleanups = availableCleanups(model)
+            if !cleanups.isEmpty {
+                Section {
+                    ForEach(cleanups) { cleanup in
+                        Button {
+                            cleanupSheet = cleanup
+                        } label: {
+                            Label {
+                                Text(cleanup.menuTitle)
+                                Text(cleanup.menuDetail(model))
+                            } icon: {
+                                Image(systemName: cleanup.symbol)
+                            }
+                        }
+                        .disabled(model.isBusy)
+                    }
+                }
+            }
         } label: {
             Image(systemName: "arrow.up.arrow.down")
         }
@@ -221,28 +250,17 @@ struct DuplicatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, AppTheme.Spacing.xxl)
         } else {
-            VStack(spacing: AppTheme.Spacing.md) {
-                if let cleanup = bandCleanup(model) {
-                    DuplicatesQuickCleanBand(model: model, cleanup: cleanup) { cleanupSheet = cleanup }
-                        .frame(maxWidth: isRegular ? 720 : .infinity)
-                        .transition(.opacity)
-                }
-                cards(model)
-            }
+            cards(model)
         }
     }
 
-    /// The band rides the list when the last load found undecided copies
-    /// and the filter could show them. It stays until the next load even
-    /// once every copy is decided: leaving under the finger would pull every
-    /// card up by its height.
-    private func bandCleanup(_ model: DuplicatesModel) -> DuplicatesCleanup? {
-        switch model.filter {
-        case .kind(let kind):
-            if kind.isCopy { return model.offersQuickClean ? .quickClean : nil }
-            if kind == .similar { return model.offersSuggestedPicks ? .suggestedPicks : nil }
-            return nil
-        }
+    /// The shortcuts the sort menu offers: only those with something
+    /// left to do, whatever the filter.
+    private func availableCleanups(_ model: DuplicatesModel) -> [DuplicatesCleanup] {
+        var cleanups: [DuplicatesCleanup] = []
+        if model.pendingQuickClean.copies > 0 { cleanups.append(.quickClean) }
+        if model.pendingSuggestedPicks.photos > 0 { cleanups.append(.suggestedPicks) }
+        return cleanups
     }
 
     /// Cards in rows of equal columns, in list order. Not masonry: a
@@ -582,10 +600,61 @@ private struct DuplicatesHeaderBand: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
+    /// Regular width (FS-06.06 §7.3, user 2026-11-16): the segmented filter
+    /// centered in the navigation bar, the status or the check's progress
+    /// right of it — no band under the bar.
+    var toolbarRow: some View {
+        // The principal item replaces the title on iPad, so the row draws
+        // it: title leading, filter centered on the row, status right of it
+        // (an empty twin of the status slot on the left keeps it centered).
+        ZStack(alignment: .leading) {
+            HStack(spacing: AppTheme.Spacing.md) {
+                Color.clear.frame(width: Self.toolbarStatusWidth, height: 1)
+                if !model.presentFilters.isEmpty {
+                    filterPicker
+                        .frame(width: Self.toolbarFilterWidth)
+                }
+                statusSlot
+                    .frame(width: Self.toolbarStatusWidth, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity)
+            Text("Duplicates", comment: "Duplicates screen title, drawn in the toolbar row on wide screens")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    static let toolbarFilterWidth: CGFloat = 340
+    static let toolbarStatusWidth: CGFloat = 220
+
+    @ViewBuilder
+    private var statusSlot: some View {
+        if let step = model.checkStep {
+            DuplicatesCheckProgress(step: step, cancel: model.cancelScan)
+        } else if let status = statusText {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(status.title)
+                    .font(.footnote.weight(.semibold))
+                Text(status.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .monospacedDigit()
+            .lineLimit(1)
+        }
+    }
+
     /// One segment per filter that has something — Exact · Similar · Burst,
     /// no All (§7.3); a PhotoKit burst is a Burst group (§4). A segmented
     /// control, not pills (user, 2026-10-22): always exactly one is chosen.
     private var filterRow: some View {
+        filterPicker
+            .frame(maxWidth: isRegular ? 420 : .infinity)
+            .padding(.horizontal, AppTheme.Size.screenMargin)
+    }
+
+    private var filterPicker: some View {
         Picker("Kind", selection: $model.filter) {
             ForEach(model.presentFilters, id: \.self) { filter in
                 Text("\(filter.title) \(model.groupCount(filter).formatted())")
@@ -596,8 +665,6 @@ private struct DuplicatesHeaderBand: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .frame(maxWidth: isRegular ? 420 : .infinity)
-        .padding(.horizontal, AppTheme.Size.screenMargin)
         .disabled(model.phase == .loading)
     }
 

@@ -161,24 +161,22 @@ sách, tier D cho màn chọn khung. Màn rộng, Duo: [06b §4](06b-duplicates-
   yet"*). Con số không tính bộ nguyên liệu.
 - Lối từ viewer (⋯ ▸ **Choose Frames…** trên ảnh burst) mở thẳng màn chọn khung (§8), không qua danh sách.
 
-### 7.2 Dải Quick clean (D2, sửa 2026-10-18)
+### 7.2 Quick clean (D2, sửa 2026-10-18; dải bỏ 2026-11-16)
 
 Mở Duplicates là **danh sách thẻ ngay** (§7.3) — không còn màn tóm tắt riêng (người dùng 2026-10-18 trên canvas: màn tóm
-tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người dùng 2026-10-22); lối tắt dọn nhanh thu thành một dải ở đầu danh sách:
+tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người dùng 2026-10-22).
 
-- Dải **Quick clean** (nền `.secondarySystemGroupedBackground`, `r-lg`, đệm 12; regular width tối đa 720pt giữa màn), là ô
-  đầu tiên trong vùng cuộn, trên thẻ nhóm đầu: nhãn *"Quick clean"*, dòng đậm *"212 copies · 1.2 GB"* (số **bản sao** sẽ
-  xoá của các nhóm Exact **chưa quyết**, và MB), dòng phụ *"Identical copies. Favorites,
-  edits and album photos stay."*; bên phải nút viên **Review…** — **nút accent duy nhất** của màn
-  ([DESIGN.md §4](../../../DESIGN.md)).
-- Dải chỉ hiện khi còn nhóm Exact chưa quyết, không đang quét, và bộ lọc là **Exact**.
-  Chọn hết qua Quick clean, hoặc quyết từng nhóm bản sao → dải biến mất.
-- **Review…** mở sheet **xem trước**: danh sách nhóm Quick clean (mỗi dòng: bản giữ + số bản sẽ xoá + MB), bỏ tick từng
+- **Không còn dải** trên đầu danh sách (người dùng 2026-11-16 trên canvas iPad: *"cái này thừa quá, bỏ đi"* — mọi thiết
+  bị). Lối tắt nằm trong **menu sắp xếp ⇅**, mục cuối sau vạch ngăn: *Quick Clean…* dòng phụ *212 copies* (biểu tượng `sparkles`;
+  số **bản sao** sẽ chọn của các nhóm Exact chưa quyết) và *Suggested Picks…* / *84 photos* (§14.5, `checkmark.seal`). Mỗi
+  mục chỉ hiện khi còn việc cho nó, **mọi bộ lọc**; mờ khi đang quét/xoá. Mac: mục *Quick Clean (N copies)…* sau vạch
+  ngăn trong menu *Sort Groups* của thanh công cụ.
+- Mục menu mở sheet **xem trước**: danh sách nhóm Quick clean (mỗi dòng: bản giữ + số bản sẽ xoá + MB), bỏ tick từng
   nhóm được, nút chân sheet **Select 205 photos** (số theo tick). Chạm nút → các bản sao mang dấu, sheet đóng, thanh xoá
   hiện (06b §3). **Chưa xoá gì.**
 - Ảnh favorite / đã chỉnh / trong album người dùng tạo: nhóm có bản sao như vậy vẫn ở Quick clean nhưng bản đó **không**
   được chọn và dòng ghi *"1 kept: in album Mai & Huy"*.
-- Chưa từng quét: dải trên hiện tiến độ quét (§3); thẻ hiện dần vào danh sách.
+- Chưa từng quét: ô trạng thái hiện tiến độ quét (§3).
 - Không có nhóm nào: màn rỗng *"No Duplicates"* + *"Checked 2 min ago"* + nút **Check Again**.
 
 ### 7.3 Danh sách
@@ -190,12 +188,14 @@ tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người
   hai dòng *"Checked 2 min ago"* / *"N photos not checked yet"* (*"Every photo checked"* khi không còn gì). Cao cố định để
   danh sách không xê dịch khi một lượt bắt đầu hay kết thúc — trước đó chạm vào vòng tròn lại mở Compare vì thẻ vừa trôi lên.
   Không *"~GB to free"*, không *"Reviewed x of y"* (người dùng 2026-10-22).
+- **Màn rộng (iPad, Duo trong)** — người dùng 2026-11-16 trên canvas iPad: **không có dải** dưới thanh điều hướng. Hàng lọc
+  (rộng 340) nằm **giữa thanh điều hướng**, cùng hàng chữ *Duplicates*; ngay bên phải (cách 12) là ô trạng thái rộng 220:
+  hai dòng *"Checked 2 min ago"* / *"Every photo checked"*, hoặc tiến độ bước đang chạy + *Cancel*. Thẻ bắt đầu ngay dưới
+  thanh. iPhone và Duo ngoài giữ dải như trên. Board `IP_Duplicates`, `DI_Duplicates`.
 - **Thứ tự đứng yên**: mỗi nhóm giữ chỗ nó có lúc mới hiện; điểm chấm về không sắp lại danh sách; nhóm mới nối cuối; chỉ
   đổi kiểu sắp xếp mới sắp lại cả danh sách. Mã nhóm = mã ảnh nhỏ nhất trong nhóm, nên đổi bản giữ không đổi thẻ.
 - Màn rộng: thẻ xếp theo **hàng** cột đều (không masonry — masonry chia lại cột mỗi khi một thẻ thu gọn, thẻ dưới tay
   người dùng nhảy sang cột khác).
-- Dải Quick clean có mặt hay không quyết định **một lần mỗi lần tải**; đánh dấu hết bản sao thì dải ghi *"Every copy
-  decided"* và Review… mờ, không biến mất dưới tay.
 - Thanh điều hướng, bên phải, đúng hai nút icon, mỗi nút một viên glass riêng, không chung capsule (người dùng 2026-10-22 thay menu ⋯; 2026-10-23 tách đôi): **sắp xếp** ⇅ (menu chọn
   **Easiest first** — A7: nhóm có khoảng cách điểm lớn nhất giữa bản giữ và bản kế lên đầu — · **Most space first** ·
   **Newest first** · **Oldest first**; nhớ lại lần sau; mờ khi đang quét) rồi **quét lại** ↻ (VoiceOver *"Check Again"*, A3).
@@ -226,7 +226,7 @@ Thẻ bo `r-lg`, đệm 12:
 - Menu giữ lâu: **Keep just this one** · **Remove** / **Don't remove** · **Compare** · — · **Keep all** (giữ cả nhóm phiên
   này; đang giữ thì ghi *Keeping all*, chạm để bỏ) · **Not duplicates** (không bao giờ hiện lại).
 - **Không có hàng nút ở chân thẻ** (người dùng 2026-10-21; trước đây *Remove the other N · Keep all · Compare*). Đánh dấu
-  bằng vòng tròn trên từng ô; dọn nhanh bản sao y hệt bằng dải Quick clean (§7.2).
+  bằng vòng tròn trên từng ô; dọn nhanh bản sao y hệt bằng Quick clean trong menu ⇅ (§7.2).
   - Chạm một ảnh: mở Compare (§7.6); ở thẻ **Burst** chạm mở thẳng **Choose frames** (§8) tại khung đó.
   - Đánh dấu bản giữ đề xuất: ảnh ở nguyên ô của nó với viền đỏ; nhãn Keep chuyển sang ảnh được đề xuất kế tiếp — không ô
     nào đổi chỗ.
@@ -357,9 +357,9 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-Q3 | (D1) ảnh có 4% điểm ảnh 255 và bản giữ 0.2% | mở thẻ | ảnh đó có chú thích *Blown highlights* | `DuplicateQualityTests.clippingCaption` ✅ |
 | AC-Q4 | (D1) bộ fixture 20 khung có người (ảnh tải từ nguồn giấy phép mở, xem §12), 3 khung mắt nhắm | chấm xong, mở màn chọn khung | 3 khung có chấm đỏ trên dải phim và chip *Eyes closed*; bản giữ đề xuất có *Eyes open* | `DuplicateQualityTests.eyesClosedOnLicensedFaceFixtures` (bỏ qua khi thiếu fixture) + `DuplicateReviewTests.eyesClosedRanksBelowEyesOpen` (điểm giả lập) ✅; fixture ⚠️ chưa có |
 | AC-Q5 | (D1, NF-01) 1.000 ảnh trong nhóm, đang chấm | người dùng cuộn danh sách / chạm Cancel | pass chấm nhường khi cuộn (không khung nào > 16 ms do pass này); Cancel dừng trong ≤ 0.5 s, điểm đã chấm được giữ | `DuplicateQualityPassTests.cancelKeepsWhatWasScored` ✅ (huỷ ≤ 0.5 s, điểm giữ); nhường khi cuộn ⚠️ chưa có — Instruments trên máy thật |
-| AC-S1 | (D2, sửa 2026-10-18) cache: nhóm Similar 51 ảnh (342.2 MB), 1 nhóm Similar, 0 dấu | mở Duplicates | danh sách thẻ hiện ngay, không màn trung gian; ô đầu là dải *Quick clean · 50 copies · 342.2 MB* + *Review…* (nút nền accent duy nhất); chọn hết qua *Review…* → dải biến mất | ảnh sim iPhone 17 26.5, 2026-10-18 ✅ (mở ra là danh sách + dải; *Review…* → sheet *Select 50 photos* → 50 dấu, dải biến mất) |
-| AC-S2 | (D2, A2) như AC-S1; 212 nhóm Quick clean có 230 bản có thể xoá, 3 bản trong đó là favorite / đã chỉnh / trong album "Client" | *Review…* → bỏ tick 5 nhóm (chứa 6 bản khác) → *Select …* | nút chân sheet ghi *Select 221 photos* (230 − 6 − 3 ảnh A2); sau khi chạm: đúng 221 ảnh mang dấu, 3 ảnh A2 không mang dấu, dòng của chúng ghi *1 kept: favorite* / *edited* / *in album Client*; chưa ảnh nào vào Recently Deleted | `DuplicateReviewTests.quickCleanNeverPicksProtectedPhotos` ✅ + route ⚠️ chưa có |
-| AC-S3 | (D2) như AC-S1 | *Review…* → Cancel | 0 dấu, không thanh xoá | ⚠️ chưa có |
+| AC-S1 | (D2, sửa 2026-10-18) cache: nhóm Similar 51 ảnh (342.2 MB), 1 nhóm Similar, 0 dấu | mở Duplicates | danh sách thẻ hiện ngay, không màn trung gian; không có dải trên đầu; menu ⇅ có *Quick Clean…* / *50 copies*; chọn hết qua mục đó → mục biến mất khỏi menu | route `duplicates-cleanup-menu.json` ✅ 2026-11-16 (iPhone 17 26.5: không dải, menu ⇅ có *Quick Clean…*, sheet *Select 9 photos*); iPad `duplicates-header-ipad.json` ✅ (một hàng: *Duplicates* · lọc giữa · trạng thái) |
+| AC-S2 | (D2, A2) như AC-S1; 212 nhóm Quick clean có 230 bản có thể xoá, 3 bản trong đó là favorite / đã chỉnh / trong album "Client" | menu ⇅ › *Quick Clean…* → bỏ tick 5 nhóm (chứa 6 bản khác) → *Select …* | nút chân sheet ghi *Select 221 photos* (230 − 6 − 3 ảnh A2); sau khi chạm: đúng 221 ảnh mang dấu, 3 ảnh A2 không mang dấu, dòng của chúng ghi *1 kept: favorite* / *edited* / *in album Client*; chưa ảnh nào vào Recently Deleted | `DuplicateReviewTests.quickCleanNeverPicksProtectedPhotos` ✅ + route ⚠️ chưa có |
+| AC-S3 | (D2) như AC-S1 | menu ⇅ › *Quick Clean…* → Cancel | 0 dấu, không thanh xoá | route `duplicates-cleanup-menu.json` ✅ 2026-11-16 (Cancel → danh sách, không thanh xoá) |
 | AC-L1 | (D4, A6) danh sách có Exact 3, Similar 5, Burst 2 | mở Duplicates | hàng lọc *Exact · Similar · Burst* (không All); chạm từng viên thì các viên còn lại không đổi vị trí x (±1pt) | ⚠️ chưa có — dump `duplicates-v3-filter.json` |
 | AC-L2 | (A7) 3 nhóm với khoảng cách điểm 0.6 / 0.1 / 0.3 | sort *Easiest first* | thứ tự 0.6, 0.3, 0.1; Back rồi vào lại vẫn *Easiest first* | `DuplicateReviewTests.easiestFirstOrdersByScoreGap` ✅ (mặc định khi chưa chọn, nhớ qua `duplicates.sort`) |
 | AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | màn so sánh nhóm mở, ảnh đó ở pane đầu; pinch pane 1 thì pane 2 zoom theo; mỗi pane chỉ một nút *Remove*; 0 dấu | route sim 2026-10-17 ✅ iPhone (*Similar · 51 photos*, pinch → cả hai pane phóng to, *Remove* → viền đỏ) + iPad (lưới 2×3, ảnh chạm *5/12* ở ô đầu) |
@@ -474,8 +474,7 @@ Immich: file lớn nhất → **nhiều trường EXIF khác rỗng nhất**. Sh
 
 Immich: *Deduplicate all* áp bản giữ đề xuất cho mọi nhóm sau một lần xác nhận. ShotDex: Quick clean chỉ Exact (§7.2).
 
-- Khi bộ lọc là **Similar**: dải cùng hình học Quick clean (§7.2), chữ *"Suggested picks"* · *"84 photos · 610 MB"* ·
-  *"Keeps the best one. Favorites, edits and albums stay."* · **Review…**.
+- Mục *Suggested Picks…* (*84 photos*) trong menu sắp xếp (§7.2; dải bỏ 2026-11-16) mở sheet xem trước như Quick clean.
 - Nhóm vào dải chỉ khi bản giữ **được quyết rõ** (sửa 2026-11-16 sau review: dùng đúng luật chọn bản giữ, không
   dùng khoảng cách điểm 0.2 — hai thước khác nhau cho kết quả ngược): đã chấm (§6) và bản giữ **thắng hẳn** mọi bản
   khác theo luật chấm (mắt → nét quá ngưỡng hoà → cháy/bệt; không hoà), **hoặc** chưa chấm và bản giữ hơn mọi bản khác
@@ -485,7 +484,7 @@ Immich: *Deduplicate all* áp bản giữ đề xuất cho mọi nhóm sau một
 - Mỗi dòng trong sheet ghi lý do bản giữ (*Keeps the one marked Sharpest*). Không còn nhóm nào: màn rỗng *No Clear
   Picks* · *Groups with a close call are left for you to decide.*
 - A2 giữ nguyên; sheet xem trước, *Select N photos*, thanh xoá, hộp xác nhận hệ thống như §7.2 — **chưa xoá gì** khi chạm Review.
-- Burst không có dải (chọn khung là việc của mắt người, §8).
+- Burst không có lối tắt (chọn khung là việc của mắt người, §8).
 
 ### 14.6 Nhãn Keep / Trash trên từng ô
 
@@ -544,11 +543,11 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I4 | (§14.2) hai ảnh byte giống hệt: `IMG_1234.HEIC` 14:02:11 và `photo.heic` không có ngày EXIF, cùng 4032×3024, cùng 2.481.337 byte | quét (gốc trên máy) | một nhóm **Exact**; vào Quick clean | `ContentChecksumTests.equalChecksumIsExactWhateverTheName`, `.streamsWithoutLoadingTheFile`, `.editedOrLivePhotosNeverJoinOnTheChecksum`, `PerceptualHashStoreTests.checksumFollowsTheModificationDate` ✅ |
 | AC-I5 | (§14.2) như AC-I4 nhưng `photo.heic` chỉ có trên iCloud, máy tắt mạng | quét | không băm, không xin mạng; hai ảnh **không** Exact (tên và giờ khác); dòng *"1 photo only in iCloud — will check on Wi-Fi"* | ⚠️ chưa chứng minh được: `isNetworkAccessAllowed` theo chính sách quét (đọc code); cần máy thật bật Optimize Storage |
 | AC-I6 | (§14.2) 55.000 ảnh, 40 cặp cùng hash + kích thước + dung lượng đúng byte | quét | đúng 80 ảnh được băm (không băm ảnh nào khác) | `ContentChecksumTests.onlyCandidatesAreHashed` ✅ |
-| AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ✅ `DuplicateAutoCheckTests.newCopiesJoinWithoutATap`, `aBurstOfIndexRunsIsOneCheck` (store + actor). ⚠️ chưa e2e trên sim: index sim rỗng (`photo_metadata` 0 dòng); vị trí thẻ không đo |
+| AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ✅ `DuplicateAutoCheckTests.newCopiesJoinWithoutATap`, `aBurstOfIndexRunsIsOneCheck` + e2e sim iPhone 17 26.5 2026-11-16 `duplicates-autocheck.json`: `simctl addmedia` 2 bản sao khi app tắt → mở Duplicates, không chạm: *Exact 5* → *Exact 6* trên màn đang mở, nhóm 5 ảnh, giờ Check đổi. Vị trí thẻ không đo |
 | AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ✅ `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck`, `idleBeforeTheFirstCheck`; sim iPhone 17 26.5 `duplicates-autocheck.json` → *Not Checked Yet* |
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ✅ `DuplicateAutoCheckTests.yieldsToLowPowerAndHeat`, `waitsWhileAToolIsOpen`, `anOpenEditorSkipsTheCheck` (policy; Low Power thật chưa bật trên máy) |
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
-| AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | `SuggestedPicksTests.measuredWinDecides`, `.unmeasuredNeedsAClearFileRule`, `.itemsSkipTiesProtectedAndBursts` ✅; ảnh sim ⚠️ không làm được (simulator không tạo nhóm Similar: feature print hằng, §4a) |
+| AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | menu ⇅ › *Suggested Picks…* → *Select …* | mục menu ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | `SuggestedPicksTests.measuredWinDecides`, `.unmeasuredNeedsAClearFileRule`, `.itemsSkipTiesProtectedAndBursts` ✅; ảnh sim ⚠️ không làm được (simulator không tạo nhóm Similar: feature print hằng, §4a) |
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | route `duplicates-keep-trash.json` ✅ 2026-11-16 (iPhone 17 26.5, `-ShotDexFakeBursts`: Keep → Trash → Keep, *1 selected* + *Delete 1*, sheet Selected; ô < 76pt chỉ còn biểu tượng) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | `PhotoDifferenceTests.onlyDifferingFieldsAreListed` ✅ + route `compare-what-differs.json` (iPhone 17 26.5) và `compare-what-differs-ipad.json` (iPad 13) ✅ 2026-11-16; Duo trong ⚠️ chưa chụp |
 | AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | `PhotoDifferenceTests.firstFiveThenShowMore` ✅ |

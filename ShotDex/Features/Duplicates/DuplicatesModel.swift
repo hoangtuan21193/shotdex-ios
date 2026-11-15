@@ -37,7 +37,7 @@ protocol DuplicatesServices: AnyObject {
     func showDuplicatesDeleted(_ text: String)
 }
 
-/// Which shortcut a band and its sheet are: Quick clean over Exact (§7.2),
+/// Which shortcut a menu row and its sheet are: Quick clean over Exact (§7.2),
 /// Suggested picks over Similar (§14.5). One geometry, one sheet.
 enum DuplicatesCleanup: String, Identifiable {
     case quickClean, suggestedPicks
@@ -47,6 +47,34 @@ enum DuplicatesCleanup: String, Identifiable {
         switch self {
         case .quickClean: String(localized: "Quick clean", comment: "Duplicates list: band over the cards")
         case .suggestedPicks: String(localized: "Suggested picks", comment: "Duplicates list: band over the Similar cards; marks the copies of groups with a clearly better photo")
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .quickClean: "sparkles"
+        case .suggestedPicks: "checkmark.seal"
+        }
+    }
+
+    /// The sort menu's row title.
+    var menuTitle: String {
+        switch self {
+        case .quickClean: String(localized: "Quick Clean…", comment: "Duplicates sort menu: opens Quick clean")
+        case .suggestedPicks: String(localized: "Suggested Picks…", comment: "Duplicates sort menu: opens Suggested picks")
+        }
+    }
+
+    /// The row's second line: what it would mark.
+    @MainActor
+    func menuDetail(_ model: DuplicatesModel) -> String {
+        switch self {
+        case .quickClean:
+            String(localized: "\(model.pendingQuickClean.copies.formatted()) copies",
+                   comment: "Duplicates sort menu: identical copies Quick clean would mark")
+        case .suggestedPicks:
+            String(localized: "\(model.pendingSuggestedPicks.photos.formatted()) photos",
+                   comment: "Duplicates sort menu: look-alike photos Suggested picks would mark")
         }
     }
 }
@@ -705,11 +733,6 @@ final class DuplicatesModel {
         var cloudOnlyCount = 0
     }
 
-    /// Whether the last load found copies for Quick clean — the band's
-    /// presence, fixed per load (see `DuplicatesScreen.bandCleanup`).
-    private(set) var offersQuickClean = false
-    /// The same for Suggested picks over the Similar list (§14.5).
-    private(set) var offersSuggestedPicks = false
 
     private func apply(_ snapshot: CacheSnapshot) {
         // Not duplicates (§9): hidden for good, unless a new photo joined.
@@ -721,10 +744,6 @@ final class DuplicatesModel {
         pendingCount = snapshot.pendingCount
         if scores != snapshot.scores { scores = snapshot.scores }
         cloudOnlyCount = snapshot.cloudOnlyCount
-        let offers = pendingQuickClean.copies > 0
-        if offers != offersQuickClean { offersQuickClean = offers }
-        let offersPicks = pendingSuggestedPicks.photos > 0
-        if offersPicks != offersSuggestedPicks { offersSuggestedPicks = offersPicks }
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)

@@ -82,6 +82,13 @@ struct MacDuplicatesScreen: View {
                     ForEach(DuplicateSort.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.inline)
+                // Quick clean lives here, not in a band over the cards
+                // (user, 2026-11-16: the band was too much).
+                if model.pendingQuickClean.copies > 0 {
+                    Divider()
+                    Button(String(localized: "Quick Clean (\(model.pendingQuickClean.copies.formatted()) copies)…", comment: "Mac Duplicates sort menu: opens Quick clean; identical copies it would mark")) { showsQuickClean = true }
+                        .disabled(model.isBusy)
+                }
             } label: {
                 Label(String(localized: "Sort Groups", comment: "Mac Duplicates toolbar"), systemImage: "arrow.up.arrow.down")
             }
@@ -231,10 +238,6 @@ struct MacDuplicatesScreen: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: Self.cardSpacing) {
-                        if model.offersQuickClean, case .kind(let kind) = model.filter, kind.isCopy {
-                            MacQuickCleanBand(model: model) { showsQuickClean = true }
-                                .frame(maxWidth: 720)
-                        }
                         cards
                     }
                     .padding(Self.margin)
@@ -408,41 +411,6 @@ private struct MacDuplicatesStatus: View {
 }
 
 // MARK: - Quick clean
-
-private struct MacQuickCleanBand: View {
-    let model: DuplicatesModel
-    let review: () -> Void
-
-    var body: some View {
-        let pending = model.pendingQuickClean
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(String(localized: "Quick clean", comment: "Duplicates list: band over the cards"))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text(pending.copies == 0
-                     ? String(localized: "Every copy decided", comment: "Duplicates Quick clean band: nothing left for it")
-                     : String(localized: "\(pending.copies.formatted()) copies · \(DuplicatesModel.byteFormatter.string(fromByteCount: Int64(pending.bytes)))",
-                              comment: "Duplicates Quick clean band: copies to remove and their size"))
-                    .font(.system(size: 13, weight: .semibold))
-                    .monospacedDigit()
-                Text(String(localized: "Identical copies. Favorites, edits and album photos stay.",
-                            comment: "Duplicates Quick clean band: what it removes and what it never touches"))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-            Button(String(localized: "Review…", comment: "Duplicates Quick clean band: opens the preview"), action: review)
-                .buttonStyle(.borderedProminent)
-                .tint(MacTheme.accentFill)
-                .disabled(model.isBusy || pending.copies == 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(MacTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MacTheme.separator))
-    }
-}
 
 /// What Quick clean would mark, one row per group, each untickable. Nothing
 /// is deleted here: the rows become marks, and Delete does the rest.

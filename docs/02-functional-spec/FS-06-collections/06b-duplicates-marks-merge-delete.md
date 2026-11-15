@@ -83,7 +83,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 
 - Danh sách: regular width giữ v2 — cột co giãn tối thiểu 400pt, khe 16, xếp gạch (Z2): iPad ngang 3 cột 437pt, dọc 2 cột
   492pt, Duo trong (835 sau rail) 2 cột ~410pt. Compact (iPhone, Duo ngoài): một cột.
-- **Dải Quick clean** (FS-06.06 §7.2): regular width tối đa 720pt giữa màn, trên các cột thẻ; compact trải hết bề ngang.
+- **Quick clean** (FS-06.06 §7.2): không còn dải (bỏ 2026-11-16); mục trong menu ⇅ trên mọi thiết bị.
 - Hàng lọc: regular width hiện đủ các viên không cuộn; compact cuộn ngang.
 - Thanh dưới: regular là cụm giữa màn; compact trải hết bề ngang nội dung.
 - Sheet *Selected*: regular là form sheet 720pt; compact là sheet `large`.
@@ -109,7 +109,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 | AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | code: album không lấy được → *Albums couldn't be updated for N photos*; sim `.limited` ⚠️ chưa có |
 | AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | code (*All reviewed · X freed today* + viên loại còn nhóm); sim ⚠️ chưa có (phải xoá hết nhóm) |
 | AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | iPad 13 dọc: cột 492pt ✅ (route `duplicates-v3-frames-ipad.json`); ngang 437pt, Duo trong, iOS 18.6 ⚠️ chưa đo |
-| AC-W2 | (D2, sửa 2026-10-18) có nhóm bản sao chưa quyết | mở Duplicates trên iPad ngang | dải Quick clean ≤ 720pt giữa màn, trên các cột thẻ | ⚠️ chưa chụp |
+| AC-W2 | **Bỏ 2026-11-16** (dải Quick clean bỏ; thay bằng mục menu ⇅, FS-06.06 AC-S1) | — | — | — |
 | AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |
 | AC-D9 | (2026-11-15) nhóm Exact {K sao 2; C1 sao 5; C2 sao 0}; iOS 27 | đánh dấu C1, C2, Delete, xác nhận | K sao 5 trong Photos | `DuplicateRatingInheritanceTests.keeperTakesTheHighestRating`, `.ratingGoesToPhotosOnIOS27` (writer giả) ✅; ghi Photos thật trên sim iOS 27 ⚠️ chưa có |
 | AC-D10 | như AC-D9, iOS 18.6 | như AC-D9 | `pending_photo_rating` của K = 5; không lỗi | `DuplicateRatingInheritanceTests.belowIOS27RatingGoesToThePendingQueue` ✅ |
