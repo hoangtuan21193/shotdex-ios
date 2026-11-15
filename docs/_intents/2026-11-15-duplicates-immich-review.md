@@ -5,7 +5,7 @@
 | Tác giả | Claude (from the user's request, 2026-11-15) |
 | Ngày | 2026-11-15 |
 | Trạng thái | accepted (user, 2026-11-15 — every proposed default in Open questions accepted) |
-| Tiến độ | **chưa làm** (2026-11-15) — spec FS-06.06 §14.4–14.8 + 06b §2, 10 AC (AC-I10…I15, AC-D9…D12) |
+| Tiến độ | **gần xong** (2026-11-16) — mọi task đã commit; /verify: 4/10 AC xanh (I10, I12, I14, D10). Còn thiếu: I11 (sim không có nhóm Similar), I13 (Duo trong chưa chụp), I15 (bảng ⌘-giữ), D9/D11 (ghi Photos thật iOS 27), D12 (ảnh banner) |
 | Nguồn | so sánh với Immich (self-host, mã nguồn mở) — người dùng chọn 3 ý resolve + 3 ý giao diện |
 | Spec sinh ra từ đây | [FS-06.06 §14](../02-functional-spec/FS-06-collections/06-duplicates.md) · [06b §2](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md) |
 

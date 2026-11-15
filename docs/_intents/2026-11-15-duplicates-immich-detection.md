@@ -5,7 +5,7 @@
 | Tác giả | Claude (from the user's request, 2026-11-15) |
 | Ngày | 2026-11-15 |
 | Trạng thái | accepted (user, 2026-11-15 — every proposed default in Open questions accepted) |
-| Tiến độ | **chưa làm** (2026-11-15) — spec FS-06.06 §14.1–14.3, 10 AC (AC-I1…I9, I16) |
+| Tiến độ | **gần xong** (2026-11-16) — mọi task đã commit; /verify: 5/10 AC xanh (I2, I4, I6, I7, I8). Còn thiếu: I1, I3 (máy thật: feature print, Instruments), I5 (máy thật Optimize Storage), I9 (Low Power thật), I16 (test huỷ riêng) |
 | Nguồn | so sánh với Immich (self-host, mã nguồn mở) — người dùng chọn cả 3 ý phát hiện |
 | Spec sinh ra từ đây | [FS-06.06 §14](../02-functional-spec/FS-06-collections/06-duplicates.md) |
 
