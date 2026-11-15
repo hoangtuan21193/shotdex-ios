@@ -26,6 +26,11 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     var originalFilename: String? = nil
     /// "1/60 s" — for the caption when shutter speeds differ in a group.
     var shutterDisplay: String? = nil
+    /// How many photo-info fields the index read from the file (camera,
+    /// lens, settings, location — `photo_metadata` only: the scoring pass's
+    /// columns exist for scored copies only and would tilt a half-scored group) — breaks a file-size tie in favour of the fuller
+    /// copy (FS-06.06 §14.4, after Immich's EXIF-count tiebreak).
+    var infoFieldCount = 0
 
     /// Software that writes an *edit*: a file it saved is an export of an
     /// edit, which counts as edited when picking the keeper (FS-06.06 §7.4).
@@ -300,9 +305,9 @@ enum DuplicateGrouper {
                 // shows under Burst (2026-10-21, Source frames gone).
                 let kind: DuplicateKind = sourceSet != nil ? .burst : kind
                 // A run and a source set are read in the order they were shot.
-                let order: (HashedPhoto, HashedPhoto) -> Bool =
-                    kind == .burst || sourceSet != nil ? oldestFirst : bestFirst
-                return DuplicateGroup(members: members.sorted(by: order), kind: kind, sourceSet: sourceSet)
+                let byAge = members.sorted(by: oldestFirst)
+                let ordered = kind == .burst || sourceSet != nil ? byAge : bestFirst(byAge)
+                return DuplicateGroup(members: ordered, kind: kind, sourceSet: sourceSet)
             }
             .sorted(by: groupOrder)
     }
@@ -313,13 +318,11 @@ enum DuplicateGrouper {
         return left == right ? a.assetId < b.assetId : left < right
     }
 
-    /// The keeper rule (`DuplicateReview.ranks`) with nothing but the hash
-    /// row to go on, then the oldest (the original predates its copies).
-    static func bestFirst(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
-        if DuplicateReview.ranks(a, above: b, traits: [:]) { return true }
-        if DuplicateReview.ranks(b, above: a, traits: [:]) { return false }
-        let left = a.creationDate ?? .max, right = b.creationDate ?? .max
-        return left == right ? a.assetId < b.assetId : left < right
+    /// The keeper rule (`DuplicateReview.fileOrder`) with nothing but the
+    /// hash row to go on; members arrive oldest first, so a full tie keeps the
+    /// oldest ahead (the original predates its copies).
+    static func bestFirst(_ members: [HashedPhoto]) -> [HashedPhoto] {
+        DuplicateReview.fileOrder(members, traits: [:])
     }
 
     /// A screenshot is only ever like another screenshot: screens of one app

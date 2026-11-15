@@ -41,7 +41,7 @@ enum DuplicateSort: String, CaseIterable, Identifiable, Sendable {
 /// reasons come first; with nothing measured, the file reason is named for
 /// what it is ("Biggest file"), never "best" (§1).
 enum DuplicateKeepReason: Hashable, Sendable {
-    case eyesOpen, sharpest, edited, raw, favorite, live, biggestFile
+    case eyesOpen, sharpest, edited, raw, favorite, live, biggestFile, moreInfo
 
     var title: String {
         switch self {
@@ -52,6 +52,7 @@ enum DuplicateKeepReason: Hashable, Sendable {
         case .favorite: String(localized: "Favorite", comment: "Duplicates: reason chip under the suggested keeper")
         case .live: String(localized: "Live", comment: "Duplicates: reason chip under the suggested keeper")
         case .biggestFile: String(localized: "Biggest file", comment: "Duplicates: reason chip — the kept photo is the biggest file, nothing was measured")
+        case .moreInfo: String(localized: "More photo info", comment: "Duplicates: reason chip — the copies are the same size and the kept one carries more camera, lens and location details")
         }
     }
 }
@@ -64,23 +65,66 @@ enum DuplicateReview {
     /// The member the card suggests keeping. When **every** member is scored
     /// (§6): no closed eyes, then sharper, then less clipping; whatever the
     /// scores leave tied, and every group not fully scored, goes by the file
-    /// rule D3 — the **edited** one, then the **favourite**, then the **bigger
-    /// file**, then **more pixels**. Ties keep the grouper's order.
+    /// rule D3 (`fileOrder`): where quality has no verdict, the copy earlier
+    /// in that order stays (so a 1% size band and photo info decide a quality
+    /// tie too, §14.4).
     static func keeper(
         of members: [HashedPhoto],
         traits: [String: DuplicateMemberTraits],
         scores: [String: DuplicateQualityScore] = [:]
     ) -> HashedPhoto? {
-        guard var best = members.first else { return nil }
-        let scored = isScored(members, scores)
-        for member in members.dropFirst() {
-            if scored, let verdict = DuplicateQuality.better(scores[member.assetId]!, than: scores[best.assetId]!) {
-                if verdict { best = member }
-            } else if ranks(member, above: best, traits: traits) {
+        let ordered = fileOrder(members, traits: traits)
+        guard var best = ordered.first else { return nil }
+        guard isScored(members, scores) else { return best }
+        // Quality first; where it has no verdict the file order stands, so
+        // walking that order keeps the earlier member on a tie.
+        for member in ordered.dropFirst() {
+            if DuplicateQuality.better(scores[member.assetId]!, than: scores[best.assetId]!) == true {
                 best = member
             }
         }
         return best
+    }
+
+    /// The file rule D3 as an order, best first: the **edited** ones, then the
+    /// **favourites**, then by **file size** — where sizes within 1% are one
+    /// band, anchored on the band's largest file, and inside a band the copy
+    /// with **more photo info** (§14.4), then **more pixels**, comes first.
+    /// Anything still tied keeps its place in `members`.
+    ///
+    /// An order over the whole set, not a pairwise "above": a 1% band is not
+    /// transitive (5.00 / 4.97 / 4.94 MB), so a comparator built on it would
+    /// pick a different keeper for every order the members arrive in.
+    static func fileOrder(
+        _ members: [HashedPhoto],
+        traits: [String: DuplicateMemberTraits]
+    ) -> [HashedPhoto] {
+        func tier(_ photo: HashedPhoto) -> (edited: Bool, favorite: Bool) {
+            let trait = traits[photo.assetId] ?? DuplicateMemberTraits(isFavorite: photo.isFavorite)
+            // An export from Lightroom & co. is an edit someone delivered (§7.4).
+            return (trait.isEdited || photo.isExportOfEdit, trait.isFavorite || photo.isFavorite)
+        }
+        let indexed = members.enumerated().map { (index: $0.offset, photo: $0.element, tier: tier($0.element)) }
+        let bySize = indexed.sorted { a, b in
+            if a.tier.edited != b.tier.edited { return a.tier.edited }
+            if a.tier.favorite != b.tier.favorite { return a.tier.favorite }
+            let left = a.photo.fileSize ?? 0, right = b.photo.fileSize ?? 0
+            return left != right ? left > right : a.index < b.index
+        }
+        var result: [HashedPhoto] = []
+        var rest = bySize[...]
+        while let anchor = rest.first {
+            let band = rest.prefix {
+                $0.tier == anchor.tier && sizesTie($0.photo.fileSize ?? 0, anchor.photo.fileSize ?? 0)
+            }
+            rest = rest.dropFirst(band.count)
+            result += band.sorted { a, b in
+                if a.photo.infoFieldCount != b.photo.infoFieldCount { return a.photo.infoFieldCount > b.photo.infoFieldCount }
+                if a.photo.pixelCount != b.photo.pixelCount { return a.photo.pixelCount > b.photo.pixelCount }
+                return a.index < b.index
+            }.map(\.photo)
+        }
+        return result
     }
 
     /// Every member has a measured score.
@@ -88,26 +132,15 @@ enum DuplicateReview {
         !members.isEmpty && members.allSatisfy { scores[$0.assetId]?.isScored == true }
     }
 
-    /// The file rule D3: edited, then favourite, then bigger file, then more
-    /// pixels. One rule for the keeper on the card and the order the grouper
-    /// hands members over in (plan §8.1).
-    static func ranks(
-        _ left: HashedPhoto,
-        above right: HashedPhoto,
-        traits: [String: DuplicateMemberTraits]
-    ) -> Bool {
-        let leftTraits = traits[left.assetId] ?? DuplicateMemberTraits(isFavorite: left.isFavorite)
-        let rightTraits = traits[right.assetId] ?? DuplicateMemberTraits(isFavorite: right.isFavorite)
-        // An export from Lightroom & co. is an edit someone delivered (§7.4).
-        let leftEdited = leftTraits.isEdited || left.isExportOfEdit
-        let rightEdited = rightTraits.isEdited || right.isExportOfEdit
-        if leftEdited != rightEdited { return leftEdited }
-        let leftFavorite = leftTraits.isFavorite || left.isFavorite
-        let rightFavorite = rightTraits.isFavorite || right.isFavorite
-        if leftFavorite != rightFavorite { return leftFavorite }
-        let leftSize = left.fileSize ?? 0, rightSize = right.fileSize ?? 0
-        if leftSize != rightSize { return leftSize > rightSize }
-        return left.pixelCount > right.pixelCount
+    /// Two file sizes count as the same when they are within 1% of the larger
+    /// (FS-06.06 §14.4) — a re-save or a stripped header moves a few bytes.
+    static let sizeTieRatio = 0.01
+
+    static func sizesTie(_ left: Int, _ right: Int) -> Bool {
+        guard left != right else { return true }
+        let larger = max(left, right)
+        guard larger > 0 else { return true }
+        return Double(abs(left - right)) <= Double(larger) * sizeTieRatio
     }
 
     /// Chips under the keeper, most telling first, at most `limit`. A reason
@@ -148,9 +181,20 @@ enum DuplicateReview {
         // "Biggest file" only when nothing was measured: a sharpest keeper
         // that also happens to be the biggest file is kept for its sharpness.
         let size = keeper.fileSize ?? 0
-        if !reasons.contains(.sharpest), !reasons.contains(.eyesOpen),
-           size > 0, others.allSatisfy({ ($0.fileSize ?? 0) < size }) {
+        let measured = reasons.contains(.sharpest) || reasons.contains(.eyesOpen)
+        if !measured, size > 0,
+           others.allSatisfy({ ($0.fileSize ?? 0) < size && !sizesTie($0.fileSize ?? 0, size) }) {
             reasons.append(.biggestFile)
+        } else if !isScored(members, scores), keeper.infoFieldCount > 0,
+                  others.allSatisfy({ other in
+                      // Info decided it only when the edited and favourite
+                      // tiers did not, and every size is a tie (§14.4).
+                      (trait(other).isEdited || other.isExportOfEdit) == (mine.isEdited || keeper.isExportOfEdit)
+                          && (trait(other).isFavorite || other.isFavorite) == (mine.isFavorite || keeper.isFavorite)
+                          && sizesTie(other.fileSize ?? 0, size)
+                          && other.infoFieldCount < keeper.infoFieldCount
+                  }) {
+            reasons.append(.moreInfo)
         }
         return Array(reasons.prefix(limit))
     }

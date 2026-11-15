@@ -446,8 +446,10 @@ Immich: mỗi ảnh mới được kiểm ngay sau khi có vector; mỗi ảnh c
 Immich: file lớn nhất → **nhiều trường EXIF khác rỗng nhất**. ShotDex D3: đã chỉnh → favorite → file lớn hơn → nhiều pixel hơn.
 
 - D3 mới: đã chỉnh → favorite → file lớn hơn (**lệch ≤ 1% coi là bằng**) → **nhiều trường thông tin hơn** → nhiều pixel hơn.
-- "Trường thông tin" = các cột index trong `photo_metadata` khác NULL: hãng, model, ống kính, tiêu cự, khẩu, tốc độ, ISO,
-  bù sáng, ngày chụp EXIF, toạ độ, phần mềm. Đếm, không cân trọng số.
+- "Trường thông tin" = cột khác NULL và khác chuỗi rỗng: hãng, model, ống kính, tiêu cự, khẩu, tốc độ, ISO, toạ độ
+  (`photo_metadata`) — tối đa 8. Không đếm bù sáng/phần mềm của `duplicate_quality`: chỉ ảnh đã chấm mới có, nhóm chấm dở sẽ lệch. Đếm, không cân trọng số.
+- "Lệch ≤ 1%" là **dải** neo vào file lớn nhất của dải (không so từng cặp — 5.00 / 4.97 / 4.94 MB so từng cặp thì vòng
+  quanh, bản giữ đổi theo thứ tự ảnh). Trong dải: nhiều trường hơn → nhiều pixel hơn → thứ tự cũ.
 - Chip lý do khi tiêu chí này quyết: *More photo info* (§6 bảng nhãn; không thêm chip nếu tiêu chí trước đã quyết).
 
 ### 14.5 Dọn nhanh cho Similar
@@ -518,7 +520,7 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I7 | (§14.3) đã Check một lần; thêm 2 bản sao của ảnh A vào thư viện | index chạy xong lô đó, rồi mở Duplicates | nhóm của A có 3 ảnh mà người dùng không chạm Check; vị trí thẻ không đổi; *"Checked just now"* | ⚠️ chưa có — `DuplicateAutoCheckTests.newCopiesJoinWithoutATap` + route `duplicates-autocheck.json` |
 | AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ⚠️ chưa có — `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck` |
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
-| AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | ⚠️ chưa có — `DuplicateReviewTests.fullerInfoBreaksASizeTie` |
+| AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
 | AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | ⚠️ chưa có — `PhotoDifferenceTests.onlyDifferingFieldsAreListed` + ảnh sim |

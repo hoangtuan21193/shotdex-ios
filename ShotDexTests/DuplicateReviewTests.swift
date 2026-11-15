@@ -42,6 +42,81 @@ struct DuplicateReviewTests {
         #expect(DuplicateReview.keeper(of: [small, big], traits: [:])?.assetId == "b")
     }
 
+    /// AC-I10 (§14.4, from Immich): file sizes within 1% are a tie, and the
+    /// copy with more photo info wins it — a messenger copy that lost its EXIF
+    /// never beats the original on a few bytes.
+    @Test func fullerInfoBreaksASizeTie() {
+        var original = photo("K", size: 5_000_000)
+        original.infoFieldCount = 14
+        var stripped = photo("C", size: 4_990_000)
+        stripped.infoFieldCount = 9
+        #expect(DuplicateReview.keeper(of: [stripped, original], traits: [:])?.assetId == "K")
+        #expect(DuplicateReview.reasons(keeper: original, members: [original, stripped], traits: [:]) == [.moreInfo])
+
+        // The stripped copy 0.2% bigger: still a tie, still the original.
+        stripped.fileSize = 5_010_000
+        #expect(DuplicateReview.keeper(of: [stripped, original], traits: [:])?.assetId == "K")
+        #expect(DuplicateReview.reasons(keeper: original, members: [original, stripped], traits: [:]) == [.moreInfo])
+
+        // Past 1% the bigger file wins again, and says so.
+        stripped.fileSize = 5_200_000
+        #expect(DuplicateReview.keeper(of: [stripped, original], traits: [:])?.assetId == "C")
+        #expect(DuplicateReview.reasons(keeper: stripped, members: [original, stripped], traits: [:]) == [.biggestFile])
+    }
+
+    /// Equal size and equal info: no chip claims a reason that is not there.
+    @Test func sizeTieWithEqualInfoNamesNothing() {
+        var a = photo("a", size: 5_000_000)
+        a.infoFieldCount = 10
+        var b = photo("b", size: 4_995_000)
+        b.infoFieldCount = 10
+        let keeper = DuplicateReview.keeper(of: [a, b], traits: [:])!
+        #expect(DuplicateReview.reasons(keeper: keeper, members: [a, b], traits: [:]).isEmpty)
+    }
+
+    /// Review 2026-11-15: a 1% band is not transitive (5.00 / 4.97 / 4.94 MB
+    /// with info 10 / 11 / 12), so the keeper must not depend on the order the
+    /// members arrive in.
+    @Test func sizeBandKeeperIgnoresMemberOrder() {
+        var x = photo("x", size: 5_000_000); x.infoFieldCount = 10
+        var y = photo("y", size: 4_940_000); y.infoFieldCount = 12
+        var z = photo("z", size: 4_970_000); z.infoFieldCount = 11
+        let orders = [[x, y, z], [x, z, y], [y, x, z], [y, z, x], [z, x, y], [z, y, x]]
+        let keepers = Set(orders.map { DuplicateReview.keeper(of: $0, traits: [:])?.assetId })
+        // The band anchors on the largest file (x, 5.00 MB): z is in it, y is not.
+        #expect(keepers == ["z"])
+        let grouped = Set(orders.map { DuplicateGrouper.bestFirst($0.sorted(by: DuplicateGrouper.oldestFirst)).map(\.assetId) })
+        #expect(grouped == [["z", "x", "y"]])
+    }
+
+    /// The favourite tier decided it: no chip claims photo info did.
+    @Test func moreInfoIsNotClaimedWhenAnEarlierTierDecided() {
+        var keeper = photo("k", size: 5_000_000, favorite: true); keeper.infoFieldCount = 12
+        var copy = photo("c", size: 4_990_000); copy.infoFieldCount = 4
+        #expect(DuplicateReview.keeper(of: [copy, keeper], traits: [:])?.assetId == "k")
+        #expect(DuplicateReview.reasons(keeper: keeper, members: [keeper, copy], traits: [:]) == [.favorite])
+    }
+
+    /// Every other copy must tie on size for info to be the reason.
+    @Test func moreInfoNeedsEveryCopyToTieOnSize() {
+        var keeper = photo("k", size: 5_000_000); keeper.infoFieldCount = 10
+        var tied = photo("t", size: 4_990_000); tied.infoFieldCount = 3
+        var small = photo("s", size: 2_000_000); small.infoFieldCount = 3
+        #expect(!DuplicateReview.reasons(keeper: keeper, members: [keeper, tied, small], traits: [:]).contains(.moreInfo))
+    }
+
+    @Test func sizesTieBoundaries() {
+        let cases: [(Int, Int, Bool)] = [
+            (0, 0, true), (5_000_000, 5_000_000, true),
+            (10_000, 9_900, true), (10_000, 9_899, false),
+            (0, 100, false),
+        ]
+        for (a, b, expected) in cases {
+            #expect(DuplicateReview.sizesTie(a, b) == expected, "\(a) vs \(b)")
+            #expect(DuplicateReview.sizesTie(b, a) == expected, "\(b) vs \(a)")
+        }
+    }
+
     /// A reason chip only appears when it sets the keeper apart.
     @Test func reasonsOnlyNameWhatTheCopiesLack() {
         let keeper = photo("k", size: 18_900_000)

@@ -73,6 +73,46 @@ struct PerceptualHashStoreTests {
         #expect(try hashes.hashedPhotos().isEmpty)
     }
 
+    /// §14.4: the photo-info count the keeper tiebreak reads — every
+    /// `photo_metadata` column once, empty text is not info, a photo with no
+    /// `duplicate_quality` row still comes back, and a quality row adds
+    /// nothing (only scored copies have one; it must not tilt the tie).
+    @Test func infoFieldCountCountsEachPhotoInfoColumnOnce() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadata = MetadataStore(database: database)
+        let hashes = PerceptualHashStore(database: database)
+        let quality = DuplicateQualityStore(database: database)
+        var full = makeRecord("full")
+        full.cameraManufacturer = "Canon"; full.cameraModel = "R6"; full.lensModel = "RF 85"
+        full.focalLength = 85; full.aperture = 1.8; full.shutterSpeedSeconds = 0.01; full.iso = 100; full.latitude = 10.5
+        var empty = makeRecord("empty")
+        empty.cameraManufacturer = ""; empty.cameraModel = ""; empty.lensModel = ""
+        for record in [full, empty, makeRecord("bare")] { try metadata.upsert(record) }
+        try hashes.upsert(["full", "empty", "bare"].map {
+            PerceptualHashRecord(assetId: $0, hash: PerceptualHash(bits: 1), modificationDate: 1_700_000_000, computedAt: 1)
+        })
+        func counts() throws -> [String: Int] {
+            Dictionary(uniqueKeysWithValues: try hashes.hashedPhotos().map { ($0.assetId, $0.infoFieldCount) })
+        }
+        #expect(try counts() == ["full": 8, "empty": 0, "bare": 0])
+
+        try quality.upsert([
+            DuplicateQualityRecord(assetId: "full", modificationDate: 1_700_000_000, score: DuplicateQualityScore(),
+                                   exposureBias: -0.3, software: "Lightroom", scoredAt: 1),
+            DuplicateQualityRecord(assetId: "empty", modificationDate: 1_700_000_000, score: DuplicateQualityScore(),
+                                   exposureBias: 0, software: "", scoredAt: 1),
+        ])
+        #expect(try counts() == ["full": 8, "empty": 0, "bare": 0])
+
+        // The cached-group read carries the same count.
+        try hashes.replaceGroups(
+            [DuplicateGroup(members: try hashes.hashedPhotos().filter { $0.assetId != "bare" }, kind: .exact)],
+            scannedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        let cached = try #require(try hashes.cachedGroups()).flatMap(\.members)
+        #expect(Dictionary(uniqueKeysWithValues: cached.map { ($0.assetId, $0.infoFieldCount) }) == ["full": 8, "empty": 0])
+    }
+
     @Test func hashedPhotosJoinMetadataFacts() throws {
         let (metadata, hashes) = try makeStores()
         for record in [makeRecord("a")] { try metadata.upsert(record) }
@@ -157,7 +197,7 @@ struct DuplicateGroupCacheTests {
         #expect(cached.count == 2)
         #expect(Set(cached.flatMap { $0.members.map(\.assetId) }) == ["a", "b", "c", "d"])
         // The kind round-trips with the group.
-        #expect(Set(cached.map { "\($0.kind)" + $0.members.map(\.assetId).sorted().joined() }) == ["lookAlikesab", "copiescd"])
+        #expect(Set(cached.map { "\($0.kind)" + $0.members.map(\.assetId).sorted().joined() }) == ["similarab", "exactcd"])
         // Facts come from photo_metadata at read time, not from the cache.
         #expect(cached.flatMap(\.members).allSatisfy { $0.fileSize == 10_000_000 })
         #expect(try store.scanState() == DuplicateScanState(scannedAt: scannedAt, groupCount: 2))
