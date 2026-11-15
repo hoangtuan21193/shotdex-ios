@@ -55,4 +55,50 @@ struct DuplicateInheritance: Equatable, Sendable {
             )
         }
     }
+
+    /// What the kept photo's caption and keywords become (06b §2, after
+    /// Immich): the keeper's caption **as it is**, then each copy's lines it
+    /// does not already have (compared trimmed, in order, no repeats); the
+    /// keywords of every copy that the keeper lacks, one per case-folded
+    /// spelling, the keeper's spelling winning. Empty when the copies bring
+    /// nothing new — the keeper's own text is never rewritten.
+    static func captionKeywordChange(keeper: CaptionKeywords, donors: [CaptionKeywords]) -> CaptionKeywordChange {
+        func lines(_ caption: String?) -> [String] {
+            (caption ?? "").components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        }
+        var seenLines = Set(lines(keeper.caption))
+        var newLines: [String] = []
+        for line in donors.flatMap({ lines($0.caption) }) where seenLines.insert(line).inserted {
+            newLines.append(line)
+        }
+        var change = CaptionKeywordChange()
+        if !newLines.isEmpty {
+            change.caption = .set(([keeper.caption].compactMap { $0 } + newLines).joined(separator: "\n"))
+        }
+        var seenKeywords = Set(keeper.keywords.map(KeywordInput.caseKey))
+        for keyword in donors.flatMap(\.keywords) {
+            let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seenKeywords.insert(KeywordInput.caseKey(trimmed)).inserted else { continue }
+            change.add.append(trimmed)
+        }
+        return change
+    }
+
+    /// Writes the kept photos' caption and keyword changes; returns the kept
+    /// photos that did not take them — every one on a failed write (a
+    /// partial multi-block write is reported whole), the refused ids on a
+    /// partial one — for the delete banner (06b §2).
+    static func applyCaptionKeywords(
+        _ changes: [String: CaptionKeywordChange],
+        apply: ([String: CaptionKeywordChange]) async throws -> PropertyWriteResult
+    ) async -> Set<String> {
+        let wanted = changes.filter { !$0.value.isEmpty }
+        guard !wanted.isEmpty else { return [] }
+        do {
+            return try await apply(wanted).refused.intersection(wanted.keys)
+        } catch {
+            return Set(wanted.keys)
+        }
+    }
 }

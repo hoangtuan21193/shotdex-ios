@@ -79,7 +79,7 @@ struct DuplicateRatingInheritanceTests {
         let ratings = await marks.ratings(for: ["K", "C1", "C2"])
         #expect(ratings == ["K": 2, "C1": 5, "C2": 0])
         let plans = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:], ratings: ratings)
-        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks).isEmpty)
         #expect(writer.ratings == ["K": 5])
         #expect(writer.blocks == [1])
     }
@@ -93,7 +93,7 @@ struct DuplicateRatingInheritanceTests {
             DuplicateInheritance(keeperId: "K1", albumIds: [], favorite: false, donorIds: ["a"], takesEarliestDate: true, rating: 5),
             DuplicateInheritance(keeperId: "K2", albumIds: [], favorite: false, donorIds: ["b"], takesEarliestDate: true, rating: 3),
         ]
-        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks).isEmpty)
         #expect(writer.ratings == ["K1": 5, "K2": 3])
         #expect(writer.blocks == [2])
     }
@@ -107,7 +107,7 @@ struct DuplicateRatingInheritanceTests {
         let marks = PhotoMarks(store: store, ratingWriter: writer, readPhotosRatings: { _ in ["K": 2] })
         let plans = [DuplicateInheritance(keeperId: "K", albumIds: [], favorite: false, donorIds: ["C"],
                                           takesEarliestDate: true, rating: 5)]
-        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 1)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == ["K"])
         #expect(marks.rating(for: "K", photosRating: 2) == 2)
     }
 
@@ -120,8 +120,64 @@ struct DuplicateRatingInheritanceTests {
         await marks.setRating(5, ids: ["C1"])
         let ratings = await marks.ratings(for: ["K", "C1", "C2"])
         let plans = DuplicateInheritance.plan(groups: [group], deleting: ["C1", "C2"], traits: [:], ratings: ratings)
-        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks) == 0)
+        #expect(await DuplicateInheritance.applyRatings(plans, marks: marks).isEmpty)
         #expect(try store.allPendingRatings()["K"] == 5)
         #expect(marks.rating(for: "K") == 5)
+    }
+}
+
+/// FS-06.06b §2 (2026-11-15, after Immich): caption lines and keywords of
+/// the deleted copies move to the kept photo (iOS 27).
+struct DuplicateCaptionKeywordInheritanceTests {
+    /// AC-D11: lines kept in order, repeats dropped; keywords merged case-
+    /// insensitively, the keeper's spelling winning.
+    @Test func captionLinesAndKeywordsAreMerged() {
+        let keeper = CaptionKeywords(caption: "Hội An\nfilm", keywords: ["Travel"])
+        let donor = CaptionKeywords(caption: "film\nKodak Gold", keywords: ["travel", "Kodak"])
+        let change = DuplicateInheritance.captionKeywordChange(keeper: keeper, donors: [donor])
+        #expect(change.caption == .set("Hội An\nfilm\nKodak Gold"))
+        #expect(change.add == ["Kodak"])
+        #expect(change.remove.isEmpty)
+        #expect(change.applied(to: keeper) == CaptionKeywords(caption: "Hội An\nfilm\nKodak Gold", keywords: ["Travel", "Kodak"]))
+    }
+
+    /// Nothing new on the copies: no write at all.
+    @Test func nothingNewIsNoChange() {
+        let keeper = CaptionKeywords(caption: "Hội An", keywords: ["Travel"])
+        let donor = CaptionKeywords(caption: "  Hội An  ", keywords: ["TRAVEL"])
+        #expect(DuplicateInheritance.captionKeywordChange(keeper: keeper, donors: [donor]).isEmpty)
+        #expect(DuplicateInheritance.captionKeywordChange(keeper: .empty, donors: [.empty]).isEmpty)
+    }
+
+    /// The keeper's own caption is never rewritten: repeated lines, odd
+    /// spacing and all stay; only new lines are appended.
+    @Test func keeperCaptionIsAppendedToNeverRewritten() {
+        let keeper = CaptionKeywords(caption: "A\nA  ", keywords: [])
+        #expect(DuplicateInheritance.captionKeywordChange(
+            keeper: keeper, donors: [CaptionKeywords(caption: "A", keywords: ["x"])]).caption == .untouched)
+        #expect(DuplicateInheritance.captionKeywordChange(
+            keeper: keeper, donors: [CaptionKeywords(caption: "B")]).caption == .set("A\nA  \nB"))
+        #expect(DuplicateInheritance.captionKeywordChange(
+            keeper: .empty, donors: [CaptionKeywords(keywords: [" Kodak "])]).add == ["Kodak"])
+    }
+
+    /// A keeper with no caption takes the copies' lines.
+    @Test func emptyKeeperTakesTheCopiesCaption() {
+        let change = DuplicateInheritance.captionKeywordChange(
+            keeper: .empty, donors: [CaptionKeywords(caption: "Dawn"), CaptionKeywords(caption: "Dawn\nTripod")])
+        #expect(change.caption == .set("Dawn\nTripod"))
+    }
+
+    /// AC-D12: Photos refuses the write — every kept photo it covered is
+    /// counted for the banner; a refused id alone counts one.
+    @Test func failedOrRefusedWritesAreCounted() async {
+        let changes: [String: CaptionKeywordChange] = ["K1": .init(add: ["a"]), "K2": .init(add: ["b"])]
+        let failed = await DuplicateInheritance.applyCaptionKeywords(changes) { _ in throw CocoaError(.fileWriteUnknown) }
+        #expect(failed == ["K1", "K2"])
+        let refused = await DuplicateInheritance.applyCaptionKeywords(changes) { _ in
+            PropertyWriteResult(dates: [:], refused: ["K2"])
+        }
+        #expect(refused == ["K2"])
+        #expect(await DuplicateInheritance.applyCaptionKeywords([:]) { _ in Issue.record("no write"); return .empty }.isEmpty)
     }
 }

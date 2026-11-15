@@ -29,6 +29,8 @@ protocol DuplicatesServices: AnyObject {
     var bursts: any BurstLibrary { get }
     /// Where ratings live — a kept photo inherits the highest (06b §2).
     var photoMarks: PhotoMarks { get }
+    /// Photos' caption and keywords (iOS 27; nil below) — inherited too.
+    var captionKeywords: CaptionKeywordService? { get }
     /// "37 photos moved to Recently Deleted…" after a delete went through.
     func showDuplicatesDeleted(_ text: String)
 }
@@ -1009,6 +1011,8 @@ final class DuplicatesModel {
         // from Photos once it sits in Recently Deleted.
         let ratings = await dependencies.photoMarks.ratings(for: affected.flatMap(\.memberIds))
         let plans = DuplicateInheritance.plan(groups: affected, deleting: ids, traits: traits, ratings: ratings)
+        // Captions and keywords too, read live before the copies go (iOS 27).
+        let captionChanges = await captionKeywordChanges(for: plans)
         let donors = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
         let keepers = Dictionary(uniqueKeysWithValues: plans.compactMap { plan in
             assetsById[plan.keeperId].map { (plan.keeperId, $0) }
@@ -1034,10 +1038,59 @@ final class DuplicatesModel {
         didDelete(ids: ids)
         recordFreed(bytes)
         let missedAlbums = await inherit(plans, keepers: keepers, donors: donors)
-        let missedRatings = await DuplicateInheritance.applyRatings(plans, marks: dependencies.photoMarks)
-        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums, missedRatings: missedRatings)
+        var missedDetails = await DuplicateInheritance.applyRatings(plans, marks: dependencies.photoMarks)
+        missedDetails.formUnion(captionChanges.unread)
+        if let service = dependencies.captionKeywords, !captionChanges.changes.isEmpty {
+            // The keeper's caption was read before the system dialog: one the
+            // user changed meanwhile is not overwritten.
+            let snapshot = captionChanges.keepers
+            let ids = Array(captionChanges.changes.keys)
+            let now = await Task.detached(priority: .userInitiated) { service.read(ids: ids) }.value
+            let current = captionChanges.changes.filter { now[$0.key] == snapshot[$0.key] }
+            missedDetails.formUnion(Set(captionChanges.changes.keys).subtracting(current.keys))
+            missedDetails.formUnion(await DuplicateInheritance.applyCaptionKeywords(current) {
+                try await service.apply($0, recount: false)
+            })
+        }
+        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums, missedDetails: missedDetails.count)
+        if let service = dependencies.captionKeywords, !captionChanges.changes.isEmpty {
+            // The keyword vocabulary recount waits until the banner is up.
+            Task { _ = await service.keywordCatalog(true) }
+        }
         deleteSuccessCount += 1
         return true
+    }
+
+    /// Each kept photo's caption and keyword change from its deleted copies
+    /// (06b §2), read live from Photos off the main actor, a page of 1,000 at
+    /// a time. `keepers` is what each keeper held when read; `unread` the
+    /// keepers whose own text or a copy's could not be read (limited access,
+    /// shared) — no change is made for an unread keeper, and both count on
+    /// the banner. Empty below iOS 27.
+    private func captionKeywordChanges(
+        for plans: [DuplicateInheritance]
+    ) async -> (changes: [String: CaptionKeywordChange], keepers: [String: CaptionKeywords], unread: Set<String>) {
+        guard let service = dependencies.captionKeywords, !plans.isEmpty else { return ([:], [:], []) }
+        let ids = plans.flatMap { [$0.keeperId] + $0.donorIds }
+        let live = await Task.detached(priority: .userInitiated) {
+            stride(from: 0, to: ids.count, by: 1_000).reduce(into: [String: CaptionKeywords]()) { result, start in
+                result.merge(service.read(ids: Array(ids[start..<min(start + 1_000, ids.count)]))) { $1 }
+            }
+        }.value
+        var changes: [String: CaptionKeywordChange] = [:]
+        var keepers: [String: CaptionKeywords] = [:]
+        var unread: Set<String> = []
+        for plan in plans {
+            guard let keeper = live[plan.keeperId] else { unread.insert(plan.keeperId); continue }
+            if plan.donorIds.contains(where: { live[$0] == nil }) { unread.insert(plan.keeperId) }
+            let change = DuplicateInheritance.captionKeywordChange(
+                keeper: keeper, donors: plan.donorIds.compactMap { live[$0] })
+            if !change.isEmpty {
+                changes[plan.keeperId] = change
+                keepers[plan.keeperId] = keeper
+            }
+        }
+        return (changes, keepers, unread)
     }
 
     /// Writes the plans in one change block; returns how many photos' albums
@@ -1130,7 +1183,7 @@ final class DuplicatesModel {
     /// "37 photos moved to Recently Deleted · 210 MB freed · kept for 30
     /// days" + Open Photos (06b §3). No Undo: an app cannot read Recently
     /// Deleted back.
-    private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int, missedRatings: Int = 0) {
+    private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int, missedDetails: Int = 0) {
         let size = Self.byteFormatter.string(fromByteCount: Int64(bytes))
         var text = count == 1
             ? String(localized: "1 photo moved to Recently Deleted", comment: "Duplicates: banner after deleting")
@@ -1145,14 +1198,14 @@ final class DuplicatesModel {
                 : String(localized: "\(missedAlbums) kept photos couldn't take their copies' albums or favorite",
                          comment: "Duplicates: banner, inheritance could not be written for several kept photos"))
         }
-        if missedRatings > 0 {
-            // The stars lived only on the deleted copy: say so, the banner
-            // must not promise more than happened (06b §2).
-            text += "\n" + (missedRatings == 1
-                ? String(localized: "1 kept photo couldn't take its copies' rating",
-                         comment: "Duplicates: banner, the inherited star rating could not be written for one kept photo")
-                : String(localized: "\(missedRatings) kept photos couldn't take their copies' rating",
-                         comment: "Duplicates: banner, the inherited star rating could not be written for several kept photos"))
+        if missedDetails > 0 {
+            // The stars, caption or keywords lived only on the deleted copy:
+            // say so, the banner must not promise more than happened (06b §2).
+            text += "\n" + (missedDetails == 1
+                ? String(localized: "1 kept photo couldn't take its copies' rating, caption or keywords",
+                         comment: "Duplicates: banner, the inherited star rating, caption or keywords could not be written for one kept photo")
+                : String(localized: "\(missedDetails) kept photos couldn't take their copies' rating, caption or keywords",
+                         comment: "Duplicates: banner, the inherited star rating, caption or keywords could not be written for several kept photos"))
         }
         lastDeleteSummary = text.replacingOccurrences(of: "\n", with: " · ")
         dependencies.showDuplicatesDeleted(text)
@@ -1197,10 +1250,10 @@ extension DuplicateInheritance {
     /// below it — in **one** write. Returns how many kept photos did not get
     /// their stars (a failed write, a shared-library photo), for the banner.
     @MainActor
-    static func applyRatings(_ plans: [DuplicateInheritance], marks: PhotoMarks) async -> Int {
+    static func applyRatings(_ plans: [DuplicateInheritance], marks: PhotoMarks) async -> Set<String> {
         var ratings: [String: Int] = [:]
         for plan in plans { if let rating = plan.rating { ratings[plan.keeperId] = rating } }
-        guard !ratings.isEmpty else { return 0 }
-        return await marks.setRatings(ratings).count
+        guard !ratings.isEmpty else { return [] }
+        return await marks.setRatings(ratings)
     }
 }

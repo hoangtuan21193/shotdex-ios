@@ -22,14 +22,16 @@ struct CaptionKeywordService: Sendable {
 
     /// Writes the changes; throws when Photos refused the whole block. The
     /// result names the ids Photos would not let the app change.
+    /// `recount: false` leaves the keyword vocabulary for the caller to
+    /// recount later — Duplicates does, after its banner (06b §2).
     @discardableResult
-    func apply(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
+    func apply(_ changes: [String: CaptionKeywordChange], recount: Bool = true) async throws -> PropertyWriteResult {
         let wanted = changes.filter { !$0.value.isEmpty }
         guard !wanted.isEmpty else { return .empty }
         let result = try await write(wanted)
         try? metadataStore.recordPropertyWrite(result)
         await mirror.refresh(ids: wanted.keys.filter { !result.refused.contains($0) })
-        _ = await keywordCatalog(true)
+        if recount { _ = await keywordCatalog(true) }
         return result
     }
 
