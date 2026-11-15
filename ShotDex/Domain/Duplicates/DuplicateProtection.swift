@@ -98,3 +98,58 @@ enum QuickClean {
         items.filter { !unticked.contains($0.groupId) }.flatMap(\.removal.remove)
     }
 }
+
+/// Suggested picks (FS-06.06 §14.5, after Immich's "Deduplicate all"): the
+/// Quick clean of look-alikes — only groups whose keeper is **clearly**
+/// better, so a shortcut never decides a coin flip.
+enum SuggestedPicks {
+    /// Whether `keeper` is clearly the one to keep: measured, it beats every
+    /// other copy outright on the scoring rule the keeper is picked by (eyes,
+    /// then sharpness past the tie ratio, then clipping — no tie); not
+    /// measured, it beats every other on the file rule's first three steps:
+    /// edited, favourite, a file more than 1% bigger. Photo info and pixel
+    /// count alone are ties here.
+    static func isClear(
+        _ group: DuplicateGroup,
+        keeper: HashedPhoto,
+        traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore]
+    ) -> Bool {
+        if DuplicateReview.isScored(group.members, scores), let mine = scores[keeper.assetId] {
+            return group.members.allSatisfy { other in
+                other.assetId == keeper.assetId
+                    || scores[other.assetId].map { DuplicateQuality.better(mine, than: $0) == true } == true
+            }
+        }
+        func tier(_ photo: HashedPhoto) -> (edited: Bool, favorite: Bool) {
+            let trait = traits[photo.assetId] ?? DuplicateMemberTraits()
+            return (trait.isEdited || photo.isExportOfEdit, trait.isFavorite || photo.isFavorite)
+        }
+        let mine = tier(keeper), size = keeper.fileSize ?? 0
+        return group.members.allSatisfy { other in
+            guard other.assetId != keeper.assetId else { return true }
+            let theirs = tier(other)
+            if mine.edited != theirs.edited { return mine.edited }
+            if mine.favorite != theirs.favorite { return mine.favorite }
+            let otherSize = other.fileSize ?? 0
+            return size > otherSize && !DuplicateReview.sizesTie(size, otherSize)
+        }
+    }
+
+    /// Look-alike groups (not bursts, not brackets) with a clear keeper that
+    /// would mark at least one photo — protected photos (A2) never marked.
+    static func items(
+        groups: [DuplicateGroup],
+        keeper: (DuplicateGroup) -> HashedPhoto?,
+        traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore]
+    ) -> [QuickCleanItem] {
+        groups.compactMap { group in
+            guard group.kind == .similar, group.sourceSet == nil, let kept = keeper(group),
+                  isClear(group, keeper: kept, traits: traits, scores: scores) else { return nil }
+            let removal = DuplicateRemoval.plan(members: group.members, keeper: kept, traits: traits)
+            guard !removal.remove.isEmpty else { return nil }
+            return QuickCleanItem(groupId: group.id, keeperId: kept.assetId, removal: removal)
+        }
+    }
+}

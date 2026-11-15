@@ -9,24 +9,38 @@ import SwiftUI
 /// cards under it never move on a tap.
 struct DuplicatesQuickCleanBand: View {
     let model: DuplicatesModel
+    var cleanup: DuplicatesCleanup = .quickClean
     let review: () -> Void
 
     var body: some View {
-        let pending = model.pendingQuickClean
+        let isPicks = cleanup == .suggestedPicks
+        let pending: (Int, Int) = isPicks
+            ? (model.pendingSuggestedPicks.photos, model.pendingSuggestedPicks.bytes)
+            : (model.pendingQuickClean.copies, model.pendingQuickClean.bytes)
         HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "Quick clean", comment: "Duplicates list: band over the cards"))
+                Text(cleanup.title)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(pending.copies == 0
+                Text(isPicks
+                     ? (pending.0 == 0
+                        ? String(localized: "Every group decided", comment: "Duplicates Suggested picks band: nothing left for it")
+                        : pending.0 == 1
+                        ? String(localized: "1 photo · \(bytes(pending.1))", comment: "Duplicates Suggested picks band: photos it would mark and their size")
+                        : String(localized: "\(pending.0.formatted()) photos · \(bytes(pending.1))",
+                                 comment: "Duplicates Suggested picks band: photos it would mark and their size"))
+                     : (pending.0 == 0
                      ? String(localized: "Every copy decided", comment: "Duplicates Quick clean band: nothing left for it")
-                     : pending.copies == 1
-                     ? String(localized: "1 copy · \(bytes(pending.bytes))", comment: "Duplicates Quick clean band: copies to remove and their size")
-                     : String(localized: "\(pending.copies.formatted()) copies · \(bytes(pending.bytes))",
-                              comment: "Duplicates Quick clean band: copies to remove and their size"))
+                     : pending.0 == 1
+                     ? String(localized: "1 copy · \(bytes(pending.1))", comment: "Duplicates Quick clean band: copies to remove and their size")
+                     : String(localized: "\(pending.0.formatted()) copies · \(bytes(pending.1))",
+                              comment: "Duplicates Quick clean band: copies to remove and their size")))
                     .font(.headline)
                     .monospacedDigit()
-                Text(String(localized: "Identical copies. Favorites, edits and album photos stay.",
+                Text(isPicks
+                     ? String(localized: "Keeps the best one. Favorites, edits and albums stay.",
+                              comment: "Duplicates Suggested picks band: what it marks and what it never touches")
+                     : String(localized: "Identical copies. Favorites, edits and album photos stay.",
                             comment: "Duplicates Quick clean band: what it removes and what it never touches"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -40,7 +54,7 @@ struct DuplicatesQuickCleanBand: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .disabled(model.isBusy || pending.copies == 0)
+            .disabled(model.isBusy || pending.0 == 0)
         }
         .padding(AppTheme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -163,6 +177,7 @@ struct DuplicatesCheckProgress: View {
 /// is deleted here.
 struct DuplicatesQuickCleanSheet: View {
     let model: DuplicatesModel
+    var cleanup: DuplicatesCleanup = .quickClean
     @Environment(\.dismiss) private var dismiss
     @State private var items: [QuickCleanItem]?
     @State private var unticked: Set<String> = []
@@ -174,7 +189,17 @@ struct DuplicatesQuickCleanSheet: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let items {
+                if let items, items.isEmpty {
+                    ContentUnavailableView(
+                        cleanup == .suggestedPicks
+                            ? String(localized: "No Clear Picks", comment: "Duplicates Suggested picks sheet: no group has a clearly better photo")
+                            : String(localized: "Nothing to Clean", comment: "Duplicates Quick clean sheet: no copies left to mark"),
+                        systemImage: "checkmark.circle",
+                        description: Text(cleanup == .suggestedPicks
+                            ? String(localized: "Groups with a close call are left for you to decide.", comment: "Duplicates Suggested picks sheet: why it is empty")
+                            : String(localized: "Every copy is decided or protected.", comment: "Duplicates Quick clean sheet: why it is empty"))
+                    )
+                } else if let items {
                     List(items) { item in
                         row(item)
                     }
@@ -185,7 +210,7 @@ struct DuplicatesQuickCleanSheet: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .navigationTitle(String(localized: "Quick clean", comment: "Duplicates: Quick clean sheet title"))
+            .navigationTitle(cleanup.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -194,7 +219,7 @@ struct DuplicatesQuickCleanSheet: View {
             }
         }
         .task {
-            items = await model.quickCleanItems()
+            items = await model.cleanupItems(cleanup)
         }
     }
 
@@ -213,6 +238,13 @@ struct DuplicatesQuickCleanSheet: View {
                                 comment: "Duplicates Quick clean row: copies it would mark and their size"))
                         .foregroundStyle(.primary)
                         .monospacedDigit()
+                    // Why this photo stays — Suggested picks only: a copy
+                    // is a copy, a look-alike is a choice (§14.5).
+                    if cleanup == .suggestedPicks, let reason = model.keeperReason(ofGroup: item.groupId) {
+                        Text(String(localized: "Keeps the one marked \(reason)", comment: "Duplicates Suggested picks row: why the kept photo was chosen, e.g. Sharpest"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     if let kept = DuplicateProtection.keptLine(item.removal.kept, namingAlbums: true) {
                         Text(kept)
                             .font(.footnote)

@@ -457,11 +457,15 @@ Immich: file lớn nhất → **nhiều trường EXIF khác rỗng nhất**. Sh
 Immich: *Deduplicate all* áp bản giữ đề xuất cho mọi nhóm sau một lần xác nhận. ShotDex: Quick clean chỉ Exact (§7.2).
 
 - Khi bộ lọc là **Similar**: dải cùng hình học Quick clean (§7.2), chữ *"Suggested picks"* · *"84 photos · 610 MB"* ·
-  *"Keeps the best of each group. Favorites, edits and album photos stay."* · **Review…**.
-- Nhóm vào dải chỉ khi bản giữ **được quyết rõ**: đã chấm (§6) và khoảng cách điểm giữa bản giữ và bản kế ≥ ngưỡng của
-  *Easiest first* (A7), **hoặc** chưa chấm nhưng D3 quyết ở tiêu chí *đã chỉnh* / *favorite* / *file lớn hơn > 1%*. Nhóm
-  hoà ở mọi tiêu chí: không vào.
-- Ngưỡng khoảng cách điểm: ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất) **0.2** (thang 0–1 của `scoreGap`), chốt sau khi xem phân bố trên máy thật.
+  *"Keeps the best one. Favorites, edits and albums stay."* · **Review…**.
+- Nhóm vào dải chỉ khi bản giữ **được quyết rõ** (sửa 2026-11-16 sau review: dùng đúng luật chọn bản giữ, không
+  dùng khoảng cách điểm 0.2 — hai thước khác nhau cho kết quả ngược): đã chấm (§6) và bản giữ **thắng hẳn** mọi bản
+  khác theo luật chấm (mắt → nét quá ngưỡng hoà → cháy/bệt; không hoà), **hoặc** chưa chấm và bản giữ hơn mọi bản khác
+  ở *đã chỉnh* / *favorite* / *file lớn hơn > 1%*. Nhóm hoà: không vào.
+- Nhóm người dùng **đã đụng** (có dấu, Keep all, hoặc tự chọn bản giữ) không vào — *Select N* không bao giờ ghi đè
+  quyết định của người dùng (cũng áp cho Quick clean, sửa cùng lúc).
+- Mỗi dòng trong sheet ghi lý do bản giữ (*Keeps the one marked Sharpest*). Không còn nhóm nào: màn rỗng *No Clear
+  Picks* · *Groups with a close call are left for you to decide.*
 - A2 giữ nguyên; sheet xem trước, *Select N photos*, thanh xoá, hộp xác nhận hệ thống như §7.2 — **chưa xoá gì** khi chạm Review.
 - Burst không có dải (chọn khung là việc của mắt người, §8).
 
@@ -522,7 +526,7 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I8 | (§14.3) chưa từng Check; thêm ảnh | index xong | không lượt kiểm nào chạy; màn vẫn *Not Checked Yet* | ⚠️ chưa có — `DuplicateAutoCheckTests.neverRunsBeforeTheFirstCheck` |
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
-| AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
+| AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | `SuggestedPicksTests.measuredWinDecides`, `.unmeasuredNeedsAClearFileRule`, `.itemsSkipTiesProtectedAndBursts` ✅; ảnh sim ⚠️ không làm được (simulator không tạo nhóm Similar: feature print hằng, §4a) |
 | AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | route `duplicates-keep-trash.json` ✅ 2026-11-16 (iPhone 17 26.5, `-ShotDexFakeBursts`: Keep → Trash → Keep, *1 selected* + *Delete 1*, sheet Selected; ô < 76pt chỉ còn biểu tượng) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | `PhotoDifferenceTests.onlyDifferingFieldsAreListed` ✅ + route `compare-what-differs.json` (iPhone 17 26.5) và `compare-what-differs-ipad.json` (iPad 13) ✅ 2026-11-16; Duo trong ⚠️ chưa chụp |
 | AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | `PhotoDifferenceTests.firstFiveThenShowMore` ✅ |

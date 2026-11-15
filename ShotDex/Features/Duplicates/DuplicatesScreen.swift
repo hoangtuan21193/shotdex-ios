@@ -29,7 +29,8 @@ struct DuplicatesScreen: View {
     @State private var isPinching = false
     @State private var hudVisible = false
     @State private var hudTask: Task<Void, Never>?
-    @State private var showsQuickClean = false
+    /// The Quick clean or Suggested picks preview, when open.
+    @State private var cleanupSheet: DuplicatesCleanup?
     @State private var showsSelected = false
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
@@ -131,8 +132,8 @@ struct DuplicatesScreen: View {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             model.refreshPendingCount()
         }
-        .sheet(isPresented: $showsQuickClean) {
-            DuplicatesQuickCleanSheet(model: model)
+        .sheet(item: $cleanupSheet) { cleanup in
+            DuplicatesQuickCleanSheet(model: model, cleanup: cleanup)
         }
         .sheet(isPresented: $showsSelected) {
             DuplicatesSelectedSheet(model: model)
@@ -211,8 +212,8 @@ struct DuplicatesScreen: View {
                 .padding(.top, AppTheme.Spacing.xxl)
         } else {
             VStack(spacing: AppTheme.Spacing.md) {
-                if showsQuickCleanBand(model) {
-                    DuplicatesQuickCleanBand(model: model) { showsQuickClean = true }
+                if let cleanup = bandCleanup(model) {
+                    DuplicatesQuickCleanBand(model: model, cleanup: cleanup) { cleanupSheet = cleanup }
                         .frame(maxWidth: isRegular ? 720 : .infinity)
                         .transition(.opacity)
                 }
@@ -225,10 +226,12 @@ struct DuplicatesScreen: View {
     /// and the filter could show them. It stays until the next load even
     /// once every copy is decided: leaving under the finger would pull every
     /// card up by its height.
-    private func showsQuickCleanBand(_ model: DuplicatesModel) -> Bool {
-        guard model.offersQuickClean else { return false }
+    private func bandCleanup(_ model: DuplicatesModel) -> DuplicatesCleanup? {
         switch model.filter {
-        case .kind(let kind): return kind.isCopy
+        case .kind(let kind):
+            if kind.isCopy { return model.offersQuickClean ? .quickClean : nil }
+            if kind == .similar { return model.offersSuggestedPicks ? .suggestedPicks : nil }
+            return nil
         }
     }
 

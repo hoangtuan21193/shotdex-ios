@@ -35,6 +35,20 @@ protocol DuplicatesServices: AnyObject {
     func showDuplicatesDeleted(_ text: String)
 }
 
+/// Which shortcut a band and its sheet are: Quick clean over Exact (§7.2),
+/// Suggested picks over Similar (§14.5). One geometry, one sheet.
+enum DuplicatesCleanup: String, Identifiable {
+    case quickClean, suggestedPicks
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .quickClean: String(localized: "Quick clean", comment: "Duplicates list: band over the cards")
+        case .suggestedPicks: String(localized: "Suggested picks", comment: "Duplicates list: band over the Similar cards; marks the copies of groups with a clearly better photo")
+        }
+    }
+}
+
 /// One step of a check, for the band's progress bar (user, 2026-11-10:
 /// every step shows its progress, not only the first).
 enum DuplicatesCheckStep: Equatable {
@@ -335,9 +349,57 @@ final class DuplicatesModel {
     /// The Quick clean sheet's rows, once every copy's favorite / edit /
     /// album is known — a protected photo must never be ticked (A2).
     func quickCleanItems() async -> [QuickCleanItem] {
-        let copies = groups.filter { $0.kind.isCopy && $0.sourceSet == nil }
+        // Only groups nobody decided: Select N must never undo a choice
+        // (the band counts the same groups).
+        let copies = groups.filter { $0.kind.isCopy && $0.sourceSet == nil && !isReviewed($0) }
         await loadAllTraits(copies)
         return QuickClean.items(groups: copies, keeper: { self.keeper(of: $0) }, traits: traits)
+    }
+
+    // MARK: Suggested picks (§14.5)
+
+    /// Look-alike groups nobody has decided whose keeper is clearly better:
+    /// the photos the Suggested picks band would mark, and their size. An
+    /// estimate until every trait is read — the sheet reads them first.
+    var pendingSuggestedPicks: (photos: Int, bytes: Int) {
+        derived("pendingSuggestedPicks") {
+            let open = groups.filter(isOpenForSuggestedPicks)
+            return SuggestedPicks.items(groups: open, keeper: { self.keeper(of: $0) }, traits: traits, scores: scores)
+                .reduce(into: (photos: 0, bytes: 0)) { total, item in
+                    total.photos += item.removal.remove.count
+                    total.bytes += item.removal.removeBytes
+                }
+        }
+    }
+
+    /// The Suggested picks sheet's rows, once every member's favorite / edit
+    /// / album is known (A2).
+    func suggestedPicksItems() async -> [QuickCleanItem] {
+        let similar = groups.filter(isOpenForSuggestedPicks)
+        await loadAllTraits(similar)
+        return SuggestedPicks.items(groups: similar, keeper: { self.keeper(of: $0) }, traits: traits, scores: scores)
+    }
+
+    /// A look-alike group nobody has touched: no marks, not kept whole, no
+    /// keeper the user chose. A group the user steered stays as they left it.
+    private func isOpenForSuggestedPicks(_ group: DuplicateGroup) -> Bool {
+        group.kind == .similar && group.sourceSet == nil && !isReviewed(group)
+            && session.keeper(among: group.members.map(\.assetId)) == nil
+    }
+
+    /// The keeper's first reason (Sharpest, Edited, Biggest file…) for a
+    /// shortcut's row, so the user sees why before selecting.
+    func keeperReason(ofGroup id: String) -> String? {
+        guard let group = groups.first(where: { $0.id == id }) else { return nil }
+        return reasons(for: group).first?.title
+    }
+
+    /// The sheet's rows for either shortcut.
+    func cleanupItems(_ cleanup: DuplicatesCleanup) async -> [QuickCleanItem] {
+        switch cleanup {
+        case .quickClean: await quickCleanItems()
+        case .suggestedPicks: await suggestedPicksItems()
+        }
     }
 
     /// Select N photos: the ticked rows' copies get marked. Nothing is
@@ -642,8 +704,10 @@ final class DuplicatesModel {
     }
 
     /// Whether the last load found copies for Quick clean — the band's
-    /// presence, fixed per load (see `DuplicatesScreen.showsQuickCleanBand`).
+    /// presence, fixed per load (see `DuplicatesScreen.bandCleanup`).
     private(set) var offersQuickClean = false
+    /// The same for Suggested picks over the Similar list (§14.5).
+    private(set) var offersSuggestedPicks = false
 
     private func apply(_ snapshot: CacheSnapshot) {
         // Not duplicates (§9): hidden for good, unless a new photo joined.
@@ -657,6 +721,8 @@ final class DuplicatesModel {
         cloudOnlyCount = snapshot.cloudOnlyCount
         let offers = pendingQuickClean.copies > 0
         if offers != offersQuickClean { offersQuickClean = offers }
+        let offersPicks = pendingSuggestedPicks.photos > 0
+        if offersPicks != offersSuggestedPicks { offersSuggestedPicks = offersPicks }
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)

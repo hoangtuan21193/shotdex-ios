@@ -351,3 +351,53 @@ struct DuplicateReviewTests {
         #expect(DuplicateReview.scoreGap(DuplicateGroup(members: [a, b], kind: .exact), keeper: a, scores: [:]) == 1)
     }
 }
+
+/// FS-06.06 §14.5 — Suggested picks: only groups whose keeper is clearly better.
+struct SuggestedPicksTests {
+    private func photo(_ id: String, size: Int, favorite: Bool = false) -> HashedPhoto {
+        HashedPhoto(assetId: id, hash: PerceptualHash(bits: 0), width: 4000, height: 3000, fileSize: size,
+                    creationDate: 1_700_000_000, isFavorite: favorite)
+    }
+
+    private func score(_ sharpness: Double) -> DuplicateQualityScore {
+        var score = DuplicateQualityScore()
+        score.sharpness = sharpness
+        return score
+    }
+
+    /// AC-I11 (review 2026-11-16: the rule the keeper is picked by): sharper
+    /// past the tie ratio is clear; within it is a coin flip.
+    @Test func measuredWinDecides() {
+        let k = photo("k", size: 5_000_000), c = photo("c", size: 5_000_000)
+        let group = DuplicateGroup(members: [k, c], kind: .similar)
+        #expect(SuggestedPicks.isClear(group, keeper: k, traits: [:], scores: ["k": score(100), "c": score(40)]))
+        #expect(!SuggestedPicks.isClear(group, keeper: k, traits: [:], scores: ["k": score(100), "c": score(95)]))
+    }
+
+    /// Not measured: a file more than 1% bigger is clear, a size tie is not.
+    @Test func unmeasuredNeedsAClearFileRule() {
+        let k = photo("k", size: 5_000_000)
+        let group = DuplicateGroup(members: [k, photo("c", size: 3_000_000)], kind: .similar)
+        #expect(SuggestedPicks.isClear(group, keeper: k, traits: [:], scores: [:]))
+        let tie = DuplicateGroup(members: [k, photo("c", size: 4_990_000)], kind: .similar)
+        #expect(!SuggestedPicks.isClear(tie, keeper: k, traits: [:], scores: [:]))
+    }
+
+    /// AC-I11: ties left out, protected copies never marked, bursts never.
+    @Test func itemsSkipTiesProtectedAndBursts() {
+        let clear = DuplicateGroup(members: [photo("a", size: 5_000_000), photo("b", size: 2_000_000)], kind: .similar)
+        let tie = DuplicateGroup(members: [photo("c", size: 5_000_000), photo("d", size: 4_999_000)], kind: .similar)
+        let guarded = DuplicateGroup(members: [photo("e", size: 5_000_000), photo("f", size: 2_000_000, favorite: true),
+                                               photo("g", size: 1_000_000)], kind: .similar)
+        let burst = DuplicateGroup(members: [photo("h", size: 5_000_000), photo("i", size: 1_000_000),
+                                             photo("j", size: 900_000)], kind: .burst)
+        let groups = [clear, tie, guarded, burst]
+        let traits: [String: DuplicateMemberTraits] = ["g": .init(albums: ["Client"], albumIds: ["a1"])]
+        let items = SuggestedPicks.items(groups: groups, keeper: { DuplicateReview.keeper(of: $0.members, traits: traits) },
+                                         traits: traits, scores: [:])
+        // The favourite f keeps its group; g stays for its album.
+        #expect(items.map(\.keeperId) == ["a", "f"])
+        #expect(QuickClean.selection(items, excluding: []) == ["b", "e"])
+        #expect(items.last?.removal.kept == [.album("Client")])
+    }
+}
