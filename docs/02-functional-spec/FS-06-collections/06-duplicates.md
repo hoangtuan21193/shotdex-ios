@@ -467,10 +467,10 @@ Immich: *Deduplicate all* áp bản giữ đề xuất cho mọi nhóm sau một
 
 Immich: mỗi bản có nút bật **Keep / To trash** bằng chữ.
 
-- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất); board vẽ trước khi code: thay **vòng 26pt góc trên phải** (§7.4, D7) bằng **viên chữ** ở góc dưới phải ô: *Keep*
+- ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất); board vẽ trước khi code: thay **vòng 26pt góc trên phải** (§7.4, D7) bằng **viên chữ** ở **góc trên phải** ô (chỗ vòng cũ; vẽ 2026-11-15: ở góc dưới phải viên chiếm chỗ chú thích D10 — ô 112pt chỉ còn 32pt cho chữ): *Keep*
   (nền kính, chữ trắng) / *Trash* (nền đỏ, chữ trắng, ảnh mờ 45% như hôm nay); chạm viên = đổi; vùng chạm ≥ 44×44.
-  Chú thích D10 đang ở góc **dưới trái** — viên chiếm góc dưới phải, chú thích co còn bề ngang ô − viên − 8.
-  Ô nhỏ (mật độ 5–6 ảnh/hàng, ô < 64pt): viên thu còn icon (✓ / 🗑) để chữ không bị cắt. Board quyết trước khi code.
+  Chú thích D10 giữ nguyên góc **dưới trái**, đủ bề ngang ô.
+  Ô nhỏ (mật độ 5–6 ảnh/hàng, ô < 64pt): viên thu còn icon (ô 83pt ở mật độ 4 vẫn đủ chữ, cỡ 12) (✓ / 🗑) để chữ không bị cắt. Board quyết trước khi code.
 - Mở màn **không** có ô nào *Trash* (§1 "không tự chọn hộ" giữ nguyên) — mọi ô *Keep* cho tới khi người dùng chạm.
 - Nhãn **✓ Keep** trên bản giữ đề xuất (§7.4) đổi thành chip *Suggested* để khỏi trùng chữ với viên *Keep*.
 - Áp cho thẻ Similar, Exact, Burst (thẻ Burst chạm ảnh vẫn mở Choose frames) và bộ nguyên liệu.
@@ -479,8 +479,9 @@ Immich: mỗi bản có nút bật **Keep / To trash** bằng chữ.
 
 Immich: liệt kê thông tin từng bản, **chỉ các dòng khác nhau**, 5 dòng đầu rồi *Show N more*.
 
-- Compare (§7.6) thêm bảng dưới hai ô (iPhone: kéo sheet lên từ dưới filmstrip; iPad/Duo trong: cột phải 320pt khi bề
-  ngang ≥ 1000pt, còn lại như iPhone; Mac: panel Info bên phải): mỗi cột một ảnh đang ở A/B, mỗi dòng một trường **khác nhau
+- Compare (§7.6) thêm bảng dưới hai ô (iPhone và Duo: nút *What differs · N* dưới filmstrip mở sheet; iPad: bảng luôn mở dưới filmstrip,
+  hai cột dòng — vẽ 2026-11-15: màn này thừa chiều cao, cột phải 320pt làm hai ô ảnh co còn 500pt; Mac: chưa có board Compare
+  cho Duplicates, làm khi có): mỗi cột một ảnh đang ở A/B, mỗi dòng một trường **khác nhau
   giữa A và B**.
 - Trường theo thứ tự: ngày chụp · dung lượng · kích thước · định dạng (RAW/HEIC/JPEG/…) · máy · ống kính · thông số chụp ·
   toạ độ (có/không + tên nơi) · album · sao · keyword · đã chỉnh · nguồn (WhatsApp, bản xuất của…). So sánh sau khi chuẩn
@@ -519,7 +520,7 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | ⚠️ chưa có — `DuplicateReviewTests.fullerInfoBreaksASizeTie` |
 | AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
-| AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44×44 trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
+| AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | ⚠️ chưa có — `PhotoDifferenceTests.onlyDifferingFieldsAreListed` + ảnh sim |
 | AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | ⚠️ chưa có — `PhotoDifferenceTests.firstFiveThenShowMore` |
 | AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | ⚠️ chưa có — `UIKeyCommand` test trong `DuplicatesKeyCommandsTests` + ảnh sim iPad |
