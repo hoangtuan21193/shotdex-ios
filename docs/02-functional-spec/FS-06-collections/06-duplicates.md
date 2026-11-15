@@ -140,7 +140,7 @@ cạnh dài, cùng chính sách mạng như dấu vân tay. Mỗi ảnh ra:
 | **Eyes** | mỗi khuôn mặt: mắt mở/nhắm và chất lượng khuôn mặt (Vision) | *Eyes open* trên bản giữ khi một bản khác có mắt nhắm; *Eyes closed* trên bản có ≥ 1 khuôn mặt mắt nhắm |
 | **Exposure** | % điểm ảnh cháy sáng (≥ 250/255) và bệt tối (≤ 5/255) | *Blown highlights* khi > 2% cháy và bản giữ ≤ 0.5%; *Too dark* tương tự với bệt tối |
 
-- **Thứ hạng** trong Similar / Burst: không ai có mắt nhắm trước → nét hơn → ít cháy sáng hơn → rồi D3. Bản đứng
+- **Thứ hạng** trong Similar / Burst: không ai có mắt nhắm trước → nét hơn → ít cháy sáng hơn → rồi D3. (2026-11-16: mỗi bước so với **cả nhóm** — dải nét neo vào bản nét nhất, cháy sáng neo vào bản ít cháy nhất — không so từng cặp; nhóm đã chấm không bao giờ có chip *Biggest file*.) Bản đứng
   đầu là **bản giữ đề xuất**; Burst v3 **có** bản giữ đề xuất (v2 không có) vì giờ có lý do đo được.
 - Nhãn mắt chỉ hiện khi độ tin cậy của Vision ≥ ngưỡng đặt sau spike (§12); dưới ngưỡng thì không nói gì về mắt.
 - Nhóm **chưa chấm xong** hoặc ảnh **không chấm được** (iCloud, không mạng): bản giữ theo D3, chip ghi đúng lý do D3

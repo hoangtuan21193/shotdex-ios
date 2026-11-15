@@ -211,3 +211,75 @@ struct DuplicateQualityPassTests {
         #expect((0...1).contains(seen.withLock { $0 }.count - scored))
     }
 }
+
+/// Review 2026-11-16 (loop row 12): the measured keeper does not depend on the
+/// order the members arrive in — a 0.9 sharpness band is not transitive.
+struct DuplicateQualityOrderTests {
+    private func photo(_ id: String) -> HashedPhoto {
+        HashedPhoto(assetId: id, hash: PerceptualHash(bits: 0), width: 4000, height: 3000, fileSize: 5_000_000,
+                    creationDate: 1_700_000_000, isFavorite: false)
+    }
+
+    private func score(_ sharpness: Double, eyesClosed: Bool = false, clip: Double = 0) -> DuplicateQualityScore {
+        var score = DuplicateQualityScore()
+        score.sharpness = sharpness
+        score.highlightClip = clip
+        if eyesClosed { score.eyesOpen = 0; score.eyeConfidence = 1 }
+        return score
+    }
+
+    @Test func keeperNeverComesFromOutsideTheBand() {
+        let a = photo("a"), b = photo("b"), c = photo("c")
+        let scores = ["a": score(100), "b": score(95), "c": score(85)]
+        let orders = [[a, b, c], [a, c, b], [b, a, c], [b, c, a], [c, a, b], [c, b, a]]
+        let keepers = Set(orders.map { DuplicateReview.keeper(of: $0, traits: [:], scores: scores)?.assetId })
+        // The band anchors on the sharpest (100): 95 is a tie with it, 85 is
+        // out; the tie goes to the file rule, which keeps input order — so
+        // the keeper is a or b, never c, and always from the band.
+        #expect(!keepers.contains("c"))
+        let leaders = Set(DuplicateQuality.leaders(of: [c, b, a], scores: scores).map(\.assetId))
+        #expect(leaders == ["a", "b"])
+    }
+
+    @Test func eyesThenSharpnessThenClipping() {
+        let a = photo("a"), b = photo("b"), c = photo("c")
+        #expect(DuplicateQuality.leaders(of: [a, b, c], scores: [
+            "a": score(100, eyesClosed: true), "b": score(60), "c": score(50),
+        ]).map(\.assetId) == ["b"])
+        #expect(DuplicateQuality.leaders(of: [a, b], scores: [
+            "a": score(100, clip: 0.03), "b": score(98, clip: 0.0),
+        ]).map(\.assetId) == ["b"])
+    }
+
+    @Test func edgeCases() {
+        let a = photo("a"), b = photo("b"), c = photo("c")
+        // Every eye closed: sharpness decides among them all.
+        #expect(DuplicateQuality.leaders(of: [a, b], scores: [
+            "a": score(100, eyesClosed: true), "b": score(50, eyesClosed: true)]).map(\.assetId) == ["a"])
+        // One member leads alone.
+        #expect(DuplicateQuality.leaders(of: [a], scores: ["a": score(10, eyesClosed: true, clip: 0.9)]).map(\.assetId) == ["a"])
+        // Clipping anchors on the least clipped, not on the first member.
+        let m = DuplicateQuality.clipKeeperMax
+        let clipped = ["a": score(100, clip: 0), "b": score(100, clip: m), "c": score(100, clip: 2 * m + 0.001)]
+        #expect(Set(DuplicateQuality.leaders(of: [c, b, a], scores: clipped).map(\.assetId)) == ["a", "b"])
+    }
+
+    /// A scored group never claims "Biggest file": its scores decided.
+    @Test func scoredKeeperNeverSaysBiggestFile() {
+        var small = photo("s"); small.fileSize = 1_000_000
+        let big = photo("b")
+        let reasons = DuplicateReview.reasons(keeper: big, members: [big, small], traits: [:],
+                                              scores: ["b": score(100, clip: 0.0), "s": score(98, clip: 0.0)])
+        #expect(!reasons.contains(.biggestFile))
+    }
+
+    /// Suggested picks: clear only when one photo leads alone.
+    @Test func clearMeansOneLeader() {
+        let a = photo("a"), b = photo("b")
+        let group = DuplicateGroup(members: [a, b], kind: .similar)
+        #expect(SuggestedPicks.isClear(group, keeper: a, traits: [:], scores: ["a": score(100), "b": score(40)]))
+        #expect(!SuggestedPicks.isClear(group, keeper: a, traits: [:], scores: ["a": score(100), "b": score(95)]))
+        // A keeper that is not the leader is never clear.
+        #expect(!SuggestedPicks.isClear(group, keeper: b, traits: [:], scores: ["a": score(100), "b": score(40)]))
+    }
+}

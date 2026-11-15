@@ -86,17 +86,28 @@ enum DuplicateQuality {
         )
     }
 
-    /// `left` is the better frame to keep by what was measured: no closed
-    /// eyes first, then clearly sharper, then less clipping. `nil` when the
-    /// scores do not tell them apart — the file rule decides.
-    static func better(_ left: DuplicateQualityScore, than right: DuplicateQualityScore) -> Bool? {
-        if left.hasEyesClosed != right.hasEyesClosed { return !left.hasEyesClosed }
-        if let a = left.sharpness, let b = right.sharpness, max(a, b) > 0, min(a, b) / max(a, b) < sharpnessTieRatio {
-            return a > b
+    /// The members still in the running after what was measured, each step
+    /// against the whole group (review 2026-11-16 — a pairwise 0.9 band is
+    /// not transitive, so a member outside the band could win depending on
+    /// order; now only a true tie is left to the file rule): no closed
+    /// eyes if any member has them open; then sharpness within the tie ratio
+    /// of the sharpest; then clipping within `clipKeeperMax` of the least.
+    /// More than one left is a tie the file rule breaks. Callers pass
+    /// scored groups only (`DuplicateReview.isScored`).
+    static func leaders(of members: [HashedPhoto], scores: [String: DuplicateQualityScore]) -> [HashedPhoto] {
+        var pool = members.filter { scores[$0.assetId] != nil }
+        guard !pool.isEmpty else { return members }
+        let open = pool.filter { !scores[$0.assetId]!.hasEyesClosed }
+        if !open.isEmpty { pool = open }
+        let sharpest = pool.compactMap { scores[$0.assetId]?.sharpness }.max() ?? 0
+        if sharpest > 0 {
+            pool = pool.filter { (scores[$0.assetId]?.sharpness ?? 0) >= sharpest * sharpnessTieRatio }
         }
-        let clipLeft = left.highlightClip + left.shadowClip
-        let clipRight = right.highlightClip + right.shadowClip
-        if abs(clipLeft - clipRight) > clipKeeperMax { return clipLeft < clipRight }
-        return nil
+        func clip(_ photo: HashedPhoto) -> Double {
+            let score = scores[photo.assetId]!
+            return score.highlightClip + score.shadowClip
+        }
+        let least = pool.map(clip).min() ?? 0
+        return pool.filter { clip($0) <= least + clipKeeperMax }
     }
 }

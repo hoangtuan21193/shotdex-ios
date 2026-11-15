@@ -73,17 +73,10 @@ enum DuplicateReview {
         traits: [String: DuplicateMemberTraits],
         scores: [String: DuplicateQualityScore] = [:]
     ) -> HashedPhoto? {
-        let ordered = fileOrder(members, traits: traits)
-        guard var best = ordered.first else { return nil }
-        guard isScored(members, scores) else { return best }
-        // Quality first; where it has no verdict the file order stands, so
-        // walking that order keeps the earlier member on a tie.
-        for member in ordered.dropFirst() {
-            if DuplicateQuality.better(scores[member.assetId]!, than: scores[best.assetId]!) == true {
-                best = member
-            }
-        }
-        return best
+        guard isScored(members, scores) else { return fileOrder(members, traits: traits).first }
+        // Quality first, as a set (`DuplicateQuality.leaders`); the file
+        // order breaks what quality leaves tied.
+        return fileOrder(DuplicateQuality.leaders(of: members, scores: scores), traits: traits).first
     }
 
     /// The file rule D3 as an order, best first: the **edited** ones, then the
@@ -181,7 +174,9 @@ enum DuplicateReview {
         // "Biggest file" only when nothing was measured: a sharpest keeper
         // that also happens to be the biggest file is kept for its sharpness.
         let size = keeper.fileSize ?? 0
-        let measured = reasons.contains(.sharpest) || reasons.contains(.eyesOpen)
+        // A scored group was decided by its scores (or tied on them): the
+        // file size did not decide, so no chip says it did.
+        let measured = reasons.contains(.sharpest) || reasons.contains(.eyesOpen) || isScored(members, scores)
         if !measured, size > 0,
            others.allSatisfy({ ($0.fileSize ?? 0) < size && !sizesTie($0.fileSize ?? 0, size) }) {
             reasons.append(.biggestFile)

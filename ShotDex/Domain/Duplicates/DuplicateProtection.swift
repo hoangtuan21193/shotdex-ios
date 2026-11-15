@@ -115,11 +115,10 @@ enum SuggestedPicks {
         traits: [String: DuplicateMemberTraits],
         scores: [String: DuplicateQualityScore]
     ) -> Bool {
-        if DuplicateReview.isScored(group.members, scores), let mine = scores[keeper.assetId] {
-            return group.members.allSatisfy { other in
-                other.assetId == keeper.assetId
-                    || scores[other.assetId].map { DuplicateQuality.better(mine, than: $0) == true } == true
-            }
+        if DuplicateReview.isScored(group.members, scores) {
+            // Clear when quality alone leaves this one photo.
+            let leaders = DuplicateQuality.leaders(of: group.members, scores: scores)
+            return leaders.count == 1 && leaders.first?.assetId == keeper.assetId
         }
         func tier(_ photo: HashedPhoto) -> (edited: Bool, favorite: Bool) {
             let trait = traits[photo.assetId] ?? DuplicateMemberTraits()
