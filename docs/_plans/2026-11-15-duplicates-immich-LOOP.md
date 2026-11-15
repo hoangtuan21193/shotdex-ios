@@ -24,6 +24,8 @@ Spec: `docs/02-functional-spec/FS-06-collections/06-duplicates.md` §14 (+ 06b �
 
 Stop the loop when every row is `done` or `blocked`; then `/verify FS-06.06` and report.
 
+**All rows done 2026-11-16 — loop stopped.**
+
 Rules from memory that bite here: no face photos in tests; no writes to real iCloud photos or the Windows server;
 sim photo permission on 26.5 needs reset + one tap; screenshot before every tap (blind taps clone the library);
 `xcodebuild` destination by `id=`; new files in `Features/` go through `Tools/mac-membership`.
@@ -44,4 +46,4 @@ sim photo permission on 26.5 needs reset + one tap; screenshot before every tap 
 | 10 | AC-I1, I2, I3, I16 | feature-print candidate search in day×camera buckets, T_fp 0.3 | done | 004bd2ce | 2 reviews (perf blocker: day buckets ≈ whole library scored) → buckets of one capture second × camera, ≤ 60, brackets excluded; confirm via existing scoring pass + §4a 0.4. Not on sim (constant prints). AC-I16 cancel = existing scoring-pass cancel. Needs device spike for T_fp |
 | 12 | — | follow-up from review: `DuplicateQuality.better` is non-transitive (sharpness 0.9 ratio), keeper on a scored group depends on member order — pre-existing | done | c67f916c | 2 reviews: set-based `DuplicateQuality.leaders` (eyes → sharpness band on group max → clip on min); file rule breaks true ties; `better` removed; scored group never says *Biggest file* |
 | 13 | AC-I12 Mac | Mac Duplicates screen (own code): Keep/Trash pill + Suggested + focus ring + shortcut hint per board `MAC_Duplicates` | done | e4238b35 | 2 passes (review + Mac run): bare arrows/letters went to the sidebar (R jumped to RAW) → ⌥↑/⌥↓/⌥K/⌥R; first K/R only selects; off during delete/alert/sheet. Builds; cards NOT screenshotted — demo library shows no groups after Check (`mac-duplicates-keep-trash.json`) |
-| 11 | AC-I7, I8, I9 | auto-check new photos after first Check; Low Power / thermal yield | todo | | |
+| 11 | AC-I7, I8, I9 | auto-check new photos after first Check; Low Power / thermal yield | done | 5725e152 | 2 reviews (blocker: observer held the index run open) → returns at once, 30 s quiet period, coalesced, regroups serialized via `DuplicateScanPipeline.regroup`, manual Check cancels it, editor/Video Studio pause, open screen reloads. Spec now says full regroup (same result). Not e2e on sim: sim index empty; 55k regroup cost unmeasured; Mac has none |
