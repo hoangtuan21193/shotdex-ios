@@ -64,7 +64,7 @@ struct DuplicatesSelectedSheet: View {
                     .accessibilityLabel(String(localized: "Photo \(index + 1) of \(marked.count), \(group.sourceSet?.title ?? group.kind.title)",
                                                comment: "VoiceOver: a marked photo in the Selected sheet"))
                     .accessibilityAddTraits(.isSelected)
-                    .accessibilityAction(named: String(localized: "Don't remove", comment: "VoiceOver action: take the mark away")) {
+                    .accessibilityAction(named: String(localized: "Keep", comment: "VoiceOver action on a tile marked Trash: keep it")) {
                         withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) }
                     }
                 }

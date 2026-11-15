@@ -315,7 +315,7 @@ nằm trong `photo_metadata`.
 |---|---|
 | Exact / Similar / Series / Bursts | Copies / Smaller copies / Look-alikes / Same moment / Screenshots / Source frames → (2026-10-21) **Exact / Similar / Burst** (Source frames gộp vào Burst) |
 | Mark the other N | Remove the other N |
-| Mark for Deletion / Unmark | Remove / Don't remove |
+| Mark for Deletion / Unmark | Remove / Don't remove → (2026-11-15, §14.6) **Move to Trash / Keep**; viên trên ô: **Keep / Trash** |
 | Keep Only This | Keep just this one |
 | Rescan | Check Again |
 | Largest | Biggest file |
@@ -472,7 +472,7 @@ Immich: mỗi bản có nút bật **Keep / To trash** bằng chữ.
 - ✅ Đã quyết (người dùng 2026-11-15, nhận đề xuất); board vẽ trước khi code: thay **vòng 26pt góc trên phải** (§7.4, D7) bằng **viên chữ** ở **góc trên phải** ô (chỗ vòng cũ; vẽ 2026-11-15: ở góc dưới phải viên chiếm chỗ chú thích D10 — ô 112pt chỉ còn 32pt cho chữ): *Keep*
   (nền kính, chữ trắng) / *Trash* (nền đỏ, chữ trắng, ảnh mờ 45% như hôm nay); chạm viên = đổi; vùng chạm ≥ 44×44.
   Chú thích D10 giữ nguyên góc **dưới trái**, đủ bề ngang ô.
-  Ô nhỏ (mật độ 5–6 ảnh/hàng, ô < 64pt): viên thu còn icon (ô 83pt ở mật độ 4 vẫn đủ chữ, cỡ 12) (✓ / 🗑) để chữ không bị cắt. Board quyết trước khi code.
+  Ô nhỏ (< 76pt — chữ "Trash" cần ≈ 62pt): viên thu còn icon, vùng chạm 44×44; chữ dưới ô (chú thích, *Suggested*) ẩn ở cỡ này, VoiceOver đọc từ ô (✓ / 🗑) để chữ không bị cắt. Board quyết trước khi code.
 - Mở màn **không** có ô nào *Trash* (§1 "không tự chọn hộ" giữ nguyên) — mọi ô *Keep* cho tới khi người dùng chạm.
 - Nhãn **✓ Keep** trên bản giữ đề xuất (§7.4) đổi thành chip *Suggested* để khỏi trùng chữ với viên *Keep*.
 - Áp cho thẻ Similar, Exact, Burst (thẻ Burst chạm ảnh vẫn mở Choose frames) và bộ nguyên liệu.
@@ -523,7 +523,7 @@ Fixture tự sinh như §13. Feature print không đo được trên simulator (
 | AC-I9 | (§14.3) Low Power Mode bật | index xong một lô | không lượt tự kiểm nào chạy; tắt Low Power → lô kế chạy | ⚠️ chưa có — `DuplicateAutoCheckTests.yieldsToLowPower` |
 | AC-I10 | (§14.4) nhóm Exact: K 5.000.000 byte, 14 trường; C 4.990.000 byte (lệch 0.2%), 9 trường (WhatsApp) | mở thẻ | bản giữ là K, chip *More photo info*; đảo dung lượng (C lớn hơn 0.2%) → vẫn K | `DuplicateReviewTests.fullerInfoBreaksASizeTie`, `.sizeBandKeeperIgnoresMemberOrder`, `.moreInfoIsNotClaimedWhenAnEarlierTierDecided`, `PerceptualHashStoreTests.infoFieldCountCountsEachPhotoInfoColumnOnce` ✅ |
 | AC-I11 | (§14.5) Similar: 10 nhóm, 6 nhóm đã chấm với khoảng cách ≥ 0.2, 2 nhóm hoà mọi tiêu chí, 2 nhóm có 1 bản favorite ngoài bản giữ | chọn Similar → *Review…* → *Select …* | dải ghi đúng số bản của 8 nhóm (6 + 2 nhóm A2 trừ bản favorite); 2 nhóm hoà không có trong sheet; sau khi chạm: các bản đó *Trash*, favorite vẫn *Keep*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có — `DuplicateReviewTests.suggestedPicksSkipTiesAndProtected` + route |
-| AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | ⚠️ chưa có — route `duplicates-keep-trash.json` (dump) |
+| AC-I12 | (§14.6) thẻ 4 ảnh mới mở | nhìn thẻ, rồi chạm viên của ảnh 3 | 4 viên *Keep*; sau chạm ảnh 3 *Trash*, mờ 45%, thanh xoá *1 selected*; vùng chạm viên ≥ 44pt cao trong dump; chú thích D10 không chồng viên | route `duplicates-keep-trash.json` ✅ 2026-11-16 (iPhone 17 26.5, `-ShotDexFakeBursts`: Keep → Trash → Keep, *1 selected* + *Delete 1*, sheet Selected; ô < 76pt chỉ còn biểu tượng) |
 | AC-I13 | (§14.7) A: 2026-03-01 14:02:11, 5.1 MB, 4032×3024, HEIC, có toạ độ, album "Client"; B: cùng ngày giờ, 1.2 MB, 1600×1200, JPEG, không toạ độ, không album | mở Compare | bảng có đúng 5 dòng: dung lượng · kích thước · định dạng · toạ độ · album; không có dòng ngày; không *Show more* | `PhotoDifferenceTests.onlyDifferingFieldsAreListed` ✅ + route `compare-what-differs.json` (iPhone 17 26.5) và `compare-what-differs-ipad.json` (iPad 13) ✅ 2026-11-16; Duo trong ⚠️ chưa chụp |
 | AC-I14 | (§14.7) A và B khác nhau 8 trường | mở Compare → *Show 3 more* | lúc đầu 5 dòng + *Show 3 more*; sau chạm 8 dòng + *Show less* | `PhotoDifferenceTests.firstFiveThenShowMore` ✅ |
 | AC-I15 | (§14.8) iPad 13 + bàn phím, danh sách 3 nhóm Similar | ↓ ↓ → **R** → **⌘⌫** | nhóm 2 có viền chọn; mọi bản trừ bản giữ đề xuất *Trash*; hộp xác nhận hệ thống hiện với đúng số đó; giữ ⌘ hiện bảng phím | ⚠️ chưa có — `UIKeyCommand` test trong `DuplicatesKeyCommandsTests` + ảnh sim iPad |

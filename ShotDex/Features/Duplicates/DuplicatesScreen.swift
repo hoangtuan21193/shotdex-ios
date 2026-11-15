@@ -622,7 +622,7 @@ private struct DuplicateDecisionCard: View {
             chips: isKeeper && !isMarked ? keeperChips(keeper) : [],
             isKeeper: isKeeper
         )
-        // D7: a tap looks, the ring marks. A burst is looked at frame by
+        // D7: a tap looks, the Keep/Trash pill marks. A burst is looked at frame by
         // frame (2026-10-21: the card has no button row any more).
         .onTapGesture { open(member) }
         .sensoryFeedback(.selection, trigger: isMarked)
@@ -637,8 +637,8 @@ private struct DuplicateDecisionCard: View {
                 toggleMark(member)
             } label: {
                 Label(isMarked
-                      ? String(localized: "Don't remove", comment: "Duplicates tile menu: take the mark away")
-                      : String(localized: "Remove", comment: "Duplicates tile menu: mark for removal"),
+                      ? String(localized: "Keep", comment: "Duplicates tile menu: take the Trash mark away, keep the photo")
+                      : String(localized: "Move to Trash", comment: "Duplicates tile menu: mark the photo for deletion"),
                       systemImage: isMarked ? "trash.slash" : "trash")
             }
             if model.canCompare(group) {
@@ -672,8 +672,8 @@ private struct DuplicateDecisionCard: View {
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { open(member) }
         .accessibilityAction(named: isMarked
-                             ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
-                             : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
+                             ? String(localized: "Keep", comment: "VoiceOver action on a tile marked Trash: keep it")
+                             : String(localized: "Move to Trash", comment: "VoiceOver action on a tile: mark it for deletion")) {
             toggleMark(member)
         }
     }
@@ -697,9 +697,10 @@ private struct DuplicateDecisionCard: View {
         if traits.hasRAW { parts.append(String(localized: "RAW")) }
         if traits.isLive { parts.append(String(localized: "Live Photo")) }
         if !isKeeper { parts += model.caption(of: member, in: group, keeper: keeper) }
+        // The pill's word, as VoiceOver hears it: the tile is one element.
         parts.append(isMarked
-                     ? String(localized: "will be removed", comment: "VoiceOver: a tile marked for removal")
-                     : String(localized: "won't be removed", comment: "VoiceOver: a tile not marked"))
+                     ? String(localized: "Trash", comment: "VoiceOver: state of a tile marked for deletion")
+                     : String(localized: "Keep", comment: "VoiceOver: state of a tile that stays"))
         return parts.joined(separator: ", ")
     }
 }
@@ -794,9 +795,10 @@ private struct DuplicateCollapsedRow: View {
 
 // MARK: - Thumbnail
 
-/// Square thumbnail. Marked = trash disc white-on-red, 3pt red edge, image at
-/// 45% (red is destructive, apart from the grid's accent "selected" tick);
-/// unmarked = an empty white ring. The keeper carries a "Keep" badge.
+/// Square thumbnail. Top right, a Keep / Trash pill that flips on a tap
+/// (FS-06.06 §14.6); a marked tile also has a 3pt red edge and its image at
+/// 45% (red is destructive, apart from the grid's accent "selected" tick).
+/// The suggested keeper carries a "Suggested" chip.
 struct DuplicateThumbnail: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
@@ -806,13 +808,13 @@ struct DuplicateThumbnail: View {
     let isMarked: Bool
     let showsKeep: Bool
     var showsMarkBadge = true
-    /// The ring's action. Its hit area is 44pt even though it draws 26pt
+    /// The pill's action. Its hit area is 44pt tall though it draws 24–26pt
     /// (AC-C2); the rest of the tile belongs to the tap that opens Compare.
     var onToggleMark: (() -> Void)?
     /// Pixel size and file size (or a series frame's seconds), on the photo
     /// rather than under it (board `PH_DuplicatesLargeGroup`).
     var factLines: [String] = []
-    /// The keeper's reasons — Edited, RAW, Favorite — top left on the photo.
+    /// The keeper's reasons — Edited, RAW, Favorite — bottom left, above "Suggested".
     var chips: [String] = []
     var isKeeper = false
 
@@ -844,74 +846,82 @@ struct DuplicateThumbnail: View {
             }
             .overlay(alignment: .topTrailing) {
                 if showsMarkBadge {
-                    let ring = Image(systemName: isMarked ? "trash.circle.fill" : "circle")
-                        .symbolRenderingMode(isMarked ? .palette : .monochrome)
-                        .foregroundStyle(.white, .red)
-                        .font(.system(size: 26))
-                        .shadow(color: .black.opacity(0.35), radius: 2)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    // FS-06.06 §14.6 (after Immich): the tile says in words
+                    // what will happen to it — Keep or Trash — and a tap flips
+                    // it. 44pt tall to hit, drawn 26 (24 on a small cell).
+                    // Under 76pt the words would reach the tile's left edge
+                    // ("Trash" ≈ 62pt drawn): the symbol alone.
+                    let compact = side < 76
+                    let pill = KeepTrashPill(isTrash: isMarked, compact: compact, small: side < 90)
+                        .padding(5)
                     if let onToggleMark {
-                        Button(action: onToggleMark) { ring }
+                        // VoiceOver reaches the toggle through the tile's own
+                        // named action; the tile is one element.
+                        Button(action: onToggleMark) { pill }
                             .buttonStyle(.plain)
-                            .accessibilityLabel(isMarked
-                                ? String(localized: "Don't remove", comment: "VoiceOver: the ring on a marked tile")
-                                : String(localized: "Remove", comment: "VoiceOver: the ring on a tile"))
+                            .minimumHitTarget(drawnHeight: side < 90 ? 34 : 36)
+                            .padding(.horizontal, compact ? 5 : 0)
+                            .contentShape(Rectangle())
+                            .padding(.horizontal, compact ? -5 : 0)
                     } else {
-                        ring.accessibilityHidden(true)
+                        pill.accessibilityHidden(true)
                     }
-                }
-            }
-            .overlay(alignment: .topLeading) {
-                // Under 100pt a chip would have ~30pt beside the ring: the
-                // Keep pill alone says which one stays.
-                if !chips.isEmpty, side >= 100 {
-                    HStack(spacing: AppTheme.Spacing.xs) {
-                        ForEach(chips, id: \.self) { chip in
-                            Text(chip)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .padding(.horizontal, 7)
-                                .frame(height: 20)
-                                .background(Color.black.opacity(0.55), in: Capsule())
-                        }
-                    }
-                    // Clear of the 44pt ring in the top-right corner, even
-                    // on the small cells of a pinched card.
-                    .frame(maxWidth: max(0, side - 44 - AppTheme.Spacing.sm), alignment: .leading)
-                    .padding(AppTheme.Spacing.sm)
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                HStack(alignment: .bottom, spacing: 6) {
-                    if showsKeep {
-                        Label("Keep", systemImage: "checkmark")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .labelStyle(KeepBadgeLabelStyle())
-                            .padding(.horizontal, AppTheme.Spacing.sm)
-                            .frame(height: 24)
-                            .background(Color.black.opacity(0.55), in: Capsule())
-                    }
-                    if !factLines.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(factLines.enumerated()), id: \.offset) { index, line in
-                                Text(line)
-                                    .fontWeight(index == 0 ? .semibold : .regular)
-                                    .opacity(index == 0 ? 1 : 0.85)
+                VStack(alignment: .leading, spacing: 4) {
+                    // The keeper's reasons sit above "Suggested": the top
+                    // corner belongs to the Keep/Trash pill. Under 100pt the
+                    // chip has no room; "Suggested" alone says which one stays.
+                    if !chips.isEmpty, side >= 100 {
+                        HStack(spacing: AppTheme.Spacing.xs) {
+                            ForEach(chips, id: \.self) { chip in
+                                Text(chip)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal, 7)
+                                    .frame(height: 20)
+                                    .background(Color.black.opacity(0.55), in: Capsule())
                             }
                         }
-                        .font(.system(size: 11))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                    // A cell under 76pt is all photo: the pill says Keep or
+                    // Trash and VoiceOver reads the rest from the tile.
+                    if side >= 76 {
+                    HStack(alignment: .bottom, spacing: 6) {
+                        if showsKeep {
+                            Text(String(localized: "Suggested", comment: "Duplicates: chip on the photo the app suggests keeping"))
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+                                .padding(.horizontal, AppTheme.Spacing.sm)
+                                .frame(minHeight: 24)
+                                .background(Color.black.opacity(0.55), in: Capsule())
+                        }
+                        if !factLines.isEmpty {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(Array(factLines.enumerated()), id: \.offset) { index, line in
+                                    Text(line)
+                                        .fontWeight(index == 0 ? .semibold : .regular)
+                                        .opacity(index == 0 ? 1 : 0.85)
+                                }
+                            }
+                            .font(.system(size: 11))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                    }
                     }
                 }
+                .frame(maxWidth: max(0, side - 10), alignment: .leading)
                 .padding(side > 120 ? AppTheme.Spacing.sm : 5)
                 .accessibilityHidden(true)
             }
@@ -965,15 +975,6 @@ struct DuplicateThumbnail: View {
     }
 }
 
-struct KeepBadgeLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: AppTheme.Spacing.xs) {
-            configuration.icon.font(.caption.weight(.bold))
-            configuration.title
-        }
-    }
-}
-
 /// The screen's alerts, out of `content` so the type checker keeps up.
 private struct DuplicatesAlerts: ViewModifier {
     @Bindable var model: DuplicatesModel
@@ -1006,3 +1007,32 @@ private struct DuplicatesAlerts: ViewModifier {
     }
 }
 
+/// Keep or Trash, in words, on a duplicate (FS-06.06 §14.6): dark glass with
+/// a check while it stays, red with a bin once it is marked. A cell under
+/// 76pt keeps only the symbol.
+struct KeepTrashPill: View {
+    let isTrash: Bool
+    var compact = false
+    var small = false
+
+    var body: some View {
+        let height: CGFloat = small ? 24 : 26
+        HStack(spacing: 4) {
+            Image(systemName: isTrash ? "trash" : "checkmark")
+                .font(.system(size: small ? 10 : 11, weight: .bold))
+            if !compact {
+                Text(isTrash
+                     ? String(localized: "Trash", comment: "Duplicates: pill on a photo marked for deletion; tap to keep it")
+                     : String(localized: "Keep", comment: "Duplicates: pill on a photo that stays; tap to mark it for deletion"))
+                    .font(.system(size: small ? 12 : 13, weight: .semibold))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, compact ? 0 : 8)
+        .frame(minWidth: height, minHeight: height, maxHeight: height)
+        .background(isTrash ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color.black.opacity(0.55)), in: Capsule())
+        .shadow(color: .black.opacity(0.35), radius: 2)
+    }
+}

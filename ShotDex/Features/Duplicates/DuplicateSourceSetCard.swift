@@ -48,8 +48,8 @@ struct DuplicateSourceSetCard: View {
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { model.openFrames(group, at: member.assetId) }
         .accessibilityAction(named: isMarked
-                             ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
-                             : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
+                             ? String(localized: "Keep", comment: "VoiceOver action on a tile marked Trash: keep it")
+                             : String(localized: "Move to Trash", comment: "VoiceOver action on a tile: mark it for deletion")) {
             model.toggleMark(member.assetId, in: group)
         }
     }

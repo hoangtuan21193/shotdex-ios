@@ -1,0 +1,119 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexFakeBursts"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "01-list"
+    },
+    {
+      "action": "tap",
+      "x": 0.56,
+      "y": 0.304
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-one-trash"
+    },
+    {
+      "action": "dump",
+      "name": "OneTrash"
+    },
+    {
+      "action": "tap",
+      "x": 0.56,
+      "y": 0.304
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-back-keep"
+    },
+    {
+      "action": "tap",
+      "x": 0.56,
+      "y": 0.304
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.4,
+      "y": 0.906
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "04-selected-sheet"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.3,
+      "direction": "down",
+      "distance": 0.6
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.56,
+      "y": 0.304
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "05-cleared"
+    }
+  ]
+}
