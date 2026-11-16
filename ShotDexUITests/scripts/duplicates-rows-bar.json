@@ -1,0 +1,64 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    },
+    {
+      "action": "dump",
+      "name": "01-rows"
+    },
+    {
+      "action": "tap",
+      "label": "All Trash"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    },
+    {
+      "action": "dump",
+      "name": "02-trash"
+    },
+    {
+      "action": "tap",
+      "label": "All Keep"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    }
+  ]
+}

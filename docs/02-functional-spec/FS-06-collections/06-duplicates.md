@@ -254,14 +254,14 @@ iPad và Duo trong (regular width): **danh sách dọc, mỗi nhóm một hàng*
 ngày (*"phí diện tích quá"*). Không còn lưới nhiều cột thẻ.
 
 - Thẻ rộng hết vùng nội dung, cách nhau 12, `r-lg`, đệm 12, nền `.secondarySystemGroupedBackground`.
-- **Thanh trên thẻ** (44pt): trái cặp nút dính *✓ All Keep* | *🗑 All Trash* (chỉ đặt dấu cho cả nhóm, nút khớp trạng
+- **Thanh trên thẻ** (32pt, chữ footnote; switch và nút phải cùng cao — góp ý board 2026-11-16): trái cặp nút dính *✓ All Keep* | *🗑 All Trash* (chỉ đặt dấu cho cả nhóm, nút khớp trạng
   thái được tô). Phải nút chính: có ảnh mang dấu Trash → *Delete N* đỏ (hộp xác nhận hệ thống, 06b §3); không có → *Keep
   All* accent (giữ cả nhóm, thẻ thu thành dòng *Keeping all N*).
 - **Một hàng ảnh**: ô vuông cố định **240pt** trên iPad (Duo trong theo chiều cao, ~184), khe 10; nhóm nhiều ảnh hơn bề
   ngang thì **cuộn ngang** trong thẻ. Nhãn Keep/Trash, chip *Suggested*, viền đỏ như §7.4/§14.6; chạm ảnh mở Compare
   (burst: Choose frames).
 - **Bảng thông tin dưới mỗi ảnh** (cùng bề ngang, cách 6, `r-sm`, nền `.tertiarySystemGroupedBackground`, đỏ 10% khi
-  Trash): 4 dòng 26pt — *File* · *Size* `4032×3024 · 2.3 MB` · *Date* · *Albums* (tên / *In N albums* / *None*).
+  Trash): 4 dòng 26pt — *File* · *Size* `12.2 MP · 2.3 MB` · *Date* `9/2/26, 10:41` (ngắn để vừa ô Duo) · *Albums* (tên / *In N albums* / *None*).
 - Không thanh xoá ở đáy, không ẩn tab bar khi có dấu (xoá từ nút của thẻ). Phím ↑/↓ chọn nhóm (vòng accent) và cuộn
   tới; K, R, Space như §14.8.
 - iPhone, Duo ngoài giữ lưới thẻ §7.4. Board `IP_Duplicates`, `DI_Duplicates`.

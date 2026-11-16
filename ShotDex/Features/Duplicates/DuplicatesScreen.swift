@@ -1274,6 +1274,9 @@ struct KeepTrashPill: View {
 private struct DuplicateRowCard: View {
     static let padding: CGFloat = 12
     static let photoGap: CGFloat = 10
+    /// The top bar: the All Keep / All Trash switch and the action pill are
+    /// the same height (iPad board comment 2026-11-16).
+    static let barHeight: CGFloat = 32
 
     /// 240 on an iPad, smaller on the Duo's 669pt-tall inner screen, so two
     /// groups and more fit on screen.
@@ -1330,6 +1333,7 @@ private struct DuplicateRowCard: View {
                     withAnimation(AppTheme.Motion.standard) { model.markAll(in: group) }
                 }
             }
+            .padding(2)
             .background(Color(.tertiarySystemFill), in: Capsule())
             Spacer(minLength: 0)
             if marked.isEmpty {
@@ -1338,12 +1342,9 @@ private struct DuplicateRowCard: View {
                 } label: {
                     Label(String(localized: "Keep All", comment: "Duplicates wide card: keep every photo of this group"),
                           systemImage: "checkmark")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, AppTheme.Spacing.lg)
-                        .frame(minHeight: 44)
+                        .barPill(fill: .accentColor)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.plain)
             } else {
                 Button(role: .destructive) {
                     let ids = Set(marked)
@@ -1351,26 +1352,23 @@ private struct DuplicateRowCard: View {
                 } label: {
                     Label(String(localized: "Delete \(marked.count)", comment: "Duplicates wide card: delete this group's photos marked Trash"),
                           systemImage: "trash")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, AppTheme.Spacing.lg)
-                        .frame(minHeight: 44)
+                        .barPill(fill: .red)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .tint(.red)
+                .buttonStyle(.plain)
                 .disabled(model.isDeleting)
             }
         }
-        .frame(height: 44)
+        .frame(height: Self.barHeight)
     }
 
     private func selectButton(_ title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: symbol)
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, AppTheme.Spacing.lg)
-                .frame(minHeight: 44)
+                .font(.footnote.weight(.semibold))
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(height: Self.barHeight - 4)
                 .background(isOn ? Color(.systemFill) : .clear, in: Capsule())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -1398,6 +1396,18 @@ private struct DuplicateRowCard: View {
                 model.compare(group, from: member.assetId)
             }
         }
+    }
+}
+
+private extension View {
+    /// The wide card's action pill, as tall as the switch beside it.
+    func barPill(fill: Color) -> some View {
+        font(.footnote.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .frame(height: DuplicateRowCard.barHeight)
+            .background(fill, in: Capsule())
+            .contentShape(Capsule())
     }
 }
 
@@ -1429,15 +1439,20 @@ private struct DuplicateRowFacts: View {
     }
 
     private var size: String {
+        // Megapixels, not 6240×4160: the full dimensions do not fit a 160pt
+        // Duo tile beside the file size (Duo screenshot 2026-11-16).
         var parts: [String] = []
-        if let dimensions = DuplicateReview.dimensions(member) { parts.append(dimensions) }
+        if let width = member.width, let height = member.height {
+            let megapixels = (Double(width * height) / 1_000_000).formatted(.number.precision(.fractionLength(0...1)))
+            parts.append(String(localized: "\(megapixels) MP", comment: "Duplicates wide card: photo resolution in megapixels"))
+        }
         if let bytes = member.fileSize { parts.append(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))) }
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
     private var date: String {
         guard let seconds = member.creationDate else { return "—" }
-        return Date(timeIntervalSince1970: TimeInterval(seconds)).formatted(date: .abbreviated, time: .shortened)
+        return Date(timeIntervalSince1970: TimeInterval(seconds)).formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day().hour().minute())
     }
 
     private func row(_ symbol: String, _ label: String, _ value: String) -> some View {
@@ -1449,10 +1464,14 @@ private struct DuplicateRowFacts: View {
             }
             Text(label)
                 .foregroundStyle(.secondary)
+                .fixedSize()
             Spacer(minLength: AppTheme.Spacing.sm)
             Text(value)
                 .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .layoutPriority(1)
                 .truncationMode(.middle)
+                .allowsTightening(true)
                 .monospacedDigit()
         }
         .font(.footnote)
