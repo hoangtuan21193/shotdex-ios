@@ -171,6 +171,8 @@ extension MacTheme {
         static let thumbnailStroke = Color.white.opacity(0.18)
         /// The ± / ∩ badge on a mask's area row.
         static let badgeFill = Color.white.opacity(0.16)
+        /// `t.dim`: what is there but not in force (a history step past the one shown).
+        static let dim = Color.white.opacity(0.35)
         /// A layer's turn knob over the photo.
         static let knobFill = Color(red: 20 / 255, green: 20 / 255, blue: 22 / 255).opacity(0.85)
         /// A text layer's tile in the layer list (shapes tint it with their colour).

@@ -171,6 +171,18 @@ final class LookPresetStore {
     /// Saves a look under `name`. A name already in use is overwritten rather
     /// than duplicated: "Golden Hour" twice in a strip is two tiles the user
     /// cannot tell apart.
+    /// Writes a look back as given — the Mac's Update with Current Settings
+    /// and Duplicate, which must keep an imported look's source, named
+    /// settings and original file rather than rebuild it from a recipe.
+    func replace(_ preset: LookPreset) {
+        if let index = presets.firstIndex(where: { $0.id == preset.id }) {
+            presets[index] = preset
+        } else {
+            presets.insert(preset, at: 0)
+        }
+        persist()
+    }
+
     @discardableResult
     func save(_ recipe: PhotoEditRecipe, name: String) -> LookPreset? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)

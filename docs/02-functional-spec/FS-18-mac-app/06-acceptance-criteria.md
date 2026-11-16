@@ -193,6 +193,8 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-178 | 03 §1f trên ảnh | như AC-177 | kéo chữ lên; kéo núm xoay; kéo tay nắm góc ra ngoài | chữ dời; nhãn góc đổi; cỡ khác 60 px | ✅ `mac-editor-markup.json` |
 | AC-179 | 03 §1f hình, kính lúp | như AC-177 | Arrow; Line 6; Rectangle; Filled; Magnifier; Zoom 300 | "Arrow 1, Orange · 6 pt"; "Magnifier 1, 300% zoom"; Signature mờ | ✅ `mac-editor-markup.json` |
 | AC-180 | 03 §1f danh sách | như AC-177 | 👁 ×2; Send to Back; bấm hình trên ảnh, Delete; ⌘Z; 🗑; Esc; Back | xoá rồi về; 🗑 xoá; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-markup.json` |
+| AC-181 | 03 §1g looks | demo `-ShotDexSection viewer`, ⌘E, panel | Classic Chrome; Exposure 0.65; + "Harbour"; Duplicate; Rename "Quay"; Update; Delete Look… › Delete | History "Filter Classic Chrome"; "Harbour", "Harbour (2)" → "Quay" → mất | ✅ `mac-editor-presets.json` |
+| AC-182 | 03 §1g tìm, snapshot, history | như AC-181 | tìm "velv"; xoá; Snapshot "Before client edit"; bấm "Opened"; bấm snapshot; Clear › Clear History; tắt panel; Back | chỉ còn Velvia; dòng snapshot; Clear mờ sau khi xoá; panel đóng; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-presets.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

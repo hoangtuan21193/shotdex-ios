@@ -208,6 +208,34 @@ cùng renderer: vùng tự nhận (Subject, Sky, Object, People, Depth) do `Phot
   không có U (gạch chân — recipe không có); token `{camera}`… chưa thay trên Mac (chữ hiện nguyên văn).
 - Chưa có: Signature/Pen/Highlighter, đổi tên lớp, chỉnh trong ô ảnh (bấm đúp vào chữ), kéo tay nắm bằng phím.
 
+### 1g. Presets and History (row 37, 2026-11-17, board `MAC_EditPresets`)
+
+`ShotDexMac/Editor/MacEditorPresets.swift`: panel 228 ở chỗ sidebar, mở bằng nút sidebar trên toolbar editor (⌥⌘P).
+Dùng chung với iPhone: `LookPresetStore` (file Looks/looks.json), `PhotoFilter` theo `FilmLookCategory`,
+`EditorSnapshotStore` (bảng `editor_snapshot`), `PhotoEditHistory.timeline/jump`, `EditorAdjustmentSummary.describeChange`.
+
+- **Presets**: + (lưu look của ảnh này thành My Look, hỏi tên gợi ý; ảnh chưa có look: "This photo has no look to save
+  yet.") · Search Presets (lọc mọi nhóm, mở hết khi đang tìm) · Amount (độ mạnh look, `filterIntensity`) · nhóm My
+  Looks / Basic / Film / B&W có số đếm, gập được. Rê chuột lên một look: ảnh xem thử sau 160 ms, dòng phụ "Previewing
+  “Harbour” · 3 of 48"; rời ra là về. Bấm = áp (một bước Undo); look đang áp có ✓. Chuột phải My Look: Apply Look ·
+  Rename… · Update with Current Settings · Duplicate · Share… · Export As ▸ ShotDex Look (.shotdexlook) · Lightroom
+  Preset (.xmp) · 3D LUT (.cube, mờ — cần render bảng) · Delete Look… (hỏi; ảnh đã sửa bằng nó giữ nguyên). Film: Apply
+  · Remove Look.
+- **Snapshots**: + (tên "Snapshot n"), dòng tên + ngày; rê = xem thử, bấm = áp; chuột phải Apply / Delete.
+- **History**: mọi bước của phiên ảnh này, mới nhất trên cùng ("Filter Classic Chrome", "Exposure +0.65"…, cuối là
+  "Opened"); bước đang hiện tô nền, bước sau nó (Redo tới được) mờ; bấm = nhảy tới bước đó. Clear (hỏi; ảnh giữ nguyên,
+  Undo không lùi qua được nữa).
+- Sau review: Update with Current Settings… hỏi "Replace “X” with this photo's settings?" và ghi **tại chỗ** (look nhập
+  từ Lightroom giữ nguồn, cài đặt được đặt tên, file gốc — `LookPresetStore.replace`); Duplicate chép cả look; + từ chối
+  tên đã có; câu báo nằm ngay dưới tiêu đề Presets; My Look đang áp có ✓ trắng; Amount mờ khi chưa có look; xem thử
+  không bao giờ lọt vào ống hút/Heal/bản đồ bụi (`cleanImage` chỉ từ khung thật) và tắt ngay khi có thay đổi thật,
+  Undo, nhảy History, đổi ảnh; nhãn History đầu là "Opened" hoặc "Earlier" (sau Clear, hay khi bước đầu đã rơi khỏi
+  100 bước); Clear = "Forget these steps?" · Clear Steps; xoá snapshot có hỏi; Export ghi đè file bằng một bước
+  (`replaceItemAt`), lỗi thì báo. Panel gắn sát mép trái (board vẽ panel kính nổi bo 18 — giữ cột gắn, cùng kiểu
+  inspector bên phải).
+- Demo: looks ghi vào thư mục tạm, xoá mỗi lần mở — không đụng looks thật.
+- Chưa có: LUTs (cần kho LUT của iPhone), ảnh nhỏ cho từng look (board có), .cube, kéo look lên ảnh khác.
+
 ## 2. Hai kiểu lưu (D16)
 
 | Ảnh | Toolbar | Lưu |

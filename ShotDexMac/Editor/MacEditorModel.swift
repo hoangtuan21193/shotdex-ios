@@ -128,7 +128,7 @@ final class MacEditorModel {
     @ObservationIgnored private var generation = 0
     /// The render wanted next, and whether one is running: latest wins, at
     /// most one in flight (the renderer's work cannot be cancelled midway).
-    @ObservationIgnored private var wanted: (recipe: PhotoEditRecipe, interactive: Bool, overlay: UUID?)?
+    @ObservationIgnored private var wanted: (recipe: PhotoEditRecipe, interactive: Bool, overlay: UUID?, isPreview: Bool)?
     @ObservationIgnored private var isRendering = false
     /// A drag's starting recipe, recorded once the drag changes something.
     @ObservationIgnored private var dragStart: PhotoEditRecipe?
@@ -205,6 +205,14 @@ final class MacEditorModel {
         selectedMaskId = nil
         selectedComponentId = nil
         selectedOverlayId = nil
+        previewTask?.cancel()
+        previewRecipe = nil
+        previewName = nil
+        presetNote = nil
+        historyBaseIsOpened = true
+        snapshots = []
+        filterThumbnails = [:]
+        filterThumbnailsFor = nil
         maskThumbnails = [:]
         hiddenSpotIds = []
         offeredSources = [:]
@@ -231,6 +239,7 @@ final class MacEditorModel {
             }.value
             guard let self, !Task.isCancelled, generation == self.generation else { return }
             self.details = read.1
+            self.loadSnapshots()
             let recipe = pending ?? read.0 ?? .identity
             self.recipe = recipe
             self.savedRecipe = recipe
@@ -249,6 +258,7 @@ final class MacEditorModel {
                 self.sourceSize = CGSize(width: info.pixelWidth, height: info.pixelHeight)
                 self.load = .ready
                 self.render(interactive: false)
+                if self.showsPresets { self.loadFilterThumbnails() }
             } catch {
                 guard !Task.isCancelled, generation == self.generation else { return }
                 self.load = .unavailable(String(localized: "ShotDex can't read this file.", comment: "Mac editor: the original could not be decoded"))
@@ -350,6 +360,7 @@ final class MacEditorModel {
 
     /// A step of a drag (a slider, the crop frame): previewed, recorded once.
     func change(_ body: (inout PhotoEditRecipe) -> Void) {
+        endPreview()
         var next = recipe
         body(&next)
         guard next != recipe else { return }
@@ -374,6 +385,7 @@ final class MacEditorModel {
 
     /// A change made in one step (a typed value, Reset, a menu).
     func apply(_ change: (inout PhotoEditRecipe) -> Void) {
+        endPreview()
         var next = recipe
         change(&next)
         guard next != recipe else { return }
@@ -385,6 +397,7 @@ final class MacEditorModel {
     }
 
     func undo() {
+        endPreview()
         straightenBase = nil
         guard let previous = history.undo(current: recipe) else { return }
         recipe = previous
@@ -394,6 +407,7 @@ final class MacEditorModel {
     }
 
     func redo() {
+        endPreview()
         straightenBase = nil
         guard let next = history.redo(current: recipe) else { return }
         recipe = next
@@ -458,6 +472,280 @@ final class MacEditorModel {
             if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
         }
         if inOneStep { apply(update) } else { change(update) }
+    }
+
+    // MARK: Presets, Snapshots, History (FS-18.03 §1g)
+
+    /// The panel where the sidebar was: Presets, Snapshots, History.
+    var showsPresets = false
+    /// The user's looks (`LookPresetStore`, shared with the iPhone's file).
+    @ObservationIgnored private lazy var lookStore: LookPresetStore = {
+        #if DEBUG
+        // The demo library never touches the user's own looks.
+        if MacDemoLibrary.isOn {
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexDemoLooks", isDirectory: true)
+            try? FileManager.default.removeItem(at: folder)
+            return LookPresetStore(directory: folder,
+                                   defaults: UserDefaults(suiteName: "ShotDexDemoLooks") ?? .standard)
+        }
+        #endif
+        return LookPresetStore()
+    }()
+    private(set) var myLooks: [LookPreset] = []
+    /// A look under the pointer: the canvas shows it, nothing is applied.
+    private(set) var previewRecipe: PhotoEditRecipe?
+    private(set) var previewName: String?
+    @ObservationIgnored private var previewTask: Task<Void, Never>?
+    private(set) var snapshots: [EditorSnapshot] = []
+    /// Each built-in look on this photo, small, for the preset rows (made off main, once a photo).
+    private(set) var filterThumbnails: [PhotoFilter: CGImage] = [:]
+    @ObservationIgnored private var filterThumbnailsFor: String?
+
+    func loadFilterThumbnails() {
+        guard let source, filterThumbnailsFor != currentId else { return }
+        filterThumbnailsFor = currentId
+        let recipe = self.recipe, renderer = self.renderer, generation = self.generation
+        Task { [weak self] in
+            let filters = PhotoFilter.allCases.filter { $0 != .original }
+            let images = try? await renderer.filterThumbnails(source: source, recipe: recipe, filters: filters, maximumDimension: 72)
+            guard let self, generation == self.generation, let images else { return }
+            self.filterThumbnails = images.images
+        }
+    }
+    /// Said under the presets when a save, a rename or an export did not go.
+    private(set) var presetNote: String?
+
+    func loadLooks() {
+        lookStore.reload()
+        myLooks = lookStore.presets
+    }
+
+    /// Hovering a look: shown after a short pause (a sweep down the list draws nothing).
+    func preview(_ recipe: PhotoEditRecipe?, name: String?) {
+        previewTask?.cancel()
+        guard let recipe else {
+            guard previewRecipe != nil else { return }
+            previewRecipe = nil
+            previewName = nil
+            render(interactive: false)
+            return
+        }
+        previewTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(160))
+            guard let self, !Task.isCancelled else { return }
+            self.previewRecipe = recipe
+            self.previewName = name
+            self.render(interactive: false)
+        }
+    }
+
+    /// Any real change ends a preview: the canvas shows the photo again.
+    private func endPreview() {
+        previewTask?.cancel()
+        guard previewRecipe != nil else { return }
+        previewRecipe = nil
+        previewName = nil
+    }
+
+    func lookPreview(_ preset: LookPreset) -> PhotoEditRecipe { preset.applied(onto: recipe) }
+
+    func filterPreview(_ filter: PhotoFilter) -> PhotoEditRecipe {
+        var next = recipe
+        next.filter = filter
+        next.lutID = nil
+        return next
+    }
+
+    // (No separate preview(nil) here: apply ends the preview itself, so the
+    // frame goes from the preview straight to the applied look, no flash between.)
+    func applyLook(_ preset: LookPreset) {
+        presetNote = nil
+        apply { $0 = preset.applied(onto: $0) }
+    }
+
+    func applyFilter(_ filter: PhotoFilter) {
+        presetNote = nil
+        apply { $0.filter = filter; $0.lutID = nil }
+    }
+
+    func isApplied(_ preset: LookPreset) -> Bool { preset.applied(onto: recipe) == recipe && !preset.recipe.isIdentity }
+
+    /// + in Presets: this photo's look as a new My Look.
+    func saveLook(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            presetNote = String(localized: "A look needs a name.", comment: "Mac editor presets: empty name")
+            return
+        }
+        // Saving over a look by name would quietly rebuild it: say so instead.
+        if myLooks.contains(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            presetNote = String(localized: "There is already a look named “\(trimmed)”. Use Update with Current Settings, or choose another name.",
+                                comment: "Mac editor presets: name taken on save")
+            return
+        }
+        guard lookStore.save(recipe, name: trimmed) != nil else {
+            presetNote = String(localized: "This photo has no look to save yet.", comment: "Mac editor presets: an identity recipe")
+            return
+        }
+        presetNote = nil
+        myLooks = lookStore.presets
+    }
+
+    var suggestedLookName: String { lookStore.suggestedName() }
+
+    func renameLook(_ preset: LookPreset, to name: String) {
+        switch lookStore.rename(preset, to: name) {
+        case .some(.nameTaken(let suggestion)):
+            presetNote = String(localized: "“\(name)” is taken — try “\(suggestion)”.", comment: "Mac editor presets: rename refused")
+        case .some(.emptyName):
+            presetNote = String(localized: "A look needs a name.", comment: "Mac editor presets: empty name")
+        case nil:
+            presetNote = nil
+        }
+        myLooks = lookStore.presets
+    }
+
+    /// Update with Current Settings: the look takes this photo's settings, keeping its name and place.
+    func updateLook(_ preset: LookPreset) {
+        let look = EditorSyncScope.look.apply(recipe, onto: .identity)
+        guard !look.isIdentity else {
+            presetNote = String(localized: "This photo has no look to save yet.", comment: "Mac editor presets: an identity recipe")
+            return
+        }
+        // In place: an imported look keeps its source, named settings and original file.
+        var updated = preset
+        updated.recipe = look
+        updated.createdAt = Date()
+        lookStore.replace(updated)
+        presetNote = String(localized: "“\(preset.name)” now has this photo's settings.", comment: "Mac editor presets: Update done")
+        myLooks = lookStore.presets
+    }
+
+    func duplicateLook(_ preset: LookPreset) {
+        var copy = preset
+        copy.id = UUID()
+        copy.name = lookStore.freeName(like: preset.name, except: copy.id)
+        copy.createdAt = Date()
+        // The copy is the user's own: the original file and the receive belong to the first.
+        copy.originalPresetFile = nil
+        copy.receiveID = nil
+        lookStore.replace(copy)
+        myLooks = lookStore.presets
+    }
+
+    func deleteLook(_ preset: LookPreset) {
+        lookStore.delete(preset)
+        myLooks = lookStore.presets
+    }
+
+    func reportExportFailure() {
+        presetNote = String(localized: "ShotDex couldn't write that look.", comment: "Mac editor presets: export failed")
+    }
+
+    /// A built-in look's name as the user renamed it (shared with the iPhone).
+    func filterName(_ filter: PhotoFilter) -> String { lookStore.displayName(of: filter) }
+
+    /// A look as a file in the temporary folder, ready to save or share.
+    func exportLook(_ preset: LookPreset, asXMP: Bool) -> URL? {
+        do {
+            if asXMP {
+                let output = LookXMPWriter.write(preset)
+                return try LookExport.write(output.data, name: preset.name, pathExtension: "xmp")
+            }
+            return try LookExport.shotdexLookFile(for: .look(preset)) { _ in nil }
+        } catch {
+            presetNote = String(localized: "ShotDex couldn't write that look.", comment: "Mac editor presets: export failed")
+            return nil
+        }
+    }
+
+    // Snapshots: this photo's recipe as it stands, named, in the database.
+
+    @ObservationIgnored private var snapshotTask: Task<Void, Never>?
+
+    func loadSnapshots() {
+        let store = EditorSnapshotStore(database: dependencies.database), id = currentId, generation = self.generation
+        snapshotTask?.cancel()
+        snapshotTask = Task { [weak self] in
+            let found = await Task.detached(priority: .userInitiated) { (try? store.snapshots(photoId: id)) ?? [] }.value
+            guard let self, !Task.isCancelled, generation == self.generation else { return }
+            self.snapshots = found
+        }
+    }
+
+    func addSnapshot(named name: String) {
+        let store = EditorSnapshotStore(database: dependencies.database), id = currentId, recipe = self.recipe
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        Task { [weak self] in
+            let saved = await Task.detached(priority: .userInitiated) { (try? store.add(name: trimmed, recipe: recipe, photoId: id)) != nil }.value
+            guard let self else { return }
+            self.presetNote = saved ? nil : String(localized: "ShotDex couldn't keep that snapshot.", comment: "Mac editor: a snapshot failed to save")
+            self.loadSnapshots()
+        }
+    }
+
+    func applySnapshot(_ snapshot: EditorSnapshot) {
+        apply { $0 = snapshot.recipe }
+    }
+
+    func deleteSnapshot(_ snapshot: EditorSnapshot) {
+        let store = EditorSnapshotStore(database: dependencies.database)
+        Task { [weak self] in
+            await Task.detached(priority: .userInitiated) { try? store.delete(id: snapshot.id) }.value
+            self?.loadSnapshots()
+        }
+    }
+
+    var suggestedSnapshotName: String {
+        let taken = Set(snapshots.map(\.name))
+        let number = (1...).first { !taken.contains(String(localized: "Snapshot \($0)", comment: "Mac editor: a new snapshot's name")) } ?? 1
+        return String(localized: "Snapshot \(number)", comment: "Mac editor: a new snapshot's name")
+    }
+
+    // History: every step of this photo's session, newest at the top.
+
+    /// Oldest first, each with what it did; `current` marks the state shown.
+    /// Whether the oldest step kept is still the photo as opened (not after Clear, or once the oldest fell off the end).
+    @ObservationIgnored private var historyBaseIsOpened = true
+    /// Labels of steps that do not touch the current one, while the stacks stay as they are.
+    @ObservationIgnored private var historyLabelCache: (key: [Int], labels: [Int: String]) = ([], [:])
+
+    var historySteps: [(index: Int, label: String)] {
+        let steps = history.timeline(current: recipe)
+        let current = history.currentIndex
+        let key = [history.undoDepth, steps.count]
+        if historyLabelCache.key != key { historyLabelCache = (key, [:]) }
+        let base = historyBaseIsOpened && history.undoDepth < 100
+            ? String(localized: "Opened", comment: "Mac editor history: the photo as opened")
+            : String(localized: "Earlier", comment: "Mac editor history: the oldest step kept, not the photo as opened")
+        return steps.indices.map { index in
+            guard index > 0 else { return (index, base) }
+            // A step next to the current one changes with every slider move; the others do not.
+            if index != current, index - 1 != current, let cached = historyLabelCache.labels[index] { return (index, cached) }
+            let label = EditorAdjustmentSummary.describeChange(from: steps[index - 1], to: steps[index])
+            if index != current, index - 1 != current { historyLabelCache.labels[index] = label }
+            return (index, label)
+        }
+    }
+
+    var historyIndex: Int { history.currentIndex }
+
+    /// A click on a step: the photo as it was then; later steps stay until something new is done.
+    func jumpHistory(to index: Int) {
+        endPreview()
+        guard let state = history.jump(to: index, current: recipe) else { return }
+        straightenBase = nil
+        recipe = state
+        reconcileSelection()
+        render(interactive: false)
+        scheduleSave()
+    }
+
+    func clearHistory() {
+        history.clear()
+        historyBaseIsOpened = false
+        histories[currentId] = history
     }
 
     // MARK: Markup (FS-18.03 §1f)
@@ -1298,7 +1586,7 @@ final class MacEditorModel {
     /// any other waiting, and runs when that one is done.
     private func render(interactive: Bool) {
         guard source != nil else { return }
-        var drawn = showsBefore ? PhotoEditRecipe.identity : recipe
+        var drawn = showsBefore ? PhotoEditRecipe.identity : (previewRecipe ?? recipe)
         if tool == .crop {
             // The frame is drawn over the whole straightened photo; masks and
             // layers sit in the cropped frame's space and would land wrong.
@@ -1312,7 +1600,7 @@ final class MacEditorModel {
         let overlay = tool == .mask && showsMaskOverlay && !showsBefore && !hidesOverlayWhileAdjusting ? selectedMaskId : nil
         if let last = lastRequested, last.recipe == drawn, last.overlay == overlay, !(last.interactive && !interactive) { return }
         lastRequested = (drawn, interactive, overlay)
-        wanted = (drawn, interactive, overlay)
+        wanted = (drawn, interactive, overlay, previewRecipe != nil && !showsBefore)
         if interactive {
             renderTask?.cancel()
             pump()
@@ -1346,7 +1634,9 @@ final class MacEditorModel {
                 if let images {
                     self.renderFailed = false
                     self.preview = images.displayImage
-                    self.cleanImage = images.cleanImage
+                    // A look under the pointer is only shown: the eyedropper, Heal and the
+                    // spot map keep reading the photo as it really is.
+                    if !next.isPreview { self.cleanImage = images.cleanImage }
                     if self.visualizesSpots, !next.interactive { self.updateSpotMap() }
                     if !next.interactive {
                         self.refreshMaskThumbnails()

@@ -15,6 +15,10 @@ struct MacEditorPage: View {
 
     var body: some View {
         HStack(spacing: 0) {
+            if model.showsPresets {
+                MacEditorPresetsPanel(model: model)
+                Divider()
+            }
             VStack(spacing: 0) {
                 MacEditorCanvas(model: model, zoom: zoom)
                 MacEditorFilmstrip(model: model)
@@ -83,6 +87,15 @@ struct MacEditorToolbar: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
+            // A plain button, not a toggle: an on toggle in the toolbar draws in the accent, kept for what commits.
+            Button { model.showsPresets.toggle() } label: {
+                Label(String(localized: "Presets and History", comment: "Mac editor toolbar: the left panel"), systemImage: "sidebar.left")
+            }
+            .accessibilityValue(model.showsPresets ? String(localized: "Shown", comment: "VoiceOver: a panel is shown")
+                                                   : String(localized: "Hidden", comment: "VoiceOver: a panel is hidden"))
+            .keyboardShortcut("p", modifiers: [.command, .option])
+            .help(String(localized: "Presets and History (⌥⌘P)", comment: "Mac editor toolbar"))
+            .accessibilityIdentifier("editor.presets")
             Button {
                 model.flushSave()
                 close(model.currentId)
@@ -418,7 +431,11 @@ enum MacEditorWords {
     /// "2026 Japan · Fujifilm X-T5 · XF56mmF1.2 R WR · 3 of 48".
     @MainActor
     static func subtitle(_ model: MacEditorModel) -> String {
-        [model.details.sourceName, model.details.camera, model.details.lens,
+        if let name = model.previewName {
+            return String(localized: "Previewing “\(name)” · \((model.index + 1).formatted()) of \(model.ids.count.formatted())",
+                          comment: "Mac editor: the subtitle while a look is under the pointer")
+        }
+        return [model.details.sourceName, model.details.camera, model.details.lens,
          String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor: position in the strip")]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
