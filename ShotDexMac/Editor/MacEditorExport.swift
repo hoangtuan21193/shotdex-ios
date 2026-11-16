@@ -1009,8 +1009,7 @@ struct MacEditorExportSheet: View {
                             : String(localized: "Export", comment: "Mac export: the commit button"))
             }
             .keyboardShortcut(.defaultAction)
-            .buttonStyle(.borderedProminent)
-            .tint(MacTheme.Editor.accent)
+            .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
             .disabled(!canExport || isStarting || model.isExporting)
             .accessibilityIdentifier("export.go")
         }

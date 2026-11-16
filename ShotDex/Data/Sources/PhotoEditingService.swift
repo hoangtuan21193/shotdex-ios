@@ -346,7 +346,10 @@ final class PhotoEditingService {
             if let resource = option.resource {
                 try await write(resource: resource, to: fileURL)
             } else if let inputURL = option.contentInputURL {
-                try FileManager.default.copyItem(at: inputURL, to: fileURL)
+                // A whole original: copied off the main actor.
+                try await Task.detached(priority: .userInitiated) {
+                    try FileManager.default.copyItem(at: inputURL, to: fileURL)
+                }.value
             } else {
                 throw PhotoEditingError.missingSource
             }

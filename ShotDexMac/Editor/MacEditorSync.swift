@@ -95,8 +95,7 @@ struct MacEditorSyncSheet: View {
                                               : MacInflect.string("Sync ^[\(syncCount) Photo](inflect: true)", comment: "Mac editor sync: the commit button"))
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(MacTheme.Editor.accent)
+                .buttonStyle(MacPushButtonStyle(isDefault: true, defaultWeight: .medium))
                 .disabled(model.isCheckingSync || syncCount == 0 || ticks.groups.isEmpty)
                 .accessibilityIdentifier("editor.sync.go")
             }

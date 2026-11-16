@@ -256,6 +256,41 @@ Dùng chung với iPhone: `LookPresetStore` (file Looks/looks.json), `PhotoFilte
 - RAW mà macOS đang chạy chưa đọc được: theo [FS-03.04b](../FS-03-photo-editor/04b-unsupported-raw.md), câu báo ghi
   phiên bản macOS ("macOS 26 can’t read RAW files from the Sony A1 II yet…").
 
+### 2a. Đã dựng (row 40, 2026-11-17, board `MAC_EditPhotos`)
+
+- **Mở được ảnh Photos:** ảnh chỉ có bản trong thư viện Photos (`photo_copies` toàn `photos`) không còn báo "chưa sửa
+  được". Editor mở qua `PhotoEditingService` của iPhone: phiên sửa (`requestContentEditingInput`, tải iCloud nếu cần),
+  file gốc ra thư mục tạm (RAW nếu có, như iPhone; copy file chạy ngoài main actor), recipe Photos đang giữ
+  (adjustment data của ShotDex) là điểm xuất phát. Bản nháp trong `photo_recipes` chỉ thắng khi nó được ghi **sau** lần
+  Photos đổi ảnh gần nhất (`modificationDate`) — việc làm ở đây chưa vào Photos (mất điện, Done hỏng lúc đóng cửa sổ):
+  mở ra với Done sáng. Nháp cũ hơn thì bỏ, để một bản sửa làm trên iPhone sau đó không bị ghi đè. Fetch `PHAsset` chạy ngoài main actor. Đọc không được → "ShotDex couldn't read this picture from the
+  Photos library. If it is in iCloud, check the connection, then open it again."
+- **Toolbar:** không có "✓ Edited · Saved" (chưa gì vào Photos trước Done); **Revert to Original…** rồi **Done**
+  (viên 36pt chữ đen trên `accentFill` như board, ⌘↩; Export và Sync dùng cùng kiểu nút `MacPushButtonStyle`), sáng
+  khi bản sửa khác bản Photos đang giữ (tooltip lúc mờ: "Photos has this edit — nothing new to save"). Đang ghi: vòng
+  quay nhỏ trong nút, bề rộng không đổi; ghi xong: "✓ Saved to Photos" 3 s. Photos chỉ đổi khi Done.
+  Tiêu đề phụ: `Photos Library · iPhone 16 Pro · 24 mm · 3 of 48` — camera có sẵn của điện thoại ghi tiêu cự tương
+  đương thay cho tên lens.
+- **Done** = Save Changes của FS-03.06 §2: render full size, `PHContentEditingOutput` + adjustment data = recipe,
+  định dạng giữ như gốc (HEIC ra HEIC). Photos nhận rồi thì là xong, kể cả khi mở lại phiên cho lần Done sau không
+  được (lần Done sau tự mở). Done thứ hai khi một Done đang ghi thì chờ cái đang ghi, không ghi hai lần.
+- **Rời là Done:** ◀ Back, Esc, chọn ảnh khác trên filmstrip (hay ◀ ▶), đóng cửa sổ, ⌘Q đều ghi trước rồi mới rời.
+  Không có hộp hỏi. Bấm ảnh khác hay ◀ trong lúc đang ghi: ghi xong (kể cả những chỉnh làm trong lúc ghi — ghi thêm
+  lượt nữa) thì tới đích bấm sau cùng; ghi hỏng thì ở lại, kêu bíp và mở luôn lý do.
+  ⌘Q ghi mọi editor có bản sửa chưa ghi (chờ tối đa 30 s), rồi hỏi Quit lại từ đầu để các câu hỏi upload / common
+  photos vẫn tới lượt; hỏng hay quá 30 s thì hộp hỏi **Stay** / **Quit Anyway** (thoát, bản sửa giữ làm nháp — lần mở
+  sau nháp mới hơn Photos nên quay lại với Done sáng).
+- **Lỗi:** ở lại editor, bản sửa còn nguyên; toolbar "Not Saved to Photos" (đỏ) — bấm mở lý do ("Photos didn't take
+  the edit. Your changes are still here — click Done to try again." / đĩa đầy). ◀ và Esc lúc đó thử ghi lại, không rời.
+- **Revert to Original…** trên ảnh Photos đưa bản sửa về gốc như ảnh thư mục; hộp xác nhận nói rõ Done (hay rời editor)
+  ghi bản gốc vào Photos, ⌘Z lấy lại tới lúc đó. Revert của chính app Photos vẫn dùng được. "Gốc" là bản Photos đưa
+  cho phiên sửa (như iPhone): ảnh đã sửa bằng app Photos thì là bản Photos đã render.
+- **Demo:** `-ShotDexSection editPhotos` biến mọi ảnh demo thành ảnh chỉ có trong Photos và mở viewer; Done ghi vào
+  bộ nhớ của lần chạy, **không bao giờ gọi PhotoKit**. `-ShotDexDemoDoneFails` làm Done hỏng để thấy câu báo lỗi.
+- **Chưa dựng:** Done bấm từ editor không có giới hạn thời gian / nút huỷ (⌘Q có 30 s); chữ token (`{camera}`) trong lớp Text được ghi đúng như thấy trên canvas — Mac chưa điền token
+  (iPhone điền trước khi render); đóng cửa sổ khi Done hỏng không có chỗ báo (bản nháp còn trong database, mở lại thấy); Live Photo
+  giữ chuyển động theo FS-03.06 §3 chưa kiểm trên Mac; chọn nguồn RAW/JPEG khi ảnh có cặp (dùng nguồn mặc định).
+
 ## 3. Sửa nhiều ảnh
 
 - ⌘-nhấp trên filmstrip chọn thêm ảnh: ảnh đang sửa vòng trắng, ảnh chọn thêm vòng amber 2.

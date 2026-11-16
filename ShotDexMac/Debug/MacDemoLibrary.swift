@@ -58,6 +58,8 @@ enum MacDemoLibrary {
         // drive (the copy they open from) and on the NAS — three copies each.
         if section == "deleteCopies" { seedDeleteCopies(dependencies) }
         if section == "onServer" { seedOnServer(dependencies) }
+        // `editPhotos` (board `MAC_EditPhotos`): every photo is a Photos library picture only.
+        if section == "editPhotos" { seedPhotosOnly(dependencies) }
         if section == "duplicates" { seedDuplicates(dependencies) }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
@@ -471,6 +473,18 @@ enum MacDemoLibrary {
         }
         try? store.upsert(records)
         try? store.replaceGroups(groups, scannedAt: Date())
+    }
+
+    private static func seedPhotosOnly(_ dependencies: MacDependencies) {
+        let now = Int(Date().timeIntervalSince1970)
+        try? dependencies.database.writer.write { db in
+            for assetId in try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata") {
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO photo_copies (id, photoId, sourceId, kind, photoKitId, isOnline, lastSeenAt)
+                    VALUES (?, ?, ?, 'photos', ?, 1, ?)
+                    """, arguments: ["demo-ph:" + assetId, assetId, PhotoLibrarySource.id, assetId, now])
+            }
+        }
     }
 
     private static func seedOnServer(_ dependencies: MacDependencies) {

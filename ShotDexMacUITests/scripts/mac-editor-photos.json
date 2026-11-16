@@ -1,0 +1,301 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "editPhotos"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "photos-open"
+  },
+  {
+   "action": "dump",
+   "name": "photos-open"
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.65\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "photos-changed"
+  },
+  {
+   "action": "dump",
+   "name": "photos-changed"
+  },
+  {
+   "action": "click",
+   "label": "editor.done"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "dump",
+   "name": "photos-writing"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "photos-done"
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.3\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "return",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "photos-cmd-return"
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.5\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Photo 13"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "photos-switched"
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-0.2\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "photos-left"
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "photos-reopened"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "editPhotos",
+    "-ShotDexDemoDoneFails"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.4\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "photos-failed"
+  },
+  {
+   "action": "dump",
+   "name": "photos-failed"
+  },
+  {
+   "action": "click",
+   "label": "editor.doneFailed"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "photos-failed-why"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "photos-failed-stays"
+  }
+ ]
+}

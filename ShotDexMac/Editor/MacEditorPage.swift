@@ -47,13 +47,14 @@ struct MacEditorPage: View {
             if model.isPickingColor { model.isPickingColor = false } else if !model.syncTargets.isEmpty { model.syncTargets = [] }
             else if model.tool != .adjust { model.tool = .adjust } else { leave() }
         }
-        // Esc wherever the keys are (a checkbox, a menu just closed): the
-        // eyedropper goes away, or Crop gives way to Adjust.
+        // Esc wherever the keys are (a checkbox, a value field just typed in, a
+        // menu just closed): the eyedropper goes away, Crop gives way to Adjust,
+        // and from Adjust the editor is left (Done first for a Photos picture).
         .background {
-            if model.tool != .adjust || model.isPickingColor || !model.syncTargets.isEmpty {
+            if !model.asksSync && !model.asksExport {
                 Button("") {
                     if model.isPickingColor { model.isPickingColor = false } else if !model.syncTargets.isEmpty { model.syncTargets = [] }
-                    else { model.tool = .adjust }
+                    else if model.tool != .adjust { model.tool = .adjust } else { leave() }
                 }
                     .keyboardShortcut(.cancelAction)
                     .opacity(0)
@@ -68,14 +69,18 @@ struct MacEditorPage: View {
         .task { model.open() }
         // The frame is drawn over the fitted photo.
         .onChange(of: model.tool) { _, tool in if tool == .crop { zoom = .fit } }
-        .onDisappear { model.flushSave() }
+        .onDisappear {
+            model.flushSave()
+            // The window closed under a Photos picture: its edit goes to Photos all the same.
+            model.doneOnClose()
+        }
         // ⌘Q with an edit not written yet: written before the app goes.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in model.flushNow() }
     }
 
+    /// ◀ and Esc: a Photos picture is written first (Done); a failed write stays here with the reason.
     private func leave() {
-        model.flushSave()
-        close(model.currentId)
+        model.leaveAfterDone { [close, model] in close(model.currentId) }
     }
 }
 
@@ -103,8 +108,7 @@ struct MacEditorToolbar: ToolbarContent {
             .help(String(localized: "Presets and History (⌥⌘P)", comment: "Mac editor toolbar"))
             .accessibilityIdentifier("editor.presets")
             Button {
-                model.flushSave()
-                close(model.currentId)
+                model.leaveAfterDone { [close, model] in close(model.currentId) }
             } label: {
                 Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left")
             }
@@ -162,12 +166,20 @@ struct MacEditorToolbar: ToolbarContent {
             if let note = model.exportNote {
                 MacEditorExportNoteView(note: note, stop: model.cancelExport) { model.exportNote = nil }
             }
-            MacEditorSaveStatus(state: model.saveState, retry: model.retrySave)
+            if model.isPhotosLibrary {
+                // Nothing is in Photos until Done (board `MAC_EditPhotos`): no "Saved".
+                MacEditorDoneFailure(model: model)
+            } else {
+                MacEditorSaveStatus(state: model.saveState, retry: model.retrySave)
+            }
             Button(String(localized: "Revert to Original…", comment: "Mac editor toolbar: drop every edit of this photo")) {
                 asksRevert = true
             }
             .disabled(model.recipe == .identity || model.load != .ready)
             .accessibilityIdentifier("editor.revert")
+            if model.isPhotosLibrary {
+                MacEditorDoneButton(model: model)
+            }
         }
     }
 }
@@ -605,8 +617,22 @@ enum MacEditorWords {
             return String(localized: "Previewing “\(name)” · \((model.index + 1).formatted()) of \(model.ids.count.formatted())",
                           comment: "Mac editor: the subtitle while a look is under the pointer")
         }
-        return [model.details.sourceName, model.details.camera, model.details.lens,
+        return [model.details.sourceName, model.details.camera, lensWords(model.details),
          String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor: position in the strip")]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// The lens, or — a phone's built-in camera, whose lens name is the phone
+    /// over again ("iPhone 16 Pro back triple camera 6.765mm f/1.78") — the
+    /// focal length: "24 mm" (board `MAC_EditPhotos`).
+    static func lensWords(_ details: MacEditorModel.Details) -> String? {
+        let focal = details.equivalentFocalLength ?? details.focalLength
+        guard let lens = details.lens, !lens.isEmpty else {
+            return focal.map { "\(Int($0.rounded())) mm" }
+        }
+        let isBuiltIn = lens.localizedCaseInsensitiveContains("camera")
+            || details.camera.map { !$0.isEmpty && lens.localizedCaseInsensitiveContains($0) } == true
+        guard isBuiltIn, let focal else { return lens }
+        return "\(Int(focal.rounded())) mm"
     }
 }

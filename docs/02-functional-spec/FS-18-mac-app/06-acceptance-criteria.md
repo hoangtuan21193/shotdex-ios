@@ -203,6 +203,11 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-188 | 03 §4a watermark, preset | như AC-187 | Add Watermark; Edit… gõ "© 2026 Test Studio" › Save; Placement; Size; Opacity; Save Preset… "Client JPEG"; Preset › Client JPEG | Text "© 2026 Test Studio"; thẻ xem trước có dấu; Preset "Client JPEG" | ✅ `mac-editor-export.json` |
 | AC-189 | 03 §4a ghi, Skip, Replace | như AC-188 | Export; ⇧⌘E, Export (Skip); ⇧⌘E, Replace, Export, Replace; ✕; ⇧⌘E, Cancel | toolbar "Saved" (file 2026-09-28_Kyoto_001.jpg); Not Written › popover "Skipped — … already in the folder."; hỏi "Replace 1 file in “ShotDexExportTest”?" rồi "Saved"; ✕ ẩn ghi chú | ✅ `mac-editor-export.json` |
 | AC-190 | 03 §4a Save as Copy | như AC-189 | ⇧⌘E; Save as Copy; Save Copy; Show in Finder | "Saved DSC04111 (edited).jpg" cạnh file gốc, gốc không đổi; Show in Finder mở folder; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-export.json` |
+| AC-191 | 03 §2a mở ảnh Photos | demo `-ShotDexSection editPhotos`, ⌘E | — | toolbar không có "Edited · Saved"; Revert mờ, **Done** mờ; tiêu đề phụ "Photos Library · …" | ✅ `mac-editor-photos.json` |
+| AC-192 | 03 §2a Done | như AC-191 | Exposure 0.65; Done; Exposure 0.3; ⌘↩ | Done sáng → đang ghi (mờ) → mờ, "+0.65"; ⌘↩ cũng ghi | ✅ `mac-editor-photos.json` |
+| AC-193 | 03 §2a rời là Done | như AC-192 | Exposure 0.5; bấm Photo 13; Exposure −0.2; Esc (ngay sau khi gõ số); ⌘E | sang "13 of 226" chỉ sau khi ghi; Esc về viewer; mở lại "−0.20", Done mờ (Photos đã có) | ✅ `mac-editor-photos.json` |
+| AC-194 | 03 §2a Done hỏng | thêm `-ShotDexDemoDoneFails` | Exposure 0.4; Done; Not Saved to Photos; Esc; ◀ Back | "Not Saved to Photos" + lý do; Back không rời, lý do tự mở; Done vẫn sáng, "+0.40" còn | ✅ `mac-editor-photos.json` |
+| AC-195 | 03 §2a ⌘Q, nháp | ảnh Photos có bản sửa chưa Done | ⌘Q | ghi trước rồi hỏi Quit lại (câu hỏi upload vẫn tới); hỏng/30 s → Stay / Quit Anyway; nháp mới hơn Photos quay lại lần sau | ⚠️ chưa có test (driver không gõ ⌘Q an toàn được) |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

@@ -263,8 +263,13 @@ struct MacRootWindow: View {
             }
             Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
         } message: {
-            Text("Every edit of this photo goes. ⌘Z brings it back while the editor is open; the original file was never changed.",
-                 comment: "Mac editor: what Revert to Original does")
+            if editor?.isPhotosLibrary == true {
+                Text("Every edit of this photo goes. Done (or leaving the editor) writes the original back into Photos; until then ⌘Z brings the edits back.",
+                     comment: "Mac editor: what Revert to Original does to a Photos library picture")
+            } else {
+                Text("Every edit of this photo goes. ⌘Z brings it back while the editor is open; the original file was never changed.",
+                     comment: "Mac editor: what Revert to Original does")
+            }
         }
         .modifier(MacSupportSheetHost())
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
@@ -1545,7 +1550,7 @@ struct MacRootWindow: View {
             }
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.
             Color.clear.task(id: library.items.count) {
-                if ["viewer", "viewerFullScreen", "viewerCloud"].contains(MacDemoLibrary.section),
+                if ["viewer", "viewerFullScreen", "viewerCloud", "editPhotos"].contains(MacDemoLibrary.section),
                    viewerId == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     showsInspector = true
@@ -1554,6 +1559,8 @@ struct MacRootWindow: View {
                     // `viewerCloud` (board `MAC_ViewerCloudDownload`): its file is only in iCloud Drive, no edits.
                     if MacDemoLibrary.section == "viewerCloud", let id {
                         MacDemoLibrary.cloudIds = [id]
+                    } else if MacDemoLibrary.section == "editPhotos" {
+                        // Nothing edited yet: Done lights with the first change.
                     } else if let id {
                         let store = PhotoRecipeStore(database: dependencies.database)
                         await Task.detached { try? store.save(MacDemoLibrary.viewerRecipe, photoId: id) }.value

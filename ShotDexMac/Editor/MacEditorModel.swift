@@ -44,6 +44,8 @@ final class MacEditorModel {
         var focalLength: Double?
         var aperture: Double?
         var shutter: String?
+        /// Full-frame equivalent, for a phone's built-in camera ("24 mm").
+        var equivalentFocalLength: Double?
         /// When it was taken: Export's file names and Date Folders.
         var captureDate: Date?
     }
@@ -155,25 +157,86 @@ final class MacEditorModel {
     /// The recipe last written: Saved means this equals the recipe.
     @ObservationIgnored private var savedRecipe = PhotoEditRecipe.identity
 
+    // MARK: Photos library (FS-18.03 §2)
+
+    /// The photo open is a Photos library picture: Done writes it back.
+    private(set) var isPhotosLibrary = false
+    /// The edit Photos holds for it (ShotDex's adjustment data); nil for none.
+    var committedRecipe: PhotoEditRecipe?
+    var doneState = DoneState.idle
+    /// The Done writing now: a second Done, ◀ or ⌘Q waits for it.
+    @ObservationIgnored var doneTask: Task<Bool, Never>?
+    /// Where to go once the Done writing now lands.
+    enum PendingTarget { case photo(Int), leave(() -> Void) }
+    @ObservationIgnored var pendingTarget: PendingTarget?
+    /// The reason Done failed is shown now (a leave or a step it blocked).
+    var showsDoneFailure = false
+    /// Which opening a Done belongs to: a new file lands only on the opening it was written for.
+    var generationForDone: Int { generation }
+    @ObservationIgnored let photosEditor: any MacPhotosEditing
+    /// Every editor open, for ⌘Q: one with an edit Photos lacks writes it before the app goes.
+    @ObservationIgnored static let live = NSHashTable<MacEditorModel>.weakObjects()
+    /// Quit Anyway was chosen: ⌘Q stops writing to Photos (the drafts stay).
+    static var quitsWithoutDone = false
+
     init(ids: [String], start: String, dependencies: MacDependencies) {
         // The photo the viewer showed is the one edited, wherever it is.
         let ids = ids.contains(start) ? ids : [start]
         self.ids = ids
         index = ids.firstIndex(of: start) ?? 0
         self.dependencies = dependencies
+        #if DEBUG
+        photosEditor = MacDemoLibrary.isOn ? MacDemoPhotosEditor() : MacPhotosLibraryEditor(renderer: PhotoRenderService())
+        #else
+        photosEditor = MacPhotosLibraryEditor(renderer: PhotoRenderService())
+        #endif
+        Self.live.add(self)
+    }
+
+    /// Editors whose Photos picture has an edit Photos does not have yet.
+    static var pendingDones: [MacEditorModel] { live.allObjects.filter(\.needsDone) }
+
+    /// Done put a new file under the picture: renders read it from now on.
+    func replaceSource(_ info: PhotoRenderSourceInfo) {
+        source = info
+        render(interactive: false)
     }
 
     // MARK: Opening
 
     func open() {
-        open(at: index)
+        // The first opening (and the page coming back): nothing to write first.
+        openNow(at: index)
         loadEditedIds()
     }
 
-    /// Steps to another photo of the strip; the one left has saved already.
+    /// Steps to another photo of the strip; the one left has saved already —
+    /// a Photos picture with an edit Photos lacks is written first (Done), and
+    /// a failed write keeps it open with the reason (FS-18.03 §2).
     func open(at newIndex: Int) {
         guard ids.indices.contains(newIndex) else { return }
+        guard needsDone || doneTask != nil else { openNow(at: newIndex); return }
+        // The latest ask wins; the Done in flight (or this one) takes the user there.
+        pendingTarget = .photo(newIndex)
+        if doneTask == nil { Task { await done() } }
+    }
+
+    /// After a Done landed: no second write.
+    func openWithoutDone(at newIndex: Int) { openNow(at: newIndex) }
+
+    /// The editor is going: an opening under way stops before it stores a session.
+    func cancelOpening() {
+        openTask?.cancel()
+        generation += 1
+    }
+
+    private func openNow(at newIndex: Int) {
+        guard ids.indices.contains(newIndex) else { return }
         flushSave()
+        if isPhotosLibrary { photosEditor.close(currentId) }
+        isPhotosLibrary = false
+        committedRecipe = nil
+        doneState = .idle
         histories[currentId] = history
         generation += 1
         renderTask?.cancel()
@@ -249,7 +312,48 @@ final class MacEditorModel {
             self.recipe = recipe
             self.savedRecipe = recipe
             self.saveState = self.failedIds.contains(id) ? .failed : (recipe == .identity ? .unchanged : .saved)
-            guard let url = await Self.sourceURL(id, dependencies: dependencies) else {
+            var opened: URL?
+            if await Self.isPhotosOnly(id, database: database) {
+                // A Photos library picture: its original out of Photos, and the edit Photos holds.
+                do {
+                    let picture = try await self.photosEditor.open(id)
+                    guard !Task.isCancelled, generation == self.generation else {
+                        // Stepped on while it opened: its session goes, not a later one's.
+                        if self.currentId != id { self.photosEditor.close(id) }
+                        return
+                    }
+                    self.isPhotosLibrary = true
+                    self.committedRecipe = picture.committed
+                    // Photos holds the truth: leaving always writes (Done), so a draft
+                    // from before Photos last changed is older than Photos — an edit made
+                    // on the iPhone since must not be written over by it. A draft written
+                    // after it is work that never reached Photos (a crash, a Done that
+                    // failed as the window closed): it comes back, with Done lit.
+                    let committed = picture.committed ?? .identity
+                    let draftAt = await Task.detached(priority: .userInitiated) { () -> Int? in
+                        try? database.reader.read { db in
+                            try Int.fetchOne(db, sql: "SELECT updatedAt FROM photo_recipes WHERE photoId = ?", arguments: [id])
+                        }
+                    }.value
+                    guard !Task.isCancelled, generation == self.generation else { return }
+                    let draft = pending ?? read.0
+                    let draftIsNewer = draft != nil && draft != committed
+                        && (picture.modified.map { modified in draftAt.map { Double($0) > modified.timeIntervalSince1970 } ?? false } ?? true)
+                    let start = draftIsNewer ? draft! : committed
+                    self.recipe = start
+                    self.savedRecipe = start
+                    self.saveState = .unchanged
+                    opened = picture.url
+                } catch {
+                    guard !Task.isCancelled, generation == self.generation else { return }
+                    self.load = .unavailable(String(localized: "ShotDex couldn't read this picture from the Photos library. If it is in iCloud, check the connection, then open it again.",
+                                                    comment: "Mac editor: a Photos library picture could not be read"))
+                    return
+                }
+            } else {
+                opened = await Self.sourceURL(id, dependencies: dependencies)
+            }
+            guard let url = opened else {
                 let reason = await Self.unavailableReason(id, dependencies: dependencies)
                 guard !Task.isCancelled, generation == self.generation else { return }
                 self.load = .unavailable(reason)
@@ -312,7 +416,8 @@ final class MacEditorModel {
             var details = Details()
             if let row = try Row.fetchOne(db, sql: """
                 SELECT originalFilename, COALESCE(normalizedCameraModel, cameraModel) AS camera,
-                       COALESCE(normalizedLensModel, lensModel) AS lens, iso, focalLength, aperture, shutterSpeedDisplay, creationDate
+                       COALESCE(normalizedLensModel, lensModel) AS lens, iso, focalLength, aperture, shutterSpeedDisplay, creationDate,
+                       COALESCE(equivalentFocalLength, focalLengthIn35mm) AS equivalentFocal
                 FROM photo_metadata WHERE assetId = ?
                 """, arguments: [id]) {
                 details.fileName = row["originalFilename"] ?? ""
@@ -322,6 +427,7 @@ final class MacEditorModel {
                 details.focalLength = row["focalLength"]
                 details.aperture = row["aperture"]
                 details.shutter = row["shutterSpeedDisplay"]
+                details.equivalentFocalLength = row["equivalentFocal"]
                 details.captureDate = (row["creationDate"] as Int64?).map { Date(timeIntervalSince1970: TimeInterval($0)) }
             }
             details.sourceName = try String.fetchOne(db, sql: """

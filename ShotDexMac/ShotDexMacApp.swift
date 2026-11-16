@@ -192,6 +192,51 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // A Photos picture with an edit Photos lacks (FS-18.03 §2): written
+        // first, as Done; a refusal keeps the app open on the editor's reason.
+        let pending = MacEditorModel.quitsWithoutDone ? [] : MacEditorModel.pendingDones
+        if !pending.isEmpty {
+            // Bounded: a Photos write that hangs never leaves Quit unanswered.
+            // Two racers, settled once; the loser is not waited for.
+            let settled = MacQuitSettle()
+            let finish: @MainActor @Sendable (Bool?) -> Void = { wrote in
+                guard !settled.isSettled else { return }
+                settled.isSettled = true
+                // This pass only wrote: Quit is asked again, so the upload and
+                // common-photos questions below still get their turn.
+                sender.reply(toApplicationShouldTerminate: false)
+                if wrote == true {
+                    sender.terminate(nil)
+                    return
+                }
+                let alert = NSAlert()
+                alert.messageText = String(localized: "An edit couldn't be saved to Photos", comment: "Mac quit: Done failed or hung")
+                alert.informativeText = wrote == nil
+                    ? String(localized: "Photos is taking too long. Quit anyway and the edit is kept as a draft for next time, or stay and let it finish.",
+                             comment: "Mac quit: a Photos write did not finish in 30 seconds")
+                    : String(localized: "Quit anyway and the edit is kept as a draft for next time, or stay and click Done in its editor, which says why.",
+                             comment: "Mac quit: Photos refused an edit")
+                alert.addButton(withTitle: String(localized: "Stay", comment: "Mac quit: don't quit"))
+                alert.addButton(withTitle: String(localized: "Quit Anyway", comment: "Mac quit: quit without the Photos write"))
+                if alert.runModal() == .alertSecondButtonReturn {
+                    MacEditorModel.quitsWithoutDone = true
+                    sender.terminate(nil)
+                }
+            }
+            let timer = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(30))
+                if !Task.isCancelled { finish(nil) }
+            }
+            Task { @MainActor in
+                var wrote = true
+                for editor in pending {
+                    if !(await editor.done()) { wrote = false }
+                }
+                timer.cancel()
+                finish(wrote)
+            }
+            return .terminateLater
+        }
         // An upload under way (FS-15.02 §9): Quit asks, as Stop… does.
         if MacUploadHold.isAnyRunning {
             let alert = NSAlert()
@@ -239,6 +284,12 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         runs.pauseAll { sender.reply(toApplicationShouldTerminate: true) }
         return .terminateLater
     }
+}
+
+/// The ⌘Q race of a Photos write against its timeout: answered once.
+@MainActor
+private final class MacQuitSettle {
+    var isSettled = false
 }
 
 /// Help › ShotDex Support… (FS-18.04 §6, FS-13).
