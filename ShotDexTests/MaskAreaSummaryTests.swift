@@ -27,4 +27,18 @@ struct MaskAreaSummaryTests {
         background.isInverted = true
         #expect(MaskAreaSummary.subtitle(for: background) == "Background")
     }
+
+    /// Background made on the Mac: Subject inverted on the area, not the mask —
+    /// so a later area is not inverted with it. It still reads "Background".
+    @Test func areaInvertedSubjectReadsBackground() {
+        var subject = PhotoMaskComponent(kind: .subject)
+        subject.isInverted = true
+        let mask = PhotoMask(name: "Mask 1", component: subject)
+        #expect(MaskAreaSummary.subtitle(for: mask) == "Background")
+        var sky = PhotoMaskComponent(kind: .sky)
+        sky.operation = .add
+        var both = mask
+        both.components.append(sky)
+        #expect(MaskAreaSummary.subtitle(for: both) == "Background + Sky")
+    }
 }

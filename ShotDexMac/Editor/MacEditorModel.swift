@@ -21,7 +21,7 @@ final class MacEditorModel {
     /// The tool the toolbar's capsule has on (rows 31–32; Mask, Heal and
     /// Markup are rows 34–36).
     enum Tool: String, CaseIterable, Identifiable {
-        case adjust, crop, heal
+        case adjust, crop, mask, heal
         var id: String { rawValue }
     }
 
@@ -76,6 +76,7 @@ final class MacEditorModel {
             guard tool != oldValue else { return }
             isStraightening = false
             isPickingColor = false
+            if tool != .mask { thumbnailTask?.cancel() }
             if tool != .heal {
                 visualizesSpots = false
                 // Back in Heal later starts neutral: nothing picked, the brush is for new spots.
@@ -125,7 +126,7 @@ final class MacEditorModel {
     @ObservationIgnored private var generation = 0
     /// The render wanted next, and whether one is running: latest wins, at
     /// most one in flight (the renderer's work cannot be cancelled midway).
-    @ObservationIgnored private var wanted: (recipe: PhotoEditRecipe, interactive: Bool)?
+    @ObservationIgnored private var wanted: (recipe: PhotoEditRecipe, interactive: Bool, overlay: UUID?)?
     @ObservationIgnored private var isRendering = false
     /// A drag's starting recipe, recorded once the drag changes something.
     @ObservationIgnored private var dragStart: PhotoEditRecipe?
@@ -134,7 +135,7 @@ final class MacEditorModel {
     @ObservationIgnored private(set) var dragBase: PhotoEditRecipe?
     /// The last recipe sent to the renderer: a crop drag changes no pixel
     /// while Crop shows the whole photo, so it renders nothing.
-    @ObservationIgnored private var lastRequested: (recipe: PhotoEditRecipe, interactive: Bool)?
+    @ObservationIgnored private var lastRequested: (recipe: PhotoEditRecipe, interactive: Bool, overlay: UUID?)?
     /// The original, small, for Upright and Auto to read; made once a photo.
     @ObservationIgnored private var analysisImage: CGImage?
     /// The frame as it was before the photo was tilted: every angle fits it
@@ -190,9 +191,17 @@ final class MacEditorModel {
         analyzingUpright = false
         isStraightening = false
         isPickingColor = false
+        activeStroke = nil
+        thumbnailKey = nil
+        brushErases = false
+        resolvedAutoAreas = []
+        emptyAutoAreas = []
         selectedPointColorId = nil
         selectedSpotId = nil
         selectedRedEyeId = nil
+        selectedMaskId = nil
+        selectedComponentId = nil
+        maskThumbnails = [:]
         hiddenSpotIds = []
         offeredSources = [:]
         spotMap = nil
@@ -391,9 +400,14 @@ final class MacEditorModel {
 
     /// After Undo or Redo: a picked spot, eye or colour that is no longer there is not picked.
     private func reconcileSelection() {
+        activeStroke = nil
         if let id = selectedSpotId, !recipe.healing.contains(where: { $0.id == id }) { selectedSpotId = nil }
         if let id = selectedRedEyeId, !recipe.redEyes.contains(where: { $0.id == id }) { selectedRedEyeId = nil }
         if let id = selectedPointColorId, !recipe.color.points.contains(where: { $0.id == id }) { selectedPointColorId = nil }
+        if let id = selectedMaskId, !recipe.masks.contains(where: { $0.id == id }) { selectMask(nil) }
+        if selectedMaskId != nil, let id = selectedComponentId, selectedMask?.components.contains(where: { $0.id == id }) != true {
+            selectedComponentId = selectedMask?.components.last?.id
+        }
     }
 
     /// Revert to Original…: the photo as it came, kept undoable.
@@ -439,6 +453,209 @@ final class MacEditorModel {
             if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
         }
         if inOneStep { apply(update) } else { change(update) }
+    }
+
+    // MARK: Mask (FS-18.03 §1e)
+
+    var selectedMaskId: UUID? { didSet { if selectedMaskId != oldValue { render(interactive: false) } } }
+    var selectedComponentId: UUID?
+    /// The picked mask in red over the photo (board: on by default).
+    var showsMaskOverlay = true { didSet { render(interactive: false) } }
+    var brushErases = false
+    /// Brush diameter as a fraction of the short edge, feather, flow (the iPhone's units).
+    var brushSize = 0.12
+    var brushFeather = 0.45
+    var brushFlow = 0.8
+    /// Automatic areas (Subject, Sky, Object, People, Depth) the renderer has
+    /// worked out, and those that came back empty: "detecting…", "nothing found".
+    private(set) var resolvedAutoAreas: Set<UUID> = []
+    private(set) var emptyAutoAreas: Set<UUID> = []
+    /// A mask slider is held: the red steps aside so the change is seen.
+    var hidesOverlayWhileAdjusting = false { didSet { if hidesOverlayWhileAdjusting != oldValue { render(interactive: false) } } }
+    /// Each mask's shape, small, for the list.
+    private(set) var maskThumbnails: [UUID: CGImage] = [:]
+    @ObservationIgnored private var thumbnailTask: Task<Void, Never>?
+    /// The stroke being painted, by its owner — not whatever area is picked when the next point comes.
+    @ObservationIgnored private var activeStroke: (mask: UUID, component: UUID, index: Int)?
+    /// The mask shapes the thumbnails were made for: they are made again only when one changes.
+    @ObservationIgnored private var thumbnailKey: [PhotoMask]?
+
+    var selectedMask: PhotoMask? { recipe.masks.first { $0.id == selectedMaskId } }
+    var selectedComponent: PhotoMaskComponent? { selectedMask?.components.first { $0.id == selectedComponentId } }
+    private var maskIndex: Int? { recipe.masks.firstIndex { $0.id == selectedMaskId } }
+
+    /// + › a kind: a new mask "Mask n" with that one area, picked.
+    func addMask(_ option: EditorNewMaskOption) {
+        var component = PhotoMaskComponent(kind: option.componentKind)
+        // Background is Subject inverted — on the area, not the mask: an inverted
+        // mask would invert every area added to it later as well.
+        component.isInverted = option.startsInverted
+        let mask = PhotoMask(name: String(localized: "Mask \(recipe.masks.count + 1)", comment: "Mac editor mask: a new mask's name"),
+                             component: component)
+        apply { $0.masks.append(mask) }
+        selectedMaskId = mask.id
+        selectedComponentId = component.id
+    }
+
+    /// Add / Subtract / Intersect › a kind: one more area in the picked mask
+    /// (a new mask when none is picked — the first area always adds).
+    func addArea(_ option: EditorNewMaskOption, _ operation: MaskBlendOperation) {
+        guard let index = maskIndex else { addMask(option); return }
+        var component = PhotoMaskComponent(kind: option.componentKind, operation: operation)
+        component.isInverted = option.startsInverted
+        apply { $0.masks[index].components.append(component) }
+        selectedComponentId = component.id
+    }
+
+    /// Delete / ⌘⌫ in Mask: the picked area, or the mask when it is the last one.
+    func deleteSelectedMaskPart() {
+        guard let mask = selectedMask else { return }
+        if let component = selectedComponentId, mask.components.count > 1 {
+            deleteComponent(component, in: mask.id)
+        } else {
+            deleteMask(mask.id)
+        }
+    }
+
+    func selectMask(_ id: UUID?) {
+        selectedMaskId = id
+        selectedComponentId = selectedMask?.components.last?.id
+    }
+
+    func selectComponent(_ id: UUID, in mask: UUID) {
+        selectedMaskId = mask
+        selectedComponentId = id
+    }
+
+    func updateMask(_ id: UUID, inOneStep: Bool = true, _ body: @escaping (inout PhotoMask) -> Void) {
+        let update: (inout PhotoEditRecipe) -> Void = { recipe in
+            if let index = recipe.masks.firstIndex(where: { $0.id == id }) { body(&recipe.masks[index]) }
+        }
+        if inOneStep { apply(update) } else { change(update) }
+    }
+
+    func updateComponent(inOneStep: Bool = false, _ body: @escaping (inout PhotoMaskComponent) -> Void) {
+        guard let maskId = selectedMaskId, let componentId = selectedComponentId else { return }
+        updateMask(maskId, inOneStep: inOneStep) { mask in
+            if let index = mask.components.firstIndex(where: { $0.id == componentId }) { body(&mask.components[index]) }
+        }
+    }
+
+    func renameMask(_ id: UUID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        updateMask(id) { $0.name = trimmed }
+    }
+
+    func duplicateMask(_ id: UUID) {
+        guard var copy = recipe.masks.first(where: { $0.id == id }) else { return }
+        copy.id = UUID()
+        copy.components = copy.components.map { var c = $0; c.id = UUID(); return c }
+        copy.name = String(localized: "\(copy.name) Copy", comment: "Mac editor mask: a duplicated mask's name")
+        let duplicate = copy
+        apply { recipe in
+            let at = (recipe.masks.firstIndex { $0.id == id } ?? recipe.masks.count - 1) + 1
+            recipe.masks.insert(duplicate, at: at)
+        }
+        selectMask(duplicate.id)
+    }
+
+    func deleteMask(_ id: UUID) {
+        apply { $0.masks.removeAll { $0.id == id } }
+        if selectedMaskId == id { selectMask(nil) }
+    }
+
+    func deleteComponent(_ id: UUID, in maskId: UUID) {
+        guard let mask = recipe.masks.first(where: { $0.id == maskId }) else { return }
+        // The last area goes with its mask: a mask with no area masks nothing.
+        if mask.components.count <= 1 { deleteMask(maskId); return }
+        updateMask(maskId) { $0.components.removeAll { $0.id == id } }
+        if selectedComponentId == id { selectedComponentId = recipe.masks.first { $0.id == maskId }?.components.last?.id }
+    }
+
+    /// The picked brush area: a stroke starts where the pointer went down.
+    func beginBrushStroke(at point: NormalizedPoint) {
+        guard let component = selectedComponent, component.kind == .brush, let maskId = selectedMaskId else { return }
+        beginChange()
+        let stroke = BrushStroke(points: [point], size: brushSize, feather: brushFeather, flow: brushFlow, isEraser: brushErases)
+        updateComponent { $0.brushStrokes.append(stroke) }
+        activeStroke = (maskId, component.id, component.brushStrokes.count)
+    }
+
+    func continueBrushStroke(at point: NormalizedPoint) {
+        guard let active = activeStroke,
+              let component = recipe.masks.first(where: { $0.id == active.mask })?.components.first(where: { $0.id == active.component }),
+              let stroke = component.brushStrokes[safe: active.index] else { return }
+        if let last = stroke.points.last, hypot(point.x - last.x, point.y - last.y) <= 0.002 { return }
+        updateMask(active.mask, inOneStep: false) { mask in
+            guard let c = mask.components.firstIndex(where: { $0.id == active.component }),
+                  mask.components[c].brushStrokes.indices.contains(active.index) else { return }
+            mask.components[c].brushStrokes[active.index].points.append(point)
+        }
+    }
+
+    func endBrushStroke() {
+        guard activeStroke != nil else { return }
+        activeStroke = nil
+        endChange()
+    }
+
+    /// A drag over the photo for a gradient: linear from start to end;
+    /// radial centred on the start, the drag giving its two radii.
+    func setGradient(start: NormalizedPoint, end: NormalizedPoint) {
+        guard let kind = selectedComponent?.kind else { return }
+        switch kind {
+        case .linearGradient:
+            updateComponent { $0.startPoint = start; $0.endPoint = end }
+        case .radialGradient:
+            updateComponent {
+                $0.center = start
+                $0.radiusX = min(1, max(0.02, abs(end.x - start.x)))
+                $0.radiusY = min(1, max(0.02, abs(end.y - start.y)))
+            }
+        default:
+            break
+        }
+    }
+
+    /// Object: the click picks it. Color Range: the click samples the colour shown.
+    func setMaskPoint(_ point: NormalizedPoint) {
+        guard let kind = selectedComponent?.kind else { return }
+        switch kind {
+        case .object:
+            updateComponent(inOneStep: true) { $0.objectPoint = point }
+        case .colorRange:
+            guard let image = cleanImage, let rgb = MacColorSampler.color(in: image, at: point) else { return }
+            updateComponent(inOneStep: true) { $0.sampledRed = rgb.x; $0.sampledGreen = rgb.y; $0.sampledBlue = rgb.z }
+        default:
+            break
+        }
+    }
+
+    /// The masks' shapes for the list, made off the main actor after a settled frame.
+    private func refreshMaskThumbnails() {
+        guard tool == .mask, !recipe.masks.isEmpty, let source else { return }
+        // Only a change of shape: a mask's sliders, tint or curve do not move it.
+        let key = recipe.masks.map { mask -> PhotoMask in
+            var shape = mask
+            shape.adjustments = .zero
+            shape.tint = nil
+            shape.curve = nil
+            shape.pointColors = nil
+            shape.name = ""
+            return shape
+        }
+        guard key != thumbnailKey else { return }
+        thumbnailKey = key
+        thumbnailTask?.cancel()
+        let recipe = self.recipe, renderer = self.renderer, generation = self.generation
+        thumbnailTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            let images = try? await renderer.maskThumbnails(source: source, recipe: recipe, maximumDimension: 80)
+            guard let self, !Task.isCancelled, generation == self.generation, let images else { return }
+            self.maskThumbnails = images.images
+        }
     }
 
     // MARK: Heal (FS-18.03 §1d)
@@ -1012,9 +1229,11 @@ final class MacEditorModel {
             drawn.overlays = []
         }
         // Nothing new to draw (a crop drag while Crop shows the whole photo).
-        if let last = lastRequested, last.recipe == drawn, !(last.interactive && !interactive) { return }
-        lastRequested = (drawn, interactive)
-        wanted = (drawn, interactive)
+        // Mask: the picked mask in red over the frame shown (never the clean one).
+        let overlay = tool == .mask && showsMaskOverlay && !showsBefore && !hidesOverlayWhileAdjusting ? selectedMaskId : nil
+        if let last = lastRequested, last.recipe == drawn, last.overlay == overlay, !(last.interactive && !interactive) { return }
+        lastRequested = (drawn, interactive, overlay)
+        wanted = (drawn, interactive, overlay)
         if interactive {
             renderTask?.cancel()
             pump()
@@ -1036,8 +1255,10 @@ final class MacEditorModel {
         let renderer = self.renderer
         Task { [weak self] in
             let images = try? await (next.interactive
-                ? renderer.renderInteractivePreviewImages(source: source, recipe: next.recipe, maximumDimension: 1000, cachesBase: true)
-                : renderer.renderPreviewImages(source: source, recipe: next.recipe, maximumDimension: 2400))
+                ? renderer.renderInteractivePreviewImages(source: source, recipe: next.recipe, maximumDimension: 1000, cachesBase: true,
+                                                          showsMaskOverlay: next.overlay != nil, selectedMaskID: next.overlay)
+                : renderer.renderPreviewImages(source: source, recipe: next.recipe, maximumDimension: 2400,
+                                               showsMaskOverlay: next.overlay != nil, selectedMaskID: next.overlay))
             var histogram: PhotoHistogram?
             if let images, !next.interactive { histogram = await renderer.histogram(of: images.cleanImage) }
             guard let self else { return }
@@ -1048,6 +1269,18 @@ final class MacEditorModel {
                     self.preview = images.displayImage
                     self.cleanImage = images.cleanImage
                     if self.visualizesSpots, !next.interactive { self.updateSpotMap() }
+                    if !next.interactive {
+                        self.refreshMaskThumbnails()
+                        if !next.recipe.masks.isEmpty {
+                            Task { [weak self] in
+                                let resolved = await renderer.resolvedAutomaticMaskComponentIDs()
+                                let empty = await renderer.emptyAutomaticMaskComponentIDs()
+                                guard let self, generation == self.generation else { return }
+                                self.resolvedAutoAreas = resolved
+                                self.emptyAutoAreas = empty
+                            }
+                        }
+                    }
                     if let histogram { self.histogram = histogram; self.updateClipping() }
                 } else if self.wanted == nil {
                     // The last good frame stays; Undo or another change renders again.
@@ -1194,3 +1427,8 @@ private struct ImageBox: @unchecked Sendable {
     init(_ image: CGImage) { self.image = image }
 }
 
+
+
+private extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}

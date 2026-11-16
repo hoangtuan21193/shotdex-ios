@@ -164,6 +164,13 @@ extension MacTheme {
         static let rowSelected = Color.white.opacity(0.10)
         /// Push buttons and list rows in the inspector (`controlRadius` is the small controls').
         static let buttonRadius: CGFloat = 8
+        /// The mask overlay's red (the renderer's tint, as a swatch).
+        static let maskOverlay = Color(red: 1, green: 0.23, blue: 0.19)
+        /// A list row's little picture: corner and edge.
+        static let thumbnailRadius: CGFloat = 3
+        static let thumbnailStroke = Color.white.opacity(0.18)
+        /// The ± / ∩ badge on a mask's area row.
+        static let badgeFill = Color.white.opacity(0.16)
         /// Over the photo: a tool's lines in white with a dark halo.
         static let overlayHalo = Color.black.opacity(0.55)
         /// Under small text laid over a picture (the curve readout, the loupe's hex).

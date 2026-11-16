@@ -1,0 +1,475 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.mask"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Add a mask with + in Masks"
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Sky",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "waitFor",
+   "label": "Mask 1, Sky"
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-0.35\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Exposure value",
+   "text": "−0.35"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.mask.resetAdjustments"
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-sky"
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.subtract"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Brush",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Mask 1, Sky − Brush"
+  },
+  {
+   "action": "assertExists",
+   "label": "Paint over the area to mask it"
+  },
+  {
+   "action": "click",
+   "label": "Size value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "40\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "x": 0.3,
+   "y": 0.25,
+   "dx": 160,
+   "dy": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Brush, Subtract · 1 strokes"
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.brushMode.Erase"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "x": 0.32,
+   "y": 0.26,
+   "dx": 40,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Brush, Subtract · 2 strokes"
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-brush"
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.overlay"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.overlay"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.invert"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.invert"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Linear Gradient",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Mask 2, Linear"
+  },
+  {
+   "action": "drag",
+   "x": 0.4,
+   "y": 0.15,
+   "dx": 0,
+   "dy": 180
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Feather value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "70\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.intersect"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Radial Gradient",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Mask 2, Linear ∩ Radial"
+  },
+  {
+   "action": "drag",
+   "x": 0.4,
+   "y": 0.45,
+   "dx": 90,
+   "dy": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.add",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "dump",
+   "name": "add-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "rightClick",
+   "label": "Mask 1, Sky − Brush"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Rename Mask…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Sky fix\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Sky fix, Sky − Brush"
+  },
+  {
+   "action": "rightClick",
+   "label": "Sky fix, Sky − Brush"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Duplicate Mask",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Sky fix Copy, Sky − Brush"
+  },
+  {
+   "action": "rightClick",
+   "label": "Sky fix Copy, Sky − Brush"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Delete Mask",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Sky fix Copy, Sky − Brush"
+  },
+  {
+   "action": "rightClick",
+   "label": "Sky fix, Sky − Brush"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Reset Mask Adjustments",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.visible",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.mask.visible",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "mask-final"
+  },
+  {
+   "action": "dump",
+   "name": "mask-final"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.group.light"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

@@ -185,6 +185,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-170 | 03 §1d sửa spot | như AC-169 | chọn Spot 2; Clone; New Source; 👁 ẩn rồi hiện; Feather 20; Delete Spot; ⌘Z | Spot 2 "Clone"; ẩn/hiện đổi nút; Spot 3 mất rồi về | ✅ `mac-editor-heal.json` |
 | AC-171 | 03 §1d View, Red Eye | như AC-169 | Visualize, Threshold 80, tắt; Pins tắt/bật; Red Eye; Fix Red Eye; bấm ảnh; Darken 70; Delete | bản đồ phủ ảnh; "No red eyes found." (ảnh demo không có mặt); "Eye 1"; xoá mất | ✅ `mac-editor-heal.json` |
 | AC-172 | 03 §1d Clear All, Esc | như AC-169 | Clear All… › Clear All; ⌘Z; Esc; Back | hết spot rồi về; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-heal.json` |
+| AC-173 | 03 §1e mask tự nhận | demo `-ShotDexSection viewer`, ⌘E, Mask | + › Sky; Exposure −0.35 | "Mask 1, Sky", trời phủ đỏ; "−0.35"; ↺ hiện | ✅ `mac-editor-mask.json` |
+| AC-174 | 03 §1e vùng cọ | như AC-173 | Subtract › Brush; Size 40; kéo trên trời; Erase; kéo | "Sky − Brush"; "1 strokes" rồi "2 strokes"; vùng trừ thấy trên lớp đỏ | ✅ `mac-editor-mask.json` |
+| AC-175 | 03 §1e gradient | như AC-173 | Show Overlay/Invert bật tắt; + › Linear Gradient, kéo; Feather 70; Intersect › Radial, kéo | "Mask 2, Linear ∩ Radial" | ✅ `mac-editor-mask.json` |
+| AC-176 | 03 §1e menu mask | như AC-173 | chuột phải › Rename "Sky fix"; Duplicate; Delete bản sao; Reset Mask Adjustments; 👁 ×2; ⌘Z; Esc; Back | tên đổi; bản sao có rồi mất; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-mask.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

@@ -148,6 +148,39 @@ kit (`suggestedSource`, `HealingSourceFinder`, `RedEyeLocator`, `SpotVisualizer`
   moment." Fix Red Eye / New Source có trạng thái đang làm ("Finding…").
 - Nhóm gập được (mũi tên như board). Chưa có: chọn spot bằng phím Tab, đổi cỡ spot bằng kéo mép vòng.
 
+### 1e. Mask (row 35, 2026-11-17, board `MAC_EditMask`)
+
+`ShotDexMac/Editor/MacEditorMask.swift`. Cùng recipe với iPhone (`PhotoMask`, `PhotoMaskComponent`, `BrushStroke`) và
+cùng renderer: vùng tự nhận (Subject, Sky, Object, People, Depth) do `PhotoRenderService` dựng lúc vẽ; lớp đỏ phủ mask
+đang chọn là `showsMaskOverlay`/`selectedMaskID` của renderer, chỉ trên khung hiện (khung sạch cho histogram, ống hút).
+
+- **Mask** trong capsule công cụ (Esc về Adjust). Chưa có mask: trên ảnh "Add a mask with + in Masks".
+- **Masks**: **+** ▾ Subject · Sky · Background · Object · People | Brush · Linear Gradient · Radial Gradient | Color
+  Range · Luminance Range · Depth Range → "Mask n" một vùng, được chọn. Dòng mask: ▸ mở vùng, ảnh nhỏ hình mask
+  (`maskThumbnails`, ngoài main), tên, "Sky − Brush" (`MaskAreaSummary`), 👁 bật/tắt mask (lưu, `isVisible`). Dòng vùng:
+  dấu +/−/∩, tên, "Subtract · 2 strokes" / "Add · detected". Chuột phải mask: Rename Mask… · Duplicate Mask · Invert
+  Mask · Show Overlay · Add/Subtract/Intersect Area ▸ · Reset Mask Adjustments · Delete Mask; chuột phải vùng: Invert
+  Area · Delete Area (vùng cuối xoá luôn mask). Dưới danh sách: Add ▾ · Subtract ▾ · Intersect ▾ (thêm vùng vào mask
+  đang chọn), Show Overlay (ô cam + ô đỏ) · Invert.
+- **Vùng đang chọn** (tên vùng): Brush — Paint · Erase, Size (px ảnh gốc, đường kính), Feather, Flow; kéo trên ảnh là
+  vẽ, vòng cọ + lõi gạch theo con trỏ. Linear/Radial — kéo trên ảnh là đặt (linear: đầu→cuối, ba vạch; radial: tâm
+  + hai bán kính, vòng trong gạch theo feather), Feather. Luminance — Darkest, Brightest, Smoothness. Color — ô màu,
+  bấm ảnh lấy màu, Range. Depth — Far, Near. Object — bấm ảnh chọn vật. Mọi vùng: Opacity. Gợi ý trên ảnh theo loại.
+- **<Tên mask> Adjustments**: các slider của `EditorAdjustmentCatalog` scope `.mask` (Light, Color với Hue, Effects,
+  Detail với Moiré/Defringe), cùng thang với iPhone; ↺ = Reset Mask Adjustments.
+- Một lần kéo (nét cọ, gradient, slider) là một bước Undo; Undo xoá mất vùng/mask đang chọn thì bỏ chọn.
+- Vùng tự nhận: dòng vùng ghi "detecting…" → "detected" / "nothing found" (từ `resolvedAutomaticMaskComponentIDs`
+  / `emptyAutomaticMaskComponentIDs` của renderer sau mỗi lần vẽ); trên ảnh "Finding it in the photo…" rồi "No sky
+  found in this photo" (Subject/People/Object tương tự). Background = Subject **đảo ở vùng** (không đảo cả mask — thêm
+  vùng sau không bị đảo theo); `MaskAreaSummary` đọc cả hai dạng là "Background".
+- Delete / ⌘⌫ xoá vùng đang chọn (vùng cuối: cả mask). Lớp đỏ tạm tắt khi đang kéo một slider của mask (thấy kết
+  quả), bật lại khi thả. Mask đang tắt (👁): Adjustments mờ + "This mask is off…". Đổi ảnh: cọ về Paint.
+- Khác board: Brush có thêm Opacity; Adjustments là bộ `.mask` dùng chung với iPhone (có Whites/Blacks/Brilliance/
+  Brightness, chưa có Amount, Temp/Tint/Hue chưa có rãnh màu); People không có menu con; nút Add/Subtract/Intersect
+  là menu hệ thống không nền.
+- Chưa có: People theo từng người/phần (iPhone có), đổi màu overlay, Color/Curve/Point Color riêng của mask
+  (`tint`, `curve`, `pointColors`), kéo tay nắm gradient sau khi đặt (kéo lại là đặt lại), vùng mặt (Face Skin…).
+
 ## 2. Hai kiểu lưu (D16)
 
 | Ảnh | Toolbar | Lưu |

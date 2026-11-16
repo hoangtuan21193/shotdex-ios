@@ -52,7 +52,9 @@ struct MacEditorPage: View {
             }
         }
         // Delete / ⌘⌫ removes the picked spot while healing (undoable; text fields keep their own Delete).
-        .onDeleteCommand { if model.tool == .heal { model.deleteSelectedSpot() } }
+        .onDeleteCommand {
+            if model.tool == .heal { model.deleteSelectedSpot() } else if model.tool == .mask { model.deleteSelectedMaskPart() }
+        }
         .task { model.open() }
         // The frame is drawn over the fitted photo.
         .onChange(of: model.tool) { _, tool in if tool == .crop { zoom = .fit } }
@@ -141,8 +143,7 @@ struct MacEditorToolbar: ToolbarContent {
     }
 }
 
-/// Adjust · Crop · Mask · Heal · Markup (316): Adjust, Crop and Heal here; the
-/// others are rows 35–36 of the Mac loop.
+/// Adjust · Crop · Mask · Heal · Markup (316): all but Markup here (row 36).
 private struct MacEditorTools: View {
     @Bindable var model: MacEditorModel
 
@@ -150,7 +151,7 @@ private struct MacEditorTools: View {
         HStack(spacing: 2) {
             live(.adjust, String(localized: "Adjust", comment: "Mac editor tool"))
             live(.crop, String(localized: "Crop", comment: "Mac editor tool"))
-            tool(String(localized: "Mask", comment: "Mac editor tool"), isOn: false)
+            live(.mask, String(localized: "Mask", comment: "Mac editor tool"))
             live(.heal, String(localized: "Heal", comment: "Mac editor tool"))
             tool(String(localized: "Markup", comment: "Mac editor tool"), isOn: false)
         }
@@ -271,6 +272,8 @@ private struct MacEditorCanvas: View {
                                         .offset(x: rect.minX, y: rect.minY)
                                     if model.tool == .crop, !model.showsBefore {
                                         MacEditorCropOverlay(model: model, imageRect: rect)
+                                    } else if model.tool == .mask, !model.showsBefore {
+                                        MacEditorMaskOverlay(model: model, imageRect: rect)
                                     } else if model.tool == .heal, !model.showsBefore {
                                         MacEditorHealOverlay(model: model, imageRect: rect)
                                     } else if model.isPickingColor {

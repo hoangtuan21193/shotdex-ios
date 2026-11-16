@@ -11,6 +11,9 @@ enum MaskAreaSummary {
         if mask.isInverted, mask.components.count == 1, mask.components[0].kind == .subject {
             return EditorNewMaskOption.background.shortTitle
         }
+        if !mask.isInverted, mask.components.count == 1, mask.components[0].kind == .subject, mask.components[0].isInverted {
+            return EditorNewMaskOption.background.shortTitle
+        }
         var text = ""
         for (index, component) in mask.components.enumerated() {
             if index > 0 { text += " \(sign(of: component.operation)) " }
@@ -29,6 +32,8 @@ enum MaskAreaSummary {
     /// The area's short name: the chooser's tile title, or who and which part
     /// for a People area.
     static func name(of component: PhotoMaskComponent) -> String {
+        // Subject inverted on the area itself reads as what was picked.
+        if component.kind == .subject, component.isInverted { return EditorNewMaskOption.background.shortTitle }
         if component.kind == .people {
             let who = component.personIndex.map { "Person \($0)" } ?? "People"
             return component.personPart.map { "\(who) \($0.displayName)" } ?? who
