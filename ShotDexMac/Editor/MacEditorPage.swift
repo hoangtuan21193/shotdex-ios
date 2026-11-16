@@ -42,6 +42,7 @@ struct MacEditorPage: View {
         // In Crop, Esc puts the frame down and go back to Adjust;
         // nothing is undone — ⌘Z is there for that.
         .sheet(isPresented: $model.asksSync) { MacEditorSyncSheet(model: model, isPresented: $model.asksSync) }
+        .sheet(isPresented: $model.asksExport) { MacEditorExportSheet(model: model, isPresented: $model.asksExport) }
         .onExitCommand {
             if model.isPickingColor { model.isPickingColor = false } else if !model.syncTargets.isEmpty { model.syncTargets = [] }
             else if model.tool != .adjust { model.tool = .adjust } else { leave() }
@@ -143,6 +144,13 @@ struct MacEditorToolbar: ToolbarContent {
             }
             .fixedSize()
             .help(String(localized: "Zoom", comment: "Mac viewer toolbar: the zoom popup"))
+            Button { model.asksExport = true } label: {
+                Label(String(localized: "Save and Export", comment: "Mac editor toolbar: open the Save and Export sheet"), systemImage: "square.and.arrow.up")
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(model.load != .ready)
+            .help(String(localized: "Save and Export (⇧⌘E)", comment: "Mac editor toolbar"))
+            .accessibilityIdentifier("editor.export")
             Button { showsInspector.toggle() } label: {
                 Label(String(localized: "Inspector", comment: "Mac editor toolbar"), systemImage: "sidebar.right")
             }
@@ -151,6 +159,9 @@ struct MacEditorToolbar: ToolbarContent {
             .accessibilityIdentifier("editor.inspector")
         }
         ToolbarItemGroup(placement: .primaryAction) {
+            if let note = model.exportNote {
+                MacEditorExportNoteView(note: note, stop: model.cancelExport) { model.exportNote = nil }
+            }
             MacEditorSaveStatus(state: model.saveState, retry: model.retrySave)
             Button(String(localized: "Revert to Original…", comment: "Mac editor toolbar: drop every edit of this photo")) {
                 asksRevert = true
@@ -197,6 +208,97 @@ private struct MacEditorTools: View {
         .accessibilityIdentifier("editor.tool.\(tool.rawValue)")
     }
 
+}
+
+/// The last export, in the toolbar: Saving… with Stop, then "Saved
+/// DSCF4127 (edited).jpg · Show in Finder" (gone after a while), or why not
+/// (stays until closed). It belongs to the export, not to the photo open.
+private struct MacEditorExportNoteView: View {
+    let note: MacExportNote
+    let stop: () -> Void
+    let dismiss: () -> Void
+
+    /// The whole line, for the tooltip of the clipped one.
+    static func words(_ note: MacExportNote) -> String {
+        switch note {
+        case .running(let name): String(localized: "Saving \(name)…", comment: "Mac editor toolbar: an export is writing")
+        case .written(let url): url.path
+        case .skipped(let words), .failed(let words): words
+        }
+    }
+
+    @State private var showsWords = false
+
+    var body: some View {
+        // Compact, so Saved status and Revert keep their places in the toolbar:
+        // a word and an icon; the file name and the reason are one click away.
+        HStack(spacing: 6) {
+            switch note {
+            case .running:
+                ProgressView().controlSize(.mini)
+                Text("Saving…", comment: "Mac editor toolbar: an export is writing").foregroundStyle(.secondary)
+                Button(String(localized: "Stop", comment: "Mac editor toolbar: stop the export"), action: stop)
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("editor.exportStop")
+            case .written(let url):
+                Label(String(localized: "Saved", comment: "Mac editor toolbar: an export was written"), systemImage: "checkmark.circle")
+                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(String(localized: "Saved \(url.lastPathComponent)", comment: "Mac editor toolbar: an export was written"))
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    dismiss()
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(String(localized: "Show \(url.lastPathComponent) in Finder", comment: "Mac editor toolbar: reveal the exported file"))
+                .accessibilityLabel(String(localized: "Show in Finder", comment: "Mac editor toolbar: reveal the exported file"))
+                .accessibilityIdentifier("editor.exportReveal")
+            case .skipped, .failed:
+                Button { showsWords = true } label: {
+                    if case .failed = note {
+                        Label(String(localized: "Not Exported", comment: "Mac editor toolbar: the export failed; a click says why"),
+                              systemImage: "exclamationmark.triangle")
+                            .labelStyle(.titleAndIcon)
+                            .foregroundStyle(MacTheme.redText)
+                    } else {
+                        Label(String(localized: "Not Written", comment: "Mac editor toolbar: the export wrote nothing (Skip, Stop); a click says why"),
+                              systemImage: "info.circle")
+                            .labelStyle(.titleAndIcon)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor.exportWhy")
+                .popover(isPresented: $showsWords, arrowEdge: .bottom) {
+                    Text(Self.words(note))
+                        .font(.system(size: 12))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(width: 260, alignment: .leading)
+                        .padding(12)
+                }
+            }
+            if !note.isRunning {
+                Button(action: dismiss) {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Dismiss", comment: "Mac editor toolbar: hide the export note"))
+                .accessibilityIdentifier("editor.exportDismiss")
+            }
+        }
+        .font(.system(size: 12))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("editor.exportNote")
+        // A saved file is said for a while; a skip or a failure waits to be read.
+        .task(id: note) {
+            guard case .written = note else { return }
+            try? await Task.sleep(for: .seconds(20))
+            if !Task.isCancelled { dismiss() }
+        }
+    }
 }
 
 private struct MacEditorSaveStatus: View {

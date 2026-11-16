@@ -80,21 +80,37 @@ final class ExportFolderStore {
     /// again now that it opened; one that will not open is *Not connected*
     /// when it lives on a drive, and gone — dropped — otherwise.
     func resolve(_ folder: ExportFolder) -> ExportFolderState {
+        let opened = Self.open(folder)
+        return apply(folder, url: opened.url, isStale: opened.isStale)
+    }
+
+    /// The file-system half of `resolve`, safe off the main actor: a bookmark
+    /// on a dead drive or a sleeping share can take seconds to answer.
+    nonisolated static func open(_ folder: ExportFolder) -> (url: URL?, isStale: Bool) {
         var isStale = false
-        guard let url = try? URL(resolvingBookmarkData: folder.bookmark, bookmarkDataIsStale: &isStale) else {
-            return unreachable(folder)
+        guard let url = try? URL(resolvingBookmarkData: folder.bookmark, options: resolveOptions, bookmarkDataIsStale: &isStale) else {
+            return (nil, false)
         }
         let isAccessing = url.startAccessingSecurityScopedResource()
         defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
-        guard (try? url.checkResourceIsReachable()) == true else { return unreachable(folder) }
+        guard (try? url.checkResourceIsReachable()) == true else { return (nil, false) }
+        return (url, isStale)
+    }
+
+    /// The bookkeeping half of `resolve`, with what `open` found.
+    func apply(_ folder: ExportFolder, url: URL?, isStale: Bool) -> ExportFolderState {
+        guard let url else { return unreachable(folder) }
         // Stale, or moved since: the bookmark is made again while it opens.
         let path = url.standardizedFileURL.path
-        if isStale || path != folder.path, let renewed = try? url.bookmarkData(),
-           let index = recents.firstIndex(where: { $0.id == folder.id }) {
-            recents[index].bookmark = renewed
-            recents[index].path = path
-            recents[index].name = url.lastPathComponent
-            persist()
+        if isStale || path != folder.path, let index = recents.firstIndex(where: { $0.id == folder.id }) {
+            let isAccessing = url.startAccessingSecurityScopedResource()
+            defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
+            if let renewed = try? url.bookmarkData(options: Self.bookmarkOptions) {
+                recents[index].bookmark = renewed
+                recents[index].path = path
+                recents[index].name = url.lastPathComponent
+                persist()
+            }
         }
         return .available(url)
     }
@@ -115,14 +131,29 @@ final class ExportFolderStore {
         defaults.set(data, forKey: SettingsKeys.fileExportFolders)
     }
 
+    /// The sandboxed Mac keeps a folder only through a security-scoped
+    /// bookmark; iOS bookmarks carry the scope on their own.
+    #if os(macOS)
+    nonisolated static let bookmarkOptions: URL.BookmarkCreationOptions = [.withSecurityScope]
+    nonisolated static let resolveOptions: URL.BookmarkResolutionOptions = [.withSecurityScope]
+    #else
+    nonisolated static let bookmarkOptions: URL.BookmarkCreationOptions = []
+    nonisolated static let resolveOptions: URL.BookmarkResolutionOptions = []
+    #endif
+
     /// The row's words for a picked URL: a drive by its volume name, a
     /// provider by its service, as the cloud folders name them (FS-17.05).
     nonisolated static func folder(for url: URL) throws -> ExportFolder {
-        let bookmark = try url.bookmarkData()
+        let bookmark = try url.bookmarkData(options: bookmarkOptions)
         let keys: Set<URLResourceKey> = [.volumeNameKey, .volumeUUIDStringKey, .volumeIsInternalKey, .volumeIsRemovableKey]
         let values = try? url.resourceValues(forKeys: keys)
         let isExternal = values?.volumeIsInternal == false || values?.volumeIsRemovable == true
+        #if os(macOS)
+        // A Mac folder is named by its disk, inside or out: `Macintosh HD › Exports`.
+        let place = values?.volumeName ?? FilesFolderClient.describe(url).service
+        #else
         let place = isExternal ? (values?.volumeName ?? FilesFolderClient.describe(url).service) : FilesFolderClient.describe(url).service
+        #endif
         return ExportFolder(
             bookmark: bookmark,
             name: url.lastPathComponent,

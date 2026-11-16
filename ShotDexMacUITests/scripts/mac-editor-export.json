@@ -1,0 +1,804 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer",
+    "-ShotDexExportTest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.4\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.export"
+  },
+  {
+   "action": "waitFor",
+   "label": "export.go",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "export-copy"
+  },
+  {
+   "action": "dump",
+   "name": "export-copy"
+  },
+  {
+   "action": "click",
+   "label": "Export Files"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "export-files"
+  },
+  {
+   "action": "dump",
+   "name": "export-files"
+  },
+  {
+   "action": "click",
+   "label": "export.saveTo"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "export.chooseFolder"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "export.dateFolders"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "export-datefolders"
+  },
+  {
+   "action": "click",
+   "label": "export.dateFolders"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "export.ifExists"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Skip",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.exportAs"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Unmodified Original",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "export-unmodified"
+  },
+  {
+   "action": "click",
+   "label": "export.exportAs"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Current Version",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.version"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Original",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.version"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Edited",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.size"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "2048 px",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.format"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "JPEG",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.colorSpace"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "sRGB",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.colorSpace"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Original",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.quality"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "scroll",
+   "label": "export.quality",
+   "distance": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "export.metadata"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "All Except Location",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "scroll",
+   "label": "export.quality",
+   "distance": -10
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "export.name"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Date + Original Name",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.name"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Custom",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Date"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Text"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Sequence"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Original Name"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Original Number"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Time"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Camera"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.chip.Lens"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.3
+  },
+  {
+   "action": "click",
+   "label": "export.nameField"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "{date}_Kyoto_{sequence}"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.addWatermark"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.editWatermark"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "export.watermarkField"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "© 2026 Test Studio"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "click",
+   "label": "export.watermarkSave"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.placement"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Bottom Right",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.watermarkSize"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.4
+  },
+  {
+   "action": "click",
+   "label": "export.watermarkOpacity"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "scroll",
+   "label": "export.addWatermark",
+   "distance": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "export-watermark"
+  },
+  {
+   "action": "dump",
+   "name": "export-watermark"
+  },
+  {
+   "action": "click",
+   "label": "export.savePreset"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Client JPEG"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "export.preset"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Client JPEG",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "export-preset"
+  },
+  {
+   "action": "click",
+   "label": "export.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "export-done-files"
+  },
+  {
+   "action": "dump",
+   "name": "export-done-files"
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "waitFor",
+   "label": "export.go",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "export.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "export-done-skip"
+  },
+  {
+   "action": "click",
+   "label": "editor.exportWhy"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "export-skip-why"
+  },
+  {
+   "action": "dump",
+   "name": "export-skip-why"
+  },
+  {
+   "action": "click",
+   "label": "editor.exportWhy"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "waitFor",
+   "label": "export.go",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "export.ifExists"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "Replace",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "export.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "export-replace-ask"
+  },
+  {
+   "action": "dump",
+   "name": "export-replace-ask"
+  },
+  {
+   "action": "click",
+   "x": 0.5415,
+   "y": 0.537
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "export-replaced"
+  },
+  {
+   "action": "dump",
+   "name": "export-replaced"
+  },
+  {
+   "action": "click",
+   "label": "editor.exportDismiss"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "waitFor",
+   "label": "export.go",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "export.cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd,shift"
+  },
+  {
+   "action": "waitFor",
+   "label": "export.go",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Save as Copy"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "export-copy2"
+  },
+  {
+   "action": "dump",
+   "name": "export-copy2"
+  },
+  {
+   "action": "click",
+   "label": "export.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "export-copy-done"
+  },
+  {
+   "action": "click",
+   "label": "editor.exportReveal"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}

@@ -316,6 +316,51 @@ Mở bằng nút Export trên toolbar editor hoặc File › Export ▸ Export N
 - Chạy, Cancel, trùng tên, đích đầy, đích mất kết nối: luật của [FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md)
   và [FS-03.07c](../FS-03-photo-editor/07c-export-acceptance-criteria.md). Tiến độ nằm trong Activity, không modal.
 
+### 4a. Đã dựng (row 39, 2026-11-17, board `MAC_Export`)
+
+- **Lối vào:** nút **Save and Export** (`square.and.arrow.up`) trên toolbar editor, giữa Fit và Inspector; **⇧⌘E**. Sheet
+  640×560, tối như editor; thân cuộn, hai cột 286pt (trái Destination + Photo, phải File Name + Watermark).
+- **Đầu:** "Save and Export", dòng `tên · máy · in “nguồn”`, popup **Preset** (Custom khi lựa chọn không khớp preset nào).
+  Segmented **Save as Copy · Export Files** (`MacEditorSegments`), câu giải thích đổi theo lựa chọn — Save as Copy ghi
+  luôn tên sẽ ra (`DSCF4127 (edited).jpg`).
+- **Save as Copy:** Destination chỉ một dòng "Beside the original"; không có File Name, Export As, Version (bản copy
+  luôn là bản đã sửa, đúng tên `(edited)`). Photo (Size · Format · Color Space · Quality · Metadata) và Watermark vẫn áp dụng. Ghi bằng
+  `OutputNaming.editedCopy` cạnh file gốc (` (2)` khi trùng). Ảnh chỉ có trong Photos chưa mở được trong editor, nên
+  nhánh "asset mới trong Photos" chưa có (row 40).
+- **Export Files:** Save To (≤ 5 folder gần đây, `ExportFolderStore`), dòng Folder (`Ổ › Folder`, ổ trong máy cũng gọi
+  bằng tên ổ, ví dụ `Macintosh HD › Exports`) + **Choose…** (trình chọn folder của hệ thống), Date Folders (ví dụ
+  `2026/2026-09-28` bên cạnh), If a File Exists. Photo thêm **Export As** (Unmodified Original ẩn các hàng render, ghi
+  câu "Original files are copied as they are…"). File Name: popup ba mẫu dựng sẵn + Custom, ô mẫu (token dạng
+  `{date}`), 8 chip `FileNameChip.all` xếp theo dòng, dòng "Example:". Tên, trùng tên, Date Folders đi qua
+  `FileExportPlan.make` như iPhone; Replace hỏi một lần ("Replace 1 file in “Exports”?") trước byte đầu, và thay file
+  cũ bằng `replaceItemAt` (file cũ chỉ mất khi file mới đã đủ). **Ảnh gốc không bao giờ bị ghi đè:** xuất vào chính
+  folder của ảnh mà tên trùng tên gốc thì luôn đánh số (Keep Both), so theo định danh file (symlink, hai đường mount
+  cùng một folder vẫn nhận ra), và lần ghi nào trỏ đúng vào file gốc đều bị chặn. Chân sheet nói trước: Skip sẽ bỏ ảnh
+  này, hay tên sẽ được đánh số để giữ tên gốc.
+- **Bookmark trên Mac:** `ExportFolderStore` tạo và mở bookmark `.withSecurityScope` (sandbox); iOS giữ như cũ.
+- **Watermark:** Add Watermark, **Edit…** (popover: một ô chữ, Save tạo hoặc sửa preset chữ trong
+  `SignaturePresetStore`; token `{camera}`… được điền theo ảnh), Text (preset), Placement (9 vị trí), Size, Opacity
+  (`WatermarkPlacement`), thẻ xem trước: ảnh nhỏ có dấu + dòng `2048 × 1365 px · JPEG 80% · about 1.1 MB`. Bật Add
+  Watermark mà chưa có chữ thì Export mờ.
+- **Chân:** Save Preset… (đặt tên; trùng tên thì ghi đè), dòng `1 photo · about 1.1 MB · 412 GB free on “T7”`
+  (ổ rút: "Connect “T7” or choose another folder."), Cancel, **Export** / **Save Copy** (accent). Export mờ thì chân
+  sheet nói vì sao bằng chữ đỏ: chưa có folder, ổ rút, folder mất, mẫu tên rỗng, watermark chưa có chữ hay không còn chữ
+  nào cho ảnh này, một lần export trước còn đang ghi.
+- **Chạy:** sheet đóng ngay; render (`render` → `resize` → dấu → Color Space → `write`) chạy ngoài main actor trên một
+  renderer riêng (preview của editor không phải xếp hàng sau nó), ghi tên tạm `.‹tên›.‹số›.shotdex-part` rồi đổi tên;
+  Date Folders chỉ được tạo lúc ghi. Toolbar (gọn, để "Edited · Saved" và Revert không bị đẩy vào menu tràn): "Saving…" + **Stop** (huỷ,
+  xoá file tạm, ghi "Stopped — nothing was written."); xong thì "✓ Saved" + nút folder (Show in Finder; tên file ở
+  tooltip, tự ẩn sau 20 s), hoặc **Not Written** / **Not Exported** (đỏ) — bấm vào mở popover lý do bằng lời có việc
+  cần làm (Skip, ổ đầy, folder chỉ đọc, ổ rút, không render được, tên là ảnh gốc) — ở lại tới khi bấm ✕. Ghi chú thuộc về lần
+  export, đổi ảnh không làm mất. Activity › Background: "Exporting DSCF4127.RAF" khi đang ghi; lỗi thì thành "Couldn't
+  export DSCF4127.RAF" kèm lý do, ở lại tới lần export sau — đóng editor giữa chừng vẫn thấy.
+- **Nhớ:** lựa chọn của sheet (`mac.export.choices`) và preset (`mac.export.presets`) trong UserDefaults; Metadata luôn
+  bắt đầu từ mức của Settings, Version luôn Edited (như iPhone).
+- **Chưa dựng:** watchdog cho ổ rút giữa lúc ghi (iPhone bỏ sau 2 s; Mac chờ hệ thống báo lỗi — Stop vẫn bấm được),
+  xuất nhiều ảnh (sheet là của ảnh đang mở; File › Export N Photos… từ lưới chưa có), connection server
+  trong Save To, Save as Copy cho ảnh Photos, editor watermark đầy đủ (logo, nhiều lớp — Edit… chỉ sửa chữ), chip token
+  nằm trong ô như board (ô là chữ `{date}`), lựa chọn Live Photo Video.
+
 ## 5. File sinh ra: chỗ và tên
 
 | Lệnh | Ghi vào | Tên |

@@ -102,6 +102,8 @@ final class MacDependencies: LibraryServices {
     }()
     /// The On Server check's counts for the sidebar foot (FS-19.07 §7).
     let onServerStatus = MacOnServerStatus()
+    /// Exports from the editor while they write (FS-18.03 §4: in Activity, not modal).
+    let exports = MacExportActivity()
     /// Memory cards and their imports (FS-20, board `MAC_Ingest`). Declared
     /// after `uploads`, whose demo run clears the demo's defaults first.
     let cards: MacIngestCards = {

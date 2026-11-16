@@ -44,6 +44,8 @@ final class MacEditorModel {
         var focalLength: Double?
         var aperture: Double?
         var shutter: String?
+        /// When it was taken: Export's file names and Date Folders.
+        var captureDate: Date?
     }
 
     let ids: [String]
@@ -310,7 +312,7 @@ final class MacEditorModel {
             var details = Details()
             if let row = try Row.fetchOne(db, sql: """
                 SELECT originalFilename, COALESCE(normalizedCameraModel, cameraModel) AS camera,
-                       COALESCE(normalizedLensModel, lensModel) AS lens, iso, focalLength, aperture, shutterSpeedDisplay
+                       COALESCE(normalizedLensModel, lensModel) AS lens, iso, focalLength, aperture, shutterSpeedDisplay, creationDate
                 FROM photo_metadata WHERE assetId = ?
                 """, arguments: [id]) {
                 details.fileName = row["originalFilename"] ?? ""
@@ -320,6 +322,7 @@ final class MacEditorModel {
                 details.focalLength = row["focalLength"]
                 details.aperture = row["aperture"]
                 details.shutter = row["shutterSpeedDisplay"]
+                details.captureDate = (row["creationDate"] as Int64?).map { Date(timeIntervalSince1970: TimeInterval($0)) }
             }
             details.sourceName = try String.fetchOne(db, sql: """
                 SELECT s.name FROM photo_copies c JOIN sources s ON s.id = c.sourceId
@@ -483,6 +486,22 @@ final class MacEditorModel {
     var syncTargets: Set<String> = []
     /// The Sync sheet is up.
     var asksSync = false
+
+    // MARK: Export (FS-18.03 §4)
+
+    /// The Save and Export sheet is up.
+    var asksExport = false
+    /// What the last export of this photo came to, said in the toolbar.
+    var exportNote: MacExportNote?
+    @ObservationIgnored var exportTask: Task<Void, Never>?
+    /// An export is writing: a second click on Export does not start another.
+    var isExporting = false
+    /// The file the editor renders, for the export.
+    var exportSource: PhotoRenderSourceInfo? { source }
+    /// The export's own renderer: a full-size render and its estimates never
+    /// queue in front of the editor's previews.
+    var exportRenderer: PhotoRenderService { exportService }
+    @ObservationIgnored private let exportService = PhotoRenderService()
     /// A photo the sync cannot write, and why — said in the sheet before anything is written.
     struct SyncSkip: Identifiable, Equatable {
         let id: String
