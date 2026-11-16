@@ -1,0 +1,456 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexEditingSettingsTest"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "waitFor",
+   "label": "General",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Editing"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "settings-editing"
+  },
+  {
+   "action": "dump",
+   "name": "settings-editing"
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.pairs"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "Edit the JPEG",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.size"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "4K",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.format"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "JPEG",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.format"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "90%",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.fileNames"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "{date}_{original}\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Replace"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Keep Both"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "settings.editing.metadata"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "All Except Location",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "settings-editing-set"
+  },
+  {
+   "action": "scroll",
+   "label": "settings.editing.metadata",
+   "distance": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.preset.add"
+  },
+  {
+   "action": "waitFor",
+   "label": "preset.save",
+   "seconds": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "preset.name"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Client 2400"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "preset.kind"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "Exact Size",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "preset.width"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "2400\t"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "preset.height"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "1600\t"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "scroll",
+   "label": "preset.width",
+   "distance": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "click",
+   "label": "preset.crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "Crop to Fill",
+   "type": "menuItem"
+  },
+  {
+   "action": "dump",
+   "name": "preset-crop"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "preset.format"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "HEIC",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "preset.quality"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "preset-editor"
+  },
+  {
+   "action": "dump",
+   "name": "preset-editor"
+  },
+  {
+   "action": "click",
+   "label": "preset.save"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "preset-added"
+  },
+  {
+   "action": "click",
+   "label": "settings.preset.edit"
+  },
+  {
+   "action": "waitFor",
+   "label": "preset.save",
+   "seconds": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "preset.name"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Client 3000"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "preset.cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "settings.preset.edit"
+  },
+  {
+   "action": "waitFor",
+   "label": "preset.save",
+   "seconds": 5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "preset.name"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Client 3000"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "click",
+   "label": "preset.save"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "preset-edited"
+  },
+  {
+   "action": "click",
+   "label": "settings.preset.remove"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "preset-delete-ask"
+  },
+  {
+   "action": "dump",
+   "name": "preset-delete-ask"
+  },
+  {
+   "action": "click",
+   "x": 0.582,
+   "y": 0.581
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "preset-deleted"
+  },
+  {
+   "action": "click",
+   "label": "settings.preset.4K"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "preset-builtin"
+  },
+  {
+   "action": "screenshot",
+   "name": "settings-editing-end"
+  }
+ ]
+}

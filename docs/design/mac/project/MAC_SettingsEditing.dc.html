@@ -25,7 +25,7 @@ input{font-family:inherit}
 </div>
 <!-- PANE (scrolls; overlay scroller at the right edge shows position) -->
 <div style="position:absolute;left:0;right:0;top:85px;bottom:0;overflow:hidden">
-<!-- FS-18.04 §3 (2026-11-04): the pane is drawn as it will be, dimmed, until the feature reaches the Mac --><div style="padding:14px 28px 0;font-size:12px;line-height:16px;color:{{t.label2}}">Editing and Export come to the Mac in a later version.</div><div data-pane-content aria-disabled="true" style="opacity:0.45;padding:12px 24px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<!-- FS-18.04 §3c (2026-11-17, row 41): the pane is live — the editor and Save and Export reached the Mac --><div data-pane-content style="padding:12px 24px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
 <sc-for list="{{editing}}" as="s" hint-placeholder-count="3">
 <div style="display:flex;flex-direction:column;gap:6px">
 <sc-if value="{{s.title}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px"><span style="font-size:13px;font-weight:600;line-height:16px;color:{{t.label}}">{{s.title}}</span><sc-if value="{{s.aside}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.aside}}</span></sc-if></div></sc-if>
@@ -286,7 +286,7 @@ class Component extends DCLogic {
 
     const editing = sections([
       { title:'RAW', rows:[
-        row({ label:'RAW + JPEG Pairs', sub:'Shown as one photo in the library. Choose which file the editor opens.', popup:'Edit the RAW', popupW:'200px', h:'44px' })
+        row({ label:'RAW + JPEG Pairs', sub:'Which file the editor opens for a photo not edited yet. Edited photos keep the file they were edited on.', popup:'Edit the RAW', popupW:'200px', h:'44px' })
       ], foot:'Exports keep the original’s color profile unless you pick sRGB, Display P3 or Adobe RGB in the Export sheet.' },
       { title:'Export Defaults', rows:[
         row({ label:'Size', popup:'2048 px', popupW:'200px' }),
@@ -294,8 +294,8 @@ class Component extends DCLogic {
         row({ label:'File Names', field:'{date}_{original}', fieldW:'200px', sub:'Example: 2026-09-28_DSC04218.jpg', h:'44px' }),
         row({ label:'If a File Exists', seg: seg(['Keep Both','Replace','Skip'], 0) }),
         row({ label:'Metadata When Sharing', sub:'Each share and export can change it', popup:'All Metadata', popupW:'200px', h:'44px' }),
-        row({ label:'Watermark When Sharing', popup:'Off', popupW:'200px' })
-      ], foot:'Used the first time you export. The Export sheet then remembers your last choices, except Metadata.' }
+        row({ label:'Watermark When Sharing', sub:'Available in a later version', labelColor:t.label2, popup:'Off', popupW:'200px', h:'44px' })
+      ], foot:'The Export sheet starts with these, then remembers your last choices there — until you change one here. Metadata always starts here.' }
     ]);
     let n = 0;
     const P = (name, type, detail, o) => { o = o || {}; const i = n++;

@@ -174,6 +174,8 @@ final class MacEditorModel {
     /// Which opening a Done belongs to: a new file lands only on the opening it was written for.
     var generationForDone: Int { generation }
     @ObservationIgnored let photosEditor: any MacPhotosEditing
+    /// Photos opened on the JPEG of their RAW + JPEG pair this session.
+    @ObservationIgnored var twinIds: Set<String> = []
     /// Every editor open, for ⌘Q: one with an edit Photos lacks writes it before the app goes.
     @ObservationIgnored static let live = NSHashTable<MacEditorModel>.weakObjects()
     /// Quit Anyway was chosen: ⌘Q stops writing to Photos (the drafts stay).
@@ -351,7 +353,10 @@ final class MacEditorModel {
                     return
                 }
             } else {
-                opened = await Self.sourceURL(id, dependencies: dependencies)
+                // A photo already edited keeps the file its edit was made on.
+                let twin = MacEditingDefaults.editsTwin(id) || (MacEditingDefaults.editsJPEG && pending == nil && read.0 == nil)
+                opened = await Self.sourceURL(id, dependencies: dependencies, prefersPairedJPEG: twin)
+                if twin, let opened, !PairingRule.isRaw(opened.lastPathComponent) { self.twinIds.insert(id) }
             }
             guard let url = opened else {
                 let reason = await Self.unavailableReason(id, dependencies: dependencies)
@@ -380,11 +385,12 @@ final class MacEditorModel {
     /// The file the editor renders: the demo's picture, or a file photo's
     /// original when it is on this Mac. Photos library pictures come with
     /// row 40 (Done writes them back to Photos).
-    private static func sourceURL(_ id: String, dependencies: MacDependencies) async -> URL? {
+    private static func sourceURL(_ id: String, dependencies: MacDependencies, prefersPairedJPEG: Bool = false) async -> URL? {
         #if DEBUG
         if MacDemoLibrary.isOn, let url = await Task.detached(operation: { MacDemoLibrary.pictureFiles(for: [id]).first }).value { return url }
         #endif
-        guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies), !file.isPlaceholder else { return nil }
+        guard let file = await MacPhotoFiles.resolve(id, dependencies: dependencies, prefersPairedJPEG: prefersPairedJPEG),
+              !file.isPlaceholder else { return nil }
         return file.url
     }
 
@@ -1996,6 +2002,11 @@ final class MacEditorModel {
 
     /// One write after the other, in the order asked.
     private func write(_ recipe: PhotoEditRecipe, id: String) {
+        // An edit made on the JPEG of a pair stays on the JPEG.
+        if twinIds.contains(id) {
+            // Edited on the JPEG: kept on it; reverted to nothing: the setting decides again.
+            if recipe.isIdentity { MacEditingDefaults.unmarkTwinEdited(id) } else { MacEditingDefaults.markTwinEdited(id) }
+        }
         let store = PhotoRecipeStore(database: dependencies.database)
         let sidecars = dependencies.sidecarQueue
         written[id] = recipe

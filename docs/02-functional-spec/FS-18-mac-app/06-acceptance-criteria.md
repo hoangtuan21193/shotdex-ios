@@ -208,6 +208,9 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-193 | 03 §2a rời là Done | như AC-192 | Exposure 0.5; bấm Photo 13; Exposure −0.2; Esc (ngay sau khi gõ số); ⌘E | sang "13 of 226" chỉ sau khi ghi; Esc về viewer; mở lại "−0.20", Done mờ (Photos đã có) | ✅ `mac-editor-photos.json` |
 | AC-194 | 03 §2a Done hỏng | thêm `-ShotDexDemoDoneFails` | Exposure 0.4; Done; Not Saved to Photos; Esc; ◀ Back | "Not Saved to Photos" + lý do; Back không rời, lý do tự mở; Done vẫn sáng, "+0.40" còn | ✅ `mac-editor-photos.json` |
 | AC-195 | 03 §2a ⌘Q, nháp | ảnh Photos có bản sửa chưa Done | ⌘Q | ghi trước rồi hỏi Quit lại (câu hỏi upload vẫn tới); hỏng/30 s → Stay / Quit Anyway; nháp mới hơn Photos quay lại lần sau | ⚠️ chưa có test (driver không gõ ⌘Q an toàn được) |
+| AC-196 | 04 §3c Export Defaults | demo, ShotDex › Settings…, Editing | RAW + JPEG Pairs › Edit the JPEG; Size › 4K; Format › JPEG, 90%; File Names `{date}_{original}`; Replace, Keep Both; Metadata › All Except Location | "Edit the JPEG"; "4K"; "JPEG · 90%"; "Example: 2026-09-28_DSC04218.jpg"; segmented đổi; "All Except Location" | ✅ `mac-settings-editing.json` |
+| AC-197 | 04 §3c thêm preset | như AC-196 | + ; Name "Client 2400"; Exact Size 2400 × 1600; Crop to Fill; HEIC; Quality; Save | dòng "Client 2400 · Resize · 2400 × 1600 · Fill · HEIC …"; đếm resize tăng | ✅ `mac-settings-editing.json` |
+| AC-198 | 04 §3c sửa, xoá | như AC-197 | Edit… đổi tên, Cancel; Edit… "Client 3000", Save; − ; Delete; chọn 4K | Cancel không đổi; "Client 3000"; hỏi "Delete “Client 3000”?" rồi mất; 4K: − và Edit… mờ; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-settings-editing.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

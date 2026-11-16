@@ -48,7 +48,11 @@ final class MacPhotosLibraryEditor: MacPhotosEditing {
         }.value
         guard let asset = box.asset else { throw PhotoEditingError.unavailable }
         let session = try await service.beginSession(for: asset, isOnCanvas: true)
-        guard let option = session.preferredSource(for: session.recalledRecipe) else { throw PhotoEditingError.missingSource }
+        // An edit already made keeps its file; a first edit of a RAW + JPEG
+        // pair opens the one Settings › Editing names.
+        let preferred = session.recalledRecipe == nil && MacEditingDefaults.editsJPEG
+            ? session.sourceOptions.first { !$0.isRAW } : nil
+        guard let option = preferred ?? session.preferredSource(for: session.recalledRecipe) else { throw PhotoEditingError.missingSource }
         let source = try await service.loadSource(option, in: session)
         sessions[assetId] = (session, source)
         return MacPhotosOpened(url: source.info.url, committed: session.recalledRecipe, modified: asset.modificationDate)

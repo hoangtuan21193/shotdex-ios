@@ -27,8 +27,10 @@ enum MacPhotoFiles {
     /// placeholder — resolved against its source's folder and looked at
     /// without opening it; nil for a Photos or server photo. Off the main
     /// actor: a database read and a bookmark.
+    /// `prefersPairedJPEG`: a RAW + JPEG pair gives its JPEG (Settings ›
+    /// Editing › RAW + JPEG Pairs › Edit the JPEG); everything else its RAW.
     @MainActor
-    static func resolve(_ id: String, dependencies: MacDependencies) async -> MacPhotoFile? {
+    static func resolve(_ id: String, dependencies: MacDependencies, prefersPairedJPEG: Bool = false) async -> MacPhotoFile? {
         #if DEBUG
         if let demo = MacDemoLibrary.cloudFile(for: id) {
             return dependencies.cloudDownloads.finished.contains(id) ? nil : demo
@@ -40,15 +42,22 @@ enum MacPhotoFiles {
         let lookup = Task.detached(priority: .userInitiated) { () -> MacPhotoFile? in
             guard let row = try? await database.reader.read({ db in
                 try Row.fetchOne(db, sql: """
-                    SELECT c.sourceId, c.relativePath, c.isCloudPlaceholder FROM photo_copies c LEFT JOIN sources s ON s.id = c.sourceId
+                    SELECT c.sourceId, c.relativePath, c.pairedPath, c.isCloudPlaceholder FROM photo_copies c LEFT JOIN sources s ON s.id = c.sourceId
                     WHERE c.photoId = ? AND c.kind = 'file' AND c.missingSince IS NULL AND c.relativePath IS NOT NULL
                     ORDER BY c.isCloudPlaceholder, s.createdAt, c.relativePath LIMIT 1
                     """, arguments: [id])
             }), !Task.isCancelled else { return nil }
-            let sourceId: String = row["sourceId"], path: String = row["relativePath"]
+            let sourceId: String = row["sourceId"]
+            let primary: String = row["relativePath"]
+            let paired: String? = row["pairedPath"]
+            // Only a RAW's still twin — never a Live Photo's movie.
+            let usesTwin = prefersPairedJPEG && PairingRule.isRaw((primary as NSString).lastPathComponent)
+                && paired.map { !PairingRule.isMovie(($0 as NSString).lastPathComponent) } == true
+            let path = usesTwin ? paired! : primary
             guard let url = roots.fileURL(sourceId: sourceId, relativePath: path), !Task.isCancelled else { return nil }
             // The index's word, or the file's own now: a file macOS evicted since the read is a placeholder too.
-            let indexed: Bool = row["isCloudPlaceholder"] ?? false
+            // The index's flag is the RAW's; the twin is judged by its own file.
+            let indexed: Bool = usesTwin ? false : (row["isCloudPlaceholder"] ?? false)
             return file(url, sourceName: roots.root(sourceId)?.lastPathComponent, indexedAsPlaceholder: indexed,
                         copy: FolderSourceRunner.CloudFile(sourceId: sourceId, relativePath: path, size: nil))
         }

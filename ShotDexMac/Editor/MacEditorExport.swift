@@ -35,7 +35,8 @@ struct MacExportChoices: Codable, Equatable, Sendable {
     static let key = "mac.export.choices"
 
     static func remembered(_ defaults: UserDefaults = .standard) -> MacExportChoices {
-        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(MacExportChoices.self, from: $0) } ?? MacExportChoices()
+        // Nothing remembered yet: Settings › Editing › Export Defaults.
+        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(MacExportChoices.self, from: $0) } ?? defaultChoices(defaults)
     }
 
     func remember(_ defaults: UserDefaults = .standard) {
@@ -478,6 +479,8 @@ struct MacEditorExportSheet: View {
     @State private var isStarting = false
     @State private var folderNote: String?
     @State private var pendingRequest: MacExportRequest?
+    /// The choices as the sheet opened (defaults or remembered, plus repairs).
+    @State private var openedWith: MacExportChoices?
 
     /// Two columns in 640 less the 24pt margins and the 20pt gutter, as the
     /// board splits them: Destination and Photo 320, File Name and Watermark 252.
@@ -527,8 +530,15 @@ struct MacEditorExportSheet: View {
         .tint(MacTheme.Editor.label)
         .onAppear(perform: appear)
         .onChange(of: choices) { _, new in
-            new.remember()
+            // What the sheet opened with is not a choice: Settings › Export
+            // Defaults keep applying until the user changes something here.
+            if new != openedWith || UserDefaults.standard.data(forKey: MacExportChoices.key) != nil { new.remember() }
             refresh()
+        }
+        // Settings › Editing (another window) changed the presets: read them again.
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification).receive(on: RunLoop.main)) { _ in
+            signatures.reload()
+            sizes.reload()
         }
         .onChange(of: metadata) { _, _ in refresh() }
         .onChange(of: version) { _, _ in refresh() }
@@ -1092,6 +1102,7 @@ struct MacEditorExportSheet: View {
                 try? FileManager.default.removeItem(at: folder)
                 UserDefaults.standard.removeObject(forKey: MacExportChoices.key)
                 UserDefaults.standard.removeObject(forKey: MacExportPreset.key)
+                UserDefaults.standard.removeObject(forKey: MacExportChoices.defaultsKey)
                 choices = MacExportChoices()
                 presets = []
             }
@@ -1099,7 +1110,11 @@ struct MacEditorExportSheet: View {
             _ = try? folders.remember(folder)
         }
         #endif
-        if choices.watermark.presetID == nil { choices.watermark.presetID = signatures.presets.first?.id }
+        // No watermark picked, or the one picked was deleted: the first there is.
+        if !signatures.presets.contains(where: { $0.id == choices.watermark.presetID }) {
+            choices.watermark.presetID = signatures.presets.first?.id
+        }
+        openedWith = choices
         resolveFolder()
         refresh()
     }
@@ -1244,6 +1259,8 @@ private struct MacExportWatermarkEditor: View {
     private func save() {
         let words = text.trimmingCharacters(in: .whitespaces)
         guard !words.isEmpty else { return }
+        // Settings may have changed the presets since this sheet read them.
+        store.reload()
         if var preset = store.presets.first(where: { $0.id == presetID }),
            let index = preset.layers.firstIndex(where: { $0.kind == .text }) {
             preset.layers[index].text = words

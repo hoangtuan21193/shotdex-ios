@@ -273,7 +273,7 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 | General | `MAC_SettingsGeneral` | câu Thumbnail size (chỉ chữ) · File Type Badge · Info on Thumbnails (File Name, Capture Time, ISO, Aperture, Shutter Speed, Focal Length, Megapixels, File Size) · Focal Length (Actual · Full-Frame Equivalent) · **Indexing** (đã có) · **Background** (đã có, [FS-22.06](../FS-22-backup/06-mac.md) §5.4) | View Full HDR · Autoplay Videos · On This Day Reminder (Show Insights in Statistics chạy thật từ row 28) | Display, Playback, Notifications |
 | AI | `MAC_SettingsAI`, `MAC_SettingsAIProvider` | — | cả pane: Use For › AI Search, bảng Providers và sheet sửa provider | AI ([FS-08.07](../FS-08-settings/)) |
 | Sources | `MAC_SettingsSources`, `MAC_SettingsSourcesCache` | bảng Photo Sources (Manage Access…, Re-index, Remove…, Grant Access…, Add Folder…, Connect to Server…, thả folder vào bảng) · When a Drive Is Disconnected · Pause Indexing on Battery Power · Prevent Sleep While Indexing · Look Up Place Names · Scan for People and Pets (kèm "N of M items scanned") · Preview Cache (dung lượng, Clear Cache, Cache Size Limit 2/5/10/25/50 GB) · **Index** (đếm, dung lượng, tiến độ, Re-index Library) · Camera Database (số máy chưa rõ, Review Unknown Cameras) · Clear Local Metadata Index | Index New and Changed Files · Preview Cache › Change Location… · Keep Full-Size Previews · Keep Previews of Disconnected Drives | Sources (FS-21), People and Pets, Library Size, Privacy |
-| Editing | `MAC_SettingsEditing` | — | cả pane: RAW + JPEG Pairs, Export Defaults, Presets (Mac chưa có editor và Export) | Export, Sharing |
+| Editing | `MAC_SettingsEditing` | RAW + JPEG Pairs · Export Defaults (Size, Format and Quality, File Names, If a File Exists, Metadata When Sharing) · bảng Presets (+, −, Edit…) — §3c | Watermark When Sharing (Share trên Mac gửi file nguyên trạng, chưa đóng dấu) | Export, Sharing |
 | Servers | `MAC_SettingsServers` | bảng Connections (Name · Host · Protocol · Folder · Status; Add Connection…, Edit, Test, Delete) · Local Network Access + Open Privacy Settings… · Server Thumbnails (phần của server trong Preview Cache, Clear Cache — không có limit riêng) | — | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
 | Cameras | `MAC_CameraDatabase` | bảng máy (tìm, Sensor Format sửa tại chỗ, Crop Factor, lọc Unknown); "Review Unknown Cameras" ở Sources nhảy tới đây | — | Camera Database (FS-08.03 §7) |
 
@@ -291,6 +291,31 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 - Không có hàng Accent Color (D11). Support mở từ menu Help, không từ Settings.
 - **Không có Widgets** (Mac bản đầu không có widget), **không có pane Privacy** — các dòng Privacy nằm trong Sources —
   và **không có ô tìm**: 6 pane đủ ngắn để nhìn hết ([FS-08.01](../FS-08-settings/01-layout-and-search.md) là của iOS).
+
+### 3c. Editing (row 41, 2026-11-17, board `MAC_SettingsEditing`)
+
+- Bỏ dòng "Editing and Export come to the Mac in a later version." — editor (row 31–40) và Save and Export (row 39) đã
+  có. Board sửa theo.
+- **RAW + JPEG Pairs** — Edit the RAW (mặc định) · Edit the JPEG: file editor mở cho ảnh **chưa sửa** có cặp
+  (`photo_copies.pairedPath` khi file chính là RAW và bạn đi kèm không phải phim — Live Photo không bao giờ mở .MOV;
+  trạng thái iCloud của file đi kèm đọc từ chính file đó). Ảnh đã sửa giữ file nó được sửa trên: sửa trên JPEG thì được
+  ghi lại (`mac.editing.editedOnJPEG`) và lần sau vẫn mở JPEG, kể cả khi đổi lại Edit the RAW; Revert về gốc thì bỏ
+  ghi. Ảnh Photos: lần sửa đầu mở bản không-RAW của phiên. Chỉ editor đổi; viewer, Quick Look, Share vẫn dùng RAW.
+- **Export Defaults** — là thứ sheet Save and Export mở ra (`mac.export.defaults`); sheet rồi nhớ lựa chọn của chính
+  nó (FS-03.07b §3) — **cho tới khi người dùng đổi một mục ở đây**: đổi là xoá trí nhớ của sheet, lần mở sau theo
+  Settings. Mở sheet mà không đổi gì không tính là nhớ. Chọn preset tự tạo ở Size lấy luôn định dạng và chất lượng của
+  nó; ô File Names ghi khi Return hay rời ô, ô trống là tên gốc (`{original}`). Size (preset Resize, kể cả preset tự tạo), Format and Quality (một popup:
+  Same as Original / JPEG / HEIC và 60–100%), File Names (mẫu token, dòng "Example: 2026-09-28_DSC04218.jpg" từ ảnh mẫu),
+  If a File Exists (Keep Both · Replace · Skip), **Metadata When Sharing** (`share.metadataLevel`, ba mức của FS-08.06 —
+  sheet Export luôn bắt đầu từ mức này). **Watermark When Sharing** mờ: Share trên Mac chưa đóng dấu.
+- **Presets** — bảng Name · Type · Details, dòng 28pt xen màu; preset dựng sẵn có ổ khoá, không xoá không sửa. **+** mở
+  sheet "New Resize Preset" (Name, Size Long Edge / Exact Size / Original Pixels, cạnh dài hay Rộng × Cao + Fit Inside / Crop to Fill,
+  Format, Quality; Save mờ kèm lý do khi tên rỗng, trùng tên preset khác, hay cỡ ngoài 64–20 000 px). **Edit…** (hay bấm đúp) mở cùng sheet cho
+  preset tự tạo; preset watermark sửa Name và chữ. **−** hỏi "Delete “Client 2400”?" (nói rõ: lựa chọn export đang dùng nó về Original; watermark thì rời danh sách
+  Text của sheet) rồi xoá. − mờ cho preset dựng sẵn và cho watermark có ảnh (ảnh đó các ảnh đã đóng dấu trong editor
+  còn dùng — xoá ở Markup). Settings và sheet Export đọc lại preset mỗi khi bên kia ghi. Đếm "7 resize · 3 watermark"
+  cạnh tiêu đề. Preset watermark được tạo trong editor (Markup, Edit… của sheet Export).
+- Preset bị xoá mà Export Defaults hay sheet Export đang trỏ tới thì sheet về Original (FS-03.07b §3a).
 
 ## 4. Collage, Resize, Combine Photos (tầng D, D10)
 
