@@ -55,6 +55,9 @@ struct MacEditorInspector: View {
                 if model.tool == .crop {
                     MacEditorCropSections(model: model)
                         .padding(.top, 8)
+                } else if model.tool == .heal {
+                    MacEditorHealSections(model: model)
+                        .padding(.top, 8)
                 } else {
                     // (Tone Curve, Color Mixer, Point Color and Grading: MacEditorColor.swift.)
                     look

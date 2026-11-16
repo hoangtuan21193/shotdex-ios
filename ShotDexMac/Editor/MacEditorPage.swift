@@ -38,12 +38,12 @@ struct MacEditorPage: View {
         // In Crop, Esc puts the frame down and go back to Adjust;
         // nothing is undone — ⌘Z is there for that.
         .onExitCommand {
-            if model.isPickingColor { model.isPickingColor = false } else if model.tool == .crop { model.tool = .adjust } else { leave() }
+            if model.isPickingColor { model.isPickingColor = false } else if model.tool != .adjust { model.tool = .adjust } else { leave() }
         }
         // Esc wherever the keys are (a checkbox, a menu just closed): the
         // eyedropper goes away, or Crop gives way to Adjust.
         .background {
-            if model.tool == .crop || model.isPickingColor {
+            if model.tool != .adjust || model.isPickingColor {
                 Button("") { if model.isPickingColor { model.isPickingColor = false } else { model.tool = .adjust } }
                     .keyboardShortcut(.cancelAction)
                     .opacity(0)
@@ -51,6 +51,8 @@ struct MacEditorPage: View {
                     .accessibilityHidden(true)
             }
         }
+        // Delete / ⌘⌫ removes the picked spot while healing (undoable; text fields keep their own Delete).
+        .onDeleteCommand { if model.tool == .heal { model.deleteSelectedSpot() } }
         .task { model.open() }
         // The frame is drawn over the fitted photo.
         .onChange(of: model.tool) { _, tool in if tool == .crop { zoom = .fit } }
@@ -139,8 +141,8 @@ struct MacEditorToolbar: ToolbarContent {
     }
 }
 
-/// Adjust · Crop · Mask · Heal · Markup (316): Adjust and Crop here; the
-/// others are rows 34–36 of the Mac loop.
+/// Adjust · Crop · Mask · Heal · Markup (316): Adjust, Crop and Heal here; the
+/// others are rows 35–36 of the Mac loop.
 private struct MacEditorTools: View {
     @Bindable var model: MacEditorModel
 
@@ -149,7 +151,7 @@ private struct MacEditorTools: View {
             live(.adjust, String(localized: "Adjust", comment: "Mac editor tool"))
             live(.crop, String(localized: "Crop", comment: "Mac editor tool"))
             tool(String(localized: "Mask", comment: "Mac editor tool"), isOn: false)
-            tool(String(localized: "Heal", comment: "Mac editor tool"), isOn: false)
+            live(.heal, String(localized: "Heal", comment: "Mac editor tool"))
             tool(String(localized: "Markup", comment: "Mac editor tool"), isOn: false)
         }
         .padding(2)
@@ -269,6 +271,8 @@ private struct MacEditorCanvas: View {
                                         .offset(x: rect.minX, y: rect.minY)
                                     if model.tool == .crop, !model.showsBefore {
                                         MacEditorCropOverlay(model: model, imageRect: rect)
+                                    } else if model.tool == .heal, !model.showsBefore {
+                                        MacEditorHealOverlay(model: model, imageRect: rect)
                                     } else if model.isPickingColor {
                                         MacEditorColorPicker(model: model, imageRect: rect)
                                     }

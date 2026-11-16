@@ -121,6 +121,33 @@ bố cục Mac, cách lưu và sheet xuất.
 - Chưa có: hình bánh xe màu của Grading (board vẽ slider, đã theo board), điểm đường cong bằng bàn phím, Point Color
   trên ảnh RAW chưa xử lý (lấy màu từ khung hiện — như iPhone).
 
+### 1d. Heal (row 34, 2026-11-17, board `MAC_EditHeal`)
+
+`ShotDexMac/Editor/MacEditorHeal.swift`. Cùng recipe với iPhone (`PhotoHealingSpot`, `PhotoRedEyeSpot`), cùng phần
+kit (`suggestedSource`, `HealingSourceFinder`, `RedEyeLocator`, `SpotVisualizer`). Spot nằm trong khung đã cắt.
+
+- **Heal** trong capsule công cụ (Esc về Adjust). Ảnh hiện đã cắt như Adjust.
+- Trên ảnh: cọ theo con trỏ (vòng cỡ, vòng gạch là feather, dấu +). **Bấm** = spot tròn, nguồn đặt sẵn bên cạnh;
+  **kéo** = spot nét cọ dọc đường kéo (tối đa 128 điểm lấy đều suốt đường); bấm/kéo vòng của spot = chọn và dời; kéo vòng nguồn (gạch) của spot đang chọn =
+  dời nguồn. Spot đang chọn: vòng 2pt, nguồn gạch, đường nối, chấm giữa; spot khác: vòng mảnh (khi Show Spot Pins
+  bật; tắt thì chỉ spot đang chọn).
+- Inspector **Retouch**: Heal · Clone · Red Eye. Heal/Clone: Size ("40 px" — bán kính tính bằng pixel của ảnh gốc
+  trên cạnh ngắn của khung đã cắt),
+  Feather, Opacity (cho spot mới, và spot đang chọn). Red Eye: Pupil, Darken, **Fix Red Eye** (tìm mọi đồng tử đỏ ngoài
+  main; không thấy: "No red eyes found."); bấm ảnh = một mắt ở đồng tử Vision thấy gần đó.
+- **Spots** (Red Eye: Eyes): số lượng, **Clear All…** (hỏi "Remove every spot from this photo?", ⌘Z lấy lại), mỗi
+  dòng: ảnh nhỏ quanh spot · "Spot 1" · "Heal · circle · top left" · 👁 ẩn/hiện vòng viền của spot trên ảnh
+  (spot vẫn sửa ảnh — ảnh xem phải giống ảnh lưu).
+  **New Source** (chỗ tốt kế tiếp quanh spot, không quay lại chỗ đã thử; hết chỗ: "No other source found for this
+  spot.") · **Delete Spot** (⌫). Trống: dòng hướng dẫn.
+- **View**: Visualize Spots (bản đồ cạnh trắng-đen phủ ảnh, làm ngoài main, làm lại sau mỗi lần vẽ) · Threshold
+  (chỉ bật khi Visualize) · Show Spot Pins (mặc định bật, ô cam như board).
+- Đang chọn một spot thì **bấm chỗ trống chỉ bỏ chọn** (lần bấm sau mới thêm); đầu nhóm Retouch ghi slider đang sửa
+  "Spot 3" hay "New spots". Over spot/nguồn con trỏ thành bàn tay, cọ ẩn đi. Delete / ⌘⌫ xoá spot đang chọn. Clear All…
+  chỉ xoá danh sách đang hiện (spot, hoặc mắt). Ảnh chưa có để đọc: "The photo is still loading — try again in a
+  moment." Fix Red Eye / New Source có trạng thái đang làm ("Finding…").
+- Nhóm gập được (mũi tên như board). Chưa có: chọn spot bằng phím Tab, đổi cỡ spot bằng kéo mép vòng.
+
 ## 2. Hai kiểu lưu (D16)
 
 | Ảnh | Toolbar | Lưu |

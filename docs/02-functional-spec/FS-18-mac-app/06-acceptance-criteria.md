@@ -181,6 +181,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-166 | 03 §1c Point Color | như AC-164 | Pick Color, Esc; Pick Color, bấm trời; Hue 10, Range 30; Pick, bấm chỗ khác; ô 1; 🗑; ↺ | Esc cất ống hút, vẫn trong editor; một rồi hai ô màu; ô 1 giữ "+10"; còn một ô; ↺ hiện câu trống | ✅ `mac-editor-color.json` |
 | AC-167 | 03 §1c Grading | như AC-164 | Midtones Hue 200, Saturation 40; Global Luminance −10, Blending 70, Balance −20; Midtones; ↺; Back | "200°", "40", "70", "−20"; về Midtones vẫn 200°; ↺ mất; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-color.json` |
 | AC-168 | 03 §1c kính lúp | `-ShotDexPickerAt 0.35,0.25` | Pick Color | kính lúp 92pt + mã hex trên ảnh | ✅ `mac-editor-color-shot.json` (ảnh) |
+| AC-169 | 03 §1d spot | demo `-ShotDexSection viewer`, ⌘E, Heal | Size 40; bấm trời trái; bấm trời phải; kéo một đường | "40 px"; Spot 1 "Heal · circle · top left", Spot 2, Spot 3 "brush stroke" | ✅ `mac-editor-heal.json` |
+| AC-170 | 03 §1d sửa spot | như AC-169 | chọn Spot 2; Clone; New Source; 👁 ẩn rồi hiện; Feather 20; Delete Spot; ⌘Z | Spot 2 "Clone"; ẩn/hiện đổi nút; Spot 3 mất rồi về | ✅ `mac-editor-heal.json` |
+| AC-171 | 03 §1d View, Red Eye | như AC-169 | Visualize, Threshold 80, tắt; Pins tắt/bật; Red Eye; Fix Red Eye; bấm ảnh; Darken 70; Delete | bản đồ phủ ảnh; "No red eyes found." (ảnh demo không có mặt); "Eye 1"; xoá mất | ✅ `mac-editor-heal.json` |
+| AC-172 | 03 §1d Clear All, Esc | như AC-169 | Clear All… › Clear All; ⌘Z; Esc; Back | hết spot rồi về; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-heal.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

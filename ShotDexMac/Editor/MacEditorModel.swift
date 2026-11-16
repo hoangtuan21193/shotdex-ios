@@ -21,7 +21,7 @@ final class MacEditorModel {
     /// The tool the toolbar's capsule has on (rows 31–32; Mask, Heal and
     /// Markup are rows 34–36).
     enum Tool: String, CaseIterable, Identifiable {
-        case adjust, crop
+        case adjust, crop, heal
         var id: String { rawValue }
     }
 
@@ -76,6 +76,12 @@ final class MacEditorModel {
             guard tool != oldValue else { return }
             isStraightening = false
             isPickingColor = false
+            if tool != .heal {
+                visualizesSpots = false
+                // Back in Heal later starts neutral: nothing picked, the brush is for new spots.
+                selectedSpotId = nil
+                selectedRedEyeId = nil
+            }
             render(interactive: false)
         }
     }
@@ -185,6 +191,12 @@ final class MacEditorModel {
         isStraightening = false
         isPickingColor = false
         selectedPointColorId = nil
+        selectedSpotId = nil
+        selectedRedEyeId = nil
+        hiddenSpotIds = []
+        offeredSources = [:]
+        spotMap = nil
+        healNote = nil
         dragStart = nil
         dragBase = nil
         isDragging = false
@@ -363,6 +375,7 @@ final class MacEditorModel {
         straightenBase = nil
         guard let previous = history.undo(current: recipe) else { return }
         recipe = previous
+        reconcileSelection()
         render(interactive: false)
         scheduleSave()
     }
@@ -371,8 +384,16 @@ final class MacEditorModel {
         straightenBase = nil
         guard let next = history.redo(current: recipe) else { return }
         recipe = next
+        reconcileSelection()
         render(interactive: false)
         scheduleSave()
+    }
+
+    /// After Undo or Redo: a picked spot, eye or colour that is no longer there is not picked.
+    private func reconcileSelection() {
+        if let id = selectedSpotId, !recipe.healing.contains(where: { $0.id == id }) { selectedSpotId = nil }
+        if let id = selectedRedEyeId, !recipe.redEyes.contains(where: { $0.id == id }) { selectedRedEyeId = nil }
+        if let id = selectedPointColorId, !recipe.color.points.contains(where: { $0.id == id }) { selectedPointColorId = nil }
     }
 
     /// Revert to Original…: the photo as it came, kept undoable.
@@ -418,6 +439,315 @@ final class MacEditorModel {
             if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
         }
         if inOneStep { apply(update) } else { change(update) }
+    }
+
+    // MARK: Heal (FS-18.03 §1d)
+
+    enum HealMode: String, CaseIterable, Identifiable {
+        case heal, clone, redEye
+        var id: String { rawValue }
+        var spotMode: PhotoHealingMode? { self == .heal ? .heal : self == .clone ? .clone : nil }
+    }
+
+    /// What a click or a stroke on the photo makes; also the selected spot's mode.
+    private(set) var healMode = HealMode.heal
+    /// A new spot's size (fraction of the short edge), feather and opacity;
+    /// the sliders show the selected spot's own once one is picked.
+    var healRadius = 0.03
+    var healFeather = 0.5
+    var healOpacity = 1.0
+    var redEyePupil = 0.5
+    var redEyeDarken = 0.5
+    var selectedSpotId: UUID?
+    var selectedRedEyeId: UUID?
+    /// Spots whose outline is switched off with the eye in the list (the
+    /// spot still heals: a picture that differs from the saved one would lie).
+    private(set) var hiddenSpotIds: Set<UUID> = []
+    var showsSpotPins = true
+    /// Visualize Spots: the photo as an edge map where dust shows white.
+    var visualizesSpots = false { didSet { updateSpotMap() } }
+    var spotThreshold = 0.5 { didSet { updateSpotMap() } }
+    private(set) var spotMap: CGImage?
+    /// "No other source found", "No red eyes found": said under the list.
+    private(set) var healNote: String?
+    @ObservationIgnored private var offeredSources: [UUID: [NormalizedPoint]] = [:]
+    /// A New Source is being worked out: a second press waits for it.
+    private(set) var isFindingSource = false
+    @ObservationIgnored private var spotMapTask: Task<Void, Never>?
+
+    var selectedSpot: PhotoHealingSpot? { recipe.healing.first { $0.id == selectedSpotId } }
+    var selectedRedEye: PhotoRedEyeSpot? { recipe.redEyes.first { $0.id == selectedRedEyeId } }
+
+    /// The cropped frame's short edge in the original's pixels: Size reads in these.
+    var healShortEdgePixels: Double {
+        guard let editing = cropEditing else { return 1000 }
+        let size = editing.pixelSize(of: recipe.crop.rect)
+        return Double(max(1, min(size.width, size.height)))
+    }
+
+    /// Width over height of the frame the spots sit on (the cropped photo).
+    var healAspect: Double {
+        guard let preview, preview.height > 0 else { return 1.5 }
+        return Double(preview.width) / Double(preview.height)
+    }
+
+    func setHealMode(_ mode: HealMode) {
+        healMode = mode
+        healNote = nil
+        if let spotMode = mode.spotMode, let id = selectedSpotId {
+            updateSpot(id, inOneStep: true) { $0.mode = spotMode }
+        }
+    }
+
+    /// Size, Feather, Opacity, Pupil, Darken: the next spot's, and the selected one's.
+    func setHealValue(_ key: ReferenceWritableKeyPath<MacEditorModel, Double>, _ value: Double, inOneStep: Bool) {
+        self[keyPath: key] = value
+        switch key {
+        case \MacEditorModel.healRadius: if let id = selectedSpotId { updateSpot(id, inOneStep: inOneStep) { $0.radius = value } }
+        case \MacEditorModel.healFeather: if let id = selectedSpotId { updateSpot(id, inOneStep: inOneStep) { $0.feather = value } }
+        case \MacEditorModel.healOpacity: if let id = selectedSpotId { updateSpot(id, inOneStep: inOneStep) { $0.opacity = value } }
+        case \MacEditorModel.redEyePupil: if let id = selectedRedEyeId { updateRedEye(id, inOneStep: inOneStep) { $0.pupilSize = value } }
+        case \MacEditorModel.redEyeDarken: if let id = selectedRedEyeId { updateRedEye(id, inOneStep: inOneStep) { $0.darken = value } }
+        default: break
+        }
+    }
+
+    /// A click on the photo: a spot filled from beside it, selected.
+    func addSpot(at center: NormalizedPoint) {
+        guard let mode = healMode.spotMode else { return }
+        let spot = PhotoHealingSpot(
+            mode: mode, center: center,
+            source: PhotoHealingSpot.suggestedSource(for: center, radius: healRadius, aspectRatio: healAspect),
+            radius: healRadius, feather: healFeather, opacity: healOpacity)
+        apply { $0.healing.append(spot) }
+        selectedSpotId = spot.id
+        healNote = nil
+    }
+
+    /// A drag over the photo: a brush-stroke spot along it (points 0…1 over
+    /// the cropped frame), thinned to one point every half radius.
+    func addStroke(through points: [NormalizedPoint]) {
+        guard let mode = healMode.spotMode else { return }
+        let aspect = healAspect
+        let shortOverWidth = aspect >= 1 ? 1 / aspect : 1, shortOverHeight = aspect >= 1 ? 1 : aspect
+        var thinned: [NormalizedPoint] = []
+        for point in points {
+            if let last = thinned.last {
+                let dx = (point.x - last.x) / shortOverWidth, dy = (point.y - last.y) / shortOverHeight
+                guard (dx * dx + dy * dy).squareRoot() >= healRadius / 2 else { continue }
+            }
+            thinned.append(point)
+        }
+        if let last = points.last, thinned.last != last { thinned.append(last) }
+        // At most 128 points, taken evenly along the whole stroke — never its first part only.
+        if thinned.count > 128 {
+            let step = Double(thinned.count - 1) / 127
+            thinned = (0..<128).map { thinned[min(thinned.count - 1, Int((Double($0) * step).rounded()))] }
+        }
+        guard let spot = PhotoHealingSpot.stroke(through: thinned, mode: mode, radius: healRadius,
+                                                  feather: healFeather, opacity: healOpacity, aspectRatio: aspect) else { return }
+        apply { $0.healing.append(spot) }
+        selectedSpotId = spot.id
+        healNote = nil
+    }
+
+    func selectSpot(_ id: UUID?) {
+        selectedSpotId = id
+        healNote = nil
+        guard let spot = selectedSpot else { return }
+        // The sliders follow the spot, so they say what it is.
+        healMode = spot.mode == .heal ? .heal : .clone
+        healRadius = spot.radius
+        healFeather = spot.feather
+        healOpacity = spot.opacity
+    }
+
+    func selectRedEye(_ id: UUID?) {
+        selectedRedEyeId = id
+        guard let eye = selectedRedEye else { return }
+        redEyePupil = eye.pupilSize
+        redEyeDarken = eye.darken
+    }
+
+    /// One spot changed: a drag step, or one undo step.
+    func updateSpot(_ id: UUID, inOneStep: Bool = false, _ body: @escaping (inout PhotoHealingSpot) -> Void) {
+        let update: (inout PhotoEditRecipe) -> Void = { recipe in
+            if let index = recipe.healing.firstIndex(where: { $0.id == id }) { body(&recipe.healing[index]) }
+        }
+        if inOneStep { apply(update) } else { change(update) }
+    }
+
+    func updateRedEye(_ id: UUID, inOneStep: Bool = false, _ body: @escaping (inout PhotoRedEyeSpot) -> Void) {
+        let update: (inout PhotoEditRecipe) -> Void = { recipe in
+            if let index = recipe.redEyes.firstIndex(where: { $0.id == id }) { body(&recipe.redEyes[index]) }
+        }
+        if inOneStep { apply(update) } else { change(update) }
+    }
+
+    func deleteSelectedSpot() {
+        if healMode == .redEye {
+            guard let id = selectedRedEyeId else { return }
+            apply { $0.redEyes.removeAll { $0.id == id } }
+            selectedRedEyeId = nil
+        } else {
+            guard let id = selectedSpotId else { return }
+            apply { $0.healing.removeAll { $0.id == id } }
+            hiddenSpotIds.remove(id)
+            selectedSpotId = nil
+        }
+    }
+
+    /// Clear All…, confirmed: the list on show (spots, or red eyes), one undo step.
+    func clearAllSpots() {
+        if healMode == .redEye {
+            apply { $0.redEyes = [] }
+            selectedRedEyeId = nil
+        } else {
+            apply { $0.healing = [] }
+            selectedSpotId = nil
+            hiddenSpotIds = []
+        }
+    }
+
+    func toggleHidden(_ id: UUID) {
+        if hiddenSpotIds.contains(id) { hiddenSpotIds.remove(id) } else { hiddenSpotIds.insert(id) }
+    }
+
+    /// New Source: the selected spot's source moves to the next best place
+    /// around it, never back to one already offered. Scored off the main actor.
+    func findNewSource() {
+        guard let id = selectedSpotId, let spot = selectedSpot else { return }
+        guard let image = cleanImage else { healNote = Self.stillLoadingNote; return }
+        guard !isFindingSource else { return }
+        var offered = offeredSources[id] ?? []
+        if !offered.contains(spot.source) { offered.append(spot.source) }
+        isFindingSource = true
+        let box = ImageBox(image)
+        let generation = self.generation
+        let seen = offered
+        Task { [weak self] in
+            let next: NormalizedPoint? = await Task.detached(priority: .userInitiated) {
+                guard let picture = HealingSourceFinder.Picture(box.image) else { return nil }
+                let aspect = Double(picture.width) / Double(picture.height)
+                let shortOverWidth = aspect >= 1 ? 1 / aspect : 1, shortOverHeight = aspect >= 1 ? 1 : aspect
+                return HealingSourceFinder.candidates(for: spot, in: picture).first { point in
+                    seen.allSatisfy { other in
+                        let dx = (point.x - other.x) / shortOverWidth, dy = (point.y - other.y) / shortOverHeight
+                        return (dx * dx + dy * dy).squareRoot() >= spot.radius
+                    }
+                }
+            }.value
+            guard let self else { return }
+            self.isFindingSource = false
+            guard generation == self.generation else { return }
+            // The spot moved or changed while the places were scored: that answer was for the old one.
+            guard let now = self.recipe.healing.first(where: { $0.id == id }),
+                  now.center == spot.center, now.radius == spot.radius, now.stroke == spot.stroke else {
+                self.healNote = String(localized: "The spot changed while looking — try New Source again.", comment: "Mac editor heal: a stale New Source")
+                return
+            }
+            guard let next else {
+                self.healNote = String(localized: "No other source found for this spot.", comment: "Mac editor heal: New Source found nothing")
+                return
+            }
+            self.offeredSources[id] = seen + [next]
+            self.updateSpot(id, inOneStep: true) { $0.source = next }
+        }
+    }
+
+    /// Red Eye: a click makes an eye on the pupil Vision finds near it (or
+    /// right there); Fix Red Eye does every red pupil at once.
+    private static var stillLoadingNote: String {
+        String(localized: "The photo is still loading — try again in a moment.", comment: "Mac editor heal: nothing to read yet")
+    }
+
+    /// Fix Red Eye or a click on a pupil is being worked out.
+    private(set) var isLocatingEyes = false
+
+    func addRedEye(at point: NormalizedPoint) {
+        // A click on an eye already there picks it, rather than stacking a second.
+        let aspect0 = healAspect
+        let shortOverWidth0 = aspect0 >= 1 ? 1 / aspect0 : 1, shortOverHeight0 = aspect0 >= 1 ? 1 : aspect0
+        if let existing = recipe.redEyes.first(where: { eye in
+            let dx = (eye.center.x - point.x) / shortOverWidth0, dy = (eye.center.y - point.y) / shortOverHeight0
+            return (dx * dx + dy * dy).squareRoot() <= eye.radius
+        }) {
+            selectRedEye(existing.id)
+            return
+        }
+        guard !isLocatingEyes else { return }
+        guard let image = cleanImage else { healNote = Self.stillLoadingNote; return }
+        isLocatingEyes = true
+        let box = ImageBox(image), aspect = healAspect, pupil = redEyePupil, darken = redEyeDarken, generation = self.generation
+        Task { [weak self] in
+            let pupils = await Task.detached(priority: .userInitiated) { RedEyeLocator.pupils(in: box.image) }.value
+            guard let self else { return }
+            self.isLocatingEyes = false
+            guard generation == self.generation else { return }
+            var eye = RedEyeLocator.spot(forTapAt: point, pupils: pupils, aspect: aspect)
+            eye.pupilSize = pupil
+            eye.darken = darken
+            self.apply { $0.redEyes.append(eye) }
+            self.selectedRedEyeId = eye.id
+            self.healNote = nil
+        }
+    }
+
+    func fixRedEyes() {
+        guard !isLocatingEyes else { return }
+        guard let image = cleanImage else { healNote = Self.stillLoadingNote; return }
+        isLocatingEyes = true
+        let box = ImageBox(image), aspect = healAspect, pupil = redEyePupil, darken = redEyeDarken, generation = self.generation
+        Task { [weak self] in
+            let red: [RedEyeLocator.Pupil] = await Task.detached(priority: .userInitiated) {
+                guard let picture = HealingSourceFinder.Picture(box.image, side: 1024) else { return [] }
+                return RedEyeLocator.redPupils(RedEyeLocator.pupils(in: box.image), in: picture)
+            }.value
+            guard let self else { return }
+            self.isLocatingEyes = false
+            guard generation == self.generation else { return }
+            let shortOverWidth = aspect >= 1 ? 1 / aspect : 1, shortOverHeight = aspect >= 1 ? 1 : aspect
+            let fresh = red.filter { found in
+                !self.recipe.redEyes.contains { eye in
+                    let dx = (eye.center.x - found.center.x) / shortOverWidth, dy = (eye.center.y - found.center.y) / shortOverHeight
+                    return (dx * dx + dy * dy).squareRoot() <= eye.radius
+                }
+            }
+            guard !fresh.isEmpty else {
+                self.healNote = String(localized: "No red eyes found.", comment: "Mac editor heal: Fix Red Eye found nothing")
+                return
+            }
+            var eyes: [PhotoRedEyeSpot] = []
+            for found in fresh {
+                var eye = RedEyeLocator.spot(forTapAt: found.center, pupils: [found], aspect: aspect)
+                eye.pupilSize = pupil
+                eye.darken = darken
+                eyes.append(eye)
+            }
+            self.apply { $0.redEyes.append(contentsOf: eyes) }
+            self.selectRedEye(eyes.last?.id)
+            self.healNote = nil
+        }
+    }
+
+    nonisolated private static let spotMapContext = CIContext(options: [.cacheIntermediates: false])
+
+    /// The edge map for Visualize Spots, made off the main actor from the frame shown.
+    private func updateSpotMap() {
+        spotMapTask?.cancel()
+        guard visualizesSpots, let image = cleanImage else { spotMap = nil; return }
+        let box = ImageBox(image), threshold = spotThreshold, generation = self.generation
+        spotMapTask = Task { [weak self] in
+            // A Threshold drag asks every tick: only the last one is drawn.
+            try? await Task.sleep(for: .milliseconds(80))
+            guard !Task.isCancelled else { return }
+            let map = await Task.detached(priority: .userInitiated) { () -> ImageBox? in
+                let map = SpotVisualizer.map(of: CIImage(cgImage: box.image), threshold: threshold)
+                return Self.spotMapContext.createCGImage(map, from: map.extent).map(ImageBox.init)
+            }.value
+            guard let self, generation == self.generation, self.visualizesSpots, self.spotThreshold == threshold else { return }
+            self.spotMap = map?.image
+        }
     }
 
     // MARK: Crop (FS-18.03 §1b)
@@ -717,6 +1047,7 @@ final class MacEditorModel {
                     self.renderFailed = false
                     self.preview = images.displayImage
                     self.cleanImage = images.cleanImage
+                    if self.visualizesSpots, !next.interactive { self.updateSpotMap() }
                     if let histogram { self.histogram = histogram; self.updateClipping() }
                 } else if self.wanted == nil {
                     // The last good frame stays; Undo or another change renders again.

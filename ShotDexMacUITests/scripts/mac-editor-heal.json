@@ -1,0 +1,420 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.heal"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.heal.canvas"
+  },
+  {
+   "action": "assertExists",
+   "label": "Click a spot in the photo to remove it, or drag to paint over a line."
+  },
+  {
+   "action": "click",
+   "label": "Size value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "40\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Size value",
+   "text": "40 px"
+  },
+  {
+   "action": "click",
+   "x": 0.3,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Spot 1, Heal · circle · top left"
+  },
+  {
+   "action": "click",
+   "x": 0.48,
+   "y": 0.25
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "New spots"
+  },
+  {
+   "action": "click",
+   "x": 0.48,
+   "y": 0.25
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "drag",
+   "x": 0.3,
+   "y": 0.55,
+   "dx": 140,
+   "dy": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Spot 3, Heal · brush stroke · center"
+  },
+  {
+   "action": "screenshot",
+   "name": "heal-spots"
+  },
+  {
+   "action": "click",
+   "label": "Spot 2, Heal · circle · top right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.mode.Clone"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Spot 2, Clone · circle · top right"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.newSource"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "after-source"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.eye",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Show Outline"
+  },
+  {
+   "action": "click",
+   "label": "Show Outline"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Feather value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "20\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Feather value",
+   "text": "20"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Spot 3, Heal · brush stroke · center"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Spot 3, Heal · brush stroke · center"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.visualize"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "click",
+   "label": "Threshold value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "80\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "heal-visualize"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.visualize"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.pins"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.pins"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.mode.Red Eye"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "Click a red pupil in the photo, or Fix Red Eye to find them all."
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.fixRedEye"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "waitFor",
+   "label": "No red eyes found."
+  },
+  {
+   "action": "click",
+   "x": 0.4,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "waitFor",
+   "label": "Eye 1, top",
+   "seconds": 6
+  },
+  {
+   "action": "click",
+   "label": "Darken value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "70\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Eye 1, top"
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.mode.Heal"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.heal.clearAll"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "clear-dialog"
+  },
+  {
+   "action": "click",
+   "x": 0.5415,
+   "y": 0.5559
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Spot 1, Heal · circle · top left"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Spot 1, Heal · circle · top left"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.group.light"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

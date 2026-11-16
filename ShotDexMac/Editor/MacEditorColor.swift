@@ -552,7 +552,7 @@ private struct MacGradingSection: View {
 /// slider · boxed number, the same drag, double-click and typing as the
 /// Light rows.
 struct MacEditorValueRow: View {
-    enum Format { case signed, plain, degrees }
+    enum Format { case signed, plain, degrees, pixels }
 
     let title: String
     let value: Double
@@ -627,12 +627,13 @@ struct MacEditorValueRow: View {
         case .degrees: return "\(rounded)°"
         case .signed: return rounded > 0 ? "+\(rounded)" : rounded < 0 ? "\u{2212}\(-rounded)" : "0"
         case .plain: return "\(rounded)"
+        case .pixels: return "\(rounded) px"
         }
     }
 
     static func parse(_ text: String) -> Double? {
         let cleaned = text.replacingOccurrences(of: "\u{2212}", with: "-").replacingOccurrences(of: "°", with: "")
-            .replacingOccurrences(of: "+", with: "").trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: "+", with: "").replacingOccurrences(of: "px", with: "").trimmingCharacters(in: .whitespaces)
         return (try? Double(cleaned, format: .number)) ?? Double(cleaned)
     }
 }

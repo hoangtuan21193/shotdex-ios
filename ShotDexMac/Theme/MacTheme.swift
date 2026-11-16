@@ -158,6 +158,14 @@ extension MacTheme {
         static let curveGrid = Color.white.opacity(0.08)
         static let curveHistogram = Color.white.opacity(0.10)
         static let curveGuide = Color.white.opacity(0.28)
+        /// `t.fill`: a push button or pill on the inspector.
+        static let fill = Color.white.opacity(0.07)
+        /// `rowSel`: the picked row of an inspector list.
+        static let rowSelected = Color.white.opacity(0.10)
+        /// Push buttons and list rows in the inspector (`controlRadius` is the small controls').
+        static let buttonRadius: CGFloat = 8
+        /// Over the photo: a tool's lines in white with a dark halo.
+        static let overlayHalo = Color.black.opacity(0.55)
         /// Under small text laid over a picture (the curve readout, the loupe's hex).
         static let readoutShade = Color.black.opacity(0.72)
 
