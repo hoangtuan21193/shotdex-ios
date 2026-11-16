@@ -110,7 +110,7 @@
   },
   "IP_Duplicates.dc.html": {
    "h": 1032,
-   "title": "iPad · Duplicates (16/11, theo Immich): một nhóm mỗi màn. Thanh tiêu đề giữ nguyên (segment Exact/Similar/Burst giữa, trạng thái 2 dòng bên phải, ⇅ ↻). Thẻ 1100 giữa màn, r-lg, đệm 16: trái All Keep | All Trash, phải Delete N (đỏ, khi có ảnh đánh Trash) hoặc Keep All (accent); ảnh một hàng min(số ảnh, 4) cột, ô vuông cách 12 (2 ảnh: 528 ngang, ~470 dọc); dưới mỗi ảnh bảng File · Size · Date · Albums (đỏ 10% khi Trash). Chân trang ‹ Previous · 12 / 164 · Next ›. Bỏ lưới nhiều thẻ, hàng Keeping all và thanh “37 selected · Delete 37” — FS-06.06",
+   "title": "iPad · Duplicates (16/11): danh sách nhóm cuộn dọc, mỗi nhóm một thẻ rộng hết màn (− 2×16), cách 12, r-lg, đệm 12. Thanh thẻ 44: trái All Keep | All Trash, phải Delete N (đỏ khi có ảnh đánh Trash) hoặc Keep All (accent). Dưới 10: MỘT hàng ảnh vuông 240 cách 10, bảng File · Size · Date · Albums 26pt dưới mỗi ảnh (đỏ 10% khi Trash); nhóm nhiều ảnh cuộn ngang, ảnh cuối bị cắt ở mép thẻ. Thanh tiêu đề giữ nguyên; bỏ phân trang Previous/Next và thanh 37 selected",
    "w": 1376,
    "x": 33488,
    "y": 560

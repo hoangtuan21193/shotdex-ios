@@ -1010,7 +1010,7 @@
     },
     "DI_Duplicates.dc.html": {
       "h": 669,
-      "title": "Duo trong · Duplicates (16/11, theo Immich): một nhóm mỗi màn, như iPad. Thanh tiêu đề giữ nguyên (segment giữa thanh 867, trạng thái bên phải, Back/⇅/↻ ở rail). Thẻ 835 (867 − 2×16): All Keep | All Trash + Delete 1; 2 ảnh bị chiều cao giới hạn ở 270, căn giữa thẻ; bảng File · Size · Date · Albums dưới mỗi ảnh; chân trang ‹ Previous · 12 / 164 · Next ›. Bỏ lưới, nhóm 24 ảnh, hàng Reviewed và thanh “37 selected · Delete 37”",
+      "title": "Duo trong · Duplicates (16/11): như iPad — danh sách nhóm cuộn dọc, thẻ rộng 835 (vùng trái rail − 2×16); thanh All Keep | All Trash + Delete N / Keep All; một hàng ảnh 184 cách 10 cuộn ngang (ảnh cuối cắt ở mép thẻ), bảng File · Size · Date · Albums 26pt dưới mỗi ảnh. Thanh tiêu đề giữ nguyên, Back/⇅/↻ ở rail; bỏ phân trang và thanh 37 selected",
       "w": 951,
       "x": 19589,
       "y": 560
