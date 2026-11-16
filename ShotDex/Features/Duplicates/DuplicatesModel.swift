@@ -213,10 +213,7 @@ final class DuplicatesModel {
     /// There is no All: one kind always shows. A remembered kind that has
     /// no group left falls back to the first one that has.
     var filter: DuplicatesFilter {
-        get {
-            let present = presentFilters
-            return present.isEmpty || present.contains(chosenFilter) ? chosenFilter : present[0]
-        }
+        get { chosenFilter }
         set { chosenFilter = newValue }
     }
 
@@ -348,8 +345,11 @@ final class DuplicatesModel {
     }
 
     /// Filters that would show something, in filter-row order (§7.3).
+    /// Every kind once the library was checked, even a kind with no group
+    /// (user 2026-11-16: "the Burst tab alone looks broken — always show
+    /// them"); none before the first check.
     var presentFilters: [DuplicatesFilter] {
-        presentKinds.map(DuplicatesFilter.kind)
+        scanState == nil && groups.isEmpty ? [] : DuplicateKind.allCases.map(DuplicatesFilter.kind)
     }
 
     func groupCount(_ filter: DuplicatesFilter) -> Int {
@@ -738,6 +738,13 @@ final class DuplicatesModel {
         // Not duplicates (§9): hidden for good, unless a new photo joined.
         let fresh = (snapshot.groups ?? []).filter { !isHidden($0) }
         if fresh != groups { groups = fresh }
+        // Opening on an empty kind while another has groups: show that one.
+        // A tap on an empty segment later is the user's choice and stays.
+        let kinds = Set(fresh.map(\.kind))
+        if case .kind(let chosen) = chosenFilter, !kinds.contains(chosen),
+           let first = DuplicateKind.allCases.first(where: kinds.contains) {
+            chosenFilter = .kind(first)
+        }
         assetsById = snapshot.assetsById
         coverage = snapshot.coverage
         scanState = snapshot.scanState

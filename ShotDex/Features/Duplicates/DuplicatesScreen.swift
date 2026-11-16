@@ -132,8 +132,12 @@ struct DuplicatesScreen: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .toolbar(hasMarks && !isRegular ? .hidden : .automatic, for: .tabBar)
-        .onChange(of: hasMarks) { navigation.hidesTabBar = hasMarks && !isRegular }
+        // Wide screens: no tab bar here, so the filter shares the row with
+        // Back and the title as the board draws it (iPadOS 26 puts the tab
+        // bar in that row and pushed the filter below it).
+        .toolbar(hasMarks || isRegular ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: hasMarks) { navigation.hidesTabBar = hasMarks || isRegular }
+        .onAppear { if isRegular { navigation.hidesTabBar = true } }
         .onDisappear {
             navigation.hidesTabBar = false
             model.stopScoring()
@@ -168,6 +172,14 @@ struct DuplicatesScreen: View {
         }
         .toolbar {
             if isRegular {
+                // The principal filter hides the title on iPad: the title
+                // goes next to Back, as the board draws it.
+                if #available(iOS 26.0, *) {
+                    ToolbarItem(placement: .topBarLeading) { wideTitle }
+                        .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarLeading) { wideTitle }
+                }
                 ToolbarItem(placement: .principal) {
                     DuplicatesHeaderBand(model: model, isRegular: true).toolbarRow
                 }
@@ -194,6 +206,15 @@ struct DuplicatesScreen: View {
         .sensoryFeedback(.success, trigger: model.deleteSuccessCount)
         .animation(AppTheme.Motion.standard, value: hasMarks)
         .animation(AppTheme.Motion.standard, value: hudVisible)
+    }
+
+    /// The title beside Back on wide screens: plain text, never a glass
+    /// button, never truncated.
+    private var wideTitle: some View {
+        Text("Duplicates", comment: "Duplicates screen title, beside Back on wide screens")
+            .font(.headline)
+            .fixedSize()
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func sortMenu(_ model: DuplicatesModel) -> some View {
@@ -233,15 +254,28 @@ struct DuplicatesScreen: View {
         .accessibilityValue(model.sort.title)
     }
 
+    @ViewBuilder
     private func rescanButton(_ model: DuplicatesModel) -> some View {
-        Button {
-            model.startScan()
-        } label: {
-            Image(systemName: "arrow.clockwise")
+        // Wide screens have no status band with a Cancel: the button stops
+        // the check while one runs.
+        if isRegular, model.checkStep != nil {
+            Button {
+                model.cancelScan()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .tint(.primary)
+            .accessibilityLabel(String(localized: "Stop Checking", comment: "Duplicates toolbar on wide screens: stop the check in progress"))
+        } else {
+            Button {
+                model.startScan()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .tint(.primary)
+            .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
+            .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates toolbar: scan the library again"))
         }
-        .tint(.primary)
-        .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
-        .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates toolbar: scan the library again"))
     }
 
     // MARK: Cards
@@ -538,7 +572,7 @@ struct DuplicatesScreen: View {
                 Text(String(localized: "\(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(model.freedToday))) freed today",
                             comment: "Duplicates: space deleted from Duplicates today"))
             } actions: {
-                ForEach(model.presentFilters.filter { $0 != model.filter }, id: \.self) { filter in
+                ForEach(model.presentFilters.filter { $0 != model.filter && model.groupCount($0) > 0 }, id: \.self) { filter in
                     Button(String(localized: "Show \(filter.title) (\(model.groupCount(filter)))",
                                   comment: "Duplicates All reviewed: a kind that still has groups")) {
                         model.filter = filter
@@ -637,46 +671,30 @@ private struct DuplicatesHeaderBand: View {
     /// centered in the navigation bar, the status or the check's progress
     /// right of it — no band under the bar.
     var toolbarRow: some View {
-        // The principal item replaces the title on iPad, so the row draws
-        // it: title leading, filter centered on the row, status right of it
-        // (an empty twin of the status slot on the left keeps it centered).
-        ZStack(alignment: .leading) {
-            HStack(spacing: AppTheme.Spacing.md) {
-                Color.clear.frame(width: Self.toolbarStatusWidth, height: 1)
-                if !model.presentFilters.isEmpty {
-                    filterPicker
-                        .frame(width: Self.toolbarFilterWidth)
-                }
-                statusSlot
-                    .frame(width: Self.toolbarStatusWidth, alignment: .leading)
+        // Filter centered, and only a small spinner right of it while a check
+        // runs — no "Checked …" text (user, 2026-11-16). The empty twin on the
+        // left keeps the filter centered.
+        HStack(spacing: AppTheme.Spacing.md) {
+            Color.clear.frame(width: 20, height: 1)
+            if !model.presentFilters.isEmpty {
+                filterPicker
+                    .frame(width: Self.toolbarFilterWidth)
             }
-            .frame(maxWidth: .infinity)
-            Text("Duplicates", comment: "Duplicates screen title, drawn in the toolbar row on wide screens")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
+            Group {
+                if model.checkStep != nil {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel(String(localized: "Checking for duplicates", comment: "Duplicates wide toolbar: spinner while a check runs"))
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: 20, height: 20)
         }
-        .frame(maxWidth: .infinity)
     }
+
 
     static let toolbarFilterWidth: CGFloat = 340
-    static let toolbarStatusWidth: CGFloat = 220
-
-    @ViewBuilder
-    private var statusSlot: some View {
-        if let step = model.checkStep {
-            DuplicatesCheckProgress(step: step, cancel: model.cancelScan)
-        } else if let status = statusText {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(status.title)
-                    .font(.footnote.weight(.semibold))
-                Text(status.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .monospacedDigit()
-            .lineLimit(1)
-        }
-    }
 
     /// One segment per filter that has something — Exact · Similar · Burst,
     /// no All (§7.3); a PhotoKit burst is a Burst group (§4). A segmented

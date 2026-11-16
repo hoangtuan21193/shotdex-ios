@@ -182,16 +182,20 @@ tắt chỉ thêm một bước). Màn không ghi tổng "~GB to free" (người
 ### 7.3 Danh sách
 
 - Dải trên đóng băng (nền `.bar`): **hàng lọc** là segmented control hệ thống (người dùng 2026-10-22, thay hàng viên; iPhone/Duo ngoài trải hết bề ngang, màn rộng tối đa 420pt)
-  (A6): **Exact · Similar · Burst** (bracket/focus stack nằm trong Burst), mỗi đoạn kèm số nhóm; loại không có nhóm thì ẩn. **Không có All**
+  (A6): **Exact · Similar · Burst** (bracket/focus stack nằm trong Burst), mỗi đoạn kèm số nhóm; luôn đủ ba đoạn (2026-11-16). **Không có All**
   (2026-10-21): luôn đúng một đoạn được chọn — mặc định Exact; đoạn đã nhớ mà hết nhóm thì chuyển sang đoạn đầu còn nhóm.
 - Dưới hàng lọc là **ô trạng thái cao cố định 54pt** (2026-11-10): tiến độ của bước đang chạy (§3, vạch + *Cancel*) hoặc
   hai dòng *"Checked 2 min ago"* / *"N photos not checked yet"* (*"Every photo checked"* khi không còn gì). Cao cố định để
   danh sách không xê dịch khi một lượt bắt đầu hay kết thúc — trước đó chạm vào vòng tròn lại mở Compare vì thẻ vừa trôi lên.
   Không *"~GB to free"*, không *"Reviewed x of y"* (người dùng 2026-10-22).
-- **Màn rộng (iPad, Duo trong)** — người dùng 2026-11-16 trên canvas iPad: **không có dải** dưới thanh điều hướng. Hàng lọc
-  (rộng 340) nằm **giữa thanh điều hướng**, cùng hàng chữ *Duplicates*; ngay bên phải (cách 12) là ô trạng thái rộng 220:
-  hai dòng *"Checked 2 min ago"* / *"Every photo checked"*, hoặc tiến độ bước đang chạy + *Cancel*. Thẻ bắt đầu ngay dưới
-  thanh. iPhone và Duo ngoài giữ dải như trên. Board `IP_Duplicates`, `DI_Duplicates`.
+- **Màn rộng (iPad, Duo trong)** — người dùng 2026-11-16 trên canvas iPad: **không có dải** dưới thanh điều hướng và
+  **không có tab bar** trên màn này (iPadOS 26 đặt tab bar vào hàng trên cùng, đẩy hàng lọc xuống dòng dưới). Một hàng:
+  Back · chữ *Duplicates* · hàng lọc (rộng 340) **giữa** · ⇅ ↻. **Không chữ "Checked …"**: lúc đang kiểm chỉ một vòng
+  xoay nhỏ bên phải hàng lọc, và nút ↻ thành ✕ (*Stop Checking*). iPhone và Duo ngoài giữ dải như trên. Board
+  `IP_Duplicates`, `DI_Duplicates`.
+- **Hàng lọc luôn đủ ba đoạn** Exact · Similar · Burst kể cả đoạn 0 nhóm (người dùng 2026-11-16: *"có khi hiện mỗi tab
+  Burst, phải luôn hiện chứ"*) — thay luật "loại không có nhóm thì ẩn". Mở màn mà đoạn đã nhớ trống thì chuyển sang đoạn
+  đầu có nhóm; chạm vào đoạn trống thì ở lại và thấy *No Duplicates*.
 - **Thứ tự đứng yên**: mỗi nhóm giữ chỗ nó có lúc mới hiện; điểm chấm về không sắp lại danh sách; nhóm mới nối cuối; chỉ
   đổi kiểu sắp xếp mới sắp lại cả danh sách. Mã nhóm = mã ảnh nhỏ nhất trong nhóm, nên đổi bản giữ không đổi thẻ.
 - Màn rộng: thẻ xếp theo **hàng** cột đều (không masonry — masonry chia lại cột mỗi khi một thẻ thu gọn, thẻ dưới tay
