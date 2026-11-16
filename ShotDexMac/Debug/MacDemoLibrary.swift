@@ -60,6 +60,8 @@ enum MacDemoLibrary {
         if section == "onServer" { seedOnServer(dependencies) }
         // `editPhotos` (board `MAC_EditPhotos`): every photo is a Photos library picture only.
         if section == "editPhotos" { seedPhotosOnly(dependencies) }
+        // `resize` (board `MAC_Compress`): the 8 newest photos from four sources.
+        if section == "resize" { seedResize(dependencies) }
         if section == "duplicates" { seedDuplicates(dependencies) }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
@@ -473,6 +475,32 @@ enum MacDemoLibrary {
         }
         try? store.upsert(records)
         try? store.replaceGroups(groups, scannedAt: Date())
+    }
+
+    private static func seedResize(_ dependencies: MacDependencies) {
+        let now = Int(Date().timeIntervalSince1970)
+        try? dependencies.database.writer.write { db in
+            for (id, kind, name) in [("demo-japan", "folder", "2026 Japan"), ("demo-t7", "drive", "T7 RAW Archive"), ("demo-nas", "server", "NAS Home")] {
+                try db.execute(sql: "INSERT OR REPLACE INTO sources (id, kind, name, pairsRawAndJpeg, createdAt) VALUES (?, ?, ?, 1, ?)",
+                               arguments: [id, kind, name, now])
+            }
+            let newest = try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata WHERE mediaType = 1 ORDER BY creationDate DESC LIMIT 8")
+            // 2 in a folder, 3 in Photos, 2 on a drive, 1 only on the NAS — the board's mix.
+            let plan: [(String, String?)] = [("file", "demo-japan"), ("file", "demo-japan"), ("photos", nil), ("photos", nil),
+                                             ("file", "demo-t7"), ("file", "demo-t7"), ("server", "demo-nas"), ("photos", nil)]
+            for (assetId, (kind, source)) in zip(newest, plan) {
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO photo_copies (id, photoId, sourceId, kind, photoKitId, relativePath, relativePathKey, isOnline, lastSeenAt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                    """, arguments: ["demo-rs:" + assetId, assetId, source ?? PhotoLibrarySource.id, kind,
+                                     kind == "photos" ? assetId : nil, kind == "photos" ? nil : "2026/" + assetId,
+                                     kind == "photos" ? nil : ("2026/" + assetId).lowercased(), now])
+                // The NAS one is on the NAS only: its other copies go.
+                if kind == "server" {
+                    try db.execute(sql: "DELETE FROM photo_copies WHERE photoId = ? AND id <> ?", arguments: [assetId, "demo-rs:" + assetId])
+                }
+            }
+        }
     }
 
     private static func seedPhotosOnly(_ dependencies: MacDependencies) {

@@ -111,16 +111,40 @@ final class MacExportActivity {
         /// Ended without a file: kept, so a failure on a photo the user has
         /// left (or an editor since closed) is still said somewhere.
         var failed = false
+        /// Finished and kept, so a run the user walked away from still says
+        /// how it went (Resize).
+        var finished = false
+        /// A Resize run: one at a time.
+        var isResize = false
     }
 
     private(set) var runs: [Run] = []
 
-    func begin(title: String, detail: String, name: String) -> UUID {
-        // A new export: older failures have been seen or are moot.
-        runs.removeAll(where: \.failed)
-        let run = Run(title: title, detail: detail, name: name)
+    /// A Resize run is still writing or removing.
+    var isResizing: Bool { runs.contains { $0.isResize && !$0.failed && !$0.finished } }
+
+    func begin(title: String, detail: String, name: String, isResize: Bool = false) -> UUID {
+        // A new run: older endings have been seen or are moot.
+        runs.removeAll { $0.failed || $0.finished }
+        var run = Run(title: title, detail: detail, name: name)
+        run.isResize = isResize
         runs.append(run)
         return run.id
+    }
+
+    /// A run's progress line ("3 of 8").
+    func update(_ id: UUID, detail: String) {
+        guard let index = runs.firstIndex(where: { $0.id == id }) else { return }
+        runs[index].detail = detail
+    }
+
+    /// A run that ends with a line of its own to keep: what it did, or what went wrong.
+    func finish(_ id: UUID, title: String, detail: String, failed: Bool) {
+        guard let index = runs.firstIndex(where: { $0.id == id }) else { return }
+        runs[index].title = title
+        runs[index].detail = detail
+        runs[index].failed = failed
+        runs[index].finished = !failed
     }
 
     func end(_ id: UUID, note: MacExportNote) {

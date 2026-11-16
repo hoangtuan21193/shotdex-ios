@@ -6,6 +6,8 @@ import SwiftUI
 /// two library windows each menu command acts on the front one.
 struct MacLibraryTarget {
     var hasSelection: Bool
+    /// A photo is open in the viewer: Resize acts on it.
+    var viewerOpen = false
     var showsInspector: Bool
     var sort: SortOption
     var quickLook: () -> Void
@@ -20,6 +22,8 @@ struct MacLibraryTarget {
     var setSort: (SortOption) -> Void
     /// Image › Start Culling Pass ⌥⌘P (FS-18.02 §7).
     var startCull: () -> Void
+    /// Image › Resize… ⌥⌘R (FS-18.04 §4a).
+    var resize: () -> Void
     /// File › Upload to Server… ⇧⌘U (FS-15.02).
     var upload: () -> Void
 }
@@ -152,6 +156,9 @@ struct MacImageCommands: Commands {
             Button(String(localized: "Start Culling Pass", comment: "Mac menu: Image › Start Culling Pass")) { library?.startCull() }
                 .keyboardShortcut("p", modifiers: [.option, .command])
                 .disabled(library == nil)
+            Button(String(localized: "Resize…", comment: "Mac menu: Image › Resize… (the selected photos, smaller)")) { library?.resize() }
+                .keyboardShortcut("r", modifiers: [.option, .command])
+                .disabled(library?.hasSelection != true && library?.viewerOpen != true)
             Divider()
             // ⌘L hides; in Collections › Hidden it unhides (board `MAC_Hidden`).
             if let hidden {

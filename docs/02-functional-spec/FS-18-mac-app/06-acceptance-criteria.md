@@ -211,6 +211,11 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-196 | 04 §3c Export Defaults | demo, ShotDex › Settings…, Editing | RAW + JPEG Pairs › Edit the JPEG; Size › 4K; Format › JPEG, 90%; File Names `{date}_{original}`; Replace, Keep Both; Metadata › All Except Location | "Edit the JPEG"; "4K"; "JPEG · 90%"; "Example: 2026-09-28_DSC04218.jpg"; segmented đổi; "All Except Location" | ✅ `mac-settings-editing.json` |
 | AC-197 | 04 §3c thêm preset | như AC-196 | + ; Name "Client 2400"; Exact Size 2400 × 1600; Crop to Fill; HEIC; Quality; Save | dòng "Client 2400 · Resize · 2400 × 1600 · Fill · HEIC …"; đếm resize tăng | ✅ `mac-settings-editing.json` |
 | AC-198 | 04 §3c sửa, xoá | như AC-197 | Edit… đổi tên, Cancel; Edit… "Client 3000", Save; − ; Delete; chọn 4K | Cancel không đổi; "Client 3000"; hỏi "Delete “Client 3000”?" rồi mất; 4K: − và Edit… mờ; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-settings-editing.json` |
+| AC-199 | 04 §4a mở | demo `-ShotDexSection resize -ShotDexResizeTest` | — | trang Resize "8 photos · … from N sources", preview trước/sau, bảng 8 hàng, hàng NAS "Not on this Mac", "7 of 8 photos", nút "Resize 7 Photos" | ✅ `mac-resize.json` |
+| AC-200 | 04 §4a preview, bảng | như AC-199 | kéo vạch chia; Whole Photo; 100%; bấm hàng NAS | vạch dời; ảnh đổi; hàng NAS: lý do, không nhãn Resized | ✅ `mac-resize.json` |
+| AC-201 | 04 §4a inspector | như AC-199 | Size 1080 px; Quality; Format JPEG; Metadata None; Save To › Choose Folder… (Esc) › ShotDex Resized; Remove originals bật/tắt; Inspector ×2 | ước lượng đổi; nút thành "Resize 7 Photos and Remove Originals" rồi về | ✅ `mac-resize.json` |
+| AC-202 | 04 §4a chạy | như AC-201 | Resize 7 Photos; Done | thẻ "7 saved · … smaller"; Show in Finder + Done; Done về thư viện | ✅ `mac-resize.json` |
+| AC-203 | 04 §4a xoá bản gốc | demo mới | Remove originals; Resize; Show in Finder | thẻ có "originals removed" (đường xoá của demo không xoá gì thật); folder mở; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-resize.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

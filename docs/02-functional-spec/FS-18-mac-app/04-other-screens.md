@@ -334,6 +334,50 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
   là tên chế độ ("Panorama"), dòng phụ "8 photos · Sony A7 IV · FE 24-70mm F2.8 GM II"; toolbar Cancel · **Save**;
   dải khung, preview đang căn "Aligning frames, 6 of 8" + Stop; inspector Projection, Edges, Output, Save To.
 
+### 4a. Resize — đã dựng (row 42, 2026-11-17, board `MAC_Compress`)
+
+- **Lối vào:** Image › **Resize…** ⌥⌘R — ảnh đang chọn (chỉ ảnh, video bỏ qua), hay ảnh đang mở trong viewer. Trang thế
+  chỗ khu chi tiết của cửa sổ như Editor; ◀ / Cancel / Esc về chỗ cũ — cả khi đang chạy: lượt vẫn chạy, chỉ **Stop**
+  dừng nó. Đổi chỗ ở sidebar cũng vậy. Một lượt một lúc: ⌥⌘R khi một lượt còn chạy hỏi "A resize is still running".
+- **Toolbar:** ◀ · tiêu đề "Resize" + "8 photos · 194.3 MB from 4 sources" · Inspector (⌥⌘I) · Cancel · **Resize 8 Photos**
+  (viên accent chữ đen, ⌘↩). Bật Remove originals thì nút ghi "Resize 8 Photos and Remove Originals" (FS-03.07 §4, D4).
+- **Preview** trước/sau cao 372: trái bản gốc, phải **chính file sẽ ghi** (render, thu nhỏ theo preset, nén theo Quality
+  rồi đọc lại) — 100% là giữa ảnh ở pixel thật, bên phải là cùng vùng đó của file nhỏ phóng lên cho bằng; Fit là cả ảnh.
+  Vạch chia kéo được (VoiceOver: điều chỉnh ±5%). Nhãn: "Original · 7728×5152 · 44.1 MB", "Resized · 2048×1365 · JPEG 80% ·
+  ~1.3 MB" (tên preset), nút 100% / Whole Photo, "DSCF4127.RAF · 1 of 8". Làm ngoài main actor, thay đổi cuối thắng;
+  đổi ảnh thì xoá ngay hình cũ (vòng quay) chứ không để ảnh cũ dưới tên mới. Không preview trong lúc chạy.
+- **Bảng:** Name (ảnh nhỏ) · Source (biểu tượng theo loại) · Dimensions "7728×5152 → 2048×1365" · Original · Estimated ·
+  Saved (xanh, "−97%"); hàng tổng "8 photos from 4 sources | 194.3 MB | ~9.4 MB | −95%"; bấm hàng = preview ảnh đó. Ảnh
+  chỉ có trên server ghi "Not on this Mac" và bị bỏ qua: hàng tổng thành "7 of 8 photos", dưới bảng một câu "1 photo only
+  on NAS Home won’t be resized — its original isn’t on this Mac.", preview nói lý do, không có nhãn "Resized".
+- **Ước lượng:** số byte trên mỗi pixel đo bằng cách nén thật ảnh đang preview ở cỡ đích, nhân với số pixel đích của từng
+  ảnh — nhanh, "A fast estimate — the final size may differ slightly."
+- **Inspector 300:** Size (preset Resize, kể cả tự tạo — lấy luôn định dạng và chất lượng của nó; dòng "Long edge 2048 ·
+  Fit"), Quality and Format (Quality 10–100%, Format Same as Original / JPEG / HEIC, Metadata All / All Except Location /
+  None), Save To (popup: ShotDex Resized · Choose Folder…; câu "Library photos go back to Photos. Folder and NAS photos go
+  to Pictures › ShotDex Resized, never into the folder they came from."), **Remove originals after resizing** (mặc định
+  tắt; câu kể theo nguồn: Recently Deleted / Trash / bị ẩn trên NAS), thẻ "194.3 MB → ~9.4 MB" có thanh.
+- **Chạy:** từng ảnh một ngoài main actor (bộ nhớ một ảnh): bản gốc + bản sửa ShotDex của nó → preset → định dạng
+  (RAW và PNG/TIFF ra JPEG, HEIC giữ HEIC ở Same as Original) → ghi. Ảnh Photos thành ảnh mới trong Photos; ảnh thư mục,
+  ổ, NAS vào Pictures › ShotDex Resized (entitlement `assets.pictures.read-write`) hoặc folder đã chọn (bookmark), tên
+  gốc + đuôi mới, trùng thì " (2)". Không bao giờ ghi vào thư mục nguồn (folder đã chọn trùng thư mục ảnh thì ảnh đó báo
+  lỗi), không đụng bản gốc. Toolbar: "Resizing 3 of 8" + Stop (Stop tới được cả lúc đang render); Activity › Background có
+  dòng. Một ảnh lỗi thì sang ảnh sau và được kể tên kèm lý do.
+- **Remove originals** chỉ xoá **bản đã dùng để resize** của ảnh đã ghi được, qua đường Move to Trash (bản Photos: Photos
+  hỏi rồi vào Recently Deleted; file: vào Trash); các bản sao khác của ảnh giữ nguyên (FS-19.04 §1). Ổ không có Trash:
+  giữ bản gốc, không bao giờ xoá hẳn từ đây. Dừng giữa chừng: không xoá gì ("Originals kept because the run was
+  stopped."). Toolbar "Removing originals…" (không Stop). Bấm Don't Allow ở hộp của Photos: "You kept the originals in
+  Photos." (không phải lỗi).
+- **Xong:** inspector (tự hiện) có thẻ "8 saved · 185 MB smaller" thế chỗ thẻ ước lượng (+ "went back to Photos",
+  "originals removed", tên tối đa 3 ảnh lỗi với lý do, bỏ qua); toolbar **Show in Finder** (mở folder đích) + **Done**.
+  Màn ở lại tới khi Done. Activity › Background giữ dòng kết thúc ("Resized 8 photos · 185 MB smaller", hay "Resize
+  finished with problems") tới lượt sau — người đã rời trang vẫn biết.
+- **Demo:** `-ShotDexSection resize` mở 8 ảnh mới nhất từ bốn nguồn (thư mục, Photos, ổ, NAS);
+  `-ShotDexResizeTest` ghi vào thư mục tạm; ảnh "Photos" của demo không vào Photos, Remove originals của demo không
+  xoá gì thật (đường xoá của demo chỉ ghi dòng).
+- **Chưa dựng:** Fill kéo neo crop cho một ảnh, watermark, Share N Photos, Cancel gỡ bản đã ghi (Stop giữ những gì đã
+  ghi), tải ảnh chỉ có trên server về để resize, ⌥⌘O cửa sổ riêng.
+
 ## 5. Video Studio
 
 - Cửa sổ riêng (Window › Video Studio ⌥⌘V), tối thiểu **1180×760** ([01](01-window-and-navigation.md) §4).

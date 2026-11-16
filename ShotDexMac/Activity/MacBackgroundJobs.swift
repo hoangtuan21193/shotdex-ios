@@ -129,8 +129,8 @@ struct MacBackgroundJobs: View {
                             fraction: progress.total > 0 ? min(1, Double(progress.checked) / Double(progress.total)) : nil))
         }
         for run in dependencies.exports.runs {
-            rows.append(Row(id: "export-\(run.id)", symbol: run.failed ? "exclamationmark.triangle" : "square.and.arrow.up",
-                            title: run.title, detail: run.detail, isWaiting: run.failed))
+            rows.append(Row(id: "export-\(run.id)", symbol: run.failed ? "exclamationmark.triangle" : run.finished ? "checkmark.circle" : "square.and.arrow.up",
+                            title: run.title, detail: run.detail, isWaiting: run.failed || run.finished))
         }
         // A card import has its own card above (board `MAC_IngestProgress`).
         return rows

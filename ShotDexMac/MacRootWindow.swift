@@ -49,6 +49,8 @@ struct MacRootWindow: View {
     @State private var isLeavingRunPage = false
     /// A culling pass open as the window's page (board `MAC_Cull`, FS-18.02 §7).
     @State private var cullRequest: MacCullRequest?
+    /// Image › Resize… (board `MAC_Compress`): a page over the place it came from.
+    @State private var resize: MacResizeModel?
     /// The editor (board `MAC_Edit`): opened from the viewer, Back returns there.
     @State private var editor: MacEditorModel?
     @State private var editorZoom = MacViewerZoom.fit
@@ -59,6 +61,8 @@ struct MacRootWindow: View {
     @State private var viewerEditable = false
     /// The sidebar as it was before the pass hid it; put back when it closes.
     @State private var columnsBeforeCull: NavigationSplitViewVisibility?
+    /// Resize has the window as the editor does (board `MAC_Compress`): no sidebar; given back on leaving.
+    @State private var columnsBeforeResize: NavigationSplitViewVisibility?
     /// The pass being ordered off the main actor: a second ⌥⌘P waits for it.
     @State private var cullBuild: Task<Void, Never>?
     /// The photo open in the viewer (board `MAC_Viewer`); nil shows the grid.
@@ -196,6 +200,9 @@ struct MacRootWindow: View {
                     self.editor = nil
                 }
                 .id(ObjectIdentifier(editor))
+            } else if let resize {
+                MacResizePage(model: resize) { self.resize = nil }
+                    .id(resize.id)
             // A culling pass: a page over the place it came from (Back returns to it).
             } else if let cullRequest {
                 MacCullPage(request: cullRequest, menu: photoMenu, picture: Self.demoPicture,
@@ -275,6 +282,15 @@ struct MacRootWindow: View {
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
+        .onChange(of: resize == nil) { _, closed in
+            if closed {
+                if let before = columnsBeforeResize { columnVisibility = before }
+                columnsBeforeResize = nil
+            } else {
+                columnsBeforeResize = columnsBeforeViewer ?? columnVisibility
+                columnVisibility = .detailOnly
+            }
+        }
         .onChange(of: cullRequest == nil) { _, closed in
             guard closed, let before = columnsBeforeCull else { return }
             columnVisibility = before
@@ -304,6 +320,8 @@ struct MacRootWindow: View {
             viewerId = nil
             commonPhotosRunId = nil
             cullRequest = nil
+            // A run under way keeps going (Activity shows it); the page goes with its place.
+            resize = nil
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
             // Another place: the editor saves and goes with the viewer it came from.
@@ -1339,6 +1357,7 @@ struct MacRootWindow: View {
         var ids: [String] { selection?.ids ?? [] }
         return MacLibraryTarget(
             hasSelection: !(selection?.ids.isEmpty ?? true),
+            viewerOpen: viewerId != nil,
             showsInspector: showsInspector,
             sort: library.sort,
             quickLook: { photoMenu.quickLook(ids) },
@@ -1352,6 +1371,21 @@ struct MacRootWindow: View {
             toggleInspector: { showsInspector.toggle() },
             setSort: { library.sort = $0 },
             startCull: startCull,
+            resize: {
+                // The photo on screen in the viewer, else the selection.
+                let chosen = viewerId.map { [$0] } ?? ids
+                guard !chosen.isEmpty, resize == nil, editor == nil else { NSSound.beep(); return }
+                // One run at a time: a second one would race the first for the folder's names.
+                if dependencies.exports.isResizing {
+                    let alert = NSAlert()
+                    alert.messageText = String(localized: "A resize is still running", comment: "Mac Resize: a second run asked for while one runs")
+                    alert.informativeText = String(localized: "Activity shows how far it is. Resize these photos once it finishes.",
+                                                   comment: "Mac Resize: what to do")
+                    alert.runModal()
+                    return
+                }
+                resize = MacResizeModel(ids: chosen, dependencies: dependencies)
+            },
             upload: {
                 // One sheet at a time on this window: another one open, or an upload under way, wins.
                 guard !ids.isEmpty, uploadRequest == nil, !showsAddSource, serverForm == nil, smartAlbumForm == nil
@@ -1546,6 +1580,20 @@ struct MacRootWindow: View {
                     hasOpenedDemoViewer = true
                     try? await Task.sleep(for: .milliseconds(500))
                     startCull()
+                }
+            }
+            // `-ShotDexSection resize` (board `MAC_Compress`): the 8 newest photos in Resize.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "resize", resize == nil, library.items.count >= 8, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    // The photos the demo seeded with their four sources.
+                    let database = dependencies.database
+                    let ids = await Task.detached {
+                        (try? database.reader.read { db in
+                            try String.fetchAll(db, sql: "SELECT photoId FROM photo_copies WHERE id LIKE 'demo-rs:%' ORDER BY id")
+                        }) ?? []
+                    }.value
+                    resize = MacResizeModel(ids: ids, dependencies: dependencies)
                 }
             }
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.

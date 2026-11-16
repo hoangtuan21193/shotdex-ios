@@ -1,0 +1,321 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "resize",
+    "-ShotDexResizeTest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "resize.go",
+   "seconds": 25
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "resize"
+  },
+  {
+   "action": "dump",
+   "name": "resize"
+  },
+  {
+   "action": "drag",
+   "label": "resize.divider",
+   "dx": -200,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "resize.zoom"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Whole Photo",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "resize-whole"
+  },
+  {
+   "action": "click",
+   "label": "resize.zoom"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "100%",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "resize-fit"
+  },
+  {
+   "action": "click",
+   "label": "Not on this Mac"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "resize-server-row"
+  },
+  {
+   "action": "click",
+   "label": "resize.size"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "1080 px",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "resize.quality"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "resize.format"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "JPEG",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "resize.metadata"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "None",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "resize.saveTo"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "Choose Folder…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "resize.saveTo"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "click",
+   "label": "ShotDex Resized",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "resize.removeOriginals"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "resize-remove-on"
+  },
+  {
+   "action": "click",
+   "label": "resize.removeOriginals"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "resize.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "resize-no-inspector"
+  },
+  {
+   "action": "click",
+   "label": "resize.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "resize-set"
+  },
+  {
+   "action": "dump",
+   "name": "resize-set"
+  },
+  {
+   "action": "click",
+   "label": "resize.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "screenshot",
+   "name": "resize-done"
+  },
+  {
+   "action": "dump",
+   "name": "resize-done"
+  },
+  {
+   "action": "click",
+   "label": "resize.done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "resize-closed"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "resize",
+    "-ShotDexResizeTest"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "resize.go",
+   "seconds": 25
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "click",
+   "label": "resize.removeOriginals"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "resize.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "dump",
+   "name": "resize-removed"
+  },
+  {
+   "action": "click",
+   "label": "resize.reveal"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}
