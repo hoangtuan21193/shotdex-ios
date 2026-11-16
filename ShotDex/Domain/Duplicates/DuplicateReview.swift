@@ -428,6 +428,8 @@ struct DuplicateCardMetrics: Equatable {
     /// Regular width lays cards out in columns of at least this width (Z2).
     static let minimumCardWidth: CGFloat = 400
     static let cardSpacing: CGFloat = 16
+    /// Between the group bar (All Keep / All Trash, Keep All) and the tiles.
+    static let barGap: CGFloat = 10
 
     /// File name and size lines under a tile (Immich-style, user
     /// 2026-11-16) only when the tile is at least this big.

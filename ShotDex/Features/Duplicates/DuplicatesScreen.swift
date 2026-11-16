@@ -761,20 +761,23 @@ private struct DuplicateDecisionCard: View {
         // "to free", no notes, and every photo shown — no Show all. Every
         // photo the same size, in the group's own order (2026-11-10).
         let metrics = metrics.fitting(photoCount: group.count)
-        ZStack(alignment: .topLeading) {
-            ForEach(Array(group.members.enumerated()), id: \.element.id) { index, member in
-                let origin = metrics.origin(at: index)
-                VStack(alignment: .leading, spacing: DuplicateCardMetrics.infoGap) {
-                    tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, keeper: keeper)
-                    if metrics.showsInfo {
-                        info(member)
-                            .frame(width: metrics.tile, height: DuplicateCardMetrics.infoHeight, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: DuplicateCardMetrics.barGap) {
+            DuplicateGroupBar(group: group, model: model)
+            ZStack(alignment: .topLeading) {
+                ForEach(Array(group.members.enumerated()), id: \.element.id) { index, member in
+                    let origin = metrics.origin(at: index)
+                    VStack(alignment: .leading, spacing: DuplicateCardMetrics.infoGap) {
+                        tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, keeper: keeper)
+                        if metrics.showsInfo {
+                            info(member)
+                                .frame(width: metrics.tile, height: DuplicateCardMetrics.infoHeight, alignment: .topLeading)
+                        }
                     }
+                    .offset(x: origin.x, y: origin.y)
                 }
-                .offset(x: origin.x, y: origin.y)
             }
+            .frame(height: metrics.gridHeight(photoCount: group.count), alignment: .topLeading)
         }
-        .frame(height: metrics.gridHeight(photoCount: group.count), alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DuplicateCardMetrics.cardPadding)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
@@ -1265,6 +1268,77 @@ struct KeepTrashPill: View {
 }
 
 
+/// The bar over every group's photos, on every device (FS-06.06 §7.4,
+/// §7.4a — user 2026-11-16): All Keep / All Trash on the left, Keep All or
+/// Delete N on the right, the switch and the pill the same height.
+struct DuplicateGroupBar: View {
+    static let height: CGFloat = 32
+
+    let group: DuplicateGroup
+    let model: DuplicatesModel
+
+    private var markedIds: [String] {
+        group.members.map(\.assetId).filter { model.isMarked($0) }
+    }
+
+    var body: some View {
+        let marked = markedIds
+        let everyKept = marked.isEmpty
+        let everyTrashed = marked.count == group.count
+        return HStack(spacing: AppTheme.Spacing.md) {
+            HStack(spacing: 0) {
+                selectButton(String(localized: "All Keep", comment: "Duplicates card: take every Trash mark off this group"),
+                             symbol: "checkmark", isOn: everyKept) {
+                    withAnimation(AppTheme.Motion.standard) { model.keepEvery(in: group) }
+                }
+                selectButton(String(localized: "All Trash", comment: "Duplicates card: mark every photo of this group for Trash"),
+                             symbol: "trash", isOn: everyTrashed) {
+                    withAnimation(AppTheme.Motion.standard) { model.markAll(in: group) }
+                }
+            }
+            .padding(2)
+            .background(Color(.tertiarySystemFill), in: Capsule())
+            Spacer(minLength: 0)
+            if marked.isEmpty {
+                Button {
+                    withAnimation(AppTheme.Motion.standard) { model.toggleKeepAll(group) }
+                } label: {
+                    Label(String(localized: "Keep All", comment: "Duplicates card: keep every photo of this group"),
+                          systemImage: "checkmark")
+                        .barPill(fill: .accentColor)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button(role: .destructive) {
+                    let ids = Set(marked)
+                    Task { await model.delete(ids: ids) }
+                } label: {
+                    Label(String(localized: "Delete \(marked.count)", comment: "Duplicates card: delete this group's photos marked Trash"),
+                          systemImage: "trash")
+                        .barPill(fill: .red)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isDeleting)
+            }
+        }
+        .frame(height: DuplicateGroupBar.height)
+    }
+
+    private func selectButton(_ title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.footnote.weight(.semibold))
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(height: DuplicateGroupBar.height - 4)
+                .background(isOn ? Color(.systemFill) : .clear, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+}
+
 // MARK: - Wide-screen group rows (FS-06.06 §7.4a)
 
 /// One group on a wide screen, one row of the list: All Keep / All Trash on
@@ -1274,10 +1348,6 @@ struct KeepTrashPill: View {
 private struct DuplicateRowCard: View {
     static let padding: CGFloat = 12
     static let photoGap: CGFloat = 10
-    /// The top bar: the All Keep / All Trash switch and the action pill are
-    /// the same height (iPad board comment 2026-11-16).
-    static let barHeight: CGFloat = 32
-
     /// 240 on an iPad, smaller on the Duo's 669pt-tall inner screen, so two
     /// groups and more fit on screen.
     static func tile(containerHeight: CGFloat) -> CGFloat {
@@ -1288,14 +1358,10 @@ private struct DuplicateRowCard: View {
     let model: DuplicatesModel
     let tile: CGFloat
 
-    private var markedIds: [String] {
-        group.members.map(\.assetId).filter { model.isMarked($0) }
-    }
-
     var body: some View {
         let keeper = model.keeper(of: group)
         VStack(alignment: .leading, spacing: 10) {
-            topBar
+            DuplicateGroupBar(group: group, model: model)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: Self.photoGap) {
                     ForEach(group.members) { member in
@@ -1316,62 +1382,6 @@ private struct DuplicateRowCard: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(localized: "\(group.kind.title), \(group.count) photos",
                                    comment: "VoiceOver: a Duplicates group row on a wide screen"))
-    }
-
-    private var topBar: some View {
-        let marked = markedIds
-        let everyKept = marked.isEmpty
-        let everyTrashed = marked.count == group.count
-        return HStack(spacing: AppTheme.Spacing.md) {
-            HStack(spacing: 0) {
-                selectButton(String(localized: "All Keep", comment: "Duplicates wide card: take every Trash mark off this group"),
-                             symbol: "checkmark", isOn: everyKept) {
-                    withAnimation(AppTheme.Motion.standard) { model.keepEvery(in: group) }
-                }
-                selectButton(String(localized: "All Trash", comment: "Duplicates wide card: mark every photo of this group for Trash"),
-                             symbol: "trash", isOn: everyTrashed) {
-                    withAnimation(AppTheme.Motion.standard) { model.markAll(in: group) }
-                }
-            }
-            .padding(2)
-            .background(Color(.tertiarySystemFill), in: Capsule())
-            Spacer(minLength: 0)
-            if marked.isEmpty {
-                Button {
-                    withAnimation(AppTheme.Motion.standard) { model.toggleKeepAll(group) }
-                } label: {
-                    Label(String(localized: "Keep All", comment: "Duplicates wide card: keep every photo of this group"),
-                          systemImage: "checkmark")
-                        .barPill(fill: .accentColor)
-                }
-                .buttonStyle(.plain)
-            } else {
-                Button(role: .destructive) {
-                    let ids = Set(marked)
-                    Task { await model.delete(ids: ids) }
-                } label: {
-                    Label(String(localized: "Delete \(marked.count)", comment: "Duplicates wide card: delete this group's photos marked Trash"),
-                          systemImage: "trash")
-                        .barPill(fill: .red)
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isDeleting)
-            }
-        }
-        .frame(height: Self.barHeight)
-    }
-
-    private func selectButton(_ title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.footnote.weight(.semibold))
-                .padding(.horizontal, AppTheme.Spacing.md)
-                .frame(height: Self.barHeight - 4)
-                .background(isOn ? Color(.systemFill) : .clear, in: Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private func photo(_ member: HashedPhoto, keeper: HashedPhoto?) -> some View {
@@ -1400,12 +1410,12 @@ private struct DuplicateRowCard: View {
 }
 
 private extension View {
-    /// The wide card's action pill, as tall as the switch beside it.
+    /// The group bar's action pill, as tall as the switch beside it.
     func barPill(fill: Color) -> some View {
         font(.footnote.weight(.semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: DuplicateRowCard.barHeight)
+            .frame(height: DuplicateGroupBar.height)
             .background(fill, in: Capsule())
             .contentShape(Capsule())
     }

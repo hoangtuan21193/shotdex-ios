@@ -264,7 +264,7 @@ ngày (*"phí diện tích quá"*). Không còn lưới nhiều cột thẻ.
   Trash): 4 dòng 26pt — *File* · *Size* `12.2 MP · 2.3 MB` · *Date* `9/2/26, 10:41` (ngắn để vừa ô Duo) · *Albums* (tên / *In N albums* / *None*).
 - Không thanh xoá ở đáy, không ẩn tab bar khi có dấu (xoá từ nút của thẻ). Phím ↑/↓ chọn nhóm (vòng accent) và cuộn
   tới; K, R, Space như §14.8.
-- iPhone, Duo ngoài giữ lưới thẻ §7.4. Board `IP_Duplicates`, `DI_Duplicates`.
+- iPhone, Duo ngoài giữ lưới thẻ §7.4, nhưng **mỗi thẻ cũng mở đầu bằng thanh nhóm này** (All Keep | All Trash · Keep All / Delete N, 32pt, cách ảnh 10 — người dùng 2026-11-16, "đưa lên iPhone"); thanh xoá ở đáy vẫn giữ trên iPhone. Board `IP_Duplicates`, `DI_Duplicates`, `PH_Duplicates`, `DC_Duplicates`.
 
 ### 7.5 Thẻ bộ nguyên liệu
 
