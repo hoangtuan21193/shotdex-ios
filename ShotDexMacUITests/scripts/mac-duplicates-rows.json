@@ -1,0 +1,109 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "duplicates"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "00-rows"
+  },
+  {
+   "action": "dump",
+   "name": "00-rows"
+  },
+  {
+   "action": "click",
+   "label": "All Trash",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-all-trash"
+  },
+  {
+   "action": "click",
+   "label": "All Keep",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-all-keep"
+  },
+  {
+   "action": "key",
+   "text": "down",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "down",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "down",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02b-seven"
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "duplicates",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "03-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

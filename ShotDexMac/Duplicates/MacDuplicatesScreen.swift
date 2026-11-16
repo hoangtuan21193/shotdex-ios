@@ -5,10 +5,9 @@ import SwiftUI
 /// as iOS — a check only when asked, groups confirmed by Vision, a list that
 /// never re-orders under the pointer — drawn the Mac way. Title and the
 /// last check in the toolbar, sort / Check Again / the selection / Delete
-/// beside it, the kind filter and one fixed-height status line over a grid
-/// of cards. Every photo in a card is the same size (user, 2026-11-10); the
-/// suggested one carries "Suggested", each photo a Keep / Trash pill. A click on a photo marks it; the right
-/// click has Keep Just This One, Keep All and Not Duplicates.
+/// beside it, the kind filter and one fixed-height status line over a list
+/// with one row per group, as on the iPad (§7.4a, user 2026-11-16): the
+/// group bar, the photos side by side at one size, the facts under each.
 struct MacDuplicatesScreen: View {
     @Environment(MacDependencies.self) private var dependencies
     @State private var showsQuickClean = false
@@ -18,12 +17,8 @@ struct MacDuplicatesScreen: View {
 
     private var model: DuplicatesModel { dependencies.duplicates }
 
-    /// Cards are at least this wide; the board fits two beside a 228 sidebar.
-    static let minimumCardWidth: CGFloat = 420
     static let cardSpacing: CGFloat = 16
     static let margin: CGFloat = 24
-    /// Photos per card row (the board's four).
-    static let photosPerRow = 4
 
     var body: some View {
         @Bindable var model = model
@@ -145,6 +140,9 @@ struct MacDuplicatesScreen: View {
                 .frame(maxWidth: 520, alignment: .leading)
                 .frame(height: 44, alignment: .top)
         }
+        // Full width before the overlay: on the content's own width the hint
+        // sat on the kind picker (Mac screenshot 2026-11-16).
+        .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .topTrailing) {
             // Wide windows only: the hint must never sit on the picker.
             if !model.sortedGroups.isEmpty, containerWidth >= 900 { shortcutHint }
@@ -248,21 +246,16 @@ struct MacDuplicatesScreen: View {
         }
     }
 
-    /// Cards in rows of equal columns, in list order — never re-dealt.
+    /// One row per group, full width, in list order — never re-dealt
+    /// (FS-06.06 §7.4a, as on the iPad: user 2026-11-16).
     private var cards: some View {
-        let content = max(0, containerWidth - Self.margin * 2)
-        let count = max(1, Int((content + Self.cardSpacing) / (Self.minimumCardWidth + Self.cardSpacing)))
-        let cardWidth = (content - Self.cardSpacing * CGFloat(count - 1)) / CGFloat(count)
-        let metrics = DuplicateCardMetrics(innerWidth: cardWidth - DuplicateCardMetrics.cardPadding * 2,
-                                           copyColumns: Self.photosPerRow - 1)
-        let columns = Array(repeating: GridItem(.flexible(), spacing: Self.cardSpacing, alignment: .top), count: count)
-        return LazyVGrid(columns: columns, alignment: .leading, spacing: Self.cardSpacing) {
+        LazyVStack(alignment: .leading, spacing: Self.cardSpacing) {
             ForEach(model.sortedGroups) { group in
                 Group {
                     if model.isCollapsed(group) {
                         MacDuplicateFoldedRow(group: group, model: model)
                     } else {
-                        MacDuplicateCard(group: group, model: model, metrics: metrics)
+                        MacDuplicateRow(group: group, model: model)
                     }
                 }
                 .overlay {
@@ -466,28 +459,110 @@ private struct MacQuickCleanSheet: View {
 /// One group: every photo the same size, in the group's own order; each
 /// photo says Keep or Trash top right, the suggested one carries
 /// "Suggested", a marked one a red frame (§14.6).
-private struct MacDuplicateCard: View {
+/// One group on the Mac, one row of the list (FS-06.06 §7.4a, board
+/// `MAC_Duplicates`): All Keep / All Trash on the left, Keep All or Delete N
+/// on the right, the photos side by side at a fixed size — scrolling sideways
+/// when there are more than fit — and under each the facts that tell copies
+/// apart. A click on a photo marks it; the right click has Keep Just This
+/// One, Keep All and Not Duplicates.
+private struct MacDuplicateRow: View {
+    static let tile: CGFloat = 200
+    static let padding: CGFloat = 12
+    static let photoGap: CGFloat = 10
+    /// The switch and the pill are the same height.
+    static let barHeight: CGFloat = 28
+
     let group: DuplicateGroup
     let model: DuplicatesModel
-    let metrics: DuplicateCardMetrics
 
     var body: some View {
         let keeper = model.keeper(of: group)
-        ZStack(alignment: .topLeading) {
-            ForEach(Array(group.members.enumerated()), id: \.element.id) { index, member in
-                let origin = metrics.origin(at: index)
-                tile(member, keeper: keeper)
-                    .offset(x: origin.x, y: origin.y)
+        VStack(alignment: .leading, spacing: 10) {
+            bar
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: Self.photoGap) {
+                    ForEach(group.members) { member in
+                        VStack(spacing: 6) {
+                            tile(member, keeper: keeper)
+                            MacDuplicateFacts(member: member, model: model, isMarked: model.isMarked(member.assetId))
+                        }
+                        .frame(width: Self.tile)
+                    }
+                }
             }
         }
-        .frame(height: metrics.gridHeight(photoCount: group.count), alignment: .topLeading)
+        .padding(Self.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DuplicateCardMetrics.cardPadding)
         .background(MacTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MacTheme.separator))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(localized: "\(group.kind.title), \(group.count) photos", comment: "VoiceOver: a Duplicates card"))
         .onAppear { model.loadTraits(for: group) }
+    }
+
+    private var bar: some View {
+        let marked = group.members.map(\.assetId).filter { model.isMarked($0) }
+        return HStack(spacing: 12) {
+            HStack(spacing: 0) {
+                segment(String(localized: "All Keep", comment: "Duplicates card: take every Trash mark off this group"),
+                        symbol: "checkmark", isOn: marked.isEmpty) {
+                    withAnimation(.easeOut(duration: 0.15)) { model.keepEvery(in: group) }
+                }
+                segment(String(localized: "All Trash", comment: "Duplicates card: mark every photo of this group for Trash"),
+                        symbol: "trash", isOn: marked.count == group.count) {
+                    withAnimation(.easeOut(duration: 0.15)) { model.markAll(in: group) }
+                }
+            }
+            .padding(2)
+            .background(MacTheme.fill, in: Capsule())
+            Spacer(minLength: 0)
+            if marked.isEmpty {
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { model.toggleKeepAll(group) }
+                } label: {
+                    pill(String(localized: "Keep All", comment: "Duplicates card: keep every photo of this group"),
+                         symbol: "checkmark", fill: MacTheme.accentFill, text: MacTheme.onAccentFill)
+                }
+                .buttonStyle(.plain)
+                .help(String(localized: "Keep every photo of this group", comment: "Mac Duplicates card tooltip"))
+            } else {
+                Button {
+                    let ids = Set(marked)
+                    Task { await model.delete(ids: ids) }
+                } label: {
+                    pill(String(localized: "Delete \(marked.count)", comment: "Duplicates card: delete this group's photos marked Trash"),
+                         symbol: "trash", fill: .red, text: .white)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isBusy)
+                .help(String(localized: "Delete this group's photos marked Trash", comment: "Mac Duplicates card tooltip"))
+            }
+        }
+        .frame(height: Self.barHeight)
+    }
+
+    private func segment(_ title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 10)
+                .frame(height: Self.barHeight - 4)
+                .background(isOn ? MacTheme.segmentOn : .clear, in: Capsule())
+                .shadow(color: isOn ? MacTheme.segmentShadow : .clear, radius: 1, y: 0.5)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    private func pill(_ title: String, symbol: String, fill: Color, text: Color) -> some View {
+        Label(title, systemImage: symbol)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(text)
+            .padding(.horizontal, 12)
+            .frame(height: Self.barHeight)
+            .background(fill, in: Capsule())
+            .contentShape(Capsule())
     }
 
     private func tile(_ member: HashedPhoto, keeper: HashedPhoto?) -> some View {
@@ -496,7 +571,7 @@ private struct MacDuplicateCard: View {
         let caption = isKeeper ? [] : model.caption(of: member, in: group, keeper: keeper)
         return MacDuplicateTile(
             asset: model.assetsById[member.assetId],
-            side: metrics.tile,
+            side: Self.tile,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
             caption: caption.first
@@ -534,6 +609,68 @@ private struct MacDuplicateCard: View {
                             ? String(localized: "Trash", comment: "VoiceOver: state of a tile marked for deletion")
                             : String(localized: "Keep", comment: "VoiceOver: state of a tile that stays"))
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// The rows under a photo: what tells two copies apart (as on the iPad).
+private struct MacDuplicateFacts: View {
+    let member: HashedPhoto
+    let model: DuplicatesModel
+    let isMarked: Bool
+
+    var body: some View {
+        let albums = model.traits(of: member.assetId).albums
+        VStack(spacing: 0) {
+            row("doc", String(localized: "File", comment: "Duplicates wide card: file name row"), member.originalFilename ?? "—")
+            Divider()
+            row("aspectratio", String(localized: "Size", comment: "Duplicates wide card: dimensions and file size row"), size)
+            Divider()
+            row("calendar", String(localized: "Date", comment: "Duplicates wide card: capture date row"), date)
+            Divider()
+            row("rectangle.stack", String(localized: "Albums", comment: "Duplicates wide card: albums row"),
+                albums.isEmpty
+                    ? String(localized: "None", comment: "Duplicates wide card: the photo is in no album")
+                    : albums.count == 1 ? albums[0]
+                    : String(localized: "In \(albums.count) albums", comment: "Duplicates wide card: number of albums the photo is in"))
+        }
+        .background(isMarked ? Color.red.opacity(0.1) : MacTheme.fill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private var size: String {
+        var parts: [String] = []
+        if let width = member.width, let height = member.height {
+            let megapixels = (Double(width * height) / 1_000_000).formatted(.number.precision(.fractionLength(0...1)))
+            parts.append(String(localized: "\(megapixels) MP", comment: "Duplicates wide card: photo resolution in megapixels"))
+        }
+        if let bytes = member.fileSize { parts.append(DuplicatesModel.byteFormatter.string(fromByteCount: Int64(bytes))) }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private var date: String {
+        guard let seconds = member.creationDate else { return "—" }
+        return Date(timeIntervalSince1970: TimeInterval(seconds))
+            .formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day().hour().minute())
+    }
+
+    private func row(_ symbol: String, _ label: String, _ value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+            Text(label)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Spacer(minLength: 6)
+            Text(value)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .layoutPriority(1)
+                .truncationMode(.middle)
+                .monospacedDigit()
+        }
+        .font(.system(size: 11))
+        .padding(.horizontal, 10)
+        .frame(height: 24)
     }
 }
 

@@ -58,6 +58,7 @@ enum MacDemoLibrary {
         // drive (the copy they open from) and on the NAS — three copies each.
         if section == "deleteCopies" { seedDeleteCopies(dependencies) }
         if section == "onServer" { seedOnServer(dependencies) }
+        if section == "duplicates" { seedDuplicates(dependencies) }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {
@@ -444,6 +445,33 @@ enum MacDemoLibrary {
     /// Shared (on the server), 20 have a file of their size there still
     /// unhashed (being checked).
     static let onServerAlbumId = "demo-on-server"
+
+    /// `-ShotDexSection duplicates` (board `MAC_Duplicates`): three exact
+    /// groups already checked — two photos, four, and seven (wider than the
+    /// row, so it scrolls sideways). The demo's photos are no PHAssets, so
+    /// the model keeps groups whose assets it cannot fetch and the tiles
+    /// draw their empty fill.
+    private static func seedDuplicates(_ dependencies: MacDependencies) {
+        DuplicatesModel.keepsGroupsWithoutAssets = true
+        let sets: [[String]] = [
+            ["demo-0-0", "demo-0-1"],
+            (0..<4).map { "demo-1-\($0)" },
+            (10..<17).map { "demo-1-\($0)" },
+        ]
+        let store = dependencies.perceptualHashStore
+        var records: [PerceptualHashRecord] = []
+        var groups: [DuplicateGroup] = []
+        for (index, ids) in sets.enumerated() {
+            let hash = PerceptualHash(bits: 0x0F0F_3C3C_5A5A_0000 &+ UInt64(index))
+            records += ids.map { PerceptualHashRecord(assetId: $0, hash: hash, modificationDate: nil, computedAt: 1) }
+            let members = ids.map {
+                HashedPhoto(assetId: $0, hash: hash, width: 6000, height: 4000, fileSize: 24_000_000, creationDate: nil, isFavorite: false)
+            }
+            groups.append(DuplicateGroup(members: members, kind: .exact))
+        }
+        try? store.upsert(records)
+        try? store.replaceGroups(groups, scannedAt: Date())
+    }
 
     private static func seedOnServer(_ dependencies: MacDependencies) {
         let now = Int(Date().timeIntervalSince1970)

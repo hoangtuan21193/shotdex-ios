@@ -659,6 +659,11 @@ final class DuplicatesModel {
         let qualityStore = DuplicateQualityStore(database: dependencies.database)
         let retryingFailed = allowNetworkForScanning
         let knownBursts = burstGroups
+        #if DEBUG
+        let keepsMissingAssets = Self.keepsGroupsWithoutAssets
+        #else
+        let keepsMissingAssets = false
+        #endif
         loadTask = Task { [weak self] in
             let bursts = await self?.readBursts(known: knownBursts) ?? (groups: [], assets: [:])
             let result = await Task.detached(priority: .userInitiated) { () -> CacheSnapshot in
@@ -684,7 +689,7 @@ final class DuplicatesModel {
                 var assetsById = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
                 // Members whose PHAsset is gone (deleted outside the app) drop
                 // out; groups that fall to one member vanish.
-                groups = groups.compactMap { group in
+                groups = keepsMissingAssets ? groups : groups.compactMap { group in
                     let present = group.members.filter { assetsById[$0.assetId] != nil }
                     return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
                 }
@@ -733,6 +738,13 @@ final class DuplicatesModel {
         var cloudOnlyCount = 0
     }
 
+
+    #if DEBUG
+    /// The Mac demo library (`-ShotDexDemoLibrary -ShotDexSection
+    /// duplicates`): its photos are no PHAssets, so their seeded groups stay
+    /// on screen to be photographed. Set once before the first load.
+    nonisolated(unsafe) static var keepsGroupsWithoutAssets = false
+    #endif
 
     private func apply(_ snapshot: CacheSnapshot) {
         // Not duplicates (§9): hidden for good, unless a new photo joined.
