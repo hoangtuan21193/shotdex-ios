@@ -58,6 +58,9 @@ struct MacEditorInspector: View {
                 } else if model.tool == .mask {
                     MacEditorMaskSections(model: model)
                         .padding(.top, 8)
+                } else if model.tool == .markup {
+                    MacEditorMarkupSections(model: model)
+                        .padding(.top, 8)
                 } else if model.tool == .heal {
                     MacEditorHealSections(model: model)
                         .padding(.top, 8)

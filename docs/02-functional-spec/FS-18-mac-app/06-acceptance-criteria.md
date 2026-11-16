@@ -189,6 +189,10 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-174 | 03 §1e vùng cọ | như AC-173 | Subtract › Brush; Size 40; kéo trên trời; Erase; kéo | "Sky − Brush"; "1 strokes" rồi "2 strokes"; vùng trừ thấy trên lớp đỏ | ✅ `mac-editor-mask.json` |
 | AC-175 | 03 §1e gradient | như AC-173 | Show Overlay/Invert bật tắt; + › Linear Gradient, kéo; Feather 70; Intersect › Radial, kéo | "Mask 2, Linear ∩ Radial" | ✅ `mac-editor-mask.json` |
 | AC-176 | 03 §1e menu mask | như AC-173 | chuột phải › Rename "Sky fix"; Duplicate; Delete bản sao; Reset Mask Adjustments; 👁 ×2; ⌘Z; Esc; Back | tên đổi; bản sao có rồi mất; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-mask.json` |
+| AC-177 | 03 §1f lớp chữ | demo `-ShotDexSection viewer`, ⌘E, Markup | Text; gõ "Skógafoss"; Font Georgia; Semibold; I ×2; căn ×3; 60 px; Cam, Trắng; Shadow 40; Opacity 90 | "Text 1, Skógafoss · System 18 px" rồi "· Georgia 60 px" | ✅ `mac-editor-markup.json` |
+| AC-178 | 03 §1f trên ảnh | như AC-177 | kéo chữ lên; kéo núm xoay; kéo tay nắm góc ra ngoài | chữ dời; nhãn góc đổi; cỡ khác 60 px | ✅ `mac-editor-markup.json` |
+| AC-179 | 03 §1f hình, kính lúp | như AC-177 | Arrow; Line 6; Rectangle; Filled; Magnifier; Zoom 300 | "Arrow 1, Orange · 6 pt"; "Magnifier 1, 300% zoom"; Signature mờ | ✅ `mac-editor-markup.json` |
+| AC-180 | 03 §1f danh sách | như AC-177 | 👁 ×2; Send to Back; bấm hình trên ảnh, Delete; ⌘Z; 🗑; Esc; Back | xoá rồi về; 🗑 xoá; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-markup.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

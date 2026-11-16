@@ -143,7 +143,7 @@ struct MacEditorToolbar: ToolbarContent {
     }
 }
 
-/// Adjust · Crop · Mask · Heal · Markup (316): all but Markup here (row 36).
+/// Adjust · Crop · Mask · Heal · Markup (316).
 private struct MacEditorTools: View {
     @Bindable var model: MacEditorModel
 
@@ -153,7 +153,7 @@ private struct MacEditorTools: View {
             live(.crop, String(localized: "Crop", comment: "Mac editor tool"))
             live(.mask, String(localized: "Mask", comment: "Mac editor tool"))
             live(.heal, String(localized: "Heal", comment: "Mac editor tool"))
-            tool(String(localized: "Markup", comment: "Mac editor tool"), isOn: false)
+            live(.markup, String(localized: "Markup", comment: "Mac editor tool"))
         }
         .padding(2)
         .background(MacTheme.Editor.glass, in: Capsule())
@@ -179,16 +179,6 @@ private struct MacEditorTools: View {
         .accessibilityIdentifier("editor.tool.\(tool.rawValue)")
     }
 
-    private func tool(_ title: String, isOn: Bool) -> some View {
-        Text(title)
-            .font(.system(size: 13, weight: isOn ? .semibold : .regular))
-            .foregroundStyle(isOn ? MacTheme.Editor.label : MacTheme.Editor.secondaryText.opacity(0.7))
-            .frame(maxWidth: .infinity, minHeight: 32)
-            .background(isOn ? MacTheme.Editor.pressed : Color.clear, in: Capsule())
-            .help(isOn ? "" : String(localized: "\(title) comes in a later version", comment: "Mac editor: a tool not built yet"))
-            .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : [])
-            .accessibilityValue(isOn ? "" : String(localized: "Not available yet", comment: "Mac editor: a tool not built yet, VoiceOver"))
-    }
 }
 
 private struct MacEditorSaveStatus: View {
@@ -274,6 +264,8 @@ private struct MacEditorCanvas: View {
                                         MacEditorCropOverlay(model: model, imageRect: rect)
                                     } else if model.tool == .mask, !model.showsBefore {
                                         MacEditorMaskOverlay(model: model, imageRect: rect)
+                                    } else if model.tool == .markup, !model.showsBefore {
+                                        MacEditorMarkupOverlay(model: model, imageRect: rect)
                                     } else if model.tool == .heal, !model.showsBefore {
                                         MacEditorHealOverlay(model: model, imageRect: rect)
                                     } else if model.isPickingColor {

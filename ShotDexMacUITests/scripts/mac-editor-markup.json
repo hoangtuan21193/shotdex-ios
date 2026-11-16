@@ -1,0 +1,480 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.tool.markup"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "No layers yet. Add text, a shape, an arrow or a magnifier below."
+  },
+  {
+   "action": "assertDisabled",
+   "label": "editor.markup.add.signature"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.add.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.markup.text"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.text"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "Skógafoss\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "Text 1, Skógafoss · System 18 px"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.font"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Georgia",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.weight"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Bold",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.italic"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.italic"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.align"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.align"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.align"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.textSize"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "60\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "Text 1, Skógafoss · Georgia 60 px"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.swatch.Orange"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.swatch.White"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Shadow value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "40\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Opacity value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "90\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "x": 0.387,
+   "y": 0.778,
+   "dx": 0,
+   "dy": -300
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "label": "editor.markup.rotate",
+   "dx": -60,
+   "dy": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "dx": 50,
+   "dy": -25,
+   "label": "editor.markup.handle",
+   "index": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Text 1, Skógafoss · Georgia 60 px"
+  },
+  {
+   "action": "screenshot",
+   "name": "markup-text"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.add.arrow"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Arrow 1, Orange · 2 pt"
+  },
+  {
+   "action": "click",
+   "label": "Line value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "6\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.add.rectangle"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.filled"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.add.magnifier"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Zoom value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "300\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "Magnifier 1, 300% zoom"
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.visible",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.visible",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "label": "Rectangle 1, White · 2 pt"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Send to Back",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Rectangle 1, White · 2 pt"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.387,
+   "y": 0.484
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Rectangle 1, White · 2 pt"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "Rectangle 1, White · 2 pt"
+  },
+  {
+   "action": "click",
+   "label": "Rectangle 1, White · 2 pt"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.markup.row",
+   "index": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "dump",
+   "name": "markup-final"
+  },
+  {
+   "action": "screenshot",
+   "name": "markup-final"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.group.light"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

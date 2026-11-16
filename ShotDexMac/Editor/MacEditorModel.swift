@@ -1,5 +1,7 @@
 import CoreGraphics
 import CoreImage
+import ImageIO
+import UniformTypeIdentifiers
 import Foundation
 import GRDB
 import ShotDexKit
@@ -21,7 +23,7 @@ final class MacEditorModel {
     /// The tool the toolbar's capsule has on (rows 31–32; Mask, Heal and
     /// Markup are rows 34–36).
     enum Tool: String, CaseIterable, Identifiable {
-        case adjust, crop, mask, heal
+        case adjust, crop, mask, heal, markup
         var id: String { rawValue }
     }
 
@@ -194,6 +196,7 @@ final class MacEditorModel {
         activeStroke = nil
         thumbnailKey = nil
         brushErases = false
+        markupNote = nil
         resolvedAutoAreas = []
         emptyAutoAreas = []
         selectedPointColorId = nil
@@ -201,6 +204,7 @@ final class MacEditorModel {
         selectedRedEyeId = nil
         selectedMaskId = nil
         selectedComponentId = nil
+        selectedOverlayId = nil
         maskThumbnails = [:]
         hiddenSpotIds = []
         offeredSources = [:]
@@ -405,6 +409,7 @@ final class MacEditorModel {
         if let id = selectedRedEyeId, !recipe.redEyes.contains(where: { $0.id == id }) { selectedRedEyeId = nil }
         if let id = selectedPointColorId, !recipe.color.points.contains(where: { $0.id == id }) { selectedPointColorId = nil }
         if let id = selectedMaskId, !recipe.masks.contains(where: { $0.id == id }) { selectMask(nil) }
+        if let id = selectedOverlayId, !recipe.overlays.contains(where: { $0.id == id }) { selectedOverlayId = nil }
         if selectedMaskId != nil, let id = selectedComponentId, selectedMask?.components.contains(where: { $0.id == id }) != true {
             selectedComponentId = selectedMask?.components.last?.id
         }
@@ -453,6 +458,80 @@ final class MacEditorModel {
             if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
         }
         if inOneStep { apply(update) } else { change(update) }
+    }
+
+    // MARK: Markup (FS-18.03 §1f)
+
+    var selectedOverlayId: UUID?
+    /// A new text layer: its words field takes the keys, words selected.
+    var focusesLayerWords = 0
+    /// A layer picked in the list or just added (not text): the photo takes the keys, so Delete reaches it.
+    var givesCanvasKeys = 0
+    var selectedOverlay: PhotoOverlay? { recipe.overlays.first { $0.id == selectedOverlayId } }
+    /// Where a signature or picture layer's image is kept (the kit's store, shared with the renderer).
+    nonisolated static let overlayImages = OverlayImageStore()
+
+    /// Add Layer: a text, a shape or a magnifier in its kind's default place, picked.
+    func addOverlay(_ overlay: PhotoOverlay) {
+        var layer = overlay
+        if layer.kind == .text, layer.text.isEmpty {
+            layer.text = String(localized: "Text", comment: "Mac editor markup: a new text layer's words")
+        }
+        apply { $0.overlays.append(layer) }
+        selectedOverlayId = layer.id
+        if layer.kind == .text { focusesLayerWords += 1 } else { givesCanvasKeys += 1 }
+    }
+
+    /// Image…: a picture file chosen in the open panel, kept in the overlay store.
+    func addImageOverlay(from url: URL) {
+        let photo = currentId, generation = self.generation
+        Task { [weak self] in
+            let id: UUID? = await Task.detached(priority: .userInitiated) {
+                // At most 2048 px: the renderer keeps these images whole in its cache.
+                guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                      let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                          kCGImageSourceCreateThumbnailFromImageAlways: true,
+                          kCGImageSourceThumbnailMaxPixelSize: 2048,
+                          kCGImageSourceCreateThumbnailWithTransform: true,
+                      ] as CFDictionary) else { return nil }
+                let data = NSMutableData()
+                guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else { return nil }
+                CGImageDestinationAddImage(destination, image, nil)
+                guard CGImageDestinationFinalize(destination) else { return nil }
+                return try? Self.overlayImages.store(pngData: data as Data)
+            }.value
+            // Another photo opened meanwhile: the picture is not this one's.
+            guard let self, photo == self.currentId, generation == self.generation else { return }
+            guard let id else {
+                self.markupNote = String(localized: "ShotDex can't read that picture.", comment: "Mac editor markup: an image layer's file failed")
+                return
+            }
+            self.markupNote = nil
+            self.addOverlay(PhotoOverlay.image(id: id, assetIdentifier: nil))
+        }
+    }
+
+    /// Said under the layer list when a picture could not be added.
+    private(set) var markupNote: String?
+
+    func updateOverlay(_ id: UUID, inOneStep: Bool = true, _ body: @escaping (inout PhotoOverlay) -> Void) {
+        let update: (inout PhotoEditRecipe) -> Void = { recipe in
+            if let index = recipe.overlays.firstIndex(where: { $0.id == id }) { body(&recipe.overlays[index]) }
+        }
+        if inOneStep { apply(update) } else { change(update) }
+    }
+
+    func deleteOverlay(_ id: UUID) {
+        apply { $0.overlays.removeAll { $0.id == id } }
+        if selectedOverlayId == id { selectedOverlayId = nil }
+    }
+
+    /// "Text 1", "Arrow 2": the layer's kind and its place among layers of that kind.
+    func overlayTitle(_ overlay: PhotoOverlay) -> String {
+        if !overlay.name.isEmpty { return overlay.name }
+        let same = recipe.overlays.filter { MacMarkupWords.kindName($0) == MacMarkupWords.kindName(overlay) }
+        let number = (same.firstIndex { $0.id == overlay.id } ?? 0) + 1
+        return "\(MacMarkupWords.kindName(overlay)) \(number)"
     }
 
     // MARK: Mask (FS-18.03 §1e)

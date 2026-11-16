@@ -624,7 +624,7 @@ struct MacEditorValueRow: View {
     static func text(_ value: Double, _ format: Format) -> String {
         let rounded = Int(value.rounded())
         switch format {
-        case .degrees: return "\(rounded)°"
+        case .degrees: return rounded < 0 ? "\u{2212}\(-rounded)°" : "\(rounded)°"
         case .signed: return rounded > 0 ? "+\(rounded)" : rounded < 0 ? "\u{2212}\(-rounded)" : "0"
         case .plain: return "\(rounded)"
         case .pixels: return "\(rounded) px"

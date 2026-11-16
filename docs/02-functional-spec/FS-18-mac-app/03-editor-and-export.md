@@ -181,6 +181,33 @@ cùng renderer: vùng tự nhận (Subject, Sky, Object, People, Depth) do `Phot
 - Chưa có: People theo từng người/phần (iPhone có), đổi màu overlay, Color/Curve/Point Color riêng của mask
   (`tint`, `curve`, `pointColors`), kéo tay nắm gradient sau khi đặt (kéo lại là đặt lại), vùng mặt (Face Skin…).
 
+### 1f. Markup (row 36, 2026-11-17, board `MAC_EditMarkup`)
+
+`ShotDexMac/Editor/MacEditorMarkup.swift`. Cùng recipe với iPhone (`PhotoOverlay`): renderer nướng lớp vào khung hiện
+(không vào khung sạch); đo chữ/hình bằng `TextOverlayLayout` / `ShapeOverlayLayout` của kit nên khung chọn ôm đúng chữ.
+
+- **Markup** trong capsule (Esc về Adjust). Trên ảnh: bấm một lớp = chọn và kéo dời; bấm chỗ trống = bỏ chọn; lớp đang
+  chọn có khung trắng, 4 tay nắm góc (kéo = to/nhỏ theo khoảng cách tới tâm), núm xoay trên cuống + nhãn góc "−8°"
+  (dương = theo chiều kim đồng hồ, bắt 0° trong ±2°). Delete / ⌘⌫ sau khi bấm lớp trên ảnh = xoá lớp.
+- **Layers**: + ▾ (các loại thêm được), dòng: ô ký hiệu (hình mang màu của nó), "Text 1" / "Arrow 1", "Skógafoss ·
+  Georgia 60 px" / "Orange · 3 pt" / "300% zoom", 👁; trên cùng là lớp nằm trên. Chuột phải: Bring to Front · Send to
+  Back · Delete Layer.
+- **Add Layer** (11 nút theo board): Text · Image… (chọn file, lưu vào `OverlayImageStore`) · Signature · Pen ·
+  Highlighter (mờ, "comes in a later version" — cần khung vẽ PencilKit) · Rectangle · Oval · Speech Bubble · Arrow (cam)
+  · Line · Magnifier.
+- **Lớp đang chọn** (tên + 🗑 + ↺ Reset Style giữ chữ/chỗ/góc): Text — ô chữ (Return/rời ô là lưu), Font (System +
+  các họ có sẵn trên Mac: Helvetica Neue, Avenir Next, Futura, Georgia…), Weight (Light…Bold), B · I · căn lề (bấm
+  xoay vòng), cỡ "60 px" (gõ, hoặc ▲▼ ×1.1); Color: giếng màu + Trắng · Đen · Cam · Đỏ; Opacity; Shadow. Hình: Color,
+  Filled (hình đổ được), Line px, Size px, Opacity. Kính lúp: Zoom %, Size, Opacity.
+- Thêm Text: ô chữ nhận phím ngay, chữ được chọn sẵn; mỗi lớp một ô chữ (chữ gõ dở không rơi sang lớp khác, rời ô / đổi
+  ảnh vẫn giữ). Lớp ẩn được chọn: khung mờ, không kéo được. Delete sau khi chọn lớp trên ảnh hoặc trong danh sách.
+  Weight chỉ liệt kê các mức họ chữ có; B mờ khi họ không có Bold (System: Regular/Bold). Núm xoay: nhấp đúp = 0°;
+  bắt 0/45/90…° trong ±2°; hàng **Turn** trong cài đặt lớp. Nhóm lớp đang chọn nằm trên lưới Add Layer; dưới lưới:
+  "Signature, Pen and Marker come in a later version." Ảnh chèn thu về ≤2048px khi nhập (ImageIO), đúng tỉ lệ thật.
+- Khác board: không có New York (mặt chữ hệ thống ẩn, renderer không mở được theo tên — ảnh sẽ âm thầm ra font khác);
+  không có U (gạch chân — recipe không có); token `{camera}`… chưa thay trên Mac (chữ hiện nguyên văn).
+- Chưa có: Signature/Pen/Highlighter, đổi tên lớp, chỉnh trong ô ảnh (bấm đúp vào chữ), kéo tay nắm bằng phím.
+
 ## 2. Hai kiểu lưu (D16)
 
 | Ảnh | Toolbar | Lưu |
