@@ -209,6 +209,9 @@ final class MacEditorModel {
         previewRecipe = nil
         previewName = nil
         presetNote = nil
+        // The one now open is the source, never a target of its own sync; a ⇧-click runs from here.
+        syncTargets.remove(ids[newIndex])
+        syncAnchor = newIndex
         historyBaseIsOpened = true
         snapshots = []
         filterThumbnails = [:]
@@ -472,6 +475,153 @@ final class MacEditorModel {
             if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
         }
         if inOneStep { apply(update) } else { change(update) }
+    }
+
+    // MARK: Sync (FS-18.03 §3)
+
+    /// Photos ⌘-clicked in the filmstrip besides the one open: the ones a sync writes to.
+    var syncTargets: Set<String> = []
+    /// The Sync sheet is up.
+    var asksSync = false
+    /// A photo the sync cannot write, and why — said in the sheet before anything is written.
+    struct SyncSkip: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let reason: String
+    }
+    private(set) var syncSkips: [SyncSkip] = []
+    private(set) var isCheckingSync = false
+    private(set) var isSyncing = false
+    /// "Syncing 2 of 4…" while the files are written.
+    private(set) var syncProgress: (done: Int, total: Int)?
+    private(set) var syncNote: String? {
+        didSet {
+            // The note says its piece and goes.
+            noteTask?.cancel()
+            guard syncNote != nil else { return }
+            noteTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled else { return }
+                self?.syncNote = nil
+            }
+        }
+    }
+    @ObservationIgnored private var noteTask: Task<Void, Never>?
+
+    /// ⌘-click: in or out of the sync; Shift-click: every photo between the last one picked and this.
+    @ObservationIgnored private var syncAnchor: Int?
+    func toggleSyncTarget(at index: Int, extending: Bool) {
+        guard ids.indices.contains(index) else { return }
+        let id = ids[index]
+        guard id != currentId else { return }
+        if extending, let anchor = syncAnchor {
+            for i in min(anchor, index)...max(anchor, index) where ids[i] != currentId { syncTargets.insert(ids[i]) }
+        } else if syncTargets.contains(id) {
+            syncTargets.remove(id)
+        } else {
+            syncTargets.insert(id)
+        }
+        syncAnchor = index
+    }
+
+    /// The targets a sync will write: picked, and not named in the skip list.
+    var writableSyncTargets: [String] {
+        let skipped = Set(syncSkips.map(\.id))
+        return orderedSyncTargets.filter { !skipped.contains($0) }
+    }
+
+    /// The order the filmstrip has them in.
+    var orderedSyncTargets: [String] { ids.filter { syncTargets.contains($0) } }
+
+    /// Opening the sheet: which photos cannot be written, worked out off the main actor.
+    @ObservationIgnored private var checkTask: Task<Void, Never>?
+
+    func checkSyncTargets() {
+        let targets = orderedSyncTargets, dependencies = self.dependencies, renderer = self.renderer
+        isCheckingSync = true
+        syncSkips = []
+        syncNote = nil
+        checkTask?.cancel()
+        checkTask = Task { [weak self] in
+            var skips: [SyncSkip] = []
+            for id in targets {
+                let name = await Task.detached(priority: .userInitiated) { Self.readDetails(id, database: dependencies.database).fileName }.value
+                guard let url = await Self.sourceURL(id, dependencies: dependencies) else {
+                    skips.append(SyncSkip(id: id, name: name, reason: await Self.unavailableReason(id, dependencies: dependencies)))
+                    continue
+                }
+                // The renderer is an actor: the decode check runs there, not on the main actor.
+                let readable = (try? await renderer.inspectSource(at: url)) != nil
+                if Task.isCancelled { return }
+                if !readable {
+                    skips.append(SyncSkip(id: id, name: name, reason: String(localized: "macOS can't read this file. Convert it to DNG, then sync again.",
+                                                                               comment: "Mac editor sync: a RAW the system cannot decode")))
+                }
+            }
+            guard let self, !Task.isCancelled, targets == self.orderedSyncTargets else { return }
+            self.syncSkips = skips
+            self.isCheckingSync = false
+        }
+    }
+
+    /// Sync: the ticked groups of this photo's edit onto each target that can take it.
+    /// Each photo keeps a step in its own Undo; files are written one after another.
+    func sync(_ groups: EditorSyncGroups) {
+        let source = recipe
+        let skipped = Set(syncSkips.map(\.id))
+        let targets = orderedSyncTargets.filter { !skipped.contains($0) }
+        guard !targets.isEmpty, !isSyncing else { return }
+        flushSave()
+        isSyncing = true
+        syncProgress = (0, targets.count)
+        let store = PhotoRecipeStore(database: dependencies.database), sidecars = dependencies.sidecarQueue
+        // After any autosave still on its way, never beside it: the last write wins.
+        let previous = writeTask
+        let run = Task { [weak self] in
+            await previous?.value
+            var written: [(id: String, before: PhotoEditRecipe, after: PhotoEditRecipe)] = []
+            var failedIds: [String] = []
+            for id in targets {
+                let pending = self?.written[id]
+                let result = await Task.detached(priority: .userInitiated) { () -> (PhotoEditRecipe, PhotoEditRecipe)? in
+                    // A recipe that cannot be read is not taken as empty: that would wipe its other groups.
+                    let before: PhotoEditRecipe
+                    if let pending { before = pending } else {
+                        // No row is an unedited photo; a read that throws is not.
+                        do { before = try store.recipe(photoId: id) ?? .identity } catch { return nil }
+                    }
+                    let after = groups.apply(source, onto: before)
+                    guard after != before else { return (before, after) }
+                    return (try? store.save(after, photoId: id)) != nil ? (before, after) : nil
+                }.value
+                if let result {
+                    written.append((id, result.0, result.1))
+                    if result.0 != result.1 { self?.written[id] = result.1 }
+                } else {
+                    failedIds.append(id)
+                }
+                self?.syncProgress = (written.count + failedIds.count, targets.count)
+            }
+            let changed = written.filter { $0.before != $0.after }
+            await sidecars.schedule(changed.map(\.id))
+            guard let self else { return }
+            for id in failedIds { self.failedIds.insert(id) }
+            for item in changed {
+                self.failedIds.remove(item.id)
+                var history = self.histories[item.id] ?? PhotoEditHistory()
+                history.record(item.before)
+                self.histories[item.id] = history
+                if item.after == .identity { self.editedIds.remove(item.id) } else { self.editedIds.insert(item.id) }
+            }
+            self.isSyncing = false
+            self.syncProgress = nil
+            // Done: the picks go, the strip is itself again, and the note says how to undo.
+            self.syncTargets = []
+            self.syncNote = failedIds.isEmpty
+                ? MacInflect.string("Synced to ^[\(changed.count) photo](inflect: true). ⌘Z in each photo undoes it.", comment: "Mac editor sync: done")
+                : MacInflect.string("Synced to ^[\(changed.count) photo](inflect: true); \(failedIds.count) couldn't be saved.", comment: "Mac editor sync: some failed")
+        }
+        writeTask = run
     }
 
     // MARK: Presets, Snapshots, History (FS-18.03 §1g)

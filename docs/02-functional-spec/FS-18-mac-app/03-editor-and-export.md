@@ -266,6 +266,29 @@ Dùng chung với iPhone: `LookPresetStore` (file Looks/looks.json), `PhotoFilte
 - Apply Previous, Auto Sync, nháp theo ảnh: theo [FS-03.09b](../FS-03-photo-editor/09b-batch-editing-and-reference.md).
 - Ô tick theo từng nhóm có trên **mọi thiết bị** (FS-03.09b thêm) — luật NF-05 ở [05](05-platform-and-distribution.md) §5.
 
+### 3a. Đã dựng (row 38, 2026-11-17, board `MAC_EditBatch`)
+
+`ShotDexMac/Editor/MacEditorSync.swift` + filmstrip. Nhóm và cách chép dùng chung với iPhone (`EditorSyncGroup`,
+`EditorSyncGroups.apply`, `.look` / `.everything`).
+
+- Filmstrip: **⌘-click** chọn thêm/bỏ một ảnh để đồng bộ, **⇧-click** chọn một dải (từ ảnh chọn trước); click thường
+  vẫn mở ảnh. Ảnh đang sửa vòng trắng 3, ảnh chọn vòng cam, ảnh khác tối đi. Cuối filmstrip "5 selected / of 226",
+  **Clear** và **Sync 4…** (⇧⌘S); dòng phụ toolbar "5 of 226 selected · máy · ống".
+- Sheet **"Sync to 4 Photos"** (640): "From DSC04111.HEIC to the other selected photos"; popup Sync Look / Sync
+  Everything / Custom (khi tick tay); cột The Look (15 nhóm) và This Frame Only (6 nhóm + câu giải thích), mỗi dòng ô
+  tick + chi tiết của ảnh này ("3 sliders", "off", "3:2 · +2.4°", số mask…); ảnh không ghi được nêu ngay trong sheet
+  với lý do (ảnh Photos, file không tới được, macOS không đọc được RAW — "Convert it to DNG…"), đọc ngoài main lúc
+  mở sheet ("Checking…"); Check All · Check None · Cancel (Esc) · **Sync N Photos** (Return; mờ khi đang kiểm, không
+  còn ảnh hay không tick gì). Bộ tick nhớ cho lần sau.
+- Đồng bộ: ghi lần lượt ngoài main (`PhotoRecipeStore` + sidecar), mỗi ảnh nhận một bước Undo của chính nó (mở ảnh
+  đó, ⌘Z là về như trước); xong: "Synced to 4 photos." (có lỗi thì nói số ảnh không lưu được) và huy hiệu đã sửa.
+- Sau review: ghi Sync xếp sau autosave đang chờ; trong lúc ghi filmstrip khoá, cuối strip "Syncing 2 of 4…"; xong thì
+  bỏ chọn và báo "Synced to 4 photos. ⌘Z in each photo undoes it." (tự ẩn sau 8 s); ảnh có recipe đọc lỗi bị bỏ qua
+  (không coi là ảnh trống — sẽ xoá các nhóm khác của nó) và mang dấu ⚠; sheet nói "Replaces the checked groups on N
+  photos… ⌘Z in each photo undoes it", lý do khi nút Sync mờ, "off" khi nhóm đó không chép gì (cùng phép thử với lúc
+  chép), số ít/số nhiều; Esc bỏ chọn trước khi rời editor; tooltip ô ảnh nói ⌘/⇧-click; VoiceOver: "Add to Sync".
+- Chưa có: Apply Previous, Auto Sync, Edit › Sync Edits trong menu, popup Sync Preset có tên.
+
 ## 4. Sheet Save and Export (D16, D17)
 
 Mở bằng nút Export trên toolbar editor hoặc File › Export ▸ Export N Photos… ⇧⌘E. Sheet ≤ **640×560**, thân cuộn.

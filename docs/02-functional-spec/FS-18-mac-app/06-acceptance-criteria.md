@@ -195,6 +195,9 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-180 | 03 §1f danh sách | như AC-177 | 👁 ×2; Send to Back; bấm hình trên ảnh, Delete; ⌘Z; 🗑; Esc; Back | xoá rồi về; 🗑 xoá; Esc về Adjust; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-markup.json` |
 | AC-181 | 03 §1g looks | demo `-ShotDexSection viewer`, ⌘E, panel | Classic Chrome; Exposure 0.65; + "Harbour"; Duplicate; Rename "Quay"; Update; Delete Look… › Delete | History "Filter Classic Chrome"; "Harbour", "Harbour (2)" → "Quay" → mất | ✅ `mac-editor-presets.json` |
 | AC-182 | 03 §1g tìm, snapshot, history | như AC-181 | tìm "velv"; xoá; Snapshot "Before client edit"; bấm "Opened"; bấm snapshot; Clear › Clear History; tắt panel; Back | chỉ còn Velvia; dòng snapshot; Clear mờ sau khi xoá; panel đóng; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-presets.json` |
+| AC-183 | 03 §3a chọn ảnh | demo `-ShotDexSection viewer`, ⌘E | Exposure 0.4; ⌘-click 13, 14; ⇧-click 16; ⌘-click 15 ×2 | "5 selected" → "4 selected" → "5 selected"; Sync… hiện | ✅ `mac-editor-sync.json` |
+| AC-184 | 03 §3a sheet | như AC-183 | Sync…; Check None; Check All; Sync Look; bỏ/tick Light; Cancel | "Sync 4 Photos"; Check None → nút mờ; Check All → "Sync Everything"; bỏ Light → "Custom"; Cancel đóng | ✅ `mac-editor-sync.json` |
+| AC-185 | 03 §3a đồng bộ | như AC-184 | Sync…; Sync 4 Photos; Clear; mở ảnh 14; ⌘Z; Back | "Synced to 4 photos."; ảnh 14 Exposure "+0.40"; ⌘Z bỏ; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-sync.json` |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

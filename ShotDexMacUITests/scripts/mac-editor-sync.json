@@ -1,0 +1,285 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Exposure value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "0.4\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Photo 13",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Photo 14",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Photo 16",
+   "modifiers": "shift"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.sync.open"
+  },
+  {
+   "action": "assertExists",
+   "label": "5 selected"
+  },
+  {
+   "action": "click",
+   "label": "Photo 15",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "4 selected"
+  },
+  {
+   "action": "click",
+   "label": "Photo 15",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.open"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "waitFor",
+   "label": "Sync 4 Photos",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "sync-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "sync-sheet"
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.checkNone"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertDisabled",
+   "label": "editor.sync.go"
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.checkAll"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.sync.preset",
+   "text": "Sync Everything"
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.preset"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Sync Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.group.light"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "editor.sync.preset",
+   "text": "Custom"
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.group.light"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.sync.go"
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.open"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "waitFor",
+   "label": "Sync 4 Photos",
+   "seconds": 10
+  },
+  {
+   "action": "click",
+   "label": "editor.sync.go"
+  },
+  {
+   "action": "waitFor",
+   "label": "Synced to 4 photos. ⌘Z in each photo undoes it.",
+   "seconds": 10
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.sync.go"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Photo 14"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertValue",
+   "label": "Exposure value",
+   "text": "+0.40"
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "+0.40",
+   "type": "textField"
+  },
+  {
+   "action": "dump",
+   "name": "after-undo"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

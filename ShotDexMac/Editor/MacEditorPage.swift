@@ -41,14 +41,19 @@ struct MacEditorPage: View {
         }
         // In Crop, Esc puts the frame down and go back to Adjust;
         // nothing is undone — ⌘Z is there for that.
+        .sheet(isPresented: $model.asksSync) { MacEditorSyncSheet(model: model, isPresented: $model.asksSync) }
         .onExitCommand {
-            if model.isPickingColor { model.isPickingColor = false } else if model.tool != .adjust { model.tool = .adjust } else { leave() }
+            if model.isPickingColor { model.isPickingColor = false } else if !model.syncTargets.isEmpty { model.syncTargets = [] }
+            else if model.tool != .adjust { model.tool = .adjust } else { leave() }
         }
         // Esc wherever the keys are (a checkbox, a menu just closed): the
         // eyedropper goes away, or Crop gives way to Adjust.
         .background {
-            if model.tool != .adjust || model.isPickingColor {
-                Button("") { if model.isPickingColor { model.isPickingColor = false } else { model.tool = .adjust } }
+            if model.tool != .adjust || model.isPickingColor || !model.syncTargets.isEmpty {
+                Button("") {
+                    if model.isPickingColor { model.isPickingColor = false } else if !model.syncTargets.isEmpty { model.syncTargets = [] }
+                    else { model.tool = .adjust }
+                }
                     .keyboardShortcut(.cancelAction)
                     .opacity(0)
                     .frame(width: 0, height: 0)
@@ -343,12 +348,24 @@ private struct MacEditorFilmstrip: View {
                     LazyHStack(spacing: 6) {
                         ForEach(model.ids.indices, id: \.self) { index in
                             let id = model.ids[index]
-                            Button { model.open(at: index) } label: {
+                            Button {
+                                // ⌘-click picks photos to sync to, Shift-click a run of them; a plain click opens.
+                                let flags = NSEvent.modifierFlags
+                                if flags.contains(.command) || flags.contains(.shift) {
+                                    model.toggleSyncTarget(at: index, extending: flags.contains(.shift))
+                                } else {
+                                    model.open(at: index)
+                                }
+                            } label: {
+                                let isTarget = model.syncTargets.contains(id)
                                 MacEditorStripTile(photoId: id)
                                     .frame(width: 84, height: 56)
+                                    // While syncing is set up, the photos left out step back.
+                                    .overlay { if !model.syncTargets.isEmpty, !isTarget, index != model.index { Color.black.opacity(0.28) } }
                                     .clipShape(RoundedRectangle(cornerRadius: 4))
                                     .overlay(RoundedRectangle(cornerRadius: 4)
-                                        .strokeBorder(index == model.index ? Color.white : Color.clear, lineWidth: 2))
+                                        .strokeBorder(index == model.index ? Color.white : isTarget ? MacTheme.Editor.accent : Color.clear,
+                                                      lineWidth: index == model.index && !model.syncTargets.isEmpty ? 3 : 2))
                                     .overlay(alignment: .bottomTrailing) {
                                         if model.failedIds.contains(id) {
                                             Image(systemName: "exclamationmark.triangle.fill")
@@ -369,6 +386,14 @@ private struct MacEditorFilmstrip: View {
                                     }
                             }
                             .buttonStyle(.plain)
+                            // While a sync writes, the photos stay put: opening one now would read it half-done.
+                            .disabled(model.isSyncing)
+                            .accessibilityAction(named: model.syncTargets.contains(id)
+                                                 ? String(localized: "Remove from Sync", comment: "Mac editor filmstrip, VoiceOver action")
+                                                 : String(localized: "Add to Sync", comment: "Mac editor filmstrip, VoiceOver action")) {
+                                model.toggleSyncTarget(at: index, extending: false)
+                            }
+                            .help(String(localized: "Click to edit · ⌘-click to pick for a sync · ⇧-click for a run", comment: "Mac editor filmstrip tile tooltip"))
                             .id(id)
                             .accessibilityLabel(String(localized: "Photo \(index + 1)", comment: "Mac editor filmstrip tile, VoiceOver"))
                             .accessibilityValue(model.editedIds.contains(id) ? String(localized: "Edited", comment: "Mac editor filmstrip tile, VoiceOver") : "")
@@ -380,11 +405,49 @@ private struct MacEditorFilmstrip: View {
                 .onAppear { proxy.scrollTo(model.currentId, anchor: .center) }
                 .onChange(of: model.index) { withAnimation { proxy.scrollTo(model.currentId, anchor: .center) } }
             }
-            Text(String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor filmstrip: position"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
+            if let progress = model.syncProgress {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Syncing \(progress.done.formatted()) of \(progress.total.formatted())…", comment: "Mac editor filmstrip: a sync running")
+                        .font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit()
+                }
                 .padding(.trailing, 16)
+                .accessibilityIdentifier("editor.sync.progress")
+            } else if model.syncTargets.isEmpty {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(String(localized: "\((model.index + 1).formatted()) of \(model.ids.count.formatted())", comment: "Mac editor filmstrip: position"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    if let note = model.syncNote {
+                        Text(note).font(.system(size: 11)).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 220, alignment: .trailing)
+                            .accessibilityIdentifier("editor.sync.note")
+                    }
+                }
+                .padding(.trailing, 16)
+            } else {
+                VStack(alignment: .trailing, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\((model.syncTargets.count + 1).formatted()) selected", comment: "Mac editor filmstrip: photos picked for a sync, the open one included")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("of \(model.ids.count.formatted())", comment: "Mac editor filmstrip: of how many").font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    .monospacedDigit()
+                    HStack(spacing: 6) {
+                        Button(String(localized: "Clear", comment: "Mac editor filmstrip: drop the sync picks")) { model.syncTargets = [] }
+                            .controlSize(.small)
+                            .accessibilityIdentifier("editor.sync.clear")
+                        Button(String(localized: "Sync \(model.syncTargets.count)…", comment: "Mac editor filmstrip: open the sync sheet")) { model.asksSync = true }
+                            .disabled(model.isSyncing)
+                            .controlSize(.small)
+                            .keyboardShortcut("s", modifiers: [.command, .shift])
+                            .help(String(localized: "Sync this photo's edit to the selected photos (⇧⌘S)", comment: "Mac editor filmstrip"))
+                            .accessibilityIdentifier("editor.sync.open")
+                    }
+                }
+                .padding(.trailing, 16)
+            }
         }
         .frame(height: 84)
         .background(MacTheme.Editor.panelSolid)
@@ -431,6 +494,11 @@ enum MacEditorWords {
     /// "2026 Japan · Fujifilm X-T5 · XF56mmF1.2 R WR · 3 of 48".
     @MainActor
     static func subtitle(_ model: MacEditorModel) -> String {
+        if !model.syncTargets.isEmpty {
+            return ([String(localized: "\((model.syncTargets.count + 1).formatted()) of \(model.ids.count.formatted()) selected",
+                            comment: "Mac editor subtitle while photos are picked for a sync"),
+                     model.details.camera, model.details.lens].compactMap { $0 }).joined(separator: " · ")
+        }
         if let name = model.previewName {
             return String(localized: "Previewing “\(name)” · \((model.index + 1).formatted()) of \(model.ids.count.formatted())",
                           comment: "Mac editor: the subtitle while a look is under the pointer")
