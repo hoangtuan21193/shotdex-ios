@@ -37,12 +37,14 @@ struct MacEditorPage: View {
         }
         // In Crop, Esc puts the frame down and go back to Adjust;
         // nothing is undone — ⌘Z is there for that.
-        .onExitCommand { if model.tool == .crop { model.tool = .adjust } else { leave() } }
-        // Esc wherever the keys are (a checkbox, a menu just closed): Crop
-        // gives way to Adjust.
+        .onExitCommand {
+            if model.isPickingColor { model.isPickingColor = false } else if model.tool == .crop { model.tool = .adjust } else { leave() }
+        }
+        // Esc wherever the keys are (a checkbox, a menu just closed): the
+        // eyedropper goes away, or Crop gives way to Adjust.
         .background {
-            if model.tool == .crop {
-                Button("") { model.tool = .adjust }
+            if model.tool == .crop || model.isPickingColor {
+                Button("") { if model.isPickingColor { model.isPickingColor = false } else { model.tool = .adjust } }
                     .keyboardShortcut(.cancelAction)
                     .opacity(0)
                     .frame(width: 0, height: 0)
@@ -267,6 +269,8 @@ private struct MacEditorCanvas: View {
                                         .offset(x: rect.minX, y: rect.minY)
                                     if model.tool == .crop, !model.showsBefore {
                                         MacEditorCropOverlay(model: model, imageRect: rect)
+                                    } else if model.isPickingColor {
+                                        MacEditorColorPicker(model: model, imageRect: rect)
                                     }
                                 }
                                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)

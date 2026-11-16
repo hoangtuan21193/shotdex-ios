@@ -1,0 +1,196 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer",
+    "-ShotDexPickerAt",
+    "0.35,0.25"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.light"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.grading"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.pointColor"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.colorMixer"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.toneCurve"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.curve.canvas"
+  },
+  {
+   "action": "click",
+   "label": "Orange value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "8\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Yellow value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-12\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Blue value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-18\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "scroll",
+   "label": "editor.mixer.blue.hue",
+   "distance": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "editor.point.pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.22
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.point.swatch"
+  },
+  {
+   "action": "click",
+   "label": "Saturation value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-22\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.point.pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "screenshot",
+   "name": "color-final"
+  },
+  {
+   "action": "dump",
+   "name": "color-final"
+  }
+ ]
+}

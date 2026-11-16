@@ -47,7 +47,8 @@ bố cục Mac, cách lưu và sheet xuất.
 - Inspector 320: thẻ histogram (ba kênh, ISO · tiêu cự · khẩu · tốc) · **Look** (các look của `PhotoFilter`) +
   **Amount** · nhóm theo thứ tự board. Có slider: Light (mở sẵn), Color, Effects, Detail, Optics (Lens Profile +
   Manual + Defringe) — lấy từ `EditorAdjustmentCatalog` chung với iPhone, cùng thang và cách ghi số. Tone Curve,
-  Color Mixer, Point Color, Grading, Lens Blur, Calibration: mở ra ghi "This group comes in a later version." (row 33…).
+  Lens Blur, Calibration: mở ra ghi "This group comes in a later version."; Tone Curve, Color Mixer, Point Color,
+  Grading ở §1c.
   Nút ↺ cạnh tên nhóm khi nhóm có giá trị khác mặc định.
 - Hàng slider 24: tên · rãnh 3pt (tô từ điểm 0 ra, vạch ở 0, núm 12pt, trung tính) · ô số có khung (Return hoặc rời ô
   là áp; không phải số thì trả lại). Kéo dịch giá trị theo quãng kéo (nhấp không đổi gì); nhấp đúp về mặc định (tooltip
@@ -92,6 +93,33 @@ bố cục Mac, cách lưu và sheet xuất.
   `EditorAdjustmentCatalog` như iPhone (cùng thang, Scale ghi 0 = 100%). ↺ nhóm.
 - Kit: `CropAspect` thêm `twoThree`, `threeFour`, `fiveFour` và `swapped` — iPhone thấy chúng trong More.
 - Chưa có: Upright Guided, Return chốt crop (Return trong ô số đang dùng để áp số), phím tắt R/A cho công cụ.
+
+### 1c. Màu (row 33, 2026-11-17, board `MAC_EditColor`)
+
+`ShotDexMac/Editor/MacEditorColor.swift`. Bốn nhóm của inspector Adjust dùng chung recipe và thang số với iPhone
+(`ToneCurveAdjustments`, `PhotoColorRecipe`: mixer, points, grading; số hiện ×100, hue grading theo độ).
+
+- **Tone Curve**: Point · Region; ở Point chọn kênh RGB · đỏ · lục · lam. Khung 130pt: lưới ¼, histogram độ sáng của
+  ảnh phía sau, đường chéo gạch, đường cong theo màu kênh. Kéo một điểm (hai đầu chỉ đi dọc, điểm giữa nằm giữa hai
+  điểm kề); bấm lên đường cong là thêm điểm ngay chỗ đường đang đi rồi kéo tiếp (không sát điểm có sẵn); nhấp đúp điểm giữa
+  hoặc chuột phải › Remove Point là xoá; chuột phải › Reset <kênh> Curve. Dòng gợi ý dưới khung nói cách thêm/xoá. Nhãn
+  "In 128 · Out 152" (0–255) cạnh điểm đang cầm. Region: Highlights · Lights · Darks · Shadows ±100, khung vẽ đường
+  của bốn vùng (không kéo được). ↺ nhóm: đường thẳng lại, Region về 0.
+- **Color Mixer**: Hue · Saturation · Luminance · All; tám dải Red…Magenta, rãnh tô màu theo dải (hue: hai màu kề,
+  saturation: xám → màu, luminance: tối → sáng), số "+8" / "−12". Tab có chỉnh mang dấu "•". All: mỗi dải ba hàng
+  dưới tên dải, ↺ riêng từng dải đã chỉnh. Black & White bật: nhóm thành **Black & White Mix** (tám dải, độ sáng của
+  từng màu khi thành xám — `grayMixer`, như iPhone).
+- **Point Color**: ô màu của từng màu đã chọn (tối đa 8; bấm để chọn), **Pick Color** → "Picking…": trên ảnh hiện
+  kính lúp 92pt 10×10 điểm ảnh, ô giữa có khung, viền theo màu đang trỏ, mã hex dưới; bấm (hoặc nhấn giữ, rê, thả)
+  là thêm màu đó — lấy từ khung đã chỉnh đang hiện (như Lightroom, như iPhone) — và ống hút tự cất; thả ngoài ảnh,
+  Esc, hay bật Before and After đều cất ống hút (không rời editor). Đang hút: "Click a color in the photo · Esc to
+  cancel"; đủ 8: "8 of 8 colors — remove one to pick another". 🗑 xoá màu đang chọn. Hue · Saturation · Luminance ±100 (rãnh theo màu đã chọn), Range 0–100
+  (mặc định 50). Chưa có màu: "Pick a color in the photo to change only that color." ↺ nhóm: xoá hết.
+- **Grading**: Shadows · Midtones · Highlights · Global; Hue 0–360° (rãnh cầu vồng), Saturation 0–100 (xám → hue),
+  Luminance ±100; Blending (mặc định 50) và Balance ±100 dùng chung bốn vùng. ↺ nhóm.
+- Hàng số chung `MacEditorValueRow` (cùng kéo, nhấp đúp, gõ số "−12"/"2,4" như hàng Light; Reset ở chuột phải).
+- Chưa có: hình bánh xe màu của Grading (board vẽ slider, đã theo board), điểm đường cong bằng bàn phím, Point Color
+  trên ảnh RAW chưa xử lý (lấy màu từ khung hiện — như iPhone).
 
 ## 2. Hai kiểu lưu (D16)
 

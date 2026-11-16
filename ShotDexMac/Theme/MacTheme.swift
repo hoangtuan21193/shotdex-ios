@@ -139,9 +139,27 @@ extension MacTheme {
         static let glass = Color(red: 30 / 255, green: 30 / 255, blue: 32 / 255).opacity(0.74)
         static let glassStroke = Color.white.opacity(0.10)
         /// The histogram's channels, screened over each other.
-        static let histogramRed = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255).opacity(0.6)
-        static let histogramGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255).opacity(0.55)
-        static let histogramBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255).opacity(0.6)
+        static let channelRed = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)
+        static let channelGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)
+        static let channelBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255)
+        static let histogramRed = channelRed.opacity(0.6)
+        static let histogramGreen = channelGreen.opacity(0.55)
+        static let histogramBlue = channelBlue.opacity(0.6)
+
+        // Inspector controls (board `MAC_EditColor`).
+        /// `fill2`: a segmented control's track, with a hairline edge.
+        static let segmentTrack = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
+        /// `segOn`: the chosen segment, an on button.
+        static let segmentOn = Color.white.opacity(0.20)
+        static let segmentRadius: CGFloat = 4
+        /// A card drawn on the inspector (the curve).
+        static let cardRadius: CGFloat = 8
+        static let cardFill = Color.white.opacity(0.03)
+        static let curveGrid = Color.white.opacity(0.08)
+        static let curveHistogram = Color.white.opacity(0.10)
+        static let curveGuide = Color.white.opacity(0.28)
+        /// Under small text laid over a picture (the curve readout, the loupe's hex).
+        static let readoutShade = Color.black.opacity(0.72)
 
         // The crop frame (board `MAC_EditCrop`).
         /// Over the photo outside the frame.

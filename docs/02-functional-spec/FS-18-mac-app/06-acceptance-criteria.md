@@ -176,6 +176,11 @@ hoặc script **sẽ viết**, kèm `⚠️ chưa có`. Script UI nằm ở `Sho
 | AC-161 | 03 §1b Straighten | như AC-159 | gõ 5 vào Angle; ↺; Straighten Tool, kéo một đường; Auto | "+5.0°", khung co; ↺ về "0.0°"; đường thả xong góc đổi, gợi ý trên ảnh biến mất; Auto ra góc hoặc dòng "No level line…" | ✅ `mac-editor-crop.json` |
 | AC-162 | 03 §1b Upright, Geometry, Esc | như AC-159 | Upright › Level; Off; Vertical 20; Constrain Crop; ↺ Geometry; Esc; Crop, Adjust; Back | Level giữ trong popup; ↺ hiện rồi mất; Esc về Adjust (Light hiện); Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-crop.json` |
 | AC-163 | 03 §1b toán khung | — | góc/cạnh/dời có khoá tỉ lệ; ảnh nghiêng 5°/8°; xoay ¼ ×4; size; tỉ lệ đổi chiều | góc đối diện đứng yên; tỉ lệ px giữ; khung trong ảnh; xoay 4 lần về chỗ cũ; 3000 × 4000 = 50% | ✅ `CropFrameEditingTests` |
+| AC-164 | 03 §1c Tone Curve | demo `-ShotDexSection viewer`, ⌘E, mở bốn nhóm màu | kéo giữa khung lên; kênh đỏ, kéo; RGB; Region, Highlights 20; Point; ⌘Z; ↺ | điểm mới + ↺ hiện; "+20"; ↺ xong không còn ↺ | ✅ `mac-editor-color.json` |
+| AC-165 | 03 §1c Color Mixer | như AC-164 | Orange 8; Saturation, Green −30; Luminance, Blue 15; All; Hue; ↺ | "+8", "−30"; All hiện tám dải ba hàng; ↺ về 0 hết | ✅ `mac-editor-color.json` |
+| AC-166 | 03 §1c Point Color | như AC-164 | Pick Color, Esc; Pick Color, bấm trời; Hue 10, Range 30; Pick, bấm chỗ khác; ô 1; 🗑; ↺ | Esc cất ống hút, vẫn trong editor; một rồi hai ô màu; ô 1 giữ "+10"; còn một ô; ↺ hiện câu trống | ✅ `mac-editor-color.json` |
+| AC-167 | 03 §1c Grading | như AC-164 | Midtones Hue 200, Saturation 40; Global Luminance −10, Blending 70, Balance −20; Midtones; ↺; Back | "200°", "40", "70", "−20"; về Midtones vẫn 200°; ↺ mất; Back về viewer; không khung ShotDex nào ≥ 50 ms (`MAC_UI_SAMPLE=1`) | ✅ `mac-editor-color.json` |
+| AC-168 | 03 §1c kính lúp | `-ShotDexPickerAt 0.35,0.25` | Pick Color | kính lúp 92pt + mã hex trên ảnh | ✅ `mac-editor-color-shot.json` (ảnh) |
 
 **Chưa chứng minh được:** mọi AC trừ phần iOS của AC-66 và phần parser của AC-34 — chờ dựng target test Mac và
 `Tools/ui-drive` bản Mac (05 §6). AC-14 cần một máy macOS 15; AC-44, AC-62, AC-63, AC-65, AC-78 cần máy thật (sandbox,

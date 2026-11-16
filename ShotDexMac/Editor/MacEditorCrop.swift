@@ -104,10 +104,12 @@ struct MacEditorCropOverlay: View {
                     drag = nil
                     model.endChange()
                 })
-            .offset(x: rect.minX, y: rect.minY)
             .accessibilityElement()
             .accessibilityLabel(id.replacingOccurrences(of: "editor.crop.", with: ""))
             .accessibilityIdentifier(id)
+            // Laid out where it is drawn (not offset), so the pointer's
+            // tracking area and the cursor follow the handle.
+            .position(x: rect.midX, y: rect.midY)
     }
 
     static let space = "editor.crop"

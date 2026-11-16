@@ -137,6 +137,9 @@ final class MacUIDriverTests: XCTestCase {
         case "activate":
             app.activate()
         case "click", "rightClick", "doubleClick":
+            // Front first: a click meant for the app must never reach a window
+            // the user brought over it while the run was going.
+            if app.state != .runningForeground { app.activate(); Thread.sleep(forTimeInterval: 0.5) }
             // Find first, then press: the lookup reads the app's accessibility
             // tree on its main thread, so a hang before `pressAt` is the
             // driver's and one after it is the app answering the click.
@@ -153,6 +156,7 @@ final class MacUIDriverTests: XCTestCase {
             }
             return describe(step) + " pressAt=\(Self.clock.string(from: pressAt!))"
         case "drag":
+            if app.state != .runningForeground { app.activate(); Thread.sleep(forTimeInterval: 0.5) }
             // Press on the element (or `x`/`y`), move by `dx`/`dy` points, let go.
             let start = try windowPoint(step) ?? pressPoint(for: step)
             let end = start.withOffset(CGVector(dx: step.dx ?? 0, dy: step.dy ?? 0))
@@ -213,6 +217,9 @@ final class MacUIDriverTests: XCTestCase {
                 throw DriverError.assertion("\(step.label ?? "?") enabled=\(found.isEnabled)")
             }
         case "screenshot":
+            // A window capture takes what is on screen there: anything of the
+            // user's lying over the app would be in it. Front first.
+            if app.state != .runningForeground { app.activate(); Thread.sleep(forTimeInterval: 0.8) }
             screenshot(named: step.name ?? "shot-\(results.count)", window: step.window)
         case "dump":
             dump(named: step.name ?? "dump-\(results.count)")
@@ -263,8 +270,18 @@ final class MacUIDriverTests: XCTestCase {
         guard let frame else { throw DriverError.notFound("\(step.type ?? "any") \(step.label ?? "")") }
         // The largest window, not the first: a token field's suggestion
         // window is a window too, and it is gone by the time the click lands.
-        let window = app.windows.allElementsBoundByIndex.max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
-            ?? app.windows.firstMatch
+        // The app window the element is in (a sheet or popover is a window
+        // too); among several, the largest. A point in none of them would land
+        // on whatever is behind — the user's own windows — so it is refused
+        // (menus float over everything and are fine).
+        let middle = CGPoint(x: frame.midX, y: frame.midY)
+        let windows = app.windows.allElementsBoundByIndex
+        let holding = windows.filter { $0.frame.insetBy(dx: -1, dy: -1).contains(middle) }
+        let largest: (XCUIElement, XCUIElement) -> Bool = { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
+        if holding.isEmpty, step.type != "menuItem" {
+            throw DriverError.assertion("\(step.label ?? "?") is outside the app's windows (scroll it into view first)")
+        }
+        let window = holding.max(by: largest) ?? windows.max(by: largest) ?? app.windows.firstMatch
         let origin = window.frame.origin
         return window.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - origin.x, dy: frame.midY - origin.y))

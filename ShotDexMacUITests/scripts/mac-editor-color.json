@@ -1,0 +1,633 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "viewer"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "e",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.slider.exposure",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.light"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.grading"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.pointColor"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.colorMixer"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.group.toneCurve"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "label": "editor.curve.canvas",
+   "dx": 0,
+   "dy": -25
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.reset.toneCurve"
+  },
+  {
+   "action": "click",
+   "label": "editor.curve.channel.red"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "drag",
+   "label": "editor.curve.canvas",
+   "dx": 0,
+   "dy": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "editor.curve.channel.rgb"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.curve.mode.Region"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Highlights value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "20\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Highlights value",
+   "text": "+20"
+  },
+  {
+   "action": "click",
+   "label": "editor.curve.mode.Point"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "key",
+   "text": "z",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.toneCurve"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.reset.toneCurve"
+  },
+  {
+   "action": "screenshot",
+   "name": "color-curve"
+  },
+  {
+   "action": "click",
+   "label": "Orange value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "8\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Orange value",
+   "text": "+8"
+  },
+  {
+   "action": "click",
+   "label": "editor.mixer.property.Saturation"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Green value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-30\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Green value",
+   "text": "−30"
+  },
+  {
+   "action": "click",
+   "label": "editor.mixer.property.Luminance"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Blue value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "15\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.mixer.property.All"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "waitFor",
+   "label": "Magenta",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "mixer-all"
+  },
+  {
+   "action": "click",
+   "label": "editor.mixer.property.Hue"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.colorMixer"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.reset.colorMixer"
+  },
+  {
+   "action": "scroll",
+   "label": "editor.group.colorMixer",
+   "distance": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.point.pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "Picking…"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertExists",
+   "label": "Pick Color"
+  },
+  {
+   "action": "assertExists",
+   "label": "editor.group.pointColor"
+  },
+  {
+   "action": "click",
+   "label": "editor.point.pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "waitFor",
+   "label": "editor.point.swatch"
+  },
+  {
+   "action": "click",
+   "label": "Hue value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "10\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Hue value",
+   "text": "+10"
+  },
+  {
+   "action": "click",
+   "label": "Range value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "30\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Range value",
+   "text": "30"
+  },
+  {
+   "action": "click",
+   "label": "editor.point.pick"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "editor.point.swatch",
+   "index": 1
+  },
+  {
+   "action": "click",
+   "label": "editor.point.swatch",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Hue value",
+   "text": "+10"
+  },
+  {
+   "action": "click",
+   "label": "editor.point.remove"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.point.swatch",
+   "index": 1
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.pointColor"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.point.swatch"
+  },
+  {
+   "action": "assertExists",
+   "label": "Pick a color in the photo to change only that color."
+  },
+  {
+   "action": "scroll",
+   "label": "editor.group.pointColor",
+   "distance": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "editor.grading.region.Midtones"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Hue value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "200\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Hue value",
+   "text": "200°"
+  },
+  {
+   "action": "click",
+   "label": "Saturation value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "40\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Saturation value",
+   "text": "40"
+  },
+  {
+   "action": "click",
+   "label": "editor.grading.region.Global"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Luminance value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-10\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "click",
+   "label": "Blending value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "70\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Blending value",
+   "text": "70"
+  },
+  {
+   "action": "click",
+   "label": "Balance value"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "-20\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Balance value",
+   "text": "−20"
+  },
+  {
+   "action": "click",
+   "label": "editor.grading.region.Midtones"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.2
+  },
+  {
+   "action": "assertValue",
+   "label": "Hue value",
+   "text": "200°"
+  },
+  {
+   "action": "screenshot",
+   "name": "color-grading"
+  },
+  {
+   "action": "click",
+   "label": "editor.reset.grading"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "editor.reset.grading"
+  },
+  {
+   "action": "click",
+   "label": "editor.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Rating and Flag",
+   "type": "staticText",
+   "seconds": 10
+  }
+ ]
+}

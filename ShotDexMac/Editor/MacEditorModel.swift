@@ -75,11 +75,16 @@ final class MacEditorModel {
         didSet {
             guard tool != oldValue else { return }
             isStraightening = false
+            isPickingColor = false
             render(interactive: false)
         }
     }
     /// Straighten Tool: a line dragged over the photo levels it.
     var isStraightening = false
+    /// Point Color's eyedropper: the canvas shows a loupe, a click adds a colour.
+    var isPickingColor = false { didSet { if isPickingColor { showsBefore = false } } }
+    /// The Point Color whose sliders show.
+    var selectedPointColorId: UUID?
     /// An Upright or Auto pass is reading the photo.
     private(set) var isAnalyzing = false
     /// Which control started it: its spinner, not the other's.
@@ -88,7 +93,14 @@ final class MacEditorModel {
     private(set) var straightenNote: String?
     private(set) var uprightNote: String?
 
-    var showsBefore = false { didSet { if showsBefore != oldValue { render(interactive: false) } } }
+    var showsBefore = false {
+        didSet {
+            guard showsBefore != oldValue else { return }
+            // The eyedropper reads the edited frame: it does not stay out over the original.
+            if showsBefore { isPickingColor = false }
+            render(interactive: false)
+        }
+    }
     var showsHighlightClipping = false { didSet { updateClipping() } }
     var showsShadowClipping = false { didSet { updateClipping() } }
 
@@ -171,6 +183,8 @@ final class MacEditorModel {
         isAnalyzing = false
         analyzingUpright = false
         isStraightening = false
+        isPickingColor = false
+        selectedPointColorId = nil
         dragStart = nil
         dragBase = nil
         isDragging = false
@@ -364,6 +378,46 @@ final class MacEditorModel {
     /// Revert to Original…: the photo as it came, kept undoable.
     func revert() {
         apply { $0 = .identity }
+    }
+
+    // MARK: Color (FS-18.03 §1c)
+
+    /// The edited frame as the canvas shows it, for the eyedropper: the
+    /// colour picked is the colour seen (Lightroom; the iPhone does the same).
+    var samplingImage: CGImage? { cleanImage }
+
+    var selectedPointColor: PointColorAdjustment? {
+        recipe.color.points.first { $0.id == selectedPointColorId } ?? recipe.color.points.last
+    }
+
+    var canAddPointColor: Bool { recipe.color.points.count < PointColorAdjustment.maximumCount }
+
+    /// A click with the eyedropper: the colour under it becomes a new point,
+    /// selected; the eyedropper puts itself away.
+    func addPointColor(at point: NormalizedPoint) {
+        // Nothing to read yet (the frame is still drawing): the eyedropper stays out.
+        guard canAddPointColor, let image = cleanImage,
+              let rgb = MacColorSampler.color(in: image, at: point) else { return }
+        isPickingColor = false
+        let hsv = ColorRenderMath.hsv(fromRed: rgb.x, green: rgb.y, blue: rgb.z)
+        let added = PointColorAdjustment(referenceHue: hsv.hue, referenceSaturation: hsv.saturation, referenceValue: hsv.value)
+        apply { $0.color.points.append(added) }
+        selectedPointColorId = added.id
+    }
+
+    func removeSelectedPointColor() {
+        guard let id = selectedPointColor?.id else { return }
+        apply { $0.color.points.removeAll { $0.id == id } }
+        selectedPointColorId = recipe.color.points.last?.id
+    }
+
+    /// One slider of the selected point (a drag step or a typed value).
+    func changeSelectedPointColor(inOneStep: Bool = false, _ body: @escaping (inout PointColorAdjustment) -> Void) {
+        guard let id = selectedPointColor?.id else { return }
+        let update: (inout PhotoEditRecipe) -> Void = { recipe in
+            if let index = recipe.color.points.firstIndex(where: { $0.id == id }) { body(&recipe.color.points[index]) }
+        }
+        if inOneStep { apply(update) } else { change(update) }
     }
 
     // MARK: Crop (FS-18.03 §1b)
@@ -756,6 +810,49 @@ final class MacEditorModel {
             if ok { self.savedRecipe = recipe }
             self.saveState = !ok ? .failed : (self.recipe == recipe ? (recipe == .identity ? .unchanged : .saved) : .saving)
         }
+    }
+}
+
+/// Reads pixels off the shown frame for the eyedropper and its loupe.
+enum MacColorSampler {
+    /// `side`×`side` pixels around `point` (normalized), row by row from the
+    /// top, as 0…1 sRGB; fewer at the photo's edge.
+    private static let srgb = CGColorSpace(name: CGColorSpace.sRGB)
+
+    static func pixels(in image: CGImage, at point: NormalizedPoint, side: Int)
+        -> (pixels: [SIMD3<Double>], width: Int, pointer: (column: Int, row: Int))? {
+        // The pixel under the pointer, kept inside the image (x = 1 is the last column).
+        let px = min(image.width - 1, max(0, Int((point.x * Double(image.width)).rounded(.down))))
+        let py = min(image.height - 1, max(0, Int((point.y * Double(image.height)).rounded(.down))))
+        let rect = CGRect(x: px - side / 2, y: py - side / 2, width: side, height: side)
+            .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard !rect.isEmpty, let crop = image.cropping(to: rect) else { return nil }
+        let width = crop.width, height = crop.height
+        guard let space = srgb else { return nil }
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        // The context writes into the buffer only while the buffer is lent to it.
+        let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                                          bytesPerRow: width * 4, space: space,
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { return nil }
+        let pixels = (0..<(width * height)).map { i in
+            SIMD3(Double(bytes[i * 4]) / 255, Double(bytes[i * 4 + 1]) / 255, Double(bytes[i * 4 + 2]) / 255)
+        }
+        return (pixels, width, (px - Int(rect.minX), py - Int(rect.minY)))
+    }
+
+    /// The pixel under `point`.
+    static func color(in image: CGImage, at point: NormalizedPoint) -> SIMD3<Double>? {
+        pixels(in: image, at: point, side: 1)?.pixels.first
+    }
+
+    /// "#6E8FA8".
+    static func hex(_ rgb: SIMD3<Double>) -> String {
+        String(format: "#%02X%02X%02X", Int((rgb.x * 255).rounded()), Int((rgb.y * 255).rounded()), Int((rgb.z * 255).rounded()))
     }
 }
 

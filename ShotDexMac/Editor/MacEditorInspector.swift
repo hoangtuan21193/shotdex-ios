@@ -56,6 +56,7 @@ struct MacEditorInspector: View {
                     MacEditorCropSections(model: model)
                         .padding(.top, 8)
                 } else {
+                    // (Tone Curve, Color Mixer, Point Color and Grading: MacEditorColor.swift.)
                     look
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
@@ -102,6 +103,13 @@ struct MacEditorInspector: View {
 
     // MARK: Groups
 
+    /// ↺ beside an open group, while it has something to put back.
+    private func resetAction(_ section: Section, kinds: [PhotoAdjustmentKind]?) -> (() -> Void)? {
+        if let reset = MacEditorColorSection.reset(section, model: model) { return reset }
+        guard let kinds, kinds.contains(where: { model.recipe.adjustments[$0] != PhotoAdjustments.zero[$0] }) else { return nil }
+        return { model.apply { recipe in for kind in kinds { recipe.adjustments[kind] = PhotoAdjustments.zero[kind] } } }
+    }
+
     @ViewBuilder
     private func group(_ section: Section) -> some View {
         let isOpen = open.contains(section)
@@ -126,10 +134,8 @@ struct MacEditorInspector: View {
                 .accessibilityValue(isOpen ? String(localized: "Expanded", comment: "Mac editor group, VoiceOver")
                                            : String(localized: "Collapsed", comment: "Mac editor group, VoiceOver"))
                 .accessibilityIdentifier("editor.group.\(section.rawValue)")
-                if isOpen, let kinds, kinds.contains(where: { model.recipe.adjustments[$0] != PhotoAdjustments.zero[$0] }) {
-                    Button {
-                        model.apply { recipe in for kind in kinds { recipe.adjustments[kind] = PhotoAdjustments.zero[kind] } }
-                    } label: {
+                if isOpen, let reset = resetAction(section, kinds: kinds) {
+                    Button(action: reset) {
                         Image(systemName: "arrow.counterclockwise").font(.system(size: 11))
                     }
                     .buttonStyle(.plain)
@@ -142,7 +148,9 @@ struct MacEditorInspector: View {
             .padding(.horizontal, 16)
             .frame(height: 32)
             if isOpen {
-                if let kinds {
+                if let colorSection = MacEditorColorSection(section, model: model) {
+                    colorSection
+                } else if let kinds {
                     VStack(spacing: 0) {
                         ForEach(kinds, id: \.self) { kind in
                             MacEditorSliderRow(model: model, kind: kind)
@@ -371,6 +379,9 @@ struct MacEditorSlider: View {
     let change: (Double) -> Void
     let end: () -> Void
     let reset: () -> Void
+    /// A coloured rail (the mixer's hues, a saturation ramp) in place of the
+    /// grey one; no white fill then, the knob reads against the colour.
+    var track: [Color]? = nil
     /// The value when the drag began: the pointer moves it by its travel.
     @State private var dragOrigin: Double?
 
@@ -384,11 +395,15 @@ struct MacEditorSlider: View {
             let origin = isBipolar ? fraction(0) : 0
             let at = fraction(value)
             ZStack(alignment: .leading) {
-                Capsule().fill(MacTheme.Editor.sliderTrack).frame(height: 3)
-                Capsule().fill(Color.white.opacity(0.85))
-                    .frame(width: abs(at - origin) * width, height: 3)
-                    .offset(x: min(at, origin) * width)
-                if isBipolar {
+                if let track {
+                    Capsule().fill(LinearGradient(colors: track, startPoint: .leading, endPoint: .trailing)).frame(height: 3)
+                } else {
+                    Capsule().fill(MacTheme.Editor.sliderTrack).frame(height: 3)
+                    Capsule().fill(Color.white.opacity(0.85))
+                        .frame(width: abs(at - origin) * width, height: 3)
+                        .offset(x: min(at, origin) * width)
+                }
+                if isBipolar, track == nil {
                     Rectangle().fill(MacTheme.Editor.secondaryText).frame(width: 1, height: 8).offset(x: origin * width - 0.5)
                 }
                 Circle().fill(Color.white)
