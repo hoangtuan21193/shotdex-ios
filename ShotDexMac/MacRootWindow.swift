@@ -55,6 +55,8 @@ struct MacRootWindow: View {
     @State private var combine: MacCombineSession?
     /// Image › Create › Collage… open (board `MAC_Collage`).
     @State private var collage: MacCollageModel?
+    /// Image › Choose Frames… open (board `MAC_BurstFrames`).
+    @State private var burstFrames: MacBurstFramesModel?
     /// Panorama… reading which photos can be frames: a second ask waits.
     @State private var isOpeningCombine = false
     /// Bumped by every move in the sidebar: a Panorama… still reading opens nowhere.
@@ -215,6 +217,9 @@ struct MacRootWindow: View {
             } else if let resize {
                 MacResizePage(model: resize) { self.resize = nil }
                     .id(resize.id)
+            } else if let burstFrames {
+                MacBurstFramesPage(model: burstFrames) { self.burstFrames = nil }
+                    .id(burstFrames.id)
             } else if let collage {
                 MacCollagePage(model: collage) {
                     self.collage = nil
@@ -306,7 +311,7 @@ struct MacRootWindow: View {
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
-        .onChange(of: resize == nil && combine == nil && collage == nil) { _, closed in
+        .onChange(of: resize == nil && combine == nil && collage == nil && burstFrames == nil) { _, closed in
             if closed {
                 if let before = columnsBeforeResize { columnVisibility = before }
                 columnsBeforeResize = nil
@@ -350,6 +355,7 @@ struct MacRootWindow: View {
             combine = nil
             collage?.close()
             collage = nil
+            burstFrames = nil
             combineToken += 1
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
@@ -1431,6 +1437,35 @@ struct MacRootWindow: View {
                 }
                 resize = MacResizeModel(ids: chosen, dependencies: dependencies)
             },
+            chooseFrames: {
+                // The photo on screen in the viewer, else the first selected.
+                guard let id = viewerId ?? ids.first, burstFrames == nil, editor == nil, resize == nil, combine == nil, collage == nil
+                else { NSSound.beep(); return }
+                let bursts = dependencies.bursts
+                Task {
+                    // The burst identifier is a library read: off the main actor (the demo's is its own list).
+                    var burst: String?
+                    var isDemo = false
+                    #if DEBUG
+                    if MacDemoLibrary.isOn { isDemo = true; burst = bursts.burstId(of: id) }
+                    #endif
+                    if burst == nil, !isDemo {
+                        burst = await Task.detached(priority: .userInitiated) {
+                            PhotoLibraryService.fetchAssets(ids: [id]).first?.burstIdentifier
+                        }.value
+                    }
+                    guard let burst else {
+                        let alert = NSAlert()
+                        alert.messageText = String(localized: "This photo isn’t part of a burst", comment: "Mac Choose Frames: not a burst")
+                        alert.informativeText = String(localized: "Choose Frames works on photos your camera took as a burst.", comment: "Mac Choose Frames: what it works on")
+                        alert.runModal()
+                        return
+                    }
+                    guard burstFrames == nil, editor == nil, resize == nil, combine == nil, collage == nil else { return }
+                    viewerId = nil
+                    burstFrames = makeBurstFrames(MacBurstRequest(burstId: burst, startFrameId: id))
+                }
+            },
             collage: {
                 guard resize == nil, combine == nil, collage == nil, editor == nil, !isOpeningCombine else { NSSound.beep(); return }
                 guard ids.count >= 2 else {
@@ -1712,6 +1747,19 @@ struct MacRootWindow: View {
                         }) ?? []
                     }.value
                     resize = MacResizeModel(ids: ids, dependencies: dependencies)
+                }
+            }
+            // `-ShotDexSection burst` (board `MAC_BurstFrames`): a 24-frame burst of demo photos.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "burst", burstFrames == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    var request = MacBurstRequest(burstId: MacDemoBursts.burstId, startFrameId: MacDemoBursts.frameIds[8])
+                    request.chips = [MacDemoBursts.frameIds[8]: [String(localized: "Sharpest", comment: "Burst chip")],
+                                     MacDemoBursts.frameIds[9]: [String(localized: "Soft", comment: "Burst chip")],
+                                     MacDemoBursts.frameIds[11]: [String(localized: "Blown highlights", comment: "Burst chip")]]
+                    request.weakFrameIds = Set([1, 9, 11, 14, 18, 22].map { MacDemoBursts.frameIds[$0] })
+                    request.initiallyKept = Set([3, 8, 17].map { MacDemoBursts.frameIds[$0] })
+                    burstFrames = makeBurstFrames(request)
                 }
             }
             // `-ShotDexSection collage` (board `MAC_Collage`): six demo photos, four in the layout.
@@ -2422,6 +2470,29 @@ extension MacRootWindow {
             alert.addButton(withTitle: String(localized: "Cancel", comment: "Mac Collages"))
             if alert.runModal() == .alertFirstButtonReturn { selection = .allPhotos }
         }, changed: { collagesRevision += 1 }, focus: collagesFocus)
+    }
+
+    /// Choose Frames' model: the real deletion goes through the server check
+    /// to Photos; the demo's touches nothing.
+    private func makeBurstFrames(_ request: MacBurstRequest) -> MacBurstFramesModel {
+        let photoLibrary = dependencies.photoLibrary
+        var delete: ([String]) async throws -> (deleted: [String], keptWhy: String?) = { ids in
+            let assets = await Task.detached(priority: .userInitiated) { MacBurstAssetsBox(assets: PhotoLibraryService.fetchAssets(ids: ids)) }.value.assets
+            do {
+                try await photoLibrary.deleteAssetsCheckingServer(assets)
+                return (assets.map(\.localIdentifier), nil)
+            } catch let kept as PhotoDeletionGate.Kept {
+                // Some went, some a server kept: only those that went leave the strip.
+                return (kept.outcome.deletable, kept.errorDescription)
+            }
+        }
+        #if DEBUG
+        // The demo never deletes: its frames are not photos (user 2026-11-06).
+        if MacDemoLibrary.isOn { delete = { ids in (ids, nil) } }
+        #endif
+        return MacBurstFramesModel(request: request, library: dependencies.bursts, photoLibrary: photoLibrary,
+                                   database: dependencies.database, isLimited: photoLibrary.authorizationState == .limited,
+                                   deleteAssets: delete)
     }
 
     /// A defaults suite emptied first: the demo's saved presets start clean every launch.

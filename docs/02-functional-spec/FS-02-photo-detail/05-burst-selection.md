@@ -136,6 +136,32 @@ Board: `PH_BurstFrames`, `IP_BurstFrames`, `DI_BurstFrames`, `DC_BurstFrames` (2
 
 **Chưa chứng minh được:** AC-1 trên burst thật, AC-8 (iCloud, mất mạng), AC-11 (cần máy thật, §9), AC-12 (banner chưa chụp), AC-13 (Duo). Simulator không có burst thật — `-ShotDexFakeBursts` (DEBUG) dựng burst từ ảnh thường.
 
+## 8b. Mac — Choose Frames (board `MAC_BurstFrames`, row 47, 2026-11-17)
+
+- **Lối vào:** Image › **Choose Frames…** trên ảnh đang mở ở viewer hay ảnh chọn đầu tiên. Không phải burst: "This photo isn’t
+  part of a burst". Trang thế chỗ cửa sổ như các trang công cụ (sidebar ẩn; đổi nơi là đóng).
+- **Toolbar:** ◀ (⌘[, Esc) · "Choose Frames" + "Burst · 24 frames · Sep 28, 2026 · within 18 seconds · Photos Library" ·
+  **Single | Survey** · zoom **Zoom: Fill Frame ▾** (Fit · Fill Frame · 2×) · **Zoom to Face** (khi lần chấm điểm có mặt) · **Keep N, remove M**
+  (đỏ; tắt khi chưa giữ khung nào — "Keep picks, remove the rest") · **Done** (⌘↩, không xoá gì). Done/Esc khi đã đổi tick mà chưa
+  xoá: hỏi "Leave without removing frames?" (Leave / Keep Choosing); ◀ rời luôn.
+- **Single:** một khung lớn; bấm không đổi tick (Space hay ô Keep mới đổi) — khác iPhone, vì trên Mac bấm là để xem; khung
+  được giữ mang nhãn **Kept**. **Survey:** khung đang xem và 3 khung sau, 2×2; bấm = xem khung đó
+  (viền accent); mỗi khung có nhãn (Suggested, Sharpest, Soft, Blown highlights…), "Frame 9 of 24", "IMG_5308.HEIC ·
+  1/500 s · 6.0 s later" và ô **Keep**. Zoom và vị trí dùng chung: kéo một khung là mọi khung dời theo.
+- **Dải dưới:** mọi khung theo thứ tự chụp; khung đang xem có viền, khung giữ có dấu ✓, khung yếu chấm đỏ; bấm = xem
+  (Space giữ/bỏ). Bên phải: "3 kept · 21 frames to remove", rồi "Photos move to Recently Deleted. · Zoom synced (Fill Frame) ·
+  6 weak frames" (hay kết quả lần xoá — chữ đậm màu, mất khi đổi tick —, hay câu quyền giới hạn), **Keep Only Suggested** khi Photos có gợi ý.
+- **Phím:** ←/→ khung trước/sau, Space giữ/bỏ khung đang xem (ô Keep đang focus thì Space là của nó), Esc = Done; tooltip
+  trên Single/Survey, ô Keep, dải nói các phím. Trống: không dải, chữ "Go back to the library.".
+- **Xoá:** một lần xoá hệ thống cho mọi khung không giữ, qua kiểm tra server (§6); hộp thoại của Photos là xác nhận. Huỷ hay
+  lỗi: không mất tick; xong: "21 frames moved to Recently Deleted. Recover them in Photos within 30 days." ở góc dải.
+- **Lệch board:** zoom "100%" của board thành Fit/Fill Frame/2× ("Fill" trùng tên Window › Fill) (khung đọc ở cỡ màn hình, không phải điểm ảnh gốc, nên "100%" sẽ
+  nói sai); nút Inspector của board chưa có.
+- **Demo:** `-ShotDexSection burst` — 24 ảnh demo của 28/9 làm một burst, gợi ý khung 9 và 15, đã giữ 4, 9, 18, chip và 6
+  khung yếu như board; xoá của demo không đụng Photos.
+- **Chưa dựng:** Inspector, Choose Frames từ nhóm Burst/Series ở Duplicates (Space; trên Mac `framePicker` còn là iOS-only),
+  zoom đúng điểm ảnh gốc.
+
 ## 9. Rủi ro và phần phải đo trước `/plan`
 
 Cần đo trên một iPhone thật có burst, **trước** `/plan`. Kết quả quyết định có cần đường chép (§2) không.

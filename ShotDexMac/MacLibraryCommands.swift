@@ -26,6 +26,8 @@ struct MacLibraryTarget {
     var startCull: () -> Void
     /// Image › Resize… ⌥⌘R (FS-18.04 §4a).
     var resize: () -> Void
+    /// Image › Choose Frames… (FS-02.05, board `MAC_BurstFrames`).
+    var chooseFrames: () -> Void
     /// Image › Create › Collage… (FS-18.04 §4c).
     var collage: () -> Void
     /// Image › Combine Photos › Panorama… (FS-18.04 §4b).
@@ -164,6 +166,8 @@ struct MacImageCommands: Commands {
                 .disabled(library == nil)
             Button(String(localized: "Resize…", comment: "Mac menu: Image › Resize… (the selected photos, smaller)")) { library?.resize() }
                 .keyboardShortcut("r", modifiers: [.option, .command])
+                .disabled(library?.hasSelection != true && library?.viewerOpen != true)
+            Button(String(localized: "Choose Frames…", comment: "Mac menu: Image › Choose Frames… (a burst's frames)")) { library?.chooseFrames() }
                 .disabled(library?.hasSelection != true && library?.viewerOpen != true)
             Menu(String(localized: "Create", comment: "Mac menu: Image › Create (submenu)")) {
                 Button(String(localized: "Collage…", comment: "Mac menu: Image › Create › Collage…")) { library?.collage() }

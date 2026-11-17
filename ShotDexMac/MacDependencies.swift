@@ -130,9 +130,11 @@ final class MacDependencies: LibraryServices {
         // The demo reads no Photos library — its bursts included: a burst
         // from the user's real library would put their photos on a demo
         // screenshot.
-        if MacDemoLibrary.isOn { return MacNoBursts() }
+        if MacDemoLibrary.isOn { return MacDemoLibrary.section == "burst" ? MacDemoBursts() : MacNoBursts() }
         #endif
-        return PhotoKitBurstLibrary.makeForApp()
+        // Never the fake library on the Mac: `-ShotDexFakeBursts` would make
+        // bursts of the user's real photos and hand them to a delete.
+        return PhotoKitBurstLibrary()
     }()
     /// The Duplicates screen's model, kept for the window's life so a check
     /// and its marks survive moving to another sidebar place and back.
@@ -495,6 +497,24 @@ extension MacDependencies: DuplicatesServices {
     /// The Mac checks only when asked (no index-run observer here yet).
     var duplicateAutoCheck: DuplicateAutoCheck? { nil }
 }
+
+#if DEBUG
+/// `-ShotDexSection burst`: one 24-frame burst of demo photos (stills of
+/// Sep 28), Photos suggesting frames 9 and 15.
+@MainActor
+final class MacDemoBursts: BurstLibrary {
+    static let burstId = "demo-burst"
+    /// Capture order: the demo's photos of a day go back in time as n grows.
+    static let frameIds: [String] = Array((0..<30).filter { $0 % 17 != 5 }.prefix(24).map { "demo-0-\($0)" }.reversed())
+    func bursts() async -> [BurstSummary] { [BurstSummary(id: Self.burstId, coverId: Self.frameIds[0], date: nil)] }
+    func frames(ofBurst id: String) async -> [BurstFrame] {
+        guard id == Self.burstId else { return [] }
+        return Self.frameIds.enumerated().map { BurstFrame(id: $0.element, isSuggested: $0.offset == 8 || $0.offset == 14, isPickedInPhotos: false) }
+    }
+    func burstId(of assetId: String) -> String? { Self.frameIds.contains(assetId) ? Self.burstId : nil }
+    func asset(for frameId: String) -> PHAsset? { nil }
+}
+#endif
 
 /// No bursts at all: the demo library's stand-in for PhotoKit's.
 @MainActor

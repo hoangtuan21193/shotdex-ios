@@ -1,0 +1,259 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "burst"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "burst.done",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "burst"
+  },
+  {
+   "action": "dump",
+   "name": "burst"
+  },
+  {
+   "action": "click",
+   "label": "burst.keep.10"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-keep10"
+  },
+  {
+   "action": "click",
+   "label": "burst.frame.15"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-15"
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-keys"
+  },
+  {
+   "action": "click",
+   "label": "burst.frame.14"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-dbl"
+  },
+  {
+   "action": "click",
+   "label": "burst.keepSuggested"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-suggested"
+  },
+  {
+   "action": "click",
+   "label": "Single"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "burst-single"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "burst-single-tap"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "Survey"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "burst.zoom"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Fit",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "burst-fit"
+  },
+  {
+   "action": "click",
+   "label": "burst.zoom"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "2×",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "x": 0.25,
+   "y": 0.3,
+   "dx": 80,
+   "dy": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "burst-2x"
+  },
+  {
+   "action": "dump",
+   "name": "burst-2x"
+  },
+  {
+   "action": "click",
+   "label": "burst.zoom"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Fill Frame",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "burst.delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "burst-deleted"
+  },
+  {
+   "action": "dump",
+   "name": "burst-deleted"
+  },
+  {
+   "action": "click",
+   "label": "burst.done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "burst.done",
+   "seconds": 5
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
