@@ -87,6 +87,26 @@ Still open (answered at /spec or on a real device):
    `RealTime=false`). Still to measure: the mapping of ShotDex's 3 levels → `AVVideoQualityKey`, and the real size saved on Canon
    files (H.264 4:2:0 8-bit) vs iPhone files: **measured in a spike** on real sample files
    before writing the ACs (Claude does this at /spec).
+   **Measured 2026-11-18** on two 21 s Canon R6 Mark II clips (3840×2160 59.94p, H.264 High
+   8-bit full range, indoor low light, fine text): ALL-I 620.6 MB (233 Mbps), IPB 324.2 MB
+   (123 Mbps). Encoded on the Mac's VideoToolbox with the app's settings (HEVC Main10,
+   RealTime off, speed hint on; ~7 s per clip). VMAF 4K model (harmonic mean) and SSIM against
+   a ProRes 422 HQ reference decoded by the same AVFoundation reader, so the score is the
+   encoder's loss alone:
+
+   | Quality | ALL-I size | VMAF | IPB size | VMAF |
+   |---|---|---|---|---|
+   | 0.50 (Balanced) | 31.6 MB (5%) | 94.2 | 20.7 MB (6%) | 95.1 |
+   | 0.60 (High) | 70.7 MB (11%) | 97.6 | 50.2 MB (15%) | 98.0 |
+   | 0.70 | 202.2 MB (33%) | 99.5 | 165.3 MB (51%) | 99.7 |
+   | 0.80 | 587.0 MB (95%) | 99.98 | 473.7 MB (146%) | 100.0 |
+   | 0.90 | 2042 MB (329%) | 100.0 | 1599 MB (493%) | 100.0 |
+
+   The speed hint costs ~0.1 VMAF and halves the encode time. 0.80 and above are larger than
+   the camera file. ffmpeg decodes the full-range source ~2/255 apart from AVFoundation
+   (PSNR ceiling ~34 dB against the camera file at any quality) — a decoder difference, not
+   encoder loss; Photos plays through AVFoundation. Not yet measured: iPhone's encoder, an
+   outdoor/high-motion scene, Smallest (0.40).
 6. Can the Duo cover / iPhone sustain a 10-minute 4K batch without throttling or running hot?
    Needs a real device to measure; the simulator does not answer it.
 

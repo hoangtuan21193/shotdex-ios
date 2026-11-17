@@ -190,13 +190,19 @@ enum VideoCompressionEncoder {
         var audioOutput: AVAssetReaderTrackOutput?
         var audioChannels = 2
         var audioSampleRate = 48_000.0
+        // AAC sound is copied as it is: it is a small share of the file, and
+        // encoding it again only loses quality. Anything else is encoded once.
+        var audioPassthroughHint: CMFormatDescription?
         if let audioTrack {
             if let description = try await audioTrack.load(.formatDescriptions).first,
                let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee {
                 audioChannels = max(1, min(Int(basic.mChannelsPerFrame), 2))
                 if basic.mSampleRate > 0 { audioSampleRate = min(basic.mSampleRate, 48_000) }
+                if VideoCompressionRules.copiesAudio(formatID: basic.mFormatID) {
+                    audioPassthroughHint = description
+                }
             }
-            let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: [
+            let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: audioPassthroughHint != nil ? nil : [
                 AVFormatIDKey: kAudioFormatLinearPCM,
                 AVSampleRateKey: audioSampleRate,
                 AVNumberOfChannelsKey: audioChannels,
@@ -251,12 +257,17 @@ enum VideoCompressionEncoder {
 
         var audioInput: AVAssetWriterInput?
         if audioOutput != nil {
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
-                AVFormatIDKey: kAudioFormatMPEG4AAC,
-                AVSampleRateKey: audioSampleRate,
-                AVNumberOfChannelsKey: audioChannels,
-                AVEncoderBitRateKey: Int(VideoCompressionRules.audioBitrate),
-            ])
+            let input: AVAssetWriterInput
+            if let audioPassthroughHint {
+                input = AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: audioPassthroughHint)
+            } else {
+                input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+                    AVFormatIDKey: kAudioFormatMPEG4AAC,
+                    AVSampleRateKey: audioSampleRate,
+                    AVNumberOfChannelsKey: audioChannels,
+                    AVEncoderBitRateKey: Int(VideoCompressionRules.audioBitrate),
+                ])
+            }
             input.expectsMediaDataInRealTime = false
             guard writer.canAdd(input) else {
                 throw EncodeError(errorDescription: String(localized: "Couldn't prepare the sound of this video.", comment: "Compress Videos: writer refused the audio input"))

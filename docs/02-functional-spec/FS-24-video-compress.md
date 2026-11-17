@@ -15,7 +15,7 @@
    videos → Compress Videos works on the videos alone, and the screen says how many photos were
    left out.
 2. Compress Videos screen:
-   - **Quality**: `High Quality` (default) · `Balanced` · `Smallest`, each with a one-line
+   - **Quality**: `Maximum` · `High Quality` (default) · `Balanced` · `Smallest`, each with a one-line
      description. No raw RF/bitrate number.
    - **Size** (resolution cap): `Original` (default) · `4K` · `1080p`. The long edge is capped,
      never enlarged; aspect ratio is kept.
@@ -23,13 +23,15 @@
    - Note: "HDR stays HDR. Originals are kept until you delete them."
    - Header: `Cancel` · title · `Compress` (accent).
 3. Encoding (idea from HandBrake `encvt.c`, own code on AVFoundation):
-   - HEVC, **constant quality** `AVVideoQualityKey`: High 0.60 · Balanced 0.50 · Smallest 0.40
+   - HEVC, **constant quality** `AVVideoQualityKey`: Maximum 0.70 · High 0.60 · Balanced 0.50 · Smallest 0.40
      (HandBrake VT 1080p = 0.60; spike 2026-11-17: synthetic 1080p H.264 40 Mbps → 88% / 58% / 38%).
    - `RealTime = false`, `PrioritizeEncodingSpeedOverQuality = true` (HandBrake preset `speed`).
    - The source is read as 10-bit 4:2:0. **HDR (HLG / PQ) stays HDR**: Main10 + the source's
      primaries, transfer function and matrix. SDR sources stay SDR (Main10 is still used, which
      costs nothing in size and avoids banding).
-   - Audio: AAC 160 kbps, keeping the source's channel count (max 2). Frame rate and duration
+   - Audio: **AAC sound is copied untouched** (camera and iPhone files: R6 II carries AAC 256 kbps, ~0.5% of
+     a compressed file — encoding it again loses quality for nothing). Other sound (PCM…) is encoded once to
+     AAC 256 kbps, keeping the channel count (max 2). Frame rate and duration
      unchanged.
 4. Batch: a queue, **one file at a time** (two on Mac). The screen does not lock while it runs;
    iOS gets the system's background grace period when the user leaves the app (no
@@ -60,10 +62,10 @@
 |---|---|---|
 | AC-24.01 | ⋯ menu has Compress Videos, enabled with ≥1 video selected; Resize unchanged | ui-drive iPhone + screenshot |
 | AC-24.02 | Mixed selection: the screen says "M photo(s) in the selection … left out" | screenshot |
-| AC-24.03 | The 3 quality levels map to quality 0.60 / 0.50 / 0.40 | unit test `VideoCompressionRulesTests` |
+| AC-24.03 | The 4 quality levels map to quality 0.70 / 0.60 / 0.50 / 0.40 (Maximum added 2026-11-18 after the R6 II measurement, intent §5) | unit test `VideoCompressionRulesTests` |
 | AC-24.04 | Resolution cap: 3840×2160 source with 1080p → 1920×1080; 1280×720 with 4K → unchanged (never enlarged); portrait keeps orientation | unit test |
 | AC-24.05 | Estimate shown before running, total before → after | unit test of the estimate + screenshot |
-| AC-24.06 | Encode outputs HEVC, the same duration (±1 frame) and frame rate, with audio when the source has audio | test on a generated file |
+| AC-24.06 | Encode outputs HEVC, the same duration (±1 frame) and frame rate, with audio when the source has audio; AAC sound is copied, not re-encoded | test on a generated file |
 | AC-24.07 | HDR source (HLG) → output still HLG BT.2020 10-bit | test on a generated HLG file |
 | AC-24.08 | Output ≥ 95% of source → "Already compact", nothing saved | unit test of the skip rule |
 | AC-24.09 | Not enough free space → the batch stops with the message, already-finished files are kept | unit test of the space rule |

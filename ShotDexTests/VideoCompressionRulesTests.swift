@@ -1,3 +1,4 @@
+import CoreAudioTypes
 import CoreGraphics
 import Foundation
 import Testing
@@ -7,6 +8,7 @@ import Testing
 struct VideoCompressionRulesTests {
     /// AC-24.03: High follows HandBrake's VideoToolbox 1080p preset (0.60).
     @Test func qualityLevelsMapToEncoderQuality() {
+        #expect(VideoCompressionQuality.maximum.encoderQuality == 0.70)
         #expect(VideoCompressionQuality.high.encoderQuality == 0.60)
         #expect(VideoCompressionQuality.balanced.encoderQuality == 0.50)
         #expect(VideoCompressionQuality.smallest.encoderQuality == 0.40)
@@ -31,11 +33,13 @@ struct VideoCompressionRulesTests {
             byteCount: 600_000_000, duration: 60,
             pixelSize: CGSize(width: 3840, height: 2160), frameRate: 30, hasAudio: true
         )
+        let maximum = VideoCompressionRules.estimatedBytes(for: source, quality: .maximum, size: .original)
         let high = VideoCompressionRules.estimatedBytes(for: source, quality: .high, size: .original)
         let balanced = VideoCompressionRules.estimatedBytes(for: source, quality: .balanced, size: .original)
         let smallest = VideoCompressionRules.estimatedBytes(for: source, quality: .smallest, size: .original)
         let capped = VideoCompressionRules.estimatedBytes(for: source, quality: .high, size: .fullHD)
-        #expect(high > balanced && balanced > smallest)
+        #expect(maximum > high && high > balanced && balanced > smallest)
+        #expect(maximum <= source.byteCount)
         #expect(capped < high)
         #expect(high <= source.byteCount)
 
@@ -61,6 +65,13 @@ struct VideoCompressionRulesTests {
     @Test func outputFilenameNeedsAName() {
         #expect(VideoCompressionRules.outputFilename(for: nil) == nil)
         #expect(VideoCompressionRules.outputFilename(for: "") == nil)
+    }
+
+    @Test func aacSoundIsCopiedOtherSoundEncoded() {
+        #expect(VideoCompressionRules.copiesAudio(formatID: kAudioFormatMPEG4AAC))
+        #expect(VideoCompressionRules.copiesAudio(formatID: kAudioFormatMPEG4AAC_HE))
+        #expect(!VideoCompressionRules.copiesAudio(formatID: kAudioFormatLinearPCM))
+        #expect(!VideoCompressionRules.copiesAudio(formatID: kAudioFormatAppleLossless))
     }
 
     @Test func skipRule() {

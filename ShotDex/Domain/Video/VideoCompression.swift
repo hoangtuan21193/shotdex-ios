@@ -1,3 +1,4 @@
+import CoreAudioTypes
 import CoreGraphics
 import Foundation
 
@@ -11,6 +12,7 @@ import Foundation
 /// than a fixed bitrate, so a still scene costs few bits and a busy one keeps
 /// its detail. The code is ShotDex's own.
 enum VideoCompressionQuality: String, CaseIterable, Identifiable, Sendable {
+    case maximum
     case high
     case balanced
     case smallest
@@ -21,8 +23,13 @@ enum VideoCompressionQuality: String, CaseIterable, Identifiable, Sendable {
     /// HandBrake's "H.265 Apple VideoToolbox 1080p" preset (slider 60 → 0.60).
     /// Spike 2026-11-17 on a 1080p H.264 40 Mbps clip: 88% / 58% / 38% of the
     /// source; 0.65 already came out larger than the source.
+    ///
+    /// Canon R6 Mark II 4K60 H.264 (2026-11-18, VMAF 4K model, intent §5):
+    /// 0.70 = VMAF 99.5+ at 33% (ALL-I) / 51% (IPB) of the camera file;
+    /// 0.60 = 97.6–98 at 11–15%; 0.80 came out larger than the camera file.
     var encoderQuality: Double {
         switch self {
+        case .maximum: 0.70
         case .high: 0.60
         case .balanced: 0.50
         case .smallest: 0.40
@@ -33,6 +40,7 @@ enum VideoCompressionQuality: String, CaseIterable, Identifiable, Sendable {
     /// bitrate the encoder is held to — only what the "about" figure uses.
     var estimatedBitsPerPixel: Double {
         switch self {
+        case .maximum: 0.15
         case .high: 0.10
         case .balanced: 0.06
         case .smallest: 0.035
@@ -84,8 +92,16 @@ struct VideoCompressionSource: Equatable, Sendable {
 }
 
 enum VideoCompressionRules {
-    /// AAC bitrate the output is written with (HandBrake presets: 160 kbps).
-    static let audioBitrate: Double = 160_000
+    /// AAC bitrate for sound that has to be encoded (PCM and the like), and
+    /// the figure the estimate assumes. AAC sound is copied untouched instead
+    /// (`copiesAudio`): R6 II files carry AAC at 256 kbps, ~0.5% of a
+    /// compressed file, so encoding it again saves nothing worth the loss.
+    static let audioBitrate: Double = 256_000
+
+    /// True when a sound track in `formatID` goes into the MP4 as it is.
+    static func copiesAudio(formatID: AudioFormatID) -> Bool {
+        [kAudioFormatMPEG4AAC, kAudioFormatMPEG4AAC_HE, kAudioFormatMPEG4AAC_HE_V2].contains(formatID)
+    }
 
     /// An output at or above this share of the source is not worth keeping.
     static let skipRatio: Double = 0.95

@@ -46,6 +46,7 @@ enum VideoCompressionCopy {
 
     static func name(_ quality: VideoCompressionQuality) -> String {
         switch quality {
+        case .maximum: String(localized: "Maximum", comment: "Compress Videos quality level")
         case .high: String(localized: "High Quality", comment: "Compress Videos quality level")
         case .balanced: String(localized: "Balanced", comment: "Compress Videos quality level")
         case .smallest: String(localized: "Smallest", comment: "Compress Videos quality level")
@@ -54,6 +55,7 @@ enum VideoCompressionCopy {
 
     static func detail(_ quality: VideoCompressionQuality) -> String {
         switch quality {
+        case .maximum: String(localized: "Visually identical, larger file", comment: "Compress Videos: Maximum description")
         case .high: String(localized: "Looks like the original", comment: "Compress Videos: High Quality description")
         case .balanced: String(localized: "Smaller, hard to tell apart", comment: "Compress Videos: Balanced description")
         case .smallest: String(localized: "Smallest file, some softening", comment: "Compress Videos: Smallest description")

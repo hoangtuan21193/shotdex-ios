@@ -70,6 +70,66 @@ struct VideoCompressionEncoderTests {
         #expect(depth == nil || depth == 10)
     }
 
+    /// AC-24.06: AAC sound is copied, not encoded again. The source carries
+    /// AAC at 96 kbps; an encode would come out at 256 kbps.
+    @Test func copiesAACSound() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = try await Self.writeVideoWithAAC(in: directory, bitrate: 96_000)
+        let output = directory.appendingPathComponent("output.mp4")
+
+        try await VideoCompressionEncoder.encode(
+            source, to: output, settings: .init(quality: .high, size: .original), progress: { _ in }
+        )
+
+        let sourceAudio = try #require(try await AVURLAsset(url: source).loadTracks(withMediaType: .audio).first)
+        let audio = try #require(try await AVURLAsset(url: output).loadTracks(withMediaType: .audio).first)
+        let description = try #require(try await audio.load(.formatDescriptions).first)
+        #expect(description.mediaSubType == .mpeg4AAC)
+        let rate = try await audio.load(.estimatedDataRate)
+        let sourceRate = try await sourceAudio.load(.estimatedDataRate)
+        #expect(abs(rate - sourceRate) < sourceRate * 0.05, "copied sound keeps \(sourceRate) bps, got \(rate)")
+    }
+
+    /// A 2 s clip with a 440 Hz tone in AAC at `bitrate`.
+    private static func writeVideoWithAAC(in directory: URL, bitrate: Int) async throws -> URL {
+        let video = directory.appendingPathComponent("video.mp4")
+        try await VideoExportFixtures.writeVideo(width: 640, height: 360, seconds: 2, to: video)
+        let audioURL = directory.appendingPathComponent("tone.m4a")
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
+        do {
+            let file = try AVAudioFile(forWriting: audioURL, settings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 48_000,
+                AVNumberOfChannelsKey: 2,
+                AVEncoderBitRateKey: bitrate,
+            ])
+            let frames = AVAudioFrameCount(48_000 * 2)
+            let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
+            buffer.frameLength = frames
+            for channel in 0..<2 {
+                let samples = buffer.floatChannelData![channel]
+                for index in 0..<Int(frames) {
+                    samples[index] = 0.3 * sin(2 * .pi * 440 * Float(index) / 48_000)
+                }
+            }
+            try file.write(from: buffer)
+        }
+        let composition = AVMutableComposition()
+        let videoAsset = AVURLAsset(url: video), audioAsset = AVURLAsset(url: audioURL)
+        let videoTrack = try #require(try await videoAsset.loadTracks(withMediaType: .video).first)
+        let audioTrack = try #require(try await audioAsset.loadTracks(withMediaType: .audio).first)
+        let range = CMTimeRange(start: .zero, duration: try await videoAsset.load(.duration))
+        try composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)?
+            .insertTimeRange(range, of: videoTrack, at: .zero)
+        try composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)?
+            .insertTimeRange(range, of: audioTrack, at: .zero)
+        let source = directory.appendingPathComponent("source.mp4")
+        let export = try #require(AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough))
+        try await export.export(to: source, as: .mp4)
+        return source
+    }
+
     /// The colour tags are copied, not guessed: an untagged source gives nil.
     @Test func colorPropertiesNeedAllThreeTags() throws {
         var description: CMFormatDescription?
