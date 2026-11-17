@@ -54,8 +54,8 @@ struct PhotoKitVideoCompressionWorker: VideoCompressionWorking {
             let creation = PHAssetCreationRequest.forAsset()
             let options = PHAssetResourceCreationOptions()
             options.shouldMoveFile = false
-            if let name {
-                options.originalFilename = (name as NSString).deletingPathExtension + ".mp4"
+            if let name = VideoCompressionRules.outputFilename(for: name) {
+                options.originalFilename = name
             }
             creation.addResource(with: .video, fileURL: file, options: options)
             creation.creationDate = original.creationDate

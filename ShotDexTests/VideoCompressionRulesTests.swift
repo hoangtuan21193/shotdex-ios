@@ -47,6 +47,22 @@ struct VideoCompressionRulesTests {
     }
 
     /// AC-24.08: an output at 95% of the source or more is thrown away.
+    @Test(arguments: [
+        ("IMG_0042.MOV", "IMG_0042_compressed.mp4"),
+        ("clip.final.mp4", "clip.final_compressed.mp4"),
+        ("IMG_0042_compressed.mp4", "IMG_0042_compressed.mp4"),
+        ("IMG_0042_Compressed.mov", "IMG_0042_Compressed.mp4"),
+        ("NoExtension", "NoExtension_compressed.mp4"),
+    ])
+    func outputFilenameAddsSuffixOnce(original: String, expected: String) {
+        #expect(VideoCompressionRules.outputFilename(for: original) == expected)
+    }
+
+    @Test func outputFilenameNeedsAName() {
+        #expect(VideoCompressionRules.outputFilename(for: nil) == nil)
+        #expect(VideoCompressionRules.outputFilename(for: "") == nil)
+    }
+
     @Test func skipRule() {
         #expect(VideoCompressionRules.shouldSkip(outputBytes: 95, sourceBytes: 100))
         #expect(VideoCompressionRules.shouldSkip(outputBytes: 120, sourceBytes: 100))

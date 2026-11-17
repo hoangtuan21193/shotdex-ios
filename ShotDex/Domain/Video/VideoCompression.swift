@@ -108,6 +108,25 @@ enum VideoCompressionRules {
         return min(bytes, source.byteCount)
     }
 
+    /// Appended to the original's name, so the copy is told apart from the
+    /// original in Photos, Files and on a server: `IMG_0042.MOV` is saved as
+    /// `IMG_0042_compressed.mp4`.
+    static let filenameSuffix = "_compressed"
+
+    /// The name the compressed copy is saved under, nil when the original
+    /// has none (PhotoKit then names it). A name that already carries the
+    /// suffix keeps one, so a copy compressed again does not grow a second.
+    static func outputFilename(for originalFilename: String?) -> String? {
+        guard let originalFilename else { return nil }
+        var base = (originalFilename as NSString).deletingPathExtension
+            .trimmingCharacters(in: .whitespaces)
+        guard !base.isEmpty else { return nil }
+        if !base.lowercased().hasSuffix(filenameSuffix) {
+            base += filenameSuffix
+        }
+        return base + ".mp4"
+    }
+
     /// True when the written output is not small enough to keep.
     static func shouldSkip(outputBytes: Int64, sourceBytes: Int64) -> Bool {
         guard sourceBytes > 0 else { return true }
