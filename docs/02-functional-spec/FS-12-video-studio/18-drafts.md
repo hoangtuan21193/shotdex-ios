@@ -50,6 +50,24 @@ export — sửa mất thời gian".
   library." · **Delete** (đỏ) · **Cancel**. Xoá dòng không bao giờ đụng ảnh hay video trong thư viện. Dòng đã xuất
   giữ menu gỡ khỏi danh sách như FS-06.01b §5.
 
+### 4b. Mac — Utilities › Video Projects (board `MAC_VideoProjects`, row 48, 2026-11-17)
+
+- "Video Projects" + "7 projects · 3 drafts"; lưới thẻ 279 rộng: bìa là 3 clip đầu chia đều (ít clip thì ít ô), nhãn
+  **Draft** góc trên, độ dài "0:24" góc dưới khi biết hết độ dài clip (clip video chưa đọc độ dài nguồn thì bỏ số), ngày giờ,
+  dòng phụ: nháp "Edited 5 minutes ago · 5 clips", đã xuất "12 clips · 16:9"; công thức không đọc được: "Can’t be opened".
+- Toolbar: **Last Edited ▾** (Last Edited · Date Created, nhớ), **+** New Video Project, **🗑** (xoá thẻ đang chọn),
+  **Search Projects** (ngày, tỉ lệ, số clip, tên file clip).
+- Bấm thẻ = viền accent; Return = mở; ⌫ hay 🗑 (nhãn theo thẻ: "Delete Draft…" / "Remove from Video Projects…") = xoá —
+  khi đang gõ ở ô tìm thì Return và ⌫ là của ô tìm; thẻ bị ô tìm ẩn đi không bị tác động; chuột phải: Open in Video Studio · Delete Draft… (nháp) /
+  Remove from Video Projects… (đã xuất). Xác nhận: "Delete Draft?" · "“‹ngày›” will be deleted. The photos and videos stay
+  in your library." · Cancel / **Delete Draft**; đã xuất: "Remove from Video Projects?" · video đã xuất và ảnh giữ nguyên ·
+  Cancel / **Remove**. Chỉ xoá dòng `creations`, không bao giờ đụng thư viện; xoá hỏng: báo, thẻ ở lại. Đếm ở sidebar.
+- **Mở / New:** Video Studio chưa có trên Mac (MAC_LOOP row 49) — Open, double-click, Return, + đều hỏi "Video Studio isn’t
+  on the Mac yet" (làm trên iPhone/iPad; nháp và bản xuất hiện ở đây). Không bao giờ bấm mà im lặng.
+- Trống: "No Video Projects"; đọc hỏng: "Projects Couldn’t Be Read" + Try Again (hiện vòng quay khi đọc lại); công thức hỏng:
+  "This draft can’t be opened." (đã xuất: "This project can’t be opened."), dòng vẫn ở lại.
+- Demo `-ShotDexSection videoProjects`: 7 project ảnh demo, 3 nháp.
+
 ## 5. Dữ liệu
 
 | | |

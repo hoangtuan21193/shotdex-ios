@@ -362,6 +362,36 @@
    "seconds": 1
   },
   {
+   "action": "click",
+   "label": "collages.card.Oct 3, 2026 at 11:20"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove",
+   "type": "button",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-delete-key"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
    "action": "quit"
   }
  ]

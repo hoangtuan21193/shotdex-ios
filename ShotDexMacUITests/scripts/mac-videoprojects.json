@@ -1,0 +1,289 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "videoProjects"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "projects.new",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "vp"
+  },
+  {
+   "action": "dump",
+   "name": "vp"
+  },
+  {
+   "action": "click",
+   "label": "projects.order"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Date Created",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "vp-created"
+  },
+  {
+   "action": "click",
+   "label": "projects.order"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Last Edited",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "x": 0.88,
+   "y": 0.033
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "typeText",
+   "text": "9:16"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "vp-search"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "projects.card.Sep 30, 2026 at 9:41"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "vp-selected"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "waitFor",
+   "label": "Delete Draft?",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "vp-delete-alert"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "projects.delete"
+  },
+  {
+   "action": "waitFor",
+   "label": "Delete Draft?",
+   "seconds": 10
+  },
+  {
+   "action": "click",
+   "label": "action-button-1"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "vp-deleted"
+  },
+  {
+   "action": "rightClick",
+   "label": "projects.card.Oct 2, 2026 at 11:20"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove from Video Projects…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove from Video Projects?",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "vp-remove-alert"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "doubleClick",
+   "label": "projects.card.Sep 28, 2026 at 18:42"
+  },
+  {
+   "action": "waitFor",
+   "label": "Video Studio isn’t on the Mac yet",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "vp-open"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "label": "projects.card.Sep 28, 2026 at 18:42"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Open in Video Studio",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Video Studio isn’t on the Mac yet",
+   "seconds": 10
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "projects.new"
+  },
+  {
+   "action": "waitFor",
+   "label": "Video Studio isn’t on the Mac yet",
+   "seconds": 10
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "projects.card.Sep 28, 2026 at 18:42"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "waitFor",
+   "label": "Video Studio isn’t on the Mac yet",
+   "seconds": 10
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "vp-end"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

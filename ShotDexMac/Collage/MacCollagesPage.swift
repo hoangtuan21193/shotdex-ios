@@ -261,10 +261,20 @@ struct MacCollagesPage: View {
         }
         // Return opens the selected collage.
         .background {
-            Button("") {
-                if let id = selected, let card = model.cards.first(where: { $0.id == id }) { openCard(card, exports: false) }
+            Group {
+                Button("") {
+                    // Not while typing a search: its Return is the field's.
+                    guard !(NSApp.keyWindow?.firstResponder is NSTextView) else { return }
+                    if let id = selected, let card = model.cards.first(where: { $0.id == id }) { openCard(card, exports: false) }
+                }
+                .keyboardShortcut(.defaultAction)
+                // ⌫ asks to remove the selected collage (the field keeps its own).
+                Button("") {
+                    guard !(NSApp.keyWindow?.firstResponder is NSTextView) else { return }
+                    if let id = selected, let card = model.cards.first(where: { $0.id == id }) { removing = card }
+                }
+                .keyboardShortcut(.delete, modifiers: [])
             }
-            .keyboardShortcut(.defaultAction)
             .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
         }
         // The app's own look, said outright: the Collage page it comes back
@@ -301,10 +311,7 @@ struct MacCollagesPage: View {
         } message: {
             Text("Its photos couldn’t be read. Open it in Collage to see which.", comment: "Mac Collages: share failed")
         }
-        // Delete asks to remove the selected collage.
-        .onDeleteCommand {
-            if let id = selected, let card = model.cards.first(where: { $0.id == id }) { removing = card }
-        }
+
         .alert(String(localized: "This collage’s photos aren’t here", comment: "Mac Collages: open failed"), isPresented: $cannotOpen) {
             Button(String(localized: "OK", comment: "Mac Collages")) {}
         } message: {
@@ -375,8 +382,6 @@ struct MacCollagesPage: View {
         // At once, not after the double-click wait.
         .simultaneousGesture(TapGesture().onEnded { selected = card.id })
         .contextMenu {
-            // The menu's card is the selected one (its ring shows which).
-            let _ = DispatchQueue.main.async { selected = card.id }
             Button(String(localized: "Open in Collage", comment: "Mac Collages: menu")) { openCard(card, exports: false) }
             Button(String(localized: "Show in Library", comment: "Mac Collages: menu")) {
                 selected = card.id

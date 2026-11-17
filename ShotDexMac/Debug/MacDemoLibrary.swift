@@ -65,6 +65,7 @@ enum MacDemoLibrary {
         if section == "resize" { seedResize(dependencies) }
         if section == "duplicates" { seedDuplicates(dependencies) }
         if section == "collages" { seedCollages(dependencies) }
+        if section == "videoProjects" { seedVideoProjects(dependencies) }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {
@@ -479,6 +480,39 @@ enum MacDemoLibrary {
             recipe.aspectRatio = shape.aspect.ratio
             guard let creation = try? Creation.collage(recipe: recipe, assetId: nil, id: "demo-collage-\(index)", createdAt: stamp - 3600, now: stamp)
             else { continue }
+            try? store.upsert(creation)
+        }
+    }
+
+    /// `videoProjects` (board `MAC_VideoProjects`): seven projects of demo
+    /// photos, three of them drafts, edited minutes to weeks ago.
+    private static func seedVideoProjects(_ dependencies: MacDependencies) {
+        let store = CreationStore(database: dependencies.database)
+        // The board's dates, fixed (so the cards' names never move between runs).
+        let shapes: [(clips: Int, aspect: VideoAspect, draft: Bool, date: DateComponents, still: Double)] = [
+            (5, .r16x9, true, DateComponents(month: 10, day: 3, hour: 14, minute: 10), 4.8),
+            (12, .r16x9, false, DateComponents(month: 10, day: 2, hour: 11, minute: 20), 6),
+            (3, .r9x16, true, DateComponents(month: 9, day: 30, hour: 9, minute: 41), 6),
+            (8, .r9x16, false, DateComponents(month: 9, day: 28, hour: 18, minute: 42), 5.9),
+            (15, .r16x9, false, DateComponents(month: 9, day: 21, hour: 9, minute: 15), 6.4),
+            (2, .r16x9, true, DateComponents(month: 9, day: 14, hour: 20, minute: 3), 5.5),
+            (6, .r16x9, false, DateComponents(month: 9, day: 2, hour: 19, minute: 30), 6.3),
+        ]
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        for (index, shape) in shapes.enumerated() {
+            var components = shape.date
+            components.year = 2026
+            let now = Int(calendar.date(from: components)!.timeIntervalSince1970)
+            var recipe = VideoProjectRecipe(clips: (0..<shape.clips).map { n in
+                var clip = VideoClip(assetID: "demo-\(index % 3)-\(n * 2 + index)", kind: .photo)
+                clip.photoDuration = shape.still
+                return clip
+            })
+            recipe.aspect = shape.aspect
+            let stamp = now
+            guard let creation = try? Creation.video(recipe: recipe, assetId: nil, id: "demo-project-\(index)", createdAt: stamp - 3600,
+                                                     now: stamp, exportedAt: shape.draft ? nil : stamp) else { continue }
             try? store.upsert(creation)
         }
     }

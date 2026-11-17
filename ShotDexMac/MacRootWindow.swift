@@ -284,6 +284,9 @@ struct MacRootWindow: View {
                 }
             } else if selection == .collages {
                 collagesDetail
+            } else if selection == .videoProjects {
+                // Utilities › Video Projects (board `MAC_VideoProjects`).
+                MacVideoProjectsPage(dependencies: dependencies) { collagesRevision += 1 }
             } else if let selection, selection.isPendingScreen {
                 MacPendingPlace(item: selection)
             } else {
@@ -900,6 +903,9 @@ struct MacRootWindow: View {
         }).value, collages > 0 {
             // No "0" on the row: an empty place has no count (as Albums).
             counts[.collages] = collages
+        }
+        if let projects = await Task.detached(priority: .utility, operation: { try? creations.count(kind: .video) }).value, projects > 0 {
+            counts[.videoProjects] = projects
         }
         guard !Task.isCancelled else { return }
         placeCounts = counts
@@ -2244,6 +2250,7 @@ struct MacRootWindow: View {
         // `-ShotDexSection duplicates` (board `MAC_Duplicates`).
         if MacDemoLibrary.section == "duplicates" { selection = .duplicates }
         if MacDemoLibrary.section == "collages" { selection = .collages }
+        if MacDemoLibrary.section == "videoProjects" { selection = .videoProjects }
         if MacDemoLibrary.section == "statistics" {
             // Board `MAC_StatisticsCamera`: a camera with 5-star photos for its Top Rated strip.
             selection = .statistics
