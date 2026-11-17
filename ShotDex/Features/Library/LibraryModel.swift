@@ -120,6 +120,10 @@ final class LibraryModel {
     /// The search being resolved: a newer one, or an emptied field, cancels
     /// it, so a slow answer never lands over a later query.
     @ObservationIgnored private var searchTask: Task<Void, Never>?
+    /// The condition the AI Search model made of the last search, while it is
+    /// still the grid's (FS-01.03c §4 "Read by …"); nil when the parser
+    /// answered, or once anything else changed the condition.
+    private(set) var modelReading: SmartAlbumQuery?
     /// SwiftUI `.task` can run again when a full-screen cover is dismissed.
     /// Initial grid loading is model-scoped and must happen only once;
     /// explicit filter/library changes still call `reload()` directly.
@@ -221,6 +225,9 @@ final class LibraryModel {
     var advancedQuery: SmartAlbumQuery? {
         didSet {
             guard advancedQuery != oldValue else { return }
+            // Any other writer — Reset, the filter bar, a smart album — makes
+            // the condition no longer the model's answer.
+            modelReading = nil
             if advancedQuery != nil, !criteria.isEmpty { criteria = .empty }
             reload()
         }
@@ -762,6 +769,7 @@ final class LibraryModel {
     func applySearch(_ text: String, using service: SearchService) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         searchTask?.cancel()
+        modelReading = nil
         guard !trimmed.isEmpty else {
             criteria.searchText = nil
             return
@@ -776,6 +784,7 @@ final class LibraryModel {
             // these is ever set.
             if resolution.hasRules {
                 advancedQuery = resolution.query
+                if resolution.usedModel { modelReading = resolution.query }
             } else {
                 criteria.searchText = resolution.searchText
             }
@@ -787,6 +796,7 @@ final class LibraryModel {
     /// (FS-01.03c §4). Remembered as the words the user sees in the field.
     func applySearchQuery(_ query: SmartAlbumQuery, remembering text: String, using service: SearchService) {
         searchTask?.cancel()
+        modelReading = nil
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty { service.recentSearches.remember(trimmed) }
         if query.isEmpty {

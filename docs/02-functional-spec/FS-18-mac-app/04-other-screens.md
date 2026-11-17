@@ -382,6 +382,10 @@ Hành vi theo [FS-08.07](../FS-08-settings/07-ai-providers.md); Mac dùng chung 
 - **AI Search chạy thật trên Mac**: gõ một câu vào ô tìm rồi Return — bộ phân tích đọc trước; còn chữ thừa thì hỏi
   model hàng AI Search (2 s trên máy, 8 s máy chủ trong nhà), quá hạn hay lỗi thì dùng kết quả bộ phân tích, không hộp
   lỗi. Gõ từng phím chỉ chạy bộ phân tích (không model).
+- **"Read by …"** (FS-01.03c §4, row 56, board `MAC_Search`): model trả lời thì thanh scope dưới toolbar thêm
+  `✦ Read by Mac Studio` (tên hàng AI Search; chữ phụ 12pt, tooltip "AI Search turned your words into the conditions
+  below. Change them in the filter bar."), sau số ảnh. Chỉ hiện khi điều kiện của lưới vẫn là đúng cái model trả —
+  gõ tiếp, sửa viên trong thanh lọc, xoá ô tìm thì mất. Bộ phân tích tự hiểu (`ISO 3200`) thì không có dòng.
 - **On This Mac** — Apple Intelligence + chấm trạng thái: Ready (xanh) · Turn on Apple Intelligence in System Settings ·
   Downloading (cam); Mac không chạy được thì không có nhóm.
 - **Providers** — bảng Name · Model · Address or Key (dòng cloud cũ: "Key ends in 7Qx2"), chú "Ollama · LM Studio" bên

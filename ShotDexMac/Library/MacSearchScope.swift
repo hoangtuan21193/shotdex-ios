@@ -55,6 +55,9 @@ struct MacSearchScopeBar: View {
     let count: String
     /// False when the scope cannot go into a saved album with this search.
     let canSave: Bool
+    /// The AI Search model that read the words into the condition, when one
+    /// did (FS-01.03c §4, FS-18.04 §3d): "Read by Mac Studio".
+    var readBy: String? = nil
     let saveAsSmartAlbum: () -> Void
 
     var body: some View {
@@ -65,6 +68,17 @@ struct MacSearchScopeBar: View {
             }
             .frame(width: 360)
             Text(count).font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit().lineLimit(1)
+            if let readBy {
+                let title = String(localized: "Read by \(readBy)", comment: "Mac search: the AI Search model turned the words into conditions")
+                Label(title, systemImage: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .help(String(localized: "AI Search turned your words into the conditions below. Change them in the filter bar.",
+                                 comment: "Mac search: tooltip on Read by"))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("search-read-by")
+            }
             let reason = String(localized: "A smart album can be kept in one source; pick All Sources or Photos Library to save this search.",
                                 comment: "Mac search: Save off for a scope that cannot nest")
             Button(String(localized: "Save as Smart Album…", comment: "Mac search: keep this search"), action: saveAsSmartAlbum)

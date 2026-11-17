@@ -1,0 +1,368 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "aiSettings"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "waitFor",
+   "label": "General",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Mac Studio"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "n",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "ISO 3200\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-parser"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "typeText",
+   "text": "pictures of my dog near the lake\r"
+  },
+  {
+   "action": "waitFor",
+   "label": "search-read-by",
+   "seconds": 10
+  },
+  {
+   "action": "assertExists",
+   "label": "Read by Mac Studio"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-read-by"
+  },
+  {
+   "action": "dump",
+   "name": "02-read-by"
+  },
+  {
+   "action": "typeText",
+   "text": " x"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-cleared"
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "aiSettings",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "waitFor",
+   "label": "General",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Mac Studio"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "n",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "ISO 3200\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-parser-dark"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "typeText",
+   "text": "pictures of my dog near the lake\r"
+  },
+  {
+   "action": "waitFor",
+   "label": "search-read-by",
+   "seconds": 10
+  },
+  {
+   "action": "assertExists",
+   "label": "Read by Mac Studio"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-read-by-dark"
+  },
+  {
+   "action": "dump",
+   "name": "02-read-by-dark"
+  },
+  {
+   "action": "typeText",
+   "text": " x"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "search-read-by"
+  },
+  {
+   "action": "screenshot",
+   "name": "03-cleared-dark"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

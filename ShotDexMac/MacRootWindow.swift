@@ -25,6 +25,12 @@ struct MacRootWindow: View {
     /// The grid's rules came from the search field (they share the slot
     /// with Advanced Filter): emptying the field takes them away again.
     @State private var searchOwnsQuery = false
+    /// The words Return last searched: the as-you-type pass for the same
+    /// words, landing after Return, must not replace — and cancel — the
+    /// answer Return asked the AI Search model for.
+    @State private var submittedSearch: MacSearchInput?
+    /// The AI Search row when Return was pressed: the one that answered.
+    @State private var submittedReader: String?
     /// ⌘F asked for the field while the grid (and so the field) was not on
     /// screen: the grid takes it when it appears.
     @State private var wantsSearchFocus = false
@@ -1213,6 +1219,7 @@ struct MacRootWindow: View {
                 if let library, !isCollectionOpen, searchOwnsQuery || library.sourceScope != nil {
                     MacSearchScopeBar(scope: Binding(get: { searchScope }, set: { setScope($0) }), count: subtitle,
                                       canSave: canSaveSearch,
+                                      readBy: readBy(library),
                                       saveAsSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest(query: savedSearchQuery) })
                 }
                 if let library, showsFilterBar, !library.criteria.isEmpty || library.advancedQuery?.isEmpty == false {
@@ -1337,8 +1344,10 @@ struct MacRootWindow: View {
                     guard !Task.isCancelled else { return }
                     (searchReading, searchGroups) = (reading, ranked)
                     guard let library, !text.isEmpty || !tokens.isEmpty else { return }
+                    let input = MacSearchInput(text: searchText, tokens: tokens.map(\.id))
+                    guard submittedSearch != input else { return }
                     let query = await dependencies.search.query(tokens: tokens, text: text)
-                    guard !Task.isCancelled else { return }
+                    guard !Task.isCancelled, submittedSearch != input else { return }
                     searchOwnsQuery = true
                     library.applySearchQuery(query, remembering: "", using: dependencies.search)
                 }
@@ -1352,6 +1361,7 @@ struct MacRootWindow: View {
                 // grid again at once. Parsing runs off the main actor.
                 .onSubmit(of: .search) {
                     searchOwnsQuery = true
+                    markSubmitted(searchText)
                     guard searchTokens.isEmpty else {
                         let tokens = searchTokens, text = searchText
                         let words = (tokens.map(\.name) + [text]).joined(separator: " ").trimmingCharacters(in: .whitespaces)
@@ -1372,6 +1382,10 @@ struct MacRootWindow: View {
                     }
                 }
                 .onChange(of: MacSearchInput(text: searchText, tokens: searchTokens.map(\.id))) {
+                    // New words: the as-you-type pass runs for them, even if
+                    // they come back to what Return searched. A suggestion
+                    // picked sets the words and marks them in one go: kept.
+                    if submittedSearch != MacSearchInput(text: searchText, tokens: searchTokens.map(\.id)) { submittedSearch = nil }
                     guard searchText.trimmingCharacters(in: .whitespaces).isEmpty, searchTokens.isEmpty, let library else { return }
                     library.applySearch("", using: dependencies.search)
                     // Clearing a search clears its scope too: back to the whole grid.
@@ -1940,6 +1954,13 @@ struct MacRootWindow: View {
         }
     }
 
+    /// Who read the search, while the grid still shows what the model made
+    /// of it — a condition edited in the filter bar is the user's own.
+    private func readBy(_ library: LibraryModel) -> String? {
+        guard let reading = library.modelReading, reading == library.advancedQuery else { return nil }
+        return submittedReader
+    }
+
     /// "54,027 photos · 1,204 videos", or "212 of 55,231 photos" while a
     /// filter is on (FS-18.02 §5).
     private var subtitle: String {
@@ -2023,7 +2044,15 @@ struct MacRootWindow: View {
     private func runSearch(_ text: String) {
         searchText = text
         searchOwnsQuery = true
+        markSubmitted(text)
         library?.applySearch(text, using: dependencies.search)
+    }
+
+    /// These words were searched with the model allowed: the as-you-type
+    /// pass leaves them alone, and Read by names the row that answered.
+    private func markSubmitted(_ text: String) {
+        submittedSearch = MacSearchInput(text: text, tokens: searchTokens.map(\.id))
+        submittedReader = dependencies.aiProviders.title(dependencies.aiProviders.choice)
     }
 
     /// The scope fits in a saved album: one source, and an "all of" search.
