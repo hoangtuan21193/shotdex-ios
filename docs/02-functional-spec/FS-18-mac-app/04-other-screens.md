@@ -378,6 +378,48 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 - **Chưa dựng:** Fill kéo neo crop cho một ảnh, watermark, Share N Photos, Cancel gỡ bản đã ghi (Stop giữ những gì đã
   ghi), tải ảnh chỉ có trên server về để resize, ⌥⌘O cửa sổ riêng.
 
+### 4b. Combine Photos › Panorama — đã dựng (row 43, 2026-11-17, board `MAC_Merge`)
+
+- **Lối vào:** Image › Combine Photos › **Panorama…** với ≥ 2 ảnh đang chọn. Khung là ảnh tĩnh có bản gốc ở đây
+  (file trên máy, hay ảnh Photos); video, file còn trên cloud, ảnh chỉ có trên server bị bỏ và đếm ("1 item in the
+  selection left out — …"). Tối đa 30 khung (Save giữ mọi khung cỡ thật cùng lúc); thừa thì panel nói "Only the first 30
+  photos are used; N more left out.". Chọn 1 ảnh: hỏi "Select two or more photos". Chọn nhiều mà ít hơn 2 khung dùng được:
+  hỏi "Choose at least two photos to join" kèm lý do. Đổi nơi trong sidebar lúc đang đọc thì trang không mở.
+  Trang thế chỗ cửa sổ như Resize (sidebar ẩn, đổi nơi trong sidebar là đóng).
+- **Toolbar:** ◀ (⌘[, Esc) · tiêu đề "Panorama" + "8 photos · Sony A7 IV · FE 24-70mm F2.8 GM II" · Inspector (⌥⌘I) ·
+  Cancel · **Save** (viên accent, ⌘S; mờ tới khi có ảnh ghép). Đang ghi: thanh tiến độ "Saving…" + **Stop**. Ghi xong:
+  **Show in Finder** (file) + **Done** (⌘↩).
+- **Frames (228, trái):** "Frames · 8 photos", từng khung (thumbnail, tên file, "1/250 s · f/8", trạng thái: ✓ đã ghép,
+  vòng quay khung đang đọc, đồng hồ khung chờ, ⚠ chưa ghép). Nhóm **Not Placed (N)** cho khung stitch không nối được.
+  Chuột phải khung đã ghép: **Remove from Panorama**.
+- **Sân khấu:** ảnh ghép xem trước (bản nháp rồi bản nét, "Sharpening the preview…"), nhãn "Auto Crop" khi bật; chú thích
+  "Spherical · 16,384 × 3,904 px"; hàng trạng thái "Loading frames — 6 of 8" + thanh + %, rồi chữ của stitch
+  ("Finding overlaps…", "Blending…"), luôn kèm **Stop** — Stop dừng hẳn (lần chạy cũ không ghi gì nữa), sân khấu "Stopped.
+  Nothing was saved." + **Try Again**. Không chồng đủ: câu "Those photos don’t overlap enough to join…". Không đọc được khung: "N photos
+  couldn’t be read." + **Try Again**. Stitch dài: câu hỏi + **Continue** (FS-14.01).
+- **Inspector 300:** Projection (Spherical / Cylindrical / Perspective, câu giải thích; phép chiếu không dùng được cho
+  sweep này thì mờ và nêu số độ), Edges (Boundary Warp 0–100, Auto Crop), Output (Size 25–100%, "16,384 × 3,904 px ·
+  64 MP · About 31 MB"), Save To (Same Folder as Frames — "Photos Library" khi khung từ Photos · Choose Folder…; câu nói chỗ ghi), Arrange (**Arrange Frames…**
+  ↔ **Done Arranging**; trong Arrange sân khấu có viền nét đứt và khung viền từng ảnh, kéo một khung Not Placed từ danh
+  sách thả lên chỗ nó chồng để ghép lại, nút − bỏ khung). Chân: "A new photo is saved. The originals are never changed."
+- **Ghi:** stitch ghi JPEG vào thư mục tạm, rồi chuyển sang **cạnh khung đầu** với tên "‹tên khung đầu› (Panorama).jpg"
+  (trùng thì " (2)", FS-18.03 §5) hay vào folder đã chọn (bookmark). Khung đầu là ảnh Photos thì ảnh ghép vào Photos.
+  Bản gốc không bao giờ đổi. ◀/Cancel/Esc lúc đang ghi dừng ghi, không để lại file. Esc trong Arrange chỉ kết thúc
+  Arrange. Chuyển file hỏng: câu đỏ + **Try Again** chuyển lại file đã ghép (không ghép lại từ đầu). Ghi vào Photos:
+  "Saved ‹tên› to Photos".
+- **Sửa ở kit (cả iOS):** Boundary Warp > 0 lật ngược ảnh ghép — map của lưới bị đảo hàng hai lần
+  (`PanoramaBoundaryWarp.map`); test `PanoramaBoundaryWarpTests.warpKeepsTheSkyOnTop`.
+- **Hiệu năng:** đọc khung, ngày chụp, căn, cân sáng, Remove/đặt khung, render và đo dung lượng JPEG đều ngoài main
+  actor; UI không chờ (AC-208). Bản Debug căn chậm hơn Release nhiều lần (vòng pixel không tối ưu) — demo dùng lát nhỏ.
+- **Demo:** `-ShotDexSection panorama` mở 8 lát chồng nhau của ảnh demo (DSC09412…DSC09419.JPG, lát của ảnh nền Sonoma Horizon, trong thư mục tạm `ShotDexDemoSweep2`) — ghi
+  cạnh khung là ghi vào thư mục tạm đó, không đụng thư viện thật.
+- **Save và Arrange:** Save ghép lại ở cỡ thật từ các khung đang được đặt — khung đã bỏ không vào; khung đặt tay chỉ
+  ở lại khi lần ghép cỡ thật cũng tìm được nó (chỗ đặt tay chưa truyền xuống lần ghép đó).
+- **Chưa dựng:** Arrange kéo khung đã ghép sang chỗ khác (chỉ ghép lại khung Not Placed và bỏ khung), giữ chỗ đặt tay
+  khi Save, số độ sweep trên
+  chú thích (model chưa trả), ước lượng thời gian ghi, Stop dừng hẳn việc căn/render đang chạy trong luồng nền và huỷ tải iCloud của khung (giờ chỉ bỏ kết quả), HDR Merge và Focus Stack (Combine Photos chỉ có Panorama),
+  ⌥⌘O cửa sổ riêng.
+
 ## 5. Video Studio
 
 - Cửa sổ riêng (Window › Video Studio ⌥⌘V), tối thiểu **1180×760** ([01](01-window-and-navigation.md) §4).

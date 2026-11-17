@@ -544,8 +544,10 @@ public enum PanoramaBoundaryWarp {
     public static func map(_ mesh: PanoramaWarpMesh) -> CIImage? {
         var values = [Float](repeating: 0, count: mesh.columns * mesh.rows * 4)
         for row in 0..<mesh.rows {
-            // Core Image counts rows from the bottom.
-            let destination = (mesh.rows - 1 - row) * mesh.columns
+            // A bitmap's first row is its top in Core Image too, so rows go
+            // in top-down as the mesh counts them; flipping them here as well
+            // turned every warped panorama upside down.
+            let destination = row * mesh.columns
             for column in 0..<mesh.columns {
                 let point = mesh.sourcePoint(column: column, row: row)
                 let at = 4 * (destination + column)

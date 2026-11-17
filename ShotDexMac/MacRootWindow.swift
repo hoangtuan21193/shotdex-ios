@@ -51,6 +51,12 @@ struct MacRootWindow: View {
     @State private var cullRequest: MacCullRequest?
     /// Image › Resize… (board `MAC_Compress`): a page over the place it came from.
     @State private var resize: MacResizeModel?
+    /// Image › Combine Photos › Panorama… open (board `MAC_Merge`).
+    @State private var combine: MacCombineSession?
+    /// Panorama… reading which photos can be frames: a second ask waits.
+    @State private var isOpeningCombine = false
+    /// Bumped by every move in the sidebar: a Panorama… still reading opens nowhere.
+    @State private var combineToken = 0
     /// The editor (board `MAC_Edit`): opened from the viewer, Back returns there.
     @State private var editor: MacEditorModel?
     @State private var editorZoom = MacViewerZoom.fit
@@ -203,6 +209,9 @@ struct MacRootWindow: View {
             } else if let resize {
                 MacResizePage(model: resize) { self.resize = nil }
                     .id(resize.id)
+            } else if let combine {
+                MacCombinePage(session: combine) { self.combine = nil }
+                    .id(combine.id)
             // A culling pass: a page over the place it came from (Back returns to it).
             } else if let cullRequest {
                 MacCullPage(request: cullRequest, menu: photoMenu, picture: Self.demoPicture,
@@ -282,7 +291,7 @@ struct MacRootWindow: View {
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
-        .onChange(of: resize == nil) { _, closed in
+        .onChange(of: resize == nil && combine == nil) { _, closed in
             if closed {
                 if let before = columnsBeforeResize { columnVisibility = before }
                 columnsBeforeResize = nil
@@ -322,6 +331,9 @@ struct MacRootWindow: View {
             cullRequest = nil
             // A run under way keeps going (Activity shows it); the page goes with its place.
             resize = nil
+            combine?.stop()
+            combine = nil
+            combineToken += 1
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
             // Another place: the editor saves and goes with the viewer it came from.
@@ -1386,6 +1398,35 @@ struct MacRootWindow: View {
                 }
                 resize = MacResizeModel(ids: chosen, dependencies: dependencies)
             },
+            panorama: {
+                guard resize == nil, combine == nil, editor == nil, !isOpeningCombine else { NSSound.beep(); return }
+                guard ids.count >= 2 else {
+                    let alert = NSAlert()
+                    alert.messageText = String(localized: "Select two or more photos", comment: "Mac Combine: one photo chosen")
+                    alert.informativeText = String(localized: "A panorama joins overlapping photos of one sweep. Select them all, then choose Panorama… again.",
+                                                   comment: "Mac Combine: what to select")
+                    alert.runModal()
+                    return
+                }
+                isOpeningCombine = true
+                let token = combineToken
+                Task {
+                    defer { isOpeningCombine = false }
+                    let session = await MacCombineSession.make(ids: ids, dependencies: dependencies)
+                    // Somewhere else by now, or another page took the window: it does not open over it.
+                    guard token == combineToken, resize == nil, editor == nil, combine == nil else { return }
+                    guard let session else {
+                        let alert = NSAlert()
+                        alert.messageText = String(localized: "Choose at least two photos to join", comment: "Mac Combine: too few usable photos")
+                        alert.informativeText = String(localized: "A panorama is made from photos whose originals are on this Mac or in Photos. Videos and photos still in the cloud are left out.",
+                                                       comment: "Mac Combine: which photos can be frames")
+                        alert.runModal()
+                        return
+                    }
+                    viewerId = nil
+                    combine = session
+                }
+            },
             upload: {
                 // One sheet at a time on this window: another one open, or an upload under way, wins.
                 guard !ids.isEmpty, uploadRequest == nil, !showsAddSource, serverForm == nil, smartAlbumForm == nil
@@ -1594,6 +1635,13 @@ struct MacRootWindow: View {
                         }) ?? []
                     }.value
                     resize = MacResizeModel(ids: ids, dependencies: dependencies)
+                }
+            }
+            // `-ShotDexSection panorama` (board `MAC_Merge`): the demo sweep in Panorama.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "panorama", combine == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    combine = await MacCombineSession.demo(dependencies: dependencies)
                 }
             }
             // `-ShotDexSection viewer`: the board's state, a photo open, once the rows are in.

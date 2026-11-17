@@ -24,6 +24,8 @@ struct MacLibraryTarget {
     var startCull: () -> Void
     /// Image › Resize… ⌥⌘R (FS-18.04 §4a).
     var resize: () -> Void
+    /// Image › Combine Photos › Panorama… (FS-18.04 §4b).
+    var panorama: () -> Void
     /// File › Upload to Server… ⇧⌘U (FS-15.02).
     var upload: () -> Void
 }
@@ -159,6 +161,11 @@ struct MacImageCommands: Commands {
             Button(String(localized: "Resize…", comment: "Mac menu: Image › Resize… (the selected photos, smaller)")) { library?.resize() }
                 .keyboardShortcut("r", modifiers: [.option, .command])
                 .disabled(library?.hasSelection != true && library?.viewerOpen != true)
+            Menu(String(localized: "Combine Photos", comment: "Mac menu: Image › Combine Photos (submenu)")) {
+                Button(String(localized: "Panorama…", comment: "Mac menu: Image › Combine Photos › Panorama…")) { library?.panorama() }
+                    .disabled(library?.hasSelection != true)
+            }
+            .disabled(library == nil)
             Divider()
             // ⌘L hides; in Collections › Hidden it unhides (board `MAC_Hidden`).
             if let hidden {

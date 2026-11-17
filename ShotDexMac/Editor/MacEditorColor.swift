@@ -644,14 +644,18 @@ struct MacEditorSegments<Option: Hashable>: View {
     @Binding var selection: Option
     let id: String
     var marked: (Option) -> Bool = { _ in false }
+    /// A segment that cannot be chosen here: dimmed and off.
+    var isUnavailable: (Option) -> Bool = { _ in false }
     let title: (Option) -> String
 
     init(options: [Option], selection: Binding<Option>, id: String, marked: @escaping (Option) -> Bool = { _ in false },
+         isUnavailable: @escaping (Option) -> Bool = { _ in false },
          title: @escaping (Option) -> String) {
         self.options = options
         _selection = selection
         self.id = id
         self.marked = marked
+        self.isUnavailable = isUnavailable
         self.title = title
     }
 
@@ -673,6 +677,8 @@ struct MacEditorSegments<Option: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(isUnavailable(option))
+                .opacity(isUnavailable(option) ? 0.4 : 1)
                 .accessibilityAddTraits(isOn ? .isSelected : [])
                 .accessibilityIdentifier("\(id).\(title(option))")
             }

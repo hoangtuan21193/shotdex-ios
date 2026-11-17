@@ -6,6 +6,7 @@ import Foundation
 import GRDB
 import ServiceManagement
 import ImageIO
+import UniformTypeIdentifiers
 
 /// `-ShotDexDemoLibrary`: the window over an in-memory library of landscape
 /// pictures — the macOS desktop pictures — instead of the user's Photos.
@@ -650,6 +651,38 @@ enum MacDemoLibrary {
             }
             await MainActor.run { done() }
         }
+    }
+
+    /// `-ShotDexSection panorama`: eight overlapping slices of one wide demo
+    /// picture, as JPEG files in a temporary folder — frames a panorama can
+    /// actually join (the demo's other pictures share no scenery).
+    static func panoramaFrames() -> [URL] {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexDemoSweep2", isDirectory: true)
+        let names = (0..<8).map { "DSC0\(9412 + $0).JPG" }
+        let urls = names.map { folder.appendingPathComponent($0) }
+        if urls.allSatisfy({ FileManager.default.fileExists(atPath: $0.path) }) { return urls }
+        // A wide landscape big enough to register (the tile thumbnails are
+        // 356 px, too small for frames of a sweep); the tile picture otherwise.
+        let wide = URL(fileURLWithPath: "/System/Library/Desktop Pictures/.wallpapers/Sonoma Horizon/Sonoma Horizon.heic")
+        let options = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 1800,
+                       kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+        guard let picture = CGImageSourceCreateWithURL(wide as CFURL, nil).flatMap({ CGImageSourceCreateThumbnailAtIndex($0, 0, options) })
+                ?? pictures.first else { return [] }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // The middle band, frames a little wider than tall: small enough that
+        // a Debug build (unoptimised pixel loops) registers them in a minute.
+        let width = picture.width, height = picture.height
+        let slice = Int(Double(width) * 0.3)
+        let band = Int(Double(height) * 0.55)
+        let step = (width - slice) / 7
+        for (index, url) in urls.enumerated() {
+            guard let part = picture.cropping(to: CGRect(x: index * step, y: (height - band) / 2, width: slice, height: band)),
+                  let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+            else { continue }
+            CGImageDestinationAddImage(destination, part, [kCGImageDestinationLossyCompressionQuality: 0.92] as CFDictionary)
+            CGImageDestinationFinalize(destination)
+        }
+        return urls
     }
 
     /// Landscape desktop pictures, decoded once, cycled over the tiles.

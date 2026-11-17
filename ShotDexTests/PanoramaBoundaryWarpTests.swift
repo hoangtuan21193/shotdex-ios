@@ -267,4 +267,34 @@ struct PanoramaBoundaryWarpTests {
         }
         return Float(total / Double(width * height))
     }
+
+    // MARK: Orientation — the warp does not turn the picture upside down
+
+    /// Red sky over blue ground stays that way round once warped. The map is
+    /// a bitmap, whose first row Core Image already puts at the top; flipping
+    /// its rows by hand as well turned every warped panorama over (seen on the
+    /// Mac's Panorama page at Boundary Warp 100, row 43).
+    @Test func warpKeepsTheSkyOnTop() throws {
+        let mesh = try #require(mesh())
+        let half = CGFloat(height) / 2
+        // Core Image counts from the bottom: the upper half is y ≥ half.
+        let sky = CIImage(color: CIColor(red: 1, green: 0, blue: 0)).cropped(to: CGRect(x: 0, y: half, width: CGFloat(width), height: half))
+        let ground = CIImage(color: CIColor(red: 0, green: 0, blue: 1)).cropped(to: CGRect(x: 0, y: 0, width: CGFloat(width), height: half))
+        let picture = sky.composited(over: ground)
+        let warped = try #require(PanoramaBoundaryWarp.apply(mesh, to: picture, width: width, height: height))
+        let context = CIContext(options: [.workingColorSpace: NSNull()])
+        let image = try #require(context.createCGImage(warped, from: CGRect(x: 0, y: 0, width: width, height: height)))
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let bitmap = try #require(CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        bitmap.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        // The bitmap's first row is the top of the picture.
+        func color(row: Int) -> (red: UInt8, blue: UInt8) {
+            let at = (row * width + width / 2) * 4
+            return (pixels[at], pixels[at + 2])
+        }
+        let top = color(row: height / 8), bottom = color(row: height * 7 / 8)
+        #expect(top.red > 200 && top.blue < 50, "top \(top)")
+        #expect(bottom.blue > 200 && bottom.red < 50, "bottom \(bottom)")
+    }
 }

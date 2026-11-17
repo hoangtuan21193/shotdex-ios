@@ -1,0 +1,357 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "panorama"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.stop",
+   "seconds": 30
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-loading"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "combine.stop"
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.retry",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-stopped"
+  },
+  {
+   "action": "click",
+   "label": "combine.retry"
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.stage",
+   "seconds": 300
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "pano"
+  },
+  {
+   "action": "dump",
+   "name": "pano"
+  },
+  {
+   "action": "click",
+   "label": "combine.projection.Cylindrical"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-cylindrical"
+  },
+  {
+   "action": "click",
+   "label": "combine.projection.Perspective"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-perspective"
+  },
+  {
+   "action": "click",
+   "label": "combine.projection.Spherical"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-spherical"
+  },
+  {
+   "action": "drag",
+   "label": "combine.warp",
+   "dx": 60,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "combine.autoCrop"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-nocrop"
+  },
+  {
+   "action": "click",
+   "label": "combine.autoCrop"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "label": "combine.size",
+   "dx": -80,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "pano-inspector"
+  },
+  {
+   "action": "click",
+   "label": "combine.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "combine.arrange"
+  },
+  {
+   "action": "click",
+   "label": "combine.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "combine.arrange"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-arrange"
+  },
+  {
+   "action": "click",
+   "label": "combine.remove.DSC09419.JPG"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-removed"
+  },
+  {
+   "action": "dump",
+   "name": "pano-removed"
+  },
+  {
+   "action": "click",
+   "label": "combine.arrange"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "combine.saveTo"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Same Folder as Frames",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "combine.save"
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.saved",
+   "seconds": 300
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-saved"
+  },
+  {
+   "action": "dump",
+   "name": "pano-saved"
+  },
+  {
+   "action": "click",
+   "label": "combine.reveal"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "activate"
+  },
+  {
+   "action": "click",
+   "label": "combine.done"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "combine.back",
+   "seconds": 5
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Image > Combine Photos > Panorama…"
+  },
+  {
+   "action": "waitFor",
+   "label": "Choose at least two photos to join",
+   "seconds": 60
+  },
+  {
+   "action": "screenshot",
+   "name": "pano-menu-alert"
+  },
+  {
+   "action": "click",
+   "label": "OK",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "combine.back",
+   "seconds": 3
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "panorama"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.cancel",
+   "seconds": 30
+  },
+  {
+   "action": "click",
+   "label": "combine.cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "combine.back",
+   "seconds": 5
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "panorama"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "combine.stop",
+   "seconds": 30
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "combine.back",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "pano-left"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
