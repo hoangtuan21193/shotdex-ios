@@ -25,7 +25,7 @@ struct AIProviderClient: Sendable {
             case .rateLimited:
                 String(localized: "The service is busy. Try again in a minute.", comment: "AI provider error: 429")
             case .unreachable(let name):
-                String(localized: "ShotDex couldn't reach \(name).", comment: "AI provider error: no connection, e.g. ShotDex couldn't reach Mac Studio.")
+                String(localized: "ShotDex couldn't reach \(name). Check the address, and that the server is on and accepts connections from this network.", comment: "AI provider error: no connection, e.g. ShotDex couldn't reach Mac Studio. …")
             case .service(let message):
                 message
             case .badResponse:
@@ -176,6 +176,16 @@ struct AIProviderClient: Sendable {
             .sorted { $0.key < $1.key }
             .map { "\($0.key): \(secret.contains($0.key.lowercased()) ? "<redacted>" : $0.value)" }
             .joined(separator: ", ")
-        return "\(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "") [\(headers)]"
+        // Scheme, host, port and path: a pasted address can carry a key in
+        // its user part or query.
+        let address = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }.map { url -> String in
+            var url = url
+            url.user = nil
+            url.password = nil
+            url.query = nil
+            url.fragment = nil
+            return url.string ?? ""
+        } ?? ""
+        return "\(request.httpMethod ?? "GET") \(address) [\(headers)]"
     }
 }

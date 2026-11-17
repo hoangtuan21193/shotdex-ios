@@ -34,7 +34,7 @@ struct MacPushButtonStyle: ButtonStyle {
         private var label: some View {
         configuration.label
             .font(.system(size: 13, weight: isDefault ? defaultWeight : .regular))
-            .foregroundStyle(isDefault ? MacTheme.onAccentFill : Color.primary)
+            .foregroundStyle(isDefault ? MacTheme.onAccentFill : configuration.role == .destructive ? MacTheme.redText : Color.primary)
             .frame(minHeight: isToolbarCommand ? 36 : 28)
             .padding(.horizontal, isToolbarCommand ? 18 : 12)
             .background(RoundedRectangle(cornerRadius: radius).fill(isDefault ? MacTheme.accentFill : MacTheme.fill))

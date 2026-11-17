@@ -123,6 +123,14 @@ Foot: idle "Up to date · indexed 2 min ago"; progress only on boards about a ru
   red = marked for deletion.
 - Checkbox on = `accentFill` box + white/black check, in every tier. Destructive button = bordered, red text.
 
+## Settings tiles (2026-11-17, boards `MAC_SettingsAI*`)
+
+A Settings row or sheet header may lead with a System Settings tile: 28 square, radius 8, a **flat** system
+colour (purple `#AF52DE` AI Search, grey `#8E8E93` built-in, blue `#007AFF` a server), white 16pt glyph. It is the
+one filled shape that is not amber: it names a kind of thing, it is not a control. Code: `MacSettingsTile`,
+`MacSettingsTileLabel` (`ShotDexMac/Settings/MacAISettings.swift`). Status text on it uses `greenText` / `redText`.
+In a table's button bar, + and − are borderless; Test and Edit… are push buttons.
+
 ## Type, size, structure
 - Text floor **10px** everywhere (badges, chart axes, frame numbers). Monospace only for timecode.
 - Tables: rows 28 tall (20px thumb), alternating `rowAlt`, header 28 with dividers.

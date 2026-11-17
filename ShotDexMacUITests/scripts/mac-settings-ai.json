@@ -1,0 +1,679 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "aiSettings"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "waitFor",
+   "label": "General",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "Mac Studio"
+  },
+  {
+   "action": "assertExists",
+   "label": "qwen3:14b"
+  },
+  {
+   "action": "assertExists",
+   "label": "127.0.0.1:11434"
+  },
+  {
+   "action": "assertExists",
+   "label": "Ollama · LM Studio"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-ai"
+  },
+  {
+   "action": "dump",
+   "name": "01-ai"
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Mac Studio"
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Off",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Off"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Delete Provider"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Test Provider"
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Edit Provider"
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Test Provider"
+  },
+  {
+   "action": "click",
+   "label": "Test Provider"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "ai-test-working",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-tested"
+  },
+  {
+   "action": "dump",
+   "name": "02-tested"
+  },
+  {
+   "action": "click",
+   "label": "Edit Provider"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Delete Provider…",
+   "seconds": 5
+  },
+  {
+   "action": "assertExists",
+   "label": "Ollama listens on port 11434, LM Studio on 1234. A key is only needed if you set one up."
+  },
+  {
+   "action": "screenshot",
+   "name": "03-edit"
+  },
+  {
+   "action": "dump",
+   "name": "03-edit"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "t",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "ai-test-working",
+   "seconds": 5
+  },
+  {
+   "action": "key",
+   "text": "\t"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "http://127.0.0.1:11435"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "t",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "The service rejected the API key.",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "04-rejected"
+  },
+  {
+   "action": "key",
+   "text": "\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "waitFor",
+   "label": "The test didn't work. Save anyway?",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "04-save-anyway"
+  },
+  {
+   "action": "key",
+   "text": "\u001b"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "The test didn't work. Save anyway?"
+  },
+  {
+   "action": "assertExists",
+   "label": "Delete Provider…"
+  },
+  {
+   "action": "key",
+   "text": "\u001b"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Delete Provider…"
+  },
+  {
+   "action": "assertExists",
+   "label": "127.0.0.1:11434"
+  },
+  {
+   "action": "click",
+   "label": "Add Provider…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Add Provider",
+   "seconds": 5
+  },
+  {
+   "action": "assertDisabled",
+   "label": "Save"
+  },
+  {
+   "action": "typeText",
+   "text": "Studio Two"
+  },
+  {
+   "action": "key",
+   "text": "\t"
+  },
+  {
+   "action": "typeText",
+   "text": "127.0.0.1:11434"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "05-add"
+  },
+  {
+   "action": "dump",
+   "name": "05-add"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "t",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "ai-test-working",
+   "seconds": 5
+  },
+  {
+   "action": "assertEnabled",
+   "label": "Save"
+  },
+  {
+   "action": "key",
+   "text": "\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Add Provider"
+  },
+  {
+   "action": "assertExists",
+   "label": "Studio Two"
+  },
+  {
+   "action": "assertExists",
+   "label": "llama3.2:3b"
+  },
+  {
+   "action": "dump",
+   "name": "06-added"
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Studio Two"
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "assertExists",
+   "label": "Studio Two",
+   "type": "menuItem"
+  },
+  {
+   "action": "click",
+   "label": "Studio Two",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Studio Two"
+  },
+  {
+   "action": "click",
+   "label": "Delete Provider"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "waitFor",
+   "label": "Delete Studio Two?",
+   "seconds": 4
+  },
+  {
+   "action": "assertExists",
+   "label": "Its API key is removed from this Mac too. AI Search will go back to Apple Intelligence."
+  },
+  {
+   "action": "screenshot",
+   "name": "07-delete"
+  },
+  {
+   "action": "click",
+   "label": "action-button-1"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "Studio Two",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "07-after-delete"
+  },
+  {
+   "action": "assertValue",
+   "label": "ai-search-choice",
+   "text": "Apple Intelligence"
+  },
+  {
+   "action": "click",
+   "label": "ai-search-choice"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "key",
+   "text": "n",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "f",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "pictures of my dog near the lake\r"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "08-searched"
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Edit Provider"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "waitFor",
+   "label": "Mac Studio",
+   "seconds": 4
+  },
+  {
+   "action": "assertExists",
+   "label": "Home server · used for AI Search"
+  },
+  {
+   "action": "key",
+   "text": "",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "waitFor",
+   "label": "Delete Mac Studio?",
+   "seconds": 4
+  },
+  {
+   "action": "assertExists",
+   "label": "Its API key is removed from this Mac too. AI Search will go back to Apple Intelligence."
+  },
+  {
+   "action": "click",
+   "label": "action-button-1"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "Delete Provider…"
+  },
+  {
+   "action": "waitFor",
+   "label": "No Providers. Click + to add Ollama or LM Studio.",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "09-empty"
+  },
+  {
+   "action": "dump",
+   "name": "09-empty"
+  },
+  {
+   "action": "quit"
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "aiSettings",
+    "-ShotDexAppearance",
+    "dark"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "w",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "ShotDex>Settings…"
+  },
+  {
+   "action": "waitFor",
+   "label": "General",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "10-ai-dark"
+  },
+  {
+   "action": "click",
+   "label": "Mac Studio",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Edit Provider"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "11-edit-dark"
+  },
+  {
+   "action": "key",
+   "text": "\u001b"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  }
+ ]
+}

@@ -141,26 +141,3 @@ struct SettingsAIScreen: View {
         providers = (try? dependencies.aiProviders.providers()) ?? []
     }
 }
-
-/// The words for an AI choice, wherever one is shown.
-enum AIChoiceTitle {
-    static func title(_ choice: AIChoice, providers: [AIProvider]) -> String {
-        switch choice {
-        case .off: String(localized: "Off", comment: "AI choice: AI Search off")
-        case .appleIntelligence: String(localized: "Apple Intelligence", comment: "Built-in AI")
-        case .provider(let id): providers.first { $0.id == id }?.name ?? id
-        }
-    }
-
-    static func kindName(_ kind: AIProvider.Kind) -> String {
-        switch kind {
-        case .homeServer: String(localized: "Home Server", comment: "AI provider kind: Ollama or LM Studio on the home network")
-        case .claude: "Claude"
-        case .chatGPT: "ChatGPT"
-        case .openRouter: "OpenRouter"
-        case .grok: "Grok"
-        case .gemini: "Gemini"
-        case .openAICompatible: String(localized: "Other OpenAI-Compatible", comment: "AI provider kind: any other service speaking the OpenAI API")
-        }
-    }
-}

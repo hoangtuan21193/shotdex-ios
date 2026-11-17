@@ -66,6 +66,13 @@ enum MacDemoLibrary {
         if section == "duplicates" { seedDuplicates(dependencies) }
         if section == "collages" { seedCollages(dependencies) }
         if section == "videoProjects" { seedVideoProjects(dependencies) }
+        // `aiSettings` (board `MAC_SettingsAI`): one home server, on this
+        // Mac's loopback so Test never reaches a real machine.
+        if section == "aiSettings" {
+            try? dependencies.aiProviders.store.save(
+                AIProvider(id: "demo-ai-mac-studio", kind: .homeServer, name: "Mac Studio",
+                           address: "http://127.0.0.1:11434", model: "qwen3:14b"), key: nil)
+        }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {

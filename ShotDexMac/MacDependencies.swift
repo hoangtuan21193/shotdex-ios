@@ -14,9 +14,11 @@ final class MacDependencies: LibraryServices {
     let metadataStore: MetadataStore
     let libraryQueries: LibraryQueries
     let filterSuggestions: FilterSuggestionCache
-    /// Typed queries to grid state (FS-18.02 §4): the parser, then free
-    /// text. AI search is a later version on the Mac (FS-18.04 §3).
+    /// Typed queries to grid state (FS-18.02 §4): the parser, then the
+    /// model Settings › AI names (on Return), then free text.
     let search: SearchService
+    /// The AI providers and the AI Search choice (FS-18.04 §3c).
+    let aiProviders: MacAIProviders
     /// The value index the search field suggests from (FS-01.03c §8).
     let searchIndex: SearchIndexQueries
     let searchIndexer: SearchIndexer
@@ -161,7 +163,24 @@ final class MacDependencies: LibraryServices {
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
         filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
-        search = SearchService(filterSuggestions: filterSuggestions, recentSearches: RecentSearchStore())
+        // The demo keeps its keys in memory and its choice apart from the real app's.
+        #if DEBUG
+        let isDemo = MacDemoLibrary.isOn
+        #else
+        let isDemo = false
+        #endif
+        let aiDefaults = isDemo ? (UserDefaults(suiteName: "com.hoangtuan.shotdex.demo") ?? .standard) : .standard
+        if isDemo { aiDefaults.removeObject(forKey: SettingsKeys.aiSearch) }
+        let aiProviders = MacAIProviders(
+            store: AIProviderStore(database: database, keys: isDemo ? InMemoryPasswordStore()
+                                                                    : KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys)),
+            defaults: aiDefaults
+        )
+        self.aiProviders = aiProviders
+        // The rows the search model reads, off the main actor; runs after the demo's seed.
+        Task { await aiProviders.reload() }
+        search = SearchService(filterSuggestions: filterSuggestions, recentSearches: RecentSearchStore(),
+                               model: { [weak aiProviders] in aiProviders?.searchModel() })
         searchIndex = SearchIndexQueries(database: database)
         let searchIndexer = SearchIndexer(database: database)
         searchIndexer.start()
@@ -178,7 +197,8 @@ final class MacDependencies: LibraryServices {
         networkStatus = NetworkMonitor()
         powerStatus = PowerMonitor()
         sources = SourceStore(database: database)
-        let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        // The demo's test servers keep their passwords in memory, never in the user's Keychain.
+        let fileServers = FileServerStore(database: database, passwords: isDemo ? InMemoryPasswordStore() : KeychainPasswordStore())
         self.fileServers = fileServers
         storeNames = MacStoreNames(sources: sources, fileServers: fileServers)
         let serverUploads = ServerUploadStore(database: database)

@@ -326,7 +326,7 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
 | Pane | Board | Hàng chạy thật | Hàng mờ (chưa có tính năng) | Từ mục iOS |
 |---|---|---|---|---|
 | General | `MAC_SettingsGeneral` | câu Thumbnail size (chỉ chữ) · File Type Badge · Info on Thumbnails (File Name, Capture Time, ISO, Aperture, Shutter Speed, Focal Length, Megapixels, File Size) · Focal Length (Actual · Full-Frame Equivalent) · **Indexing** (đã có) · **Background** (đã có, [FS-22.06](../FS-22-backup/06-mac.md) §5.4) | View Full HDR · Autoplay Videos · On This Day Reminder (Show Insights in Statistics chạy thật từ row 28) | Display, Playback, Notifications |
-| AI | `MAC_SettingsAI`, `MAC_SettingsAIProvider` | — | cả pane: Use For › AI Search, bảng Providers và sheet sửa provider | AI ([FS-08.07](../FS-08-settings/)) |
+| AI | `MAC_SettingsAI`, `MAC_SettingsAIProvider` | cả pane — §3d: Use For › AI Search, On This Mac, bảng Providers (+, −, Test, Edit…) và sheet sửa provider | — | AI ([FS-08.07](../FS-08-settings/07-ai-providers.md)) |
 | Sources | `MAC_SettingsSources`, `MAC_SettingsSourcesCache` | bảng Photo Sources (Manage Access…, Re-index, Remove…, Grant Access…, Add Folder…, Connect to Server…, thả folder vào bảng) · When a Drive Is Disconnected · Pause Indexing on Battery Power · Prevent Sleep While Indexing · Look Up Place Names · Scan for People and Pets (kèm "N of M items scanned") · Preview Cache (dung lượng, Clear Cache, Cache Size Limit 2/5/10/25/50 GB) · **Index** (đếm, dung lượng, tiến độ, Re-index Library) · Camera Database (số máy chưa rõ, Review Unknown Cameras) · Clear Local Metadata Index | Index New and Changed Files · Preview Cache › Change Location… · Keep Full-Size Previews · Keep Previews of Disconnected Drives | Sources (FS-21), People and Pets, Library Size, Privacy |
 | Editing | `MAC_SettingsEditing` | RAW + JPEG Pairs · Export Defaults (Size, Format and Quality, File Names, If a File Exists, Metadata When Sharing) · bảng Presets (+, −, Edit…) — §3c | Watermark When Sharing (Share trên Mac gửi file nguyên trạng, chưa đóng dấu) | Export, Sharing |
 | Servers | `MAC_SettingsServers` | bảng Connections (Name · Host · Protocol · Folder · Status; Add Connection…, Edit, Test, Delete) · Local Network Access + Open Privacy Settings… · Server Thumbnails (phần của server trong Preview Cache, Clear Cache — không có limit riêng) | — | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
@@ -371,6 +371,41 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
   còn dùng — xoá ở Markup). Settings và sheet Export đọc lại preset mỗi khi bên kia ghi. Đếm "7 resize · 3 watermark"
   cạnh tiêu đề. Preset watermark được tạo trong editor (Markup, Edit… của sheet Export).
 - Preset bị xoá mà Export Defaults hay sheet Export đang trỏ tới thì sheet về Original (FS-03.07b §3a).
+
+### 3d. AI (rows 54–55, 2026-11-17, boards `MAC_SettingsAI`, `MAC_SettingsAIProvider`)
+
+Hành vi theo [FS-08.07](../FS-08-settings/07-ai-providers.md); Mac dùng chung bảng `ai_providers`, `AIProviderStore`,
+`AIProviderClient`, `AIChoice` và `SearchService`. Bỏ dòng "AI Search comes to the Mac in a later version." — board sửa theo.
+
+- **Use For › AI Search** — popup Apple Intelligence (nếu Mac có và đang bật) · các máy chủ trong nhà · Off; đổi là áp
+  ngay (`ai.search`). Không bao giờ có dịch vụ cloud (FS-08.07 §5).
+- **AI Search chạy thật trên Mac**: gõ một câu vào ô tìm rồi Return — bộ phân tích đọc trước; còn chữ thừa thì hỏi
+  model hàng AI Search (2 s trên máy, 8 s máy chủ trong nhà), quá hạn hay lỗi thì dùng kết quả bộ phân tích, không hộp
+  lỗi. Gõ từng phím chỉ chạy bộ phân tích (không model).
+- **On This Mac** — Apple Intelligence + chấm trạng thái: Ready (xanh) · Turn on Apple Intelligence in System Settings ·
+  Downloading (cam); Mac không chạy được thì không có nhóm.
+- **Providers** — bảng Name · Model · Address or Key (dòng cloud cũ: "Key ends in 7Qx2"), chú "Ollama · LM Studio" bên
+  phải tiêu đề; trống thì "No Providers. Click + to add Ollama or LM Studio.". **+** mở sheet Add Provider; thêm máy chủ
+  khi AI Search đang Off thì AI Search chọn luôn máy đó. **−** (hay ⌫, menu chuột phải Delete…) hỏi "Delete Mac
+  Studio?" · "Its API key is removed from this Mac too." (+ "AI Search will go back to Apple Intelligence." / "AI
+  Search will turn off." khi AI Search đang dùng nó); **Test** gửi một dòng tới provider đang chọn, kết
+  quả cạnh nút ("✓ Working · 0.8 s" hay câu lỗi của máy chủ); **Edit…** (hay bấm đúp) mở sheet. Không chọn dòng: −, Test,
+  Edit… mờ. Xoá provider đang được AI Search dùng thì hàng về mặc định.
+- **Sheet** (520 × 456 cố định — sheet đổi cỡ khi danh sách model về thì AppKit dựng lại cửa sổ): ô vuông xanh server + tên + "Home server" (thêm "· used for AI Search" khi hàng AI Search chọn
+  nó); Name, Address (gợi ý `http://192.168.1.10:11434`), API Key (ô bí mật, "Optional"; đã lưu thì chỉ hiện •••• + 4 ký
+  tự cuối, chỉ với key ≥ 8 ký tự), dòng giúp cổng 11434 / 1234, Model — popup từ danh sách máy chủ trả về (hỏi khi
+  địa chỉ đã ra một host, không gửi key đang gõ dở; không chọn sẵn model embedding; model đã lưu mà máy chủ không còn
+  thì vẫn giữ, ghi "(not on the server)"); máy chủ không trả lời thì "Couldn't load the models from Mac Studio. Type the
+  model name." và ô gõ tay;
+  Test (⌘T) + kết quả + "Test sends one short line to Mac Studio."; Delete Provider… (đỏ, trái, chỉ khi sửa, ⌘⌫) · Cancel (Esc) ·
+  Save (Return, nhấn accent; mờ khi thiếu tên, địa chỉ hay model, lý do ghi cạnh nút: "Add a name." …; mờ cả khi
+  Test đang chạy). Test lỗi thì Save hỏi "The test didn't work. Save anyway?"; sửa một ô thì kết quả Test cũ bỏ đi
+  (Test đang chạy bị huỷ). Không tới được máy chủ: "ShotDex couldn't reach Mac Studio. Check the address, and that the
+  server is on and accepts connections from this network." Địa chỉ dán vào có user/key/query thì bỏ phần đó trước khi
+  gửi và ghi log. Lưu, xoá, đọc key và danh sách đều chạy ngoài main actor.
+- Key ở Keychain của Mac (`com.hoangtuan.shotdex.ai-provider`), không vào database, log, thông báo. Bản demo
+  (`-ShotDexDemoLibrary`) giữ key trong bộ nhớ và lựa chọn ở defaults riêng; `-ShotDexSection aiSettings` thêm "Mac Studio"
+  ở `127.0.0.1:11434` (loopback, Test không chạm máy thật nào).
 
 ## 4. Collage, Resize, Combine Photos (tầng D, D10)
 
