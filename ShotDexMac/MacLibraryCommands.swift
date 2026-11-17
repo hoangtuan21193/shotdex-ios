@@ -24,6 +24,8 @@ struct MacLibraryTarget {
     var startCull: () -> Void
     /// Image › Resize… ⌥⌘R (FS-18.04 §4a).
     var resize: () -> Void
+    /// Image › Create › Collage… (FS-18.04 §4c).
+    var collage: () -> Void
     /// Image › Combine Photos › Panorama… (FS-18.04 §4b).
     var panorama: () -> Void
     /// File › Upload to Server… ⇧⌘U (FS-15.02).
@@ -161,6 +163,11 @@ struct MacImageCommands: Commands {
             Button(String(localized: "Resize…", comment: "Mac menu: Image › Resize… (the selected photos, smaller)")) { library?.resize() }
                 .keyboardShortcut("r", modifiers: [.option, .command])
                 .disabled(library?.hasSelection != true && library?.viewerOpen != true)
+            Menu(String(localized: "Create", comment: "Mac menu: Image › Create (submenu)")) {
+                Button(String(localized: "Collage…", comment: "Mac menu: Image › Create › Collage…")) { library?.collage() }
+                    .disabled(library?.hasSelection != true)
+            }
+            .disabled(library == nil)
             Menu(String(localized: "Combine Photos", comment: "Mac menu: Image › Combine Photos (submenu)")) {
                 Button(String(localized: "Panorama…", comment: "Mac menu: Image › Combine Photos › Panorama…")) { library?.panorama() }
                     .disabled(library?.hasSelection != true)

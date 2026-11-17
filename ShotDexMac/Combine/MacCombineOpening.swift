@@ -12,58 +12,19 @@ extension MacCombineSession {
     /// holds them all while it blends (30 × 45 MP is about 5 GB), and a
     /// sweep of more is a different tool.
     static let frameLimit = 30
-    /// The photos looked at: enough past the limit to skip videos and
-    /// cloud copies, and well under SQLite's bound-variable cap.
-    static let candidateLimit = 400
-
     static func make(ids allIds: [String], dependencies: MacDependencies) async -> MacCombineSession? {
-        let ids = Array(allIds.prefix(candidateLimit))
-        let database = dependencies.database
-        let rows = await Task.detached(priority: .userInitiated) { () -> [MacCombineRow] in
-            (try? database.reader.read { db in
-                try Row.fetchAll(db, sql: """
-                    SELECT assetId, mediaType, originalFilename, shutterSpeedDisplay, aperture,
-                           COALESCE(normalizedCameraModel, cameraModel) AS camera,
-                           COALESCE(normalizedLensModel, lensModel) AS lens
-                    FROM photo_metadata WHERE assetId IN (\(ids.map { _ in "?" }.joined(separator: ",")))
-                    """, arguments: StatementArguments(ids))
-                .map { MacCombineRow(id: $0["assetId"], isImage: ($0["mediaType"] as Int?) == PHAssetMediaType.image.rawValue,
-                                     filename: $0["originalFilename"], shutter: $0["shutterSpeedDisplay"], aperture: $0["aperture"],
-                                     camera: $0["camera"], lens: $0["lens"]) }
-            }) ?? []
-        }.value
-        let byId = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var origins: [PhotoEditOrigin] = []
-        var frames: [Frame] = []
-        var camera: String?
-        var lens: String?
-        var overLimit = 0
-        for id in ids {
-            guard let row = byId[id], row.isImage else { continue }
-            guard origins.count < frameLimit else { overLimit += 1; continue }
-            let origin: PhotoEditOrigin?
-            if await MacEditorModel.isPhotosOnly(id, database: database) {
-                let asset = await Task.detached { MacCombineAssetBox(PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject) }.value
-                origin = asset.asset.map { .asset($0) }
-            } else if let file = await MacPhotoFiles.resolve(id, dependencies: dependencies), !file.isPlaceholder {
-                origin = .fileCopy(FileCopyPhoto(photoId: id, url: file.url))
-            } else {
-                origin = nil
-            }
-            guard let origin else { continue }
-            origins.append(origin)
-            let name = row.filename ?? origin.localFileURL?.lastPathComponent ?? id
-            frames.append(Frame(id: frames.count, photoId: id, name: name,
-                                exposure: exposure(shutter: row.shutter, aperture: row.aperture)))
-            camera = camera ?? row.camera
-            lens = lens ?? row.lens
+        let found = await MacPhotoOrigins.resolve(ids: allIds, limit: frameLimit, dependencies: dependencies)
+        guard found.photos.count >= 2 else { return nil }
+        let frames = found.photos.enumerated().map { index, photo in
+            Frame(id: index, photoId: photo.origin.id, name: photo.name,
+                  exposure: exposure(shutter: photo.shutter, aperture: photo.aperture))
         }
-        guard origins.count >= 2 else { return nil }
-        let session = MacCombineSession(origins: origins, frames: frames,
-                                        leftOut: ids.count - origins.count - overLimit,
-                                        subtitle: subtitle(count: frames.count, camera: camera, lens: lens),
+        let session = MacCombineSession(origins: found.photos.map(\.origin), frames: frames,
+                                        leftOut: found.leftOut,
+                                        subtitle: subtitle(count: frames.count, camera: found.photos.lazy.compactMap(\.camera).first,
+                                                           lens: found.photos.lazy.compactMap(\.lens).first),
                                         photoLibrary: dependencies.photoLibrary)
-        session.overLimit = overLimit + max(0, allIds.count - ids.count)
+        session.overLimit = found.overLimit
         return session
     }
 
@@ -98,7 +59,67 @@ extension MacCombineSession {
     #endif
 }
 
-private struct MacCombineRow: Sendable {
+/// Chosen photos that can be worked on here: stills with their original on
+/// this Mac (a file) or in the Photos library. Shared by Combine Photos and
+/// Collage (FS-18.04 §4b, §4c), read off the main actor.
+struct MacResolvedPhoto {
+    let origin: PhotoEditOrigin
+    let name: String
+    let shutter: String?
+    let aperture: Double?
+    let camera: String?
+    let lens: String?
+}
+
+enum MacPhotoOrigins {
+    /// The photos looked at: enough past any limit to skip videos and cloud
+    /// copies, and well under SQLite's bound-variable cap.
+    static let candidateLimit = 400
+
+    /// `leftOut`: videos, cloud placeholders, server-only photos.
+    /// `overLimit`: usable photos past `limit`.
+    @MainActor
+    static func resolve(ids allIds: [String], limit: Int, dependencies: MacDependencies)
+        async -> (photos: [MacResolvedPhoto], leftOut: Int, overLimit: Int) {
+        let ids = Array(allIds.prefix(candidateLimit))
+        let database = dependencies.database
+        let rows = await Task.detached(priority: .userInitiated) { () -> [MacOriginRow] in
+            (try? database.reader.read { db in
+                try Row.fetchAll(db, sql: """
+                    SELECT assetId, mediaType, originalFilename, shutterSpeedDisplay, aperture,
+                           COALESCE(normalizedCameraModel, cameraModel) AS camera,
+                           COALESCE(normalizedLensModel, lensModel) AS lens
+                    FROM photo_metadata WHERE assetId IN (\(ids.map { _ in "?" }.joined(separator: ",")))
+                    """, arguments: StatementArguments(ids))
+                .map { MacOriginRow(id: $0["assetId"], isImage: ($0["mediaType"] as Int?) == PHAssetMediaType.image.rawValue,
+                                    filename: $0["originalFilename"], shutter: $0["shutterSpeedDisplay"], aperture: $0["aperture"],
+                                    camera: $0["camera"], lens: $0["lens"]) }
+            }) ?? []
+        }.value
+        let byId = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var photos: [MacResolvedPhoto] = []
+        var overLimit = 0
+        for id in ids {
+            guard let row = byId[id], row.isImage else { continue }
+            guard photos.count < limit else { overLimit += 1; continue }
+            let origin: PhotoEditOrigin?
+            if await MacEditorModel.isPhotosOnly(id, database: database) {
+                let asset = await Task.detached { MacOriginAssetBox(PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject) }.value
+                origin = asset.asset.map { .asset($0) }
+            } else if let file = await MacPhotoFiles.resolve(id, dependencies: dependencies), !file.isPlaceholder {
+                origin = .fileCopy(FileCopyPhoto(photoId: id, url: file.url))
+            } else {
+                origin = nil
+            }
+            guard let origin else { continue }
+            photos.append(MacResolvedPhoto(origin: origin, name: row.filename ?? origin.localFileURL?.lastPathComponent ?? id,
+                                           shutter: row.shutter, aperture: row.aperture, camera: row.camera, lens: row.lens))
+        }
+        return (photos, ids.count - photos.count - overLimit, overLimit + max(0, allIds.count - ids.count))
+    }
+}
+
+private struct MacOriginRow: Sendable {
     let id: String
     let isImage: Bool
     let filename: String?
@@ -108,7 +129,8 @@ private struct MacCombineRow: Sendable {
     let lens: String?
 }
 
-private struct MacCombineAssetBox: @unchecked Sendable {
+/// A fetched asset carried out of the detached fetch; PHAsset is immutable once fetched.
+private struct MacOriginAssetBox: @unchecked Sendable {
     let asset: PHAsset?
     init(_ asset: PHAsset?) { self.asset = asset }
 }

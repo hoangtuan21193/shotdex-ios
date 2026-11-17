@@ -685,6 +685,36 @@ enum MacDemoLibrary {
         return urls
     }
 
+    /// `-ShotDexSection collage`: six photos cut from a wide landscape
+    /// (skies and hills, no people), 1200 px, in temp `ShotDexDemoCollage`.
+    static func collagePhotos() -> [URL] {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexDemoCollage", isDirectory: true)
+        let urls = (0..<6).map { folder.appendingPathComponent("DSC0\(7201 + $0).JPG") }
+        if urls.allSatisfy({ FileManager.default.fileExists(atPath: $0.path) }) { return urls }
+        let wide = URL(fileURLWithPath: "/System/Library/Desktop Pictures/.wallpapers/Sonoma Horizon/Sonoma Horizon.heic")
+        let options = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 2400,
+                       kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+        guard let picture = CGImageSourceCreateWithURL(wide as CFURL, nil).flatMap({ CGImageSourceCreateThumbnailAtIndex($0, 0, options) })
+                ?? pictures.first else { return [] }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let width = CGFloat(picture.width), height = CGFloat(picture.height)
+        // Portrait, landscape and square crops from across the picture.
+        let crops: [CGRect] = [
+            CGRect(x: 0.02, y: 0.05, width: 0.30, height: 0.90), CGRect(x: 0.36, y: 0.10, width: 0.45, height: 0.50),
+            CGRect(x: 0.55, y: 0.40, width: 0.40, height: 0.55), CGRect(x: 0.20, y: 0.45, width: 0.42, height: 0.50),
+            CGRect(x: 0.70, y: 0.05, width: 0.28, height: 0.50), CGRect(x: 0.05, y: 0.55, width: 0.35, height: 0.40),
+        ]
+        for (url, crop) in zip(urls, crops) {
+            let rect = CGRect(x: crop.minX * width, y: crop.minY * height, width: crop.width * width, height: crop.height * height).integral
+            guard let part = picture.cropping(to: rect),
+                  let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+            else { continue }
+            CGImageDestinationAddImage(destination, part, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
+            CGImageDestinationFinalize(destination)
+        }
+        return urls
+    }
+
     /// Landscape desktop pictures, decoded once, cycled over the tiles.
     private static let pictures: [CGImage] = {
         let folder = URL(fileURLWithPath: "/System/Library/Desktop Pictures/.thumbnails", isDirectory: true)

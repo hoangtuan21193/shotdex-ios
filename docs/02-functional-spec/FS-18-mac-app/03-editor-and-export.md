@@ -402,6 +402,7 @@ Mở bằng nút Export trên toolbar editor hoặc File › Export ▸ Export N
 |---|---|---|
 | Save as Copy | cạnh ảnh gốc (ảnh Photos: asset mới trong Photos) | `‹tên› (edited).‹đuôi›` |
 | Combine Photos | cạnh **khung đầu** của bộ (Save To: Same Folder as Frames) | `‹tên khung đầu› (‹chế độ›).jpg`, ví dụ `DSC09812 (Panorama).jpg` |
+| Collage | Save To trong sheet Export: cạnh **ảnh đầu** (ảnh Photos: asset mới trong Photos) hay folder đã chọn | `‹tên ảnh đầu› (Collage).jpg` |
 | Resize | Save To trong inspector, mặc định Pictures › ShotDex Resized; không bao giờ thư mục nguồn | tên gốc |
 | Export Files | folder đã chọn trong sheet | mẫu tên của sheet |
 

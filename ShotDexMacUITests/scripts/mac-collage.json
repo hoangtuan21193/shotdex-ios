@@ -1,0 +1,687 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "collage"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.export",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "col"
+  },
+  {
+   "action": "dump",
+   "name": "col"
+  },
+  {
+   "action": "click",
+   "x": 0.142,
+   "y": 0.096
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "col-5"
+  },
+  {
+   "action": "click",
+   "x": 0.142,
+   "y": 0.117
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "col-4"
+  },
+  {
+   "action": "click",
+   "label": "collage.layout.2"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "col-layout2"
+  },
+  {
+   "action": "click",
+   "label": "collage.layout.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "collage.savePreset"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "typeText",
+   "text": "Demo Look"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.presets"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Demo Look",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "col-preset"
+  },
+  {
+   "action": "click",
+   "label": "collage.presets"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Delete “Demo Look”",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "collage"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.export",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "label": "collage.cell.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "col-selected"
+  },
+  {
+   "action": "dump",
+   "name": "col-selected"
+  },
+  {
+   "action": "drag",
+   "label": "collage.cell.1",
+   "dx": 60,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "x": 0.035,
+   "y": 0.668,
+   "dx": 780,
+   "dy": -256
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "col-filled"
+  },
+  {
+   "action": "click",
+   "label": "collage.cell.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "drag",
+   "dx": -129,
+   "dy": 439,
+   "x": 0.4557,
+   "y": 0.157
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "col-swapped"
+  },
+  {
+   "action": "drag",
+   "label": "collage.divider",
+   "dx": 60,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "col-divider"
+  },
+  {
+   "action": "doubleClick",
+   "label": "collage.divider"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertExists",
+   "label": "collage.back"
+  },
+  {
+   "action": "click",
+   "label": "collage.aspect"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "4:5",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "collage.width"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "3000"
+  },
+  {
+   "action": "key",
+   "text": "tab"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "typeText",
+   "text": "2000"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "col-size"
+  },
+  {
+   "action": "drag",
+   "label": "collage.border",
+   "dx": 30,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "drag",
+   "label": "collage.spacing",
+   "dx": 30,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "drag",
+   "label": "collage.corners",
+   "dx": 30,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.fill"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Blurred Photo",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "drag",
+   "label": "collage.blur",
+   "dx": 30,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "drag",
+   "label": "collage.dim",
+   "dx": 30,
+   "dy": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.polaroid"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "label": "collage.cell.2"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "typeText",
+   "label": "collage.caption",
+   "text": "Hills"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "label": "collage.title",
+   "text": "Big Sur"
+  },
+  {
+   "action": "key",
+   "text": "return"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "col-styled"
+  },
+  {
+   "action": "dump",
+   "name": "col-styled"
+  },
+  {
+   "action": "click",
+   "label": "collage.undo"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.undo"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.redo"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "col-undo"
+  },
+  {
+   "action": "click",
+   "label": "collage.original"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "col-original"
+  },
+  {
+   "action": "click",
+   "label": "collage.original"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "collage.aspect"
+  },
+  {
+   "action": "click",
+   "label": "collage.inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.export"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "col-export"
+  },
+  {
+   "action": "click",
+   "label": "HEIC"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "JPEG"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "collage.export.saveTo"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "dump",
+   "name": "col-saveto-menu"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "col-export"
+  },
+  {
+   "action": "click",
+   "label": "collage.export.go"
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.reveal",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "col-saved"
+  },
+  {
+   "action": "dump",
+   "name": "col-saved"
+  },
+  {
+   "action": "click",
+   "label": "collage.reveal"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "activate"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "collage.export"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "click",
+   "label": "collage.export.cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "assertMissing",
+   "label": "collage.export.go"
+  },
+  {
+   "action": "click",
+   "label": "collage.back"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "collage.back",
+   "seconds": 5
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "menu",
+   "text": "Image > Create > Collage…"
+  },
+  {
+   "action": "waitFor",
+   "label": "Choose at least two photos for a collage",
+   "seconds": 60
+  },
+  {
+   "action": "screenshot",
+   "name": "col-menu-alert"
+  },
+  {
+   "action": "click",
+   "label": "OK",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "assertMissing",
+   "label": "collage.back",
+   "seconds": 3
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "collage"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.export",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "assertMissing",
+   "label": "collage.back",
+   "seconds": 5
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

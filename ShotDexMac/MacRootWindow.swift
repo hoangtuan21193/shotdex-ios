@@ -53,6 +53,8 @@ struct MacRootWindow: View {
     @State private var resize: MacResizeModel?
     /// Image › Combine Photos › Panorama… open (board `MAC_Merge`).
     @State private var combine: MacCombineSession?
+    /// Image › Create › Collage… open (board `MAC_Collage`).
+    @State private var collage: MacCollageModel?
     /// Panorama… reading which photos can be frames: a second ask waits.
     @State private var isOpeningCombine = false
     /// Bumped by every move in the sidebar: a Panorama… still reading opens nowhere.
@@ -209,6 +211,9 @@ struct MacRootWindow: View {
             } else if let resize {
                 MacResizePage(model: resize) { self.resize = nil }
                     .id(resize.id)
+            } else if let collage {
+                MacCollagePage(model: collage) { self.collage = nil }
+                    .id(collage.id)
             } else if let combine {
                 MacCombinePage(session: combine) { self.combine = nil }
                     .id(combine.id)
@@ -291,7 +296,7 @@ struct MacRootWindow: View {
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
-        .onChange(of: resize == nil && combine == nil) { _, closed in
+        .onChange(of: resize == nil && combine == nil && collage == nil) { _, closed in
             if closed {
                 if let before = columnsBeforeResize { columnVisibility = before }
                 columnsBeforeResize = nil
@@ -333,6 +338,8 @@ struct MacRootWindow: View {
             resize = nil
             combine?.stop()
             combine = nil
+            collage?.close()
+            collage = nil
             combineToken += 1
             if new?.isOpenedFromAlbums == true, old?.isOpenedFromAlbums != true { backTarget = old }
             if new != .allPhotos { drilledFromStatistics = false }
@@ -1398,8 +1405,51 @@ struct MacRootWindow: View {
                 }
                 resize = MacResizeModel(ids: chosen, dependencies: dependencies)
             },
+            collage: {
+                guard resize == nil, combine == nil, collage == nil, editor == nil, !isOpeningCombine else { NSSound.beep(); return }
+                guard ids.count >= 2 else {
+                    let alert = NSAlert()
+                    alert.messageText = String(localized: "Select two or more photos", comment: "Mac Collage: one photo chosen")
+                    alert.informativeText = String(localized: "A collage holds 2 to 9 photos. Select them, then choose Collage… again.",
+                                                   comment: "Mac Collage: what to select")
+                    alert.runModal()
+                    return
+                }
+                isOpeningCombine = true
+                let token = combineToken
+                Task {
+                    defer { isOpeningCombine = false }
+                    // Up to 9 in cells; the rest of the selection waits in Set Aside (FS-11 §3).
+                    let found = await MacPhotoOrigins.resolve(ids: ids, limit: 30, dependencies: dependencies)
+                    guard token == combineToken, resize == nil, editor == nil, combine == nil, collage == nil else { return }
+                    guard found.photos.count >= 2 else {
+                        let alert = NSAlert()
+                        alert.messageText = String(localized: "Choose at least two photos for a collage", comment: "Mac Collage: too few usable photos")
+                        alert.informativeText = String(localized: "A collage is made from photos whose originals are on this Mac or in Photos. Videos and photos still in the cloud are left out.",
+                                                       comment: "Mac Collage: which photos can go in")
+                        alert.runModal()
+                        return
+                    }
+                    viewerId = nil
+                    let model = MacCollageModel(photos: found.photos.map(\.origin),
+                                                names: Dictionary(found.photos.map { ($0.origin.id, $0.name) }, uniquingKeysWith: { first, _ in first }),
+                                                placed: min(found.photos.count, 9),
+                                                photoLibrary: dependencies.photoLibrary, presetStore: CollagePresetStore())
+                    var notes: [String] = []
+                    if found.leftOut > 0 {
+                        notes.append(MacInflect.string("^[\(found.leftOut) item](inflect: true) left out — videos, or photos whose original isn’t on this Mac.",
+                                                       comment: "Mac Collage: what of the selection was not used"))
+                    }
+                    if found.overLimit > 0 {
+                        notes.append(MacInflect.string("Only the first 30 photos came along; ^[\(found.overLimit) more](inflect: true) left out.",
+                                                       comment: "Mac Collage: more photos than a collage takes"))
+                    }
+                    model.leftOutNote = notes.isEmpty ? nil : notes.joined(separator: " ")
+                    collage = model
+                }
+            },
             panorama: {
-                guard resize == nil, combine == nil, editor == nil, !isOpeningCombine else { NSSound.beep(); return }
+                guard resize == nil, combine == nil, collage == nil, editor == nil, !isOpeningCombine else { NSSound.beep(); return }
                 guard ids.count >= 2 else {
                     let alert = NSAlert()
                     alert.messageText = String(localized: "Select two or more photos", comment: "Mac Combine: one photo chosen")
@@ -1635,6 +1685,19 @@ struct MacRootWindow: View {
                         }) ?? []
                     }.value
                     resize = MacResizeModel(ids: ids, dependencies: dependencies)
+                }
+            }
+            // `-ShotDexSection collage` (board `MAC_Collage`): six demo photos, four in the layout.
+            Color.clear.task(id: library.items.count) {
+                if MacDemoLibrary.section == "collage", collage == nil, !library.items.isEmpty, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    let urls = await Task.detached(priority: .userInitiated) { MacDemoLibrary.collagePhotos() }.value
+                    guard urls.count >= 4 else { return }
+                    let photos = urls.enumerated().map { PhotoEditOrigin.fileCopy(FileCopyPhoto(photoId: "demo-collage-\($0.offset)", url: $0.element)) }
+                    collage = MacCollageModel(photos: photos,
+                                              names: Dictionary(uniqueKeysWithValues: zip(photos.map(\.id), urls.map(\.lastPathComponent))),
+                                              placed: 4, photoLibrary: dependencies.photoLibrary,
+                                              presetStore: CollagePresetStore(defaults: Self.freshDemoDefaults("ShotDexDemoCollage")))
                 }
             }
             // `-ShotDexSection panorama` (board `MAC_Merge`): the demo sweep in Panorama.
@@ -2292,6 +2355,13 @@ struct MacServerFormRequest: Identifiable {
 
 extension MacRootWindow {
     /// The demo library's pictures; nil outside it.
+    /// A defaults suite emptied first: the demo's saved presets start clean every launch.
+    static func freshDemoDefaults(_ name: String) -> UserDefaults {
+        let defaults = UserDefaults(suiteName: name) ?? .standard
+        defaults.removePersistentDomain(forName: name)
+        return defaults
+    }
+
     static var demoPicture: ((String) -> CGImage?)? {
         #if DEBUG
         if MacDemoLibrary.isOn { return MacDemoLibrary.picture(for:) }

@@ -420,6 +420,49 @@ Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở me
   chú thích (model chưa trả), ước lượng thời gian ghi, Stop dừng hẳn việc căn/render đang chạy trong luồng nền và huỷ tải iCloud của khung (giờ chỉ bỏ kết quả), HDR Merge và Focus Stack (Combine Photos chỉ có Panorama),
   ⌥⌘O cửa sổ riêng.
 
+### 4c. Collage — đã dựng (row 44, 2026-11-17, board `MAC_Collage`)
+
+- **Lối vào:** Image › Create › **Collage…** với ≥ 2 ảnh chọn. Ảnh dùng được như Combine (§4b: ảnh tĩnh có bản gốc ở đây —
+  file trên máy hay ảnh Photos); 9 ảnh đầu vào ô, phần còn lại (tới 30) nằm ở Set Aside (FS-11 §3). 1 ảnh: hỏi "Select two
+  or more photos"; không đủ 2 ảnh dùng được: "Choose at least two photos for a collage" kèm lý do. Phần bị bỏ (video, ảnh còn trên cloud,
+  quá 30) được nói một dòng dưới Set Aside, không bỏ lặng lẽ. Trang thế chỗ cửa sổ như Resize; đổi nơi trong sidebar là đóng.
+- **Toolbar:** ◀ (⌘[, Esc) · "Collage" + "4 of 4 photos · 1:1 · Not saved yet" (sau Export: "Saved ‹tên›" / "Saved ‹tên› to
+  Photos"; sửa tiếp thì về "Not saved yet") · Undo ⌘Z · Redo ⇧⌘Z · **Show Original** (bật: ảnh không viền, khoảng cách, bo
+  góc, chữ) · Inspector ⌥⌘I · **Export…** ⇧⌘E (viên accent; mờ khi chưa ô nào có ảnh). Sau Export ra file: **Show in Finder**.
+- **Panel trái 228:** **Photos** + stepper (2–9; thêm ô lấy ảnh đầu của Set Aside, không có thì ô trống; bớt ô đưa ảnh
+  của ô cuối về Set Aside, không bao giờ bỏ ảnh). **Presets** (popup ★ tên preset khớp hiện tại hay "None"; chọn là áp
+  khung + kiểu, layout chỉ khi cùng số ô; "Delete “‹tên›”"; **+** đặt tên rồi lưu — giữ layout, tỉ lệ, kiểu, không giữ
+  ảnh hay chữ). **Layouts for N Photos**: ô 60 vẽ chính layout, ô chọn viền accent; "59 layouts for 2–9 photos." (đếm từ catalog; board cũ ghi 33).
+  **Set Aside (N)**: ảnh chưa vào layout, kéo lên một ô để đặt vào (ảnh cũ của ô về Set Aside); chuột phải: Put in Empty
+  Cell, Replace Selected Photo; thả grip của một ô vào đây là bỏ ảnh ra.
+- **Giữa:** ảnh ghép do chính compositor vẽ (đúng như file Export), vẽ lại ngoài main actor ở 2× điểm. Bấm ô: chọn (viền
+  accent). Kéo trong ô: dời ảnh trong ô (luôn phủ kín ô). Pinch: phóng 100–400%, nhãn "118%". Ô đang chọn hay đang di chuột có
+  **grip** ✥ ở góc: kéo sang ô khác là đổi chỗ, kéo vào Set Aside là bỏ ra. Thả ảnh Set Aside lên ô. Chuột phải ô: Move to Set Aside ·
+  Reset Crop · Use as Blurred Background. Đường chia có tay nắm accent: kéo đổi tỉ lệ (bắt nhẹ 1/3, 1/2, 2/3, tối thiểu
+  15%), double-click về đều; VoiceOver chỉnh ±5%. Ô trống: "Drag a photo from Set Aside" (Set Aside rỗng: nói rõ không có
+  ảnh, giảm Photos hay chọn thêm ảnh trước khi mở). Kéo/slider không đổi gì thì không thành bước Undo, "Saved" giữ nguyên. Bấm nền: bỏ chọn. Esc: bỏ chọn,
+  rồi mới rời trang. ◀/Esc khi đã sửa mà chưa Export từ lần sửa cuối: hỏi "Discard this collage?" (Discard / Keep
+  Editing) — collage chỉ được giữ khi đã Export; đổi nơi trong sidebar thì bỏ không hỏi.
+- **Inspector 300:** Layout (Aspect Ratio popup 11 tỉ lệ; Size W × H gõ được — đổi cạnh dài, và tỉ lệ khi W:H khác);
+  Style (Border 0–4%, Spacing 0–6%, Corners 0–8% của cạnh ảnh ghép); Background (Fill Color / Blurred Photo + ô màu; Blur,
+  Dim 0–100 chỉ sáng với Blurred Photo; "Blur and Dim apply to Blurred Photo."; Polaroid); Text ("Add a Title" — Return
+  đặt tiêu đề, xoá trống là bỏ; Polaroid + một ô chọn: ô Caption cho ảnh đó); Export Size "2048 × 2048 · ~3.3 MB". Mỗi lần
+  kéo slider, một lần kéo/pinch trong ô, một lượt chọn màu là một bước Undo; Size cũng undo được. Rời ô chữ (không cần
+  Return) là giữ chữ đã gõ; khi đang gõ, ⌘Z thuộc ô chữ.
+- **Export… (sheet 440):** Format JPEG/HEIC, Quality 50–100, "Keep the first photo’s camera details", Save To (**Same Folder
+  as First Photo** hay **Photos Library** khi ảnh đầu từ Photos · Choose Folder…), câu nói chỗ ghi và tên, "W × H px ·
+  ~MB", Cancel / **Export** (↩). Mở sheet là tắt Show Original. Đang ghi: "Reading photos — 3 of 9";
+  **Cancel** dừng (không ghi gì). Ghi: từng ô giải mã ở cỡ ô × zoom × 1.5, lần lượt; vẽ và mã hoá ngoài main actor.
+  Tên `‹ảnh đầu› (Collage).jpg` (FS-18.03 §5), trùng thì " (2)"; ảnh đầu từ Photos thì vào Photos. Hỏng: câu đỏ trong
+  sheet, sheet ở lại. Một ô không đọc được: không ghi gì, câu đỏ nêu tên ảnh (không ra collage có ô trống). Giữ thông
+  tin máy ảnh: bỏ hướng xoay và kích thước của ảnh đầu (ảnh ghép đã đứng thẳng).
+- **Demo:** `-ShotDexSection collage` mở 6 ảnh cắt từ ảnh nền Sonoma Horizon (DSC07201…07206.JPG, thư mục tạm
+  `ShotDexDemoCollage`), 4 trong ô, 2 ở Set Aside; preset demo lưu riêng (suite `ShotDexDemoCollage`).
+- **Chưa dựng:** Show in Photos sau khi Export vào Photos (chỉ có dòng "Saved … to Photos"), Undo/Redo trong menu Edit
+  (chỉ ⌘Z/⇧⌘Z của toolbar), Create › Collage… mờ khi đang mở một trang (giờ kêu bíp), kéo ảnh từ lưới thư viện hay Finder vào Collage, chữ nhiều lớp (font, màu, kéo đặt chỗ), Custom… tỉ lệ
+  bằng popover (Size W × H thay), album "ShotDex Collages" và mục Creations cho bản Export (row 45), ⌥⌘O cửa sổ riêng,
+  mở lại một collage đã lưu.
+
 ## 5. Video Studio
 
 - Cửa sổ riêng (Window › Video Studio ⌥⌘V), tối thiểu **1180×760** ([01](01-window-and-navigation.md) §4).
