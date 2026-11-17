@@ -1,22 +1,77 @@
 {
   "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "tap", "label": "Search" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "typeText", "text": "ISO 400\n" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "screenshot", "name": "01-parser" },
-    { "action": "dump", "name": "01-parser" },
-    { "action": "tap", "label": "Clear text" },
-    { "action": "wait", "seconds": 1 },
-    { "action": "typeText", "text": "pictures of my dog near the lake\n" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "screenshot", "name": "02-read-by" },
-    { "action": "dump", "name": "02-read-by" },
-    { "action": "typeText", "text": " x" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "screenshot", "name": "03-typed-on" },
-    { "action": "dump", "name": "03-typed-on" }
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Search"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "typeText",
+      "text": "ISO 400\n"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "01-parser"
+    },
+    {
+      "action": "dump",
+      "name": "01-parser"
+    },
+    {
+      "action": "typeText",
+      "label": "Search your library…",
+      "text": "\b\b\b\b\b\b\b"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "typeText",
+      "text": "pictures of my dog near the lake\n"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "02-read-by"
+    },
+    {
+      "action": "dump",
+      "name": "02-read-by"
+    },
+    {
+      "action": "typeText",
+      "label": "Search your library…",
+      "text": " x"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "03-typed-on"
+    },
+    {
+      "action": "dump",
+      "name": "03-typed-on"
+    }
   ]
 }

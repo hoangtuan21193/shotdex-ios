@@ -70,7 +70,10 @@ diện; gõ chữ khớp trên các dòng này, không quét ảnh.
 - Nút **Open in Library** ở dòng tiêu đề mục Photos: áp câu tìm vào Library (thanh điều kiện, lọc, sắp xếp như cũ)
   và chuyển sang tab Library — đường áp cũ (03 §7), giờ là một lựa chọn chứ không bắt buộc.
 - **Phím Search**: ẩn bàn phím, giữ kết quả, ghi Recents. Bộ phân tích không chắc và có model (03 §4) → hỏi model
-  **lúc này** (không bao giờ khi đang gõ), có câu trả lời thì thay kết quả và hiện dòng "Read by …" như cũ.
+  **lúc này** (không bao giờ khi đang gõ), có câu trả lời thì thay kết quả và hiện dòng **`✦ Read by <tên>`** (2026-11-17) ngay dưới
+  `Photos · N`: chữ phụ footnote, tên là hàng AI Search đã trả lời (`Apple Intelligence`, `Mac Studio`). Gõ khác đi
+  là mất (kết quả về bộ phân tích). Bộ phân tích tự hiểu hết thì không hỏi model, không có dòng. Mac: cùng dòng, nằm
+  trong thanh scope (FS-18.04 §3d). Board: iPhone `PH_Search`, Duo `DI_Search`/`DC_Search`, Mac `MAC_Search`.
 - Recents ghi khi: bấm Search, Open in Library, hoặc mở một ảnh kết quả. Ghi tên các viên + chữ, cách nhau dấu cách.
 - 0 ảnh: trạng thái rỗng `No Results` + `Try a different search.` (`ContentUnavailableView.search`).
 - iPad / Duo / Mac: lưới kết quả chiếm phần còn lại của màn; gợi ý ≤ 5 dòng khi có kết quả.
@@ -147,3 +150,4 @@ viên (`.searchable(text:tokens:)`); lưới cửa sổ hiện kết quả ngay 
 | AC-23 | iPad 26.5 ngang, Duo inner | gõ `canon` | gợi ý ≤ 5 dòng + lưới kết quả cùng màn | ✅ iPad 13" 26.5 ngang (sim-shot): 8 dòng trái + `Photos · 330` + lưới; Duo inner 27.1 (sim-shot): 4 dòng trái + `Photos · 6` — cùng màn, 2026-11-14 |
 | AC-24 | Mac | gõ `can` ở ô thanh công cụ | danh sách gợi ý có số; chọn thành viên; lưới cửa sổ lọc ngay | ✅ Mac `mac-search-photos` (demo): gõ `il` → `In Your Library · ILCE-7M4 · Camera · 85`, lưới 85 of 226 |
 | AC-25 | 55k dòng (sim) | gõ một tiền tố | gợi ý ≤ 50 ms; dựng lại chỉ mục ≤ 3 s | ✅ `SearchIndexPerformanceTests.indexAtLibrarySize` sim: dựng 2,5 s, gợi ý ≤ 10 ms (lọc + xếp sơ bộ trong SQL, 60 dòng), đếm trong viên ≤ 60 ms |
+| AC-26 | AI Search = máy chủ trong nhà "Mac Studio" (máy chủ giả trả `iso greater …`) | gõ `ISO 400` + Search; xoá; `pictures of my dog near the lake` + Search; gõ thêm ` x` | lần đầu không có `search-read-by`; lần hai `✦ Read by Mac Studio` dưới `Photos · N`, máy chủ nhận một `chat/completions`; gõ thêm thì mất; sáng + tối | ✅ iPhone 26.5 `iphone-search-read-by.json` + log máy chủ giả, 2026-11-17; `SearchServiceTests.networkModelTimesOutToParser` (`modelName`) |
