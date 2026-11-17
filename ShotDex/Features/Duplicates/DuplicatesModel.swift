@@ -985,6 +985,16 @@ final class DuplicatesModel {
         groups.removeAll { $0.id == group.id }
     }
 
+    /// Undo of Not duplicates right after it (the Mac's footer): the group is
+    /// back in the list; its marks, cleared by the dismissal, are not.
+    func undoDismiss(_ group: DuplicateGroup) {
+        if let set = session.notDuplicates.first(where: { $0.members == group.memberIds }) {
+            session.undismiss(setId: set.id)
+        }
+        guard !groups.contains(where: { $0.id == group.id }) else { return }
+        groups.append(group)
+    }
+
     /// A group shown again because a photo joined it after Not duplicates.
     func hasNewPhotoSinceDismissal(_ group: DuplicateGroup) -> Bool {
         if case .newPhotoSince = session.dismissal(of: group.memberIds) { return true }
@@ -1133,7 +1143,18 @@ final class DuplicatesModel {
     /// banner says where the photos went.
     func delete(ids: Set<String>) async -> Bool {
         let assets = ids.compactMap { assetsById[$0] }
-        guard !assets.isEmpty, !isDeleting else { return false }
+        guard !isDeleting else { return false }
+        guard !assets.isEmpty else {
+            // Marks on photos Photos no longer returns: say so, never a silent no-op.
+            if !ids.isEmpty {
+                notice = DuplicateNotice(
+                    title: String(localized: "Nothing to Delete", comment: "Duplicates: the marked photos are not Photos assets"),
+                    message: String(localized: "The marked photos aren't in your Photos library any more, so nothing was deleted.",
+                                    comment: "Duplicates: the marked photos are not Photos assets")
+                )
+            }
+            return false
+        }
         isDeleting = true
         defer { isDeleting = false }
         let affected = groups.filter { !$0.memberIds.isDisjoint(with: ids) }
@@ -1148,14 +1169,26 @@ final class DuplicatesModel {
         let keepers = Dictionary(uniqueKeysWithValues: plans.compactMap { plan in
             assetsById[plan.keeperId].map { (plan.keeperId, $0) }
         })
-        let goingMembers = groups.flatMap(\.members).filter { ids.contains($0.assetId) }
-        // A frame the index never read has no size: say nothing rather than
-        // a number that is too low.
-        let bytes = goingMembers.contains { $0.fileSize == nil } ? 0 : goingMembers.reduce(0) { $0 + ($1.fileSize ?? 0) }
+        // What actually goes: only marks that are Photos assets (a mark with
+        // no asset stays in the library and in its group), less what the
+        // server check keeps.
+        var deleted = Set(assets.map(\.localIdentifier))
+        var keptNotice: DuplicateNotice?
         do {
             try await photoLibrary.deleteAssetsCheckingServer(assets)
         } catch let error as PHPhotosError where error.code == .userCancelled {
             return false
+        } catch let kept as PhotoDeletionGate.Kept {
+            // The rest was deleted; those on a server that didn't answer stay.
+            deleted.formIntersection(kept.outcome.deletable)
+            keptNotice = DuplicateNotice(
+                title: String(localized: "Some Photos Weren't Deleted", comment: "Duplicates: the server check kept some photos"),
+                message: kept.errorDescription ?? ""
+            )
+            if deleted.isEmpty {
+                notice = keptNotice
+                return false
+            }
         } catch {
             notice = DuplicateNotice(
                 title: assets.count == 1
@@ -1166,8 +1199,13 @@ final class DuplicatesModel {
             )
             return false
         }
-        didDelete(ids: ids)
+        let goingMembers = groups.flatMap(\.members).filter { deleted.contains($0.assetId) }
+        // A frame the index never read has no size: say nothing rather than
+        // a number that is too low.
+        let bytes = goingMembers.contains { $0.fileSize == nil } ? 0 : goingMembers.reduce(0) { $0 + ($1.fileSize ?? 0) }
+        didDelete(ids: deleted)
         recordFreed(bytes)
+        if let keptNotice { notice = keptNotice }
         let missedAlbums = await inherit(plans, keepers: keepers, donors: donors)
         var missedDetails = await DuplicateInheritance.applyRatings(plans, marks: dependencies.photoMarks)
         missedDetails.formUnion(captionChanges.unread)
@@ -1183,7 +1221,7 @@ final class DuplicatesModel {
                 try await service.apply($0, recount: false)
             })
         }
-        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums, missedDetails: missedDetails.count)
+        showDeletedBanner(count: deleted.count, bytes: bytes, missedAlbums: missedAlbums, missedDetails: missedDetails.count)
         if let service = dependencies.captionKeywords, !captionChanges.changes.isEmpty {
             // The keyword vocabulary recount waits until the banner is up.
             Task { _ = await service.keywordCatalog(true) }

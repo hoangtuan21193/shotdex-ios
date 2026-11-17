@@ -6,6 +6,8 @@ import SwiftUI
 /// two library windows each menu command acts on the front one.
 struct MacLibraryTarget {
     var hasSelection: Bool
+    /// On Duplicates: ⌘⌫ deletes its marked photos (nil elsewhere, or with none marked).
+    var deleteMarkedDuplicates: (() -> Void)? = nil
     /// A photo is open in the viewer: Resize acts on it.
     var viewerOpen = false
     var showsInspector: Bool
@@ -194,6 +196,9 @@ struct MacImageCommands: Commands {
                 } else if let cull {
                     // In a pass, ⌘⌫ is Move N Rejected… (board).
                     cull.moveRejected()
+                } else if let deleteMarked = library?.deleteMarkedDuplicates {
+                    // On Duplicates, ⌘⌫ is its Delete N — never the grid's selection behind it.
+                    deleteMarked()
                 } else if library?.hasSelection == true {
                     library?.moveToTrash()
                 } else {

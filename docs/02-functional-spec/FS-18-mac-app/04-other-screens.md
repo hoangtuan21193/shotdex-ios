@@ -204,6 +204,32 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
 - **Chưa dựng:** đặt tên collage, album "ShotDex Collages" trong Photos, ảnh thu nhỏ dùng đúng ảnh đã Export (đang vẽ lại
   từ ảnh nguồn), nhóm theo năm khi nhiều.
 
+### 1.6 Duplicates (board `MAC_Duplicates`, hành vi theo [FS-06.06](../FS-06-collections/06-duplicates.md) §7.4a, §14.8) — kiểm row 46, 2026-11-17
+
+- Đã có (commit trước: e4238b35, 481e2dba, d6d79077): toolbar "Duplicates" + "N groups" · **Sort ▾** (thứ tự nhóm + Quick
+  Clean (N copies)… khi có) · **Check Again** · khi có đánh dấu: "N selected · 71.3 MB" và **Delete N** (⌘⌫); dải lọc Exact /
+  Similar / Burst với số; một dòng trạng thái cao cố định ("Checked 2 min ago" / tiến độ + Cancel); mỗi nhóm một hàng: thanh
+  **All Keep | All Trash** · **Keep All** / **Delete N**, ảnh 200pt cạnh nhau với Keep/Trash, Suggested, chú thích lý do
+  ("Same file", "85mm"…), bảng File · Size · Date · Albums; bấm ảnh đổi Keep/Trash (Trash: viền đỏ, mờ, bảng hồng); chuột phải
+  Keep Just This One · Move to Trash/Keep · Keep All · Not Duplicates; ⌥↑/⌥↓ chọn nhóm (viền accent), ⌥K Keep all, ⌥R Trash
+  others; chân trang "N selected in N groups · marks are kept…" và nơi ảnh bị xoá đi.
+- Sửa ở row 46:
+  - **⌘⌫ an toàn:** Image › Move to Trash trên Duplicates là Delete N của các ảnh đã đánh dấu, không bao giờ là vùng chọn còn lại
+    của lưới phía sau; mọi lệnh theo vùng chọn (Move to Trash, Hide, Share…) chỉ chạy khi lưới hay viewer đang hiện.
+  - Phím ⌥↑/⌥↓/⌥K/⌥R bắt ở cấp cửa sổ khi Duplicates hiện (sidebar không còn nuốt mũi tên/chữ và nhảy sang RAW).
+  - Xoá một phần (server không trả lời giữ vài ảnh): ảnh đã xoá rời nhóm, banner đếm đúng, thêm "Some Photos Weren't Deleted";
+    đánh dấu không còn là ảnh Photos: "Nothing to Delete" thay vì im lặng (model chung với iOS).
+  - **Not Duplicates** có Undo ở chân trang ngay sau đó (đánh dấu của nhóm không quay lại); danh sách Ignored vẫn chưa có.
+  - Nhóm bị đánh dấu hết: nút "Delete All N"; nhóm đã Keep All mở lại: "Keeping All" (bấm để bỏ).
+  - Chữ: "N to delete · 71.3 MB", chân trang "N to delete in N groups · marks are kept until you delete or change them" (ưu
+    tiên hơn tóm tắt lần xoá trước), "Deleted photos stay in Recently Deleted for 30 days"; số ít đúng cho "1 photo not
+    checked yet", "Quick Clean (1 copy)…".
+  - Ảnh không có PHAsset (demo, ảnh PhotoKit không còn trả) lấy thumbnail theo id thay vì để ô trống; hàng Collages không hiện "0".
+- **Lệch board còn lại (chưa dựng):** popup **All Sources** (Duplicates hiện chỉ xét ảnh Photos; FS-18 D7 "chỉ gom trong một
+  nguồn" cần model mới), chip "N to delete ›" mở danh sách, danh sách Ignored (bỏ Not Duplicates về sau), nhãn VoiceOver có tên file,
+  `groupsWithMarks` tính lại mỗi lần vẽ chân trang (chậm ở thư viện rất lớn), số "~4.2 GB" có thể lấy lại ở sidebar, hàng phím tắt dưới toolbar
+  (chỉ có trong menu và tooltip).
+
 ## 2. Statistics (D18)
 
 - Sidebar › Utilities › Statistics, Go ⌥⌘6. Tầng A. Toolbar: ◀ ▶ · "Statistics" + "54,027 photos · 1,204 videos" ·

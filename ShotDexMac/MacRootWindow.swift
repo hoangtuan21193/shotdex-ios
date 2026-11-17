@@ -891,7 +891,8 @@ struct MacRootWindow: View {
         // Counted as the page lists them: only collages that can be read back.
         if let collages = await Task.detached(priority: .utility, operation: {
             try? creations.fetchOrdered(kind: .collage).filter { $0.collageRecipe != nil }.count
-        }).value {
+        }).value, collages > 0 {
+            // No "0" on the row: an empty place has no count (as Albums).
             counts[.collages] = collages
         }
         guard !Task.isCancelled else { return }
@@ -1391,8 +1392,16 @@ struct MacRootWindow: View {
         // Read when the command runs: a key right after a click acts on the new selection.
         let selection = photoSelection
         var ids: [String] { selection?.ids ?? [] }
+        // A selection counts only where the grid or the viewer is on screen: on
+        // Duplicates, Collages, a tool page… a selection kept from the grid must
+        // not be trashed, hidden or shared by a menu key (review row 46).
+        let showsPhotos = editor == nil && resize == nil && combine == nil && collage == nil
+            && (viewerId != nil || (self.selection.map(isGridPlace) ?? false))
+        let duplicates = dependencies.duplicates
         return MacLibraryTarget(
-            hasSelection: !(selection?.ids.isEmpty ?? true),
+            hasSelection: showsPhotos && !(selection?.ids.isEmpty ?? true),
+            deleteMarkedDuplicates: self.selection == .duplicates && duplicates.markedCount > 0 && !duplicates.isBusy
+                ? { Task { await duplicates.deleteMarked() } } : nil,
             viewerOpen: viewerId != nil,
             showsInspector: showsInspector,
             sort: library.sort,

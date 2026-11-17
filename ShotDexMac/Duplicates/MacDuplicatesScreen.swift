@@ -14,6 +14,20 @@ struct MacDuplicatesScreen: View {
     @State private var containerWidth: CGFloat = 0
     /// The group ↑/↓ moves to (FS-06.06 §14.8); nil until the first arrow.
     @State private var keyboardGroupId: String?
+    /// The list holds the keys while Duplicates shows, so ⌥ + an arrow or a
+    /// letter reaches it and not the sidebar (which moves its own selection
+    /// on arrows: review row 46 caught ⌥↓/⌥R landing on RAW).
+    @State private var keyMonitor: Any?
+    /// A key pressed in the list, handed to the commands that know the groups.
+    @State private var keyPress: KeyRequest?
+    /// The group just hidden as Not Duplicates; the next mark change ends its Undo.
+    @State private var lastDismissed: DuplicateGroup?
+
+    struct KeyRequest: Equatable {
+        enum Kind { case next, previous, keepAll, trashOthers }
+        let kind: Kind
+        let id = UUID()
+    }
 
     private var model: DuplicatesModel { dependencies.duplicates }
 
@@ -31,6 +45,8 @@ struct MacDuplicatesScreen: View {
             list
             Divider()
             footer
+                // A new mark ends the Undo of the last Not Duplicates.
+                .onChange(of: model.markedCount) { lastDismissed = nil }
         }
         .background(MacTheme.content)
         .navigationTitle(String(localized: "Duplicates", comment: "Mac Duplicates title"))
@@ -81,7 +97,7 @@ struct MacDuplicatesScreen: View {
                 // (user, 2026-11-16: the band was too much).
                 if model.pendingQuickClean.copies > 0 {
                     Divider()
-                    Button(String(localized: "Quick Clean (\(model.pendingQuickClean.copies.formatted()) copies)…", comment: "Mac Duplicates sort menu: opens Quick clean; identical copies it would mark")) { showsQuickClean = true }
+                    Button(MacInflect.string("Quick Clean (^[\(model.pendingQuickClean.copies) copy](inflect: true))…", comment: "Mac Duplicates sort menu: opens Quick clean; identical copies it would mark")) { showsQuickClean = true }
                         .disabled(model.isBusy)
                 }
             } label: {
@@ -89,6 +105,7 @@ struct MacDuplicatesScreen: View {
             }
             .help(String(localized: "Sort groups", comment: "Mac Duplicates toolbar tooltip"))
             Button {
+                lastDismissed = nil
                 model.startScan()
             } label: {
                 Label(String(localized: "Check Again", comment: "Mac Duplicates toolbar: scan the library again"), systemImage: "arrow.clockwise")
@@ -98,8 +115,8 @@ struct MacDuplicatesScreen: View {
         }
         if model.markedCount > 0 {
             ToolbarItemGroup(placement: .primaryAction) {
-                Text("\(model.markedCount) selected · \(DuplicatesModel.byteFormatter.string(fromByteCount: Int64(model.markedBytes)))",
-                     comment: "Mac Duplicates toolbar: marked photos and their size")
+                Text("\(model.markedCount) to delete · \(DuplicatesModel.byteFormatter.string(fromByteCount: Int64(model.markedBytes)))",
+                     comment: "Mac Duplicates toolbar: photos marked Trash and their size")
                     .font(.system(size: 13))
                     .monospacedDigit()
                     .padding(.horizontal, 8)
@@ -112,7 +129,8 @@ struct MacDuplicatesScreen: View {
                         .foregroundStyle(MacTheme.redText)
                 }
                 .disabled(model.isBusy)
-                .keyboardShortcut(.delete, modifiers: .command)
+                // ⌘⌫ is Image › Move to Trash, which on this screen calls this (MacLibraryTarget).
+                .help(String(localized: "Delete the marked photos (⌘⌫)", comment: "Mac Duplicates toolbar tooltip"))
             }
         }
     }
@@ -182,6 +200,31 @@ struct MacDuplicatesScreen: View {
         }
     }
 
+    private func watchKeys() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .option,
+                  !(event.window?.firstResponder is NSTextView),
+                  event.window?.attachedSheet == nil,
+                  !showsQuickClean, model.notice == nil, !model.isBusy else { return event }
+            let kind: KeyRequest.Kind
+            switch event.keyCode {
+            case 125: kind = .next          // ↓
+            case 126: kind = .previous      // ↑
+            case 40: kind = .keepAll        // K
+            case 15: kind = .trashOthers    // R
+            default: return event
+            }
+            keyPress = KeyRequest(kind: kind)
+            return nil
+        }
+    }
+
+    private func stopWatchingKeys() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+    }
+
     /// The iPad's keys (§14.8) with ⌥ held: on the Mac the sidebar list has
     /// the focus, and a bare arrow moves its selection while a bare letter
     /// jumps to the row it starts (R → RAW). Read at the moment of the press.
@@ -203,6 +246,17 @@ struct MacDuplicatesScreen: View {
             return nil
         }
         return Group {
+            Color.clear.onChange(of: keyPress) { _, request in
+                guard let request else { return }
+                switch request.kind {
+                case .next: move(1)
+                case .previous: move(-1)
+                case .keepAll:
+                    if let group = target(), !model.isKeptAll(group) { model.toggleKeepAll(group) }
+                case .trashOthers:
+                    if let group = target() { model.markOthers(in: group) }
+                }
+            }
             if !showsQuickClean, model.notice == nil, !model.isBusy {
                 Button(String(localized: "Next Group", comment: "Duplicates keyboard shortcut: move to the next group")) { move(1) }
                     .keyboardShortcut(.downArrow, modifiers: .option)
@@ -242,6 +296,10 @@ struct MacDuplicatesScreen: View {
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
                 .background { keyboardCommands(proxy: proxy) }
+                // ⌥ + an arrow, K or R, wherever the focus is in this window
+                // (the sidebar keeps it and moves its own selection on arrows).
+                .onAppear(perform: watchKeys)
+                .onDisappear(perform: stopWatchingKeys)
             }
         }
     }
@@ -255,7 +313,7 @@ struct MacDuplicatesScreen: View {
                     if model.isCollapsed(group) {
                         MacDuplicateFoldedRow(group: group, model: model)
                     } else {
-                        MacDuplicateRow(group: group, model: model)
+                        MacDuplicateRow(group: group, model: model) { lastDismissed = $0 }
                     }
                 }
                 .overlay {
@@ -305,14 +363,24 @@ struct MacDuplicatesScreen: View {
 
     private var footer: some View {
         HStack {
-            if let summary = model.lastDeleteSummary {
-                Text(summary)
+            if let hidden = lastDismissed {
+                // Not Duplicates, undoable right after (no Ignored list yet).
+                Text("Group hidden as Not Duplicates.", comment: "Mac Duplicates footer: after Not Duplicates")
+                Button(String(localized: "Undo", comment: "Mac Duplicates footer: show the hidden group again")) {
+                    withAnimation(.easeOut(duration: 0.15)) { model.undoDismiss(hidden) }
+                    lastDismissed = nil
+                }
+                .buttonStyle(.link)
+                .accessibilityIdentifier("duplicates.undoDismiss")
             } else if model.markedCount > 0 {
-                Text("\(model.markedCount) selected in \(model.groupsWithMarks.count) groups · marks are kept until you delete or unmark them",
-                     comment: "Mac Duplicates footer: what is marked")
+                // The marks first: an old delete summary never hides what is marked now.
+                Text(MacInflect.string("\(model.markedCount) to delete in ^[\(model.groupsWithMarks.count) group](inflect: true) · marks are kept until you delete or change them",
+                                       comment: "Mac Duplicates footer: what is marked"))
+            } else if let summary = model.lastDeleteSummary {
+                Text(summary).layoutPriority(1)
             }
             Spacer()
-            Text(String(localized: "Photos Library items: Recently Deleted keeps them 30 days",
+            Text(String(localized: "Deleted photos stay in Recently Deleted for 30 days",
                         comment: "Mac Duplicates footer: where deleted photos go"))
         }
         .font(.system(size: 11))
@@ -367,7 +435,7 @@ private struct MacDuplicatesStatus: View {
 
     private var pending: String {
         if model.pendingCount > 0 {
-            return String(localized: "\(model.pendingCount) photos not checked yet", comment: "Duplicates header: photos a rescan would cover")
+            return MacInflect.string("^[\(model.pendingCount) photo](inflect: true) not checked yet", comment: "Duplicates header: photos a rescan would cover")
         }
         return String(localized: "Every photo checked", comment: "Duplicates header: nothing left for a rescan")
     }
@@ -474,6 +542,8 @@ private struct MacDuplicateRow: View {
 
     let group: DuplicateGroup
     let model: DuplicatesModel
+    /// Told after Not Duplicates, for the footer's Undo.
+    var onDismiss: (DuplicateGroup) -> Void = { _ in }
 
     var body: some View {
         let keeper = model.keeper(of: group)
@@ -517,11 +587,14 @@ private struct MacDuplicateRow: View {
             .background(MacTheme.fill, in: Capsule())
             Spacer(minLength: 0)
             if marked.isEmpty {
+                let isKept = model.isKeptAll(group)
                 Button {
                     withAnimation(.easeOut(duration: 0.15)) { model.toggleKeepAll(group) }
                 } label: {
-                    pill(String(localized: "Keep All", comment: "Duplicates card: keep every photo of this group"),
-                         symbol: "checkmark", fill: MacTheme.accentFill, text: MacTheme.onAccentFill)
+                    // Kept already (back from folded): says so, a click undoes it.
+                    pill(isKept ? String(localized: "Keeping All", comment: "Duplicates card: the group is kept whole; click to undo")
+                                : String(localized: "Keep All", comment: "Duplicates card: keep every photo of this group"),
+                         symbol: "checkmark", fill: isKept ? MacTheme.fill : MacTheme.accentFill, text: isKept ? Color.primary : MacTheme.onAccentFill)
                 }
                 .buttonStyle(.plain)
                 .help(String(localized: "Keep every photo of this group", comment: "Mac Duplicates card tooltip"))
@@ -530,7 +603,10 @@ private struct MacDuplicateRow: View {
                     let ids = Set(marked)
                     Task { await model.delete(ids: ids) }
                 } label: {
-                    pill(String(localized: "Delete \(marked.count)", comment: "Duplicates card: delete this group's photos marked Trash"),
+                    // Every copy marked: the pill says the whole group goes.
+                    pill(marked.count == group.members.count
+                         ? String(localized: "Delete All \(marked.count)", comment: "Duplicates card: every photo of the group is marked Trash")
+                         : String(localized: "Delete \(marked.count)", comment: "Duplicates card: delete this group's photos marked Trash"),
                          symbol: "trash", fill: .red, text: .white)
                 }
                 .buttonStyle(.plain)
@@ -571,6 +647,7 @@ private struct MacDuplicateRow: View {
         let caption = isKeeper ? [] : model.caption(of: member, in: group, keeper: keeper)
         return MacDuplicateTile(
             asset: model.assetsById[member.assetId],
+            photoId: member.assetId,
             side: Self.tile,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
@@ -599,6 +676,7 @@ private struct MacDuplicateRow: View {
             }
             Button(String(localized: "Not Duplicates", comment: "Duplicates card: these photos are not duplicates")) {
                 model.dismiss(group)
+                onDismiss(group)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -677,6 +755,9 @@ private struct MacDuplicateFacts: View {
 private struct MacDuplicateTile: View {
     @Environment(MacDependencies.self) private var dependencies
     let asset: PHAsset?
+    /// The photo, for a picture when it has no Photos asset (the demo, a
+    /// photo PhotoKit no longer returns).
+    let photoId: String
     let side: CGFloat
     let isMarked: Bool
     let showsKeep: Bool
@@ -684,6 +765,8 @@ private struct MacDuplicateTile: View {
 
     @State private var image: NSImage?
     @State private var requestId: PHImageRequestID?
+    /// The no-asset picture under way: a gone or resized tile cancels it.
+    @State private var fallback: Task<Void, Never>?
     @State private var isHovered = false
 
     var body: some View {
@@ -748,11 +831,30 @@ private struct MacDuplicateTile: View {
             .onDisappear {
                 if let requestId { dependencies.photoLibrary.cancelThumbnailRequest(requestId) }
                 requestId = nil
+                fallback?.cancel()
+                fallback = nil
             }
     }
 
     private func load() {
-        guard let asset else { return }
+        guard let asset else {
+            let id = photoId
+            let side = side
+            let dependencies = dependencies
+            fallback?.cancel()
+            fallback = Task {
+                #if DEBUG
+                if MacDemoLibrary.isOn {
+                    if let picture = MacDemoLibrary.picture(for: id) { image = NSImage(cgImage: picture, size: .zero) }
+                    return
+                }
+                #endif
+                if let picture = await MacViewerThumbnail.load(id, side: side, dependencies: dependencies), !Task.isCancelled {
+                    image = NSImage(cgImage: picture, size: .zero)
+                }
+            }
+            return
+        }
         if let requestId { dependencies.photoLibrary.cancelThumbnailRequest(requestId) }
         let pixels = side * 2
         requestId = dependencies.photoLibrary.requestThumbnail(for: asset, targetSize: CGSize(width: pixels, height: pixels),
@@ -773,7 +875,7 @@ private struct MacDuplicateFoldedRow: View {
         HStack(spacing: 12) {
             HStack(spacing: -10) {
                 ForEach(group.members.prefix(2)) { member in
-                    MacDuplicateTile(asset: model.assetsById[member.assetId], side: 36,
+                    MacDuplicateTile(asset: model.assetsById[member.assetId], photoId: member.assetId, side: 36,
                                      isMarked: false, showsKeep: false, caption: nil)
                         .allowsHitTesting(false)
                 }

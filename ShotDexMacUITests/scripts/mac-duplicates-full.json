@@ -1,0 +1,324 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "duplicates"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "dup"
+  },
+  {
+   "action": "dump",
+   "name": "dup"
+  },
+  {
+   "action": "click",
+   "x": 0.404,
+   "y": 0.43
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-one"
+  },
+  {
+   "action": "dump",
+   "name": "dup-one"
+  },
+  {
+   "action": "click",
+   "label": "All Trash",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-alltrash"
+  },
+  {
+   "action": "click",
+   "label": "All Keep",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-allkeep"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.404,
+   "y": 0.43
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Keep Just This One",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-keeponly"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.404,
+   "y": 0.43
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Keep All",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-keepall"
+  },
+  {
+   "action": "key",
+   "text": "down",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-group2"
+  },
+  {
+   "action": "key",
+   "text": "r",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-trashothers"
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-trashothers"
+  },
+  {
+   "action": "key",
+   "text": "k",
+   "modifiers": "option"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-keptall"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "dup-sorted"
+  },
+  {
+   "action": "rightClick",
+   "x": 0.404,
+   "y": 0.43
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Not Duplicates",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "dup-dismissed"
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-dismissed"
+  },
+  {
+   "action": "click",
+   "label": "duplicates.undoDismiss"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "dup-undone"
+  },
+  {
+   "action": "click",
+   "label": "Check Again",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-checking"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "dump",
+   "name": "dup-checked"
+  },
+  {
+   "action": "menu",
+   "text": "Go > All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "click",
+   "x": 0.35,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "x": 0.5,
+   "y": 0.3,
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "dup-grid-selected"
+  },
+  {
+   "action": "menu",
+   "text": "Go > Duplicates"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "delete",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "dup-cmd-delete"
+  },
+  {
+   "action": "dump",
+   "name": "dup-cmd-delete"
+  },
+  {
+   "action": "menu",
+   "text": "Go > All Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "dup-grid-after"
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}
