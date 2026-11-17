@@ -22,8 +22,10 @@ final class SearchService {
         var query = SmartAlbumQuery.empty
         /// Text to search the old way, when there is no rule for it.
         var searchText: String?
-        /// Whether a model produced any of this, for the interpretation row.
-        var usedModel = false
+        /// The model that produced this, for "Read by …"; nil when the
+        /// parser answered alone.
+        var modelName: String?
+        var usedModel: Bool { modelName != nil }
 
         var hasRules: Bool { !query.isEmpty }
     }
@@ -167,7 +169,7 @@ final class SearchService {
             return Resolution(
                 query: SmartAlbumQuery(matchMode: .all, rules: rules),
                 searchText: nil,
-                usedModel: true
+                modelName: model.name
             )
         }
 

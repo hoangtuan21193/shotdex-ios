@@ -123,7 +123,11 @@ final class LibraryModel {
     /// The condition the AI Search model made of the last search, while it is
     /// still the grid's (FS-01.03c §4 "Read by …"); nil when the parser
     /// answered, or once anything else changed the condition.
-    private(set) var modelReading: SmartAlbumQuery?
+    private(set) var modelReading: SmartAlbumQuery? {
+        didSet { if modelReading == nil { modelReader = nil } }
+    }
+    /// The model that made `modelReading`: "Read by Mac Studio".
+    private(set) var modelReader: String?
     /// SwiftUI `.task` can run again when a full-screen cover is dismissed.
     /// Initial grid loading is model-scoped and must happen only once;
     /// explicit filter/library changes still call `reload()` directly.
@@ -784,7 +788,10 @@ final class LibraryModel {
             // these is ever set.
             if resolution.hasRules {
                 advancedQuery = resolution.query
-                if resolution.usedModel { modelReading = resolution.query }
+                if let name = resolution.modelName {
+                    modelReading = resolution.query
+                    modelReader = name
+                }
             } else {
                 criteria.searchText = resolution.searchText
             }

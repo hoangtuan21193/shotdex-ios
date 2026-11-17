@@ -287,6 +287,17 @@ struct SearchSuggestionsScreen: View {
                 }
                 .padding(.horizontal, isWide ? 0 : 20)
                 .padding(.top, 8)
+                // The Search key had a model read the sentence (FS-01.03c §4).
+                if session.modelReading != nil, let reader = session.modelReader {
+                    Label(String(localized: "Read by \(reader)", comment: "Search: the AI Search model turned the words into conditions"),
+                          systemImage: "sparkles")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, isWide ? 0 : 20)
+                        .padding(.top, -4)
+                        .accessibilityIdentifier("search-read-by")
+                }
                 resultsGrid
             } else if session.hasResults {
                 ContentUnavailableView.search(text: session.displayText)

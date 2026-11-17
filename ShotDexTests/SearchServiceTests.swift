@@ -57,6 +57,7 @@ struct SearchServiceTests {
     private struct SlowModel: SearchModel {
         var delay: Duration
         var timeout: Duration
+        var name: String { "Slow" }
         func translate(_ query: String, vocabulary: FilterSuggestionCatalog) async -> [SmartAlbumRule]? {
             try? await Task.sleep(for: delay)
             return [SmartAlbumRule(field: .anyText, op: .contains, text: "model")]
@@ -88,6 +89,7 @@ struct SearchServiceTests {
         let quick = try service(SlowModel(delay: .milliseconds(10), timeout: .seconds(2)))
         let answered = await quick.resolve("ảnh hoàng hôn 85mm")
         #expect(answered.usedModel)
+        #expect(answered.modelName == "Slow")
     }
 
     /// AC-7: a cloud provider never becomes the AI Search model, even if a

@@ -4,6 +4,8 @@ import Foundation
 /// device, or a home server. There is no cloud implementation, by design —
 /// the prompt carries the library's place names.
 protocol SearchModel: Sendable {
+    /// What "Read by …" calls it (FS-01.03c §4): the AI Search row's title.
+    var name: String { get }
     /// After this the parser's answer is used, with no error shown.
     var timeout: Duration { get }
     func prewarm(vocabulary: FilterSuggestionCatalog) async
@@ -18,6 +20,7 @@ extension SearchModel {
 struct AppleIntelligenceSearchModel: SearchModel {
     let translator: AISearchTranslator
     var timeout: Duration { .seconds(2) }
+    var name: String { String(localized: "Apple Intelligence", comment: "Built-in AI") }
 
     func prewarm(vocabulary: FilterSuggestionCatalog) async {
         await translator.prewarm(vocabulary: vocabulary)
@@ -34,6 +37,7 @@ struct HomeServerSearchModel: SearchModel {
     let key: String?
     var client = AIProviderClient()
     var timeout: Duration = .seconds(8)
+    var name: String { provider.name }
 
     func translate(_ query: String, vocabulary: FilterSuggestionCatalog) async -> [SmartAlbumRule]? {
         guard provider.kind.servesAISearch else { return nil }

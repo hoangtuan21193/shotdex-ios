@@ -29,8 +29,6 @@ struct MacRootWindow: View {
     /// words, landing after Return, must not replace — and cancel — the
     /// answer Return asked the AI Search model for.
     @State private var submittedSearch: MacSearchInput?
-    /// The AI Search row when Return was pressed: the one that answered.
-    @State private var submittedReader: String?
     /// ⌘F asked for the field while the grid (and so the field) was not on
     /// screen: the grid takes it when it appears.
     @State private var wantsSearchFocus = false
@@ -1958,7 +1956,7 @@ struct MacRootWindow: View {
     /// of it — a condition edited in the filter bar is the user's own.
     private func readBy(_ library: LibraryModel) -> String? {
         guard let reading = library.modelReading, reading == library.advancedQuery else { return nil }
-        return submittedReader
+        return library.modelReader
     }
 
     /// "54,027 photos · 1,204 videos", or "212 of 55,231 photos" while a
@@ -2049,10 +2047,9 @@ struct MacRootWindow: View {
     }
 
     /// These words were searched with the model allowed: the as-you-type
-    /// pass leaves them alone, and Read by names the row that answered.
+    /// pass leaves them alone.
     private func markSubmitted(_ text: String) {
         submittedSearch = MacSearchInput(text: text, tokens: searchTokens.map(\.id))
-        submittedReader = dependencies.aiProviders.title(dependencies.aiProviders.choice)
     }
 
     /// The scope fits in a saved album: one source, and an "all of" search.

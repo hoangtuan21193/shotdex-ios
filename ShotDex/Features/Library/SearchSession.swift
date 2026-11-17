@@ -37,7 +37,11 @@ final class SearchSession {
     private(set) var highlights: [SearchGroup] = []
     /// Set when the Search key had a model read the sentence; the results then
     /// come from its rules until the text changes.
-    private(set) var modelReading: (text: String, query: SmartAlbumQuery)?
+    private(set) var modelReading: (text: String, query: SmartAlbumQuery)? {
+        didSet { if modelReading == nil { modelReader = nil } }
+    }
+    /// The model behind `modelReading`, for "Read by …" (FS-01.03c §4).
+    private(set) var modelReader: String?
 
     var trimmedText: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
     var hasInput: Bool { !tokens.isEmpty || !trimmedText.isEmpty }
@@ -105,8 +109,9 @@ final class SearchSession {
         let local = await service.resolveLocally(typed)
         if local.hasRules, local.query.validRules.allSatisfy({ $0.field != .anyText }) { return }
         let resolution = await service.resolve(typed)
-        guard resolution.usedModel, typed == trimmedText else { return }
+        guard let name = resolution.modelName, typed == trimmedText else { return }
         modelReading = (typed, resolution.query)
+        modelReader = name
         scheduleUpdate(immediately: true)
     }
 
