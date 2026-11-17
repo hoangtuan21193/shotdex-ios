@@ -1070,6 +1070,20 @@
    "w": 402,
    "x": 19218,
    "y": 2534
+  },
+  "PH_VideoCompress.dc.html": {
+   "x": 38474,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Compress Videos (FS-24): 5 video, Quality 3 mức, Size Original/4K/1080p, ước lượng trước→sau, nút Compress"
+  },
+  "PH_VideoCompressRun.dc.html": {
+   "x": 38956,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Compress Videos đang chạy: thanh tổng, 1 of 5 done, từng file có tiến độ, nút Stop"
   }
  },
  "createdOnFiles": {
@@ -1291,7 +1305,9 @@
   "PH_Utilities.dc.html",
   "PH_KeepOnIPhone.dc.html",
   "PH_OnThisIPhone.dc.html",
-  "PH41_EditHistory.dc.html"
+  "PH41_EditHistory.dc.html",
+  "PH_VideoCompress.dc.html",
+  "PH_VideoCompressRun.dc.html"
  ],
  "pages": [],
  "title": "ShotDex · iPhone",

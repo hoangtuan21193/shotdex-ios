@@ -55,6 +55,16 @@ struct MacRootWindow: View {
     @State private var cullRequest: MacCullRequest?
     /// Image › Resize… (board `MAC_Compress`): a page over the place it came from.
     @State private var resize: MacResizeModel?
+    /// Image › Compress Videos… (board `MAC_VideoCompress`): a page like Resize.
+    @State private var videoCompress: VideoCompressionBatch?
+    /// The stand-in videos' names in a Debug demo; none in a release build.
+    private static var videoCompressDemoNames: [String: String] {
+        #if DEBUG
+        MacVideoCompressPage.demoNames
+        #else
+        [:]
+        #endif
+    }
     /// Image › Combine Photos › Panorama… open (board `MAC_Merge`).
     @State private var combine: MacCombineSession?
     /// Image › Create › Collage… open (board `MAC_Collage`).
@@ -221,6 +231,9 @@ struct MacRootWindow: View {
             } else if let resize {
                 MacResizePage(model: resize) { self.resize = nil }
                     .id(resize.id)
+            } else if let videoCompress {
+                MacVideoCompressPage(batch: videoCompress, names: Self.videoCompressDemoNames) { self.videoCompress = nil }
+                    .id(ObjectIdentifier(videoCompress))
             } else if let burstFrames {
                 MacBurstFramesPage(model: burstFrames) { self.burstFrames = nil }
                     .id(burstFrames.id)
@@ -318,7 +331,7 @@ struct MacRootWindow: View {
         .modifier(MacCommonPhotosRunHost(runId: $commonPhotosRunId))
         .modifier(MacIngestHost(selection: $selection))
         // The page has the window: a viewer left open under it would keep its toolbar.
-        .onChange(of: resize == nil && combine == nil && collage == nil && burstFrames == nil) { _, closed in
+        .onChange(of: resize == nil && videoCompress == nil && combine == nil && collage == nil && burstFrames == nil) { _, closed in
             if closed {
                 if let before = columnsBeforeResize { columnVisibility = before }
                 columnsBeforeResize = nil
@@ -1455,6 +1468,15 @@ struct MacRootWindow: View {
                 }
                 resize = MacResizeModel(ids: chosen, dependencies: dependencies)
             },
+            compressVideos: {
+                // The video on screen in the viewer, else the selection's videos.
+                let chosen = viewerId.map { [$0] } ?? ids
+                let videos = PhotoLibraryService.fetchAssets(ids: chosen)
+                    .filter { $0.mediaType == .video }
+                    .map(\.localIdentifier)
+                guard !videos.isEmpty, videoCompress == nil, resize == nil, editor == nil else { NSSound.beep(); return }
+                videoCompress = MacVideoCompressPage.makeBatch(ids: videos, photoLibrary: dependencies.photoLibrary)
+            },
             chooseFrames: {
                 // The photo on screen in the viewer, else the first selected.
                 guard let id = viewerId ?? ids.first, burstFrames == nil, editor == nil, resize == nil, combine == nil, collage == nil
@@ -1751,6 +1773,21 @@ struct MacRootWindow: View {
                     hasOpenedDemoViewer = true
                     try? await Task.sleep(for: .milliseconds(500))
                     startCull()
+                }
+            }
+            // `-ShotDexSection videoCompress` (board `MAC_VideoCompress`): five
+            // stand-in videos through a worker that never touches Photos.
+            Color.clear.task(id: library.items.count) {
+                // `videoCompressRun`: the same, already compressing (board `MAC_VideoCompressRun`).
+                let section = MacDemoLibrary.section
+                if section == "videoCompress" || section == "videoCompressRun", videoCompress == nil, !hasOpenedDemoViewer {
+                    hasOpenedDemoViewer = true
+                    let batch = MacVideoCompressPage.demoBatch()
+                    videoCompress = batch
+                    if section == "videoCompressRun" {
+                        await batch.load()
+                        batch.start()
+                    }
                 }
             }
             // `-ShotDexSection resize` (board `MAC_Compress`): the 8 newest photos in Resize.

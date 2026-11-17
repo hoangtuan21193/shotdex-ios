@@ -26,6 +26,8 @@ struct MacLibraryTarget {
     var startCull: () -> Void
     /// Image › Resize… ⌥⌘R (FS-18.04 §4a).
     var resize: () -> Void
+    /// Image › Compress Videos… (FS-24, board `MAC_VideoCompress`).
+    var compressVideos: () -> Void
     /// Image › Choose Frames… (FS-02.05, board `MAC_BurstFrames`).
     var chooseFrames: () -> Void
     /// Image › Create › Collage… (FS-18.04 §4c).
@@ -166,6 +168,8 @@ struct MacImageCommands: Commands {
                 .disabled(library == nil)
             Button(String(localized: "Resize…", comment: "Mac menu: Image › Resize… (the selected photos, smaller)")) { library?.resize() }
                 .keyboardShortcut("r", modifiers: [.option, .command])
+                .disabled(library?.hasSelection != true && library?.viewerOpen != true)
+            Button(String(localized: "Compress Videos…", comment: "Mac menu: Image › Compress Videos… (the selected videos to HEVC)")) { library?.compressVideos() }
                 .disabled(library?.hasSelection != true && library?.viewerOpen != true)
             Button(String(localized: "Choose Frames…", comment: "Mac menu: Image › Choose Frames… (a burst's frames)")) { library?.chooseFrames() }
                 .disabled(library?.hasSelection != true && library?.viewerOpen != true)

@@ -33,6 +33,7 @@ struct AlbumDetailScreen: View {
     @State private var isAdvancedFilterPresented = false
     @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var videoCompressionRequest: VideoCompressionRequest?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var stackPresentation: PhotoStackPresentation?
@@ -58,6 +59,9 @@ struct AlbumDetailScreen: View {
         }
         .selectionCompare($compareRequest, onDismiss: stopSelecting)
         .multiEditCover($multiEditPresentation, sourceAlbum: model?.sourceAlbum, onDismiss: stopSelecting)
+        .fullScreenCover(item: $videoCompressionRequest, onDismiss: stopSelecting) { request in
+            VideoCompressionScreen(request: request)
+        }
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -546,6 +550,9 @@ struct AlbumDetailScreen: View {
                 compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: { presentCompression(model) },
+            onCompressVideos: {
+                videoCompressionRequest = VideoCompressionRequest(selection: selectedIds, imageIDs: selectedImageIDs(model))
+            },
             onEdit: { presentMultiEdit(model) },
             onCombine: { presentCombine($0, model) },
             onDelete: { deleteSelected(model) },

@@ -50,6 +50,9 @@ struct SelectionBarModel {
     var onCompare: (() -> Void)? = nil
     /// Middle cluster — resize / compress the picked images.
     var onCompress: (() -> Void)? = nil
+    /// Middle cluster — compress the picked videos to HEVC (FS-24). Enabled
+    /// when the selection holds at least one video.
+    var onCompressVideos: (() -> Void)? = nil
     /// Opens the editor on the whole selection — one photo on the canvas, the
     /// rest in a filmstrip under it.
     var onEdit: (() -> Void)? = nil

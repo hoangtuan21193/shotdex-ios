@@ -1,0 +1,15 @@
+{
+ "steps": [
+  {"action": "wait", "seconds": 6},
+  {"action": "screenshot", "name": "1-setup"},
+  {"action": "tap", "label": "Compress", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "2-running"},
+  {"action": "wait", "seconds": 60},
+  {"action": "wait", "seconds": 60},
+  {"action": "wait", "seconds": 60},
+  {"action": "wait", "seconds": 40},
+  {"action": "screenshot", "name": "3-finished"},
+  {"action": "dump", "name": "finished"}
+ ]
+}

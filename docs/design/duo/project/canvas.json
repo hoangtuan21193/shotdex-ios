@@ -1549,6 +1549,34 @@
       "w": 466,
       "x": 35368,
       "y": 1609
+    },
+    "DI_VideoCompress.dc.html": {
+      "x": 76354,
+      "y": 560,
+      "w": 951,
+      "h": 669,
+      "title": "Duo mở · Compress Videos (FS-24): danh sách + inspector 340"
+    },
+    "DI_VideoCompressRun.dc.html": {
+      "x": 77385,
+      "y": 560,
+      "w": 951,
+      "h": 669,
+      "title": "Duo mở · Compress Videos đang chạy"
+    },
+    "DC_VideoCompress.dc.html": {
+      "x": 35914,
+      "y": 1609,
+      "w": 466,
+      "h": 678,
+      "title": "Duo màn ngoài · Compress Videos (FS-24): cột 382 trái rail 84"
+    },
+    "DC_VideoCompressRun.dc.html": {
+      "x": 36460,
+      "y": 1609,
+      "w": 466,
+      "h": 678,
+      "title": "Duo màn ngoài · Compress Videos đang chạy"
     }
   },
   "createdOnFiles": {
@@ -1902,7 +1930,11 @@
     "DI_KeepOnIPhone.dc.html",
     "DC_Utilities.dc.html",
     "DC_OnThisIPhone.dc.html",
-    "DC_KeepOnIPhone.dc.html"
+    "DC_KeepOnIPhone.dc.html",
+    "DI_VideoCompress.dc.html",
+    "DI_VideoCompressRun.dc.html",
+    "DC_VideoCompress.dc.html",
+    "DC_VideoCompressRun.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

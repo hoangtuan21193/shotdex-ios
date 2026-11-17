@@ -1,0 +1,105 @@
+{
+ "steps": [
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.165,
+   "y": 0.765
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.765
+  },
+  {
+   "action": "tap",
+   "x": 0.835,
+   "y": 0.765
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "1-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Compress Videos"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "2-setup"
+  },
+  {
+   "action": "dump",
+   "name": "PH_VideoCompress"
+  },
+  {
+   "action": "tap",
+   "label": "Balanced"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "3-balanced"
+  },
+  {
+   "action": "tap",
+   "label": "Compress",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "4-running"
+  },
+  {
+   "action": "dump",
+   "name": "PH_VideoCompressRun"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "5-finished"
+  },
+  {
+   "action": "dump",
+   "name": "finished"
+  }
+ ]
+}

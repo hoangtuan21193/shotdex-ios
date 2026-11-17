@@ -203,7 +203,7 @@ struct SelectionToolbarItems: ToolbarContent {
     var usesIconItems = false
 
     private var hasMenu: Bool {
-        model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCombine != nil
+        model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCompressVideos != nil || model.onCombine != nil
             || model.onAddToCollection != nil || model.onExportEXIF != nil
             || model.onDuplicate != nil || model.onUploadToServer != nil || model.assetActions != nil
             || model.offersFileExport
@@ -295,6 +295,12 @@ struct SelectionToolbarItems: ToolbarContent {
                             PhotoCommand.resize.label
                         }
                         .disabled(model.imageSelectionCount < 1)
+                    }
+                    if let onCompressVideos = model.onCompressVideos {
+                        Button(action: onCompressVideos) {
+                            Label(VideoCompressionCopy.command, systemImage: "film.stack")
+                        }
+                        .disabled(model.selectionCount - model.imageSelectionCount < 1)
                     }
                     if model.offersFileExport {
                         FileExportSelectionRow(ids: model.selectedIds)

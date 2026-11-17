@@ -53,6 +53,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var isAdvancedFilterPresented = false
     @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var videoCompressionRequest: VideoCompressionRequest?
     @State private var stackPresentation: PhotoStackPresentation?
     @State private var panoramaPresentation: PanoramaMergePresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
@@ -184,6 +185,9 @@ struct SmartAlbumDetailScreen: View {
             stopSelecting()
             navigation.openPhoto(assetId: assetID)
         })
+        .fullScreenCover(item: $videoCompressionRequest, onDismiss: stopSelecting) { request in
+            VideoCompressionScreen(request: request)
+        }
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -766,6 +770,9 @@ struct SmartAlbumDetailScreen: View {
                 compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: { presentCompression(model) },
+            onCompressVideos: {
+                videoCompressionRequest = VideoCompressionRequest(selection: selectedIds, imageIDs: selectedImageIDs(model))
+            },
             onEdit: { presentMultiEdit(model) },
             onCombine: { presentCombine($0, model) },
             onDelete: { deleteSelected(model) },

@@ -31,6 +31,10 @@ struct LibraryScreen: View {
     @State private var selectedIds: [String] = []
     @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var videoCompressionRequest: VideoCompressionRequest?
+    #if DEBUG
+    @MainActor private static var hasOpenedVideoCompressDemo = false
+    #endif
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
@@ -233,10 +237,26 @@ struct LibraryScreen: View {
         } message: { frames in
             Text("^[\(frames.count) photo](inflect: true) were being joined when ShotDex closed. Nothing was saved.")
         }
+        #if DEBUG
+        // `-ShotDexVideoCompressDemo`: opens Compress Videos on the newest
+        // videos once, so a route on the iPad or the Duo reaches the screen
+        // without driving the grid (FS-24 screenshots).
+        .task(id: model?.items.count ?? 0) {
+            guard ProcessInfo.processInfo.arguments.contains("-ShotDexVideoCompressDemo"),
+                  !Self.hasOpenedVideoCompressDemo, let model else { return }
+            let videos = model.items.filter { $0.mediaType == PHAssetMediaType.video.rawValue }.suffix(5).map(\.assetId)
+            guard !videos.isEmpty else { return }
+            Self.hasOpenedVideoCompressDemo = true
+            videoCompressionRequest = VideoCompressionRequest(selection: Array(videos), imageIDs: [])
+        }
+        #endif
         .task {
             guard let frames = PanoramaSaveRecord.interrupted, frames.count >= 2 else { return }
             interruptedPanoramaFrames = frames
             showsInterruptedPanorama = true
+        }
+        .fullScreenCover(item: $videoCompressionRequest, onDismiss: stopSelecting) { request in
+            VideoCompressionScreen(request: request)
         }
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
@@ -626,6 +646,9 @@ struct LibraryScreen: View {
                 compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: { presentCompression(model) },
+            onCompressVideos: {
+                videoCompressionRequest = VideoCompressionRequest(selection: selectedIds, imageIDs: selectedImageIDs(model))
+            },
             onEdit: { presentMultiEdit(model) },
             onPasteEdits: dependencies.editClipboard.hasContent
                 ? { pasteEditsToSelection(model) }

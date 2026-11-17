@@ -995,6 +995,20 @@
    "w": 1376,
    "x": 100464,
    "y": 560
+  },
+  "IP_VideoCompress.dc.html": {
+   "x": 101920,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Compress Videos (FS-24): danh sách video bên trái, inspector 340 bên phải, Compress ghim dưới"
+  },
+  "IP_VideoCompressRun.dc.html": {
+   "x": 103376,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Compress Videos đang chạy: hàng có tiến độ, inspector hiện tổng + Stop"
   }
  },
  "order": [
@@ -1134,7 +1148,9 @@
   "IP_BackupCustomDate.dc.html",
   "IP_BackupRunning.dc.html",
   "IP_SettingsAI.dc.html",
-  "IP_SettingsAIProvider.dc.html"
+  "IP_SettingsAIProvider.dc.html",
+  "IP_VideoCompress.dc.html",
+  "IP_VideoCompressRun.dc.html"
  ],
  "notes": {
   "sec_app": {

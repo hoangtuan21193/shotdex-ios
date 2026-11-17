@@ -29,6 +29,7 @@ struct OnThisDayScreen: View {
     @State private var isSelecting = false
     @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
+    @State private var videoCompressionRequest: VideoCompressionRequest?
     @State private var stackPresentation: PhotoStackPresentation?
     @State private var panoramaPresentation: PanoramaMergePresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
@@ -109,6 +110,9 @@ struct OnThisDayScreen: View {
             stopSelecting()
             navigation.openPhoto(assetId: assetID)
         })
+        .fullScreenCover(item: $videoCompressionRequest, onDismiss: stopSelecting) { request in
+            VideoCompressionScreen(request: request)
+        }
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
                 assets: presentation.assets,
@@ -324,6 +328,9 @@ struct OnThisDayScreen: View {
                 compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: presentCompression,
+            onCompressVideos: {
+                videoCompressionRequest = VideoCompressionRequest(selection: selectedIds, imageIDs: selectedIds.filter { model?.assetsById[$0]?.mediaType == .image })
+            },
             onEdit: presentMultiEdit,
             onCombine: presentCombine,
             onDelete: deleteSelected,
