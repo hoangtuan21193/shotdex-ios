@@ -57,7 +57,14 @@ struct MacCollagePage: View {
                 .accessibilityHidden(true)
             }
         }
-        .onAppear { model.loadPictures() }
+        .onAppear {
+            model.loadPictures()
+            // Collages › Export…: the sheet comes up on the reopened collage.
+            if model.exportsOnOpen {
+                model.exportsOnOpen = false
+                exports = true
+            }
+        }
         .confirmationDialog(String(localized: "Discard this collage?", comment: "Mac Collage: leaving with changes not exported"),
                             isPresented: $asksDiscard) {
             Button(String(localized: "Discard", comment: "Mac Collage: leave without exporting"), role: .destructive) {
@@ -77,6 +84,7 @@ struct MacCollagePage: View {
         switch model.saved {
         case .file(let url): state = String(localized: "Saved \(url.lastPathComponent)", comment: "Mac Collage subtitle: exported to a file")
         case .photos(let name): state = String(localized: "Saved \(name) to Photos", comment: "Mac Collage subtitle: exported into Photos")
+        case .restored: state = String(localized: "Exported", comment: "Mac Collage subtitle: reopened from Collages, unchanged since its export")
         case nil: state = String(localized: "Not saved yet", comment: "Mac Collage subtitle: nothing exported since the last change")
         }
         return [MacInflect.string("\(model.placedCount) of ^[\(model.slotCount) photo](inflect: true)", comment: "Mac Collage subtitle: cells filled"),

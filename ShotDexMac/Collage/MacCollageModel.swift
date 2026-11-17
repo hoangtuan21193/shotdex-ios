@@ -49,10 +49,22 @@ final class MacCollageModel: Identifiable {
     enum Saved: Equatable {
         case file(URL)
         case photos(String)
+        /// Reopened from Collages, unchanged since its export.
+        case restored
     }
 
     private let photoLibrary: PhotoLibraryService
     private let presetStore: CollagePresetStore
+    /// Where an exported collage is recorded (Collages, FS-18.04 §1.5), and
+    /// this collage's row: exporting a reopened collage again updates it.
+    private let creationStore: CreationStore?
+    let creationID: String
+    /// Open the Export sheet as soon as the page shows (Collages › Export…).
+    var exportsOnOpen = false
+    /// Cells a reopened collage had photos in that are not here now: the
+    /// record keeps those photos while their cells stay empty, so a photo
+    /// that comes back is not lost from the collage.
+    private var missingOnRestore: [Int: String] = [:]
     private var renderTask: Task<Void, Never>?
     private var renderGeneration = 0
     private var isRendering = false
@@ -82,11 +94,35 @@ final class MacCollageModel: Identifiable {
     /// `placed`: the first photos go into cells (up to the count the
     /// layouts take); the rest start in Set Aside.
     init(photos: [PhotoEditOrigin], names: [String: String], placed: Int,
-         photoLibrary: PhotoLibraryService, presetStore: CollagePresetStore) {
+         photoLibrary: PhotoLibraryService, presetStore: CollagePresetStore,
+         creationStore: CreationStore? = nil, restoring: Creation? = nil) {
         self.photos = photos
         self.names = names
         self.photoLibrary = photoLibrary
         self.presetStore = presetStore
+        self.creationStore = creationStore
+        creationID = restoring?.id ?? UUID().uuidString
+        if let restoring, var stored = restoring.collageRecipe {
+            // A photo no longer here leaves its cell empty, never another photo in it.
+            let here = Set(photos.map(\.id))
+            var missing: [Int: String] = [:]
+            for index in stored.cells.indices {
+                if let id = stored.cells[index].assetID, !here.contains(id) {
+                    missing[index] = id
+                    stored.cells[index] = CollageCell(assetID: nil)
+                }
+            }
+            recipe = stored
+            unplaced = []
+            missingOnRestore = missing
+            if !missing.isEmpty {
+                leftOutNote = MacInflect.string("^[\(missing.count) photo](inflect: true) of this collage isn’t here any more — deleted, or its original is gone. Its cell is empty.",
+                                                comment: "Mac Collage: reopened with photos missing")
+            }
+            // Exported as it is: "Saved" until it changes.
+            saved = restoring.exportedAt == nil ? nil : .restored
+            return
+        }
         let count = min(max(placed, Self.slotRange.lowerBound), min(Self.slotRange.upperBound, photos.count))
         let template = CollageTemplateCatalog.templates(for: count).first
         recipe = CollageRecipe(templateID: template?.id ?? "",
@@ -573,54 +609,8 @@ final class MacCollageModel: Identifiable {
         errorMessage = nil
         saved = nil
         defer { isExporting = false }
-        // One copy of the recipe for the frames, the reads and the render.
         let recipe = recipe
-        let pixelSize = outputSize
-        let frames = CollageGeometry.cellFrames(template: template, canvasSize: pixelSize,
-                                                gutter: CollageGeometry.gutterPixels(recipe.gutter, canvasSize: pixelSize),
-                                                overrides: recipe.dividerWeights)
-        let byId = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var pictures: [Int: CGImage] = [:]
-        var unread: [String] = []
-        let total = recipe.cells.filter { !$0.isEmpty }.count
-        exportProgress = (0, total)
-        defer { exportProgress = nil }
-        for (index, cell) in recipe.cells.enumerated() {
-            // Cancel in the sheet: nothing is written.
-            guard !Task.isCancelled else { return false }
-            guard let id = cell.assetID, let photo = byId[id], frames.indices.contains(index) else { continue }
-            exportProgress = (pictures.count + unread.count, total)
-            let side = Int((max(frames[index].width, frames[index].height) * CGFloat(cell.contentScale) * 1.5).rounded(.up))
-            if let image = await fullImage(photo, side: side) { pictures[index] = image } else { unread.append(name(of: id)) }
-        }
-        // A cell that could not be read would come out blank: nothing is written.
-        guard unread.isEmpty, !pictures.isEmpty else {
-            errorMessage = String(localized: "ShotDex couldn’t read \(unread.joined(separator: ", ")). Nothing was exported.",
-                                  comment: "Mac Collage: export could not read some photos")
-            return false
-        }
-        var metadata: [CFString: Any]?
-        if options.keepFirstPhotoEXIF, let first = firstPlaced {
-            switch first {
-            case .asset(let asset): metadata = await photoLibrary.imageProperties(for: asset)
-            case .fileCopy, .serverFile:
-                if let url = first.localFileURL {
-                    metadata = await Task.detached { MacCollageMetadataBox(properties: PhotoOriginFile.properties(at: url)) }.value.properties
-                }
-            }
-        }
-        let box = MacCollagePictures(images: pictures)
-        // The pixels are already upright and the size is the collage's: the
-        // first photo's orientation and dimensions must not come along.
-        metadata = metadata.map(Self.cameraDetails(from:))
-        let meta = MacCollageMetadataBox(properties: metadata)
-        guard let data = await Task.detached(priority: .userInitiated, operation: { () -> Data? in
-            guard let image = CollageCompositor.render(recipe: recipe, template: template, images: box.images, pixelSize: pixelSize) else { return nil }
-            return CollageImageEncoder.encode(image, format: options.format, quality: options.quality, metadata: meta.properties)
-        }).value else {
-            errorMessage = String(localized: "ShotDex couldn’t draw the collage. Try a smaller Size.", comment: "Mac Collage: render failed")
-            return false
-        }
+        guard let data = await renderData(options, recipe: recipe, template: template) else { return false }
         guard !Task.isCancelled else { return false }
         let name = fileName(options.format)
         if folder == nil, savesToPhotos {
@@ -628,7 +618,7 @@ final class MacCollageModel: Identifiable {
                 let assetId = try await photoLibrary.saveImage(data, filename: name)
                 photoLibrary.publishAppCreatedAsset()
                 saved = .photos(name)
-                _ = assetId
+                await record(assetId: assetId, recipe: recipe)
                 return true
             } catch {
                 errorMessage = String(localized: "Photos didn’t take the collage. Choose a folder and export again.", comment: "Mac Collage: Photos save failed")
@@ -654,11 +644,35 @@ final class MacCollageModel: Identifiable {
                 return url
             }.value
             saved = .file(url)
+            await record(assetId: nil, recipe: recipe)
             return true
         } catch {
             errorMessage = String(localized: "ShotDex couldn’t write the collage there. Choose another folder and export again.",
                                   comment: "Mac Collage: writing the file failed")
             return false
+        }
+    }
+
+    /// Files the exported collage under Collages with its recipe, so it can
+    /// be reopened. A failure never fails the export: the picture is written.
+    private func record(assetId: String?, recipe: CollageRecipe) async {
+        guard let creationStore else { return }
+        var kept = recipe
+        // A missing photo's cell left empty keeps its photo in the record.
+        for (index, id) in missingOnRestore where kept.cells.indices.contains(index) && kept.cells[index].isEmpty {
+            kept.cells[index] = CollageCell(assetID: id)
+        }
+        guard let creation = try? Creation.collage(recipe: kept, assetId: assetId, id: creationID) else { return }
+        let id = creationID
+        let wrote = await Task.detached(priority: .utility) { () -> Bool in
+            // The newest export is the collage's picture: a file export leaves
+            // no Photos picture to show (Show in Library shows its photos).
+            _ = id
+            return (try? creationStore.upsert(creation)) != nil
+        }.value
+        if !wrote {
+            leftOutNote = String(localized: "Exported, but it couldn’t be added to Collages. Export again to try once more.",
+                                 comment: "Mac Collage: the record of the export failed")
         }
     }
 
@@ -680,6 +694,75 @@ final class MacCollageModel: Identifiable {
             kept[kCGImagePropertyExifDictionary] = exif
         }
         return kept
+    }
+
+    /// The collage at the output size, encoded: each cell decoded at its
+    /// placed size (× zoom, with headroom), one at a time, so nine large
+    /// originals never sit in memory together; drawing and encoding off the
+    /// main actor. Nil (with `errorMessage`) on a cell it could not read.
+    private func renderData(_ options: CollageExportOptions, recipe: CollageRecipe, template: CollageTemplate) async -> Data? {
+        let pixelSize = outputSize
+        let frames = CollageGeometry.cellFrames(template: template, canvasSize: pixelSize,
+                                                gutter: CollageGeometry.gutterPixels(recipe.gutter, canvasSize: pixelSize),
+                                                overrides: recipe.dividerWeights)
+        let byId = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var pictures: [Int: CGImage] = [:]
+        var unread: [String] = []
+        let total = recipe.cells.filter { !$0.isEmpty }.count
+        exportProgress = (0, total)
+        defer { exportProgress = nil }
+        for (index, cell) in recipe.cells.enumerated() {
+            // Cancel in the sheet: nothing is written.
+            guard !Task.isCancelled else { return nil }
+            guard let id = cell.assetID, let photo = byId[id], frames.indices.contains(index) else { continue }
+            exportProgress = (pictures.count + unread.count, total)
+            let side = Int((max(frames[index].width, frames[index].height) * CGFloat(cell.contentScale) * 1.5).rounded(.up))
+            if let image = await fullImage(photo, side: side) { pictures[index] = image } else { unread.append(name(of: id)) }
+        }
+        // A cell that could not be read would come out blank: nothing is written.
+        guard unread.isEmpty, !pictures.isEmpty else {
+            errorMessage = String(localized: "ShotDex couldn’t read \(unread.joined(separator: ", ")). Nothing was exported.",
+                                  comment: "Mac Collage: export could not read some photos")
+            return nil
+        }
+        var metadata: [CFString: Any]?
+        if options.keepFirstPhotoEXIF, let first = firstPlaced {
+            switch first {
+            case .asset(let asset): metadata = await photoLibrary.imageProperties(for: asset)
+            case .fileCopy, .serverFile:
+                if let url = first.localFileURL {
+                    metadata = await Task.detached { MacCollageMetadataBox(properties: PhotoOriginFile.properties(at: url)) }.value.properties
+                }
+            }
+        }
+        let box = MacCollagePictures(images: pictures)
+        // The pixels are already upright and the size is the collage's: the
+        // first photo's orientation and dimensions must not come along.
+        metadata = metadata.map(Self.cameraDetails(from:))
+        let meta = MacCollageMetadataBox(properties: metadata)
+        guard let data = await Task.detached(priority: .userInitiated, operation: { () -> Data? in
+            guard let image = CollageCompositor.render(recipe: recipe, template: template, images: box.images, pixelSize: pixelSize) else { return nil }
+            return CollageImageEncoder.encode(image, format: options.format, quality: options.quality, metadata: meta.properties)
+        }).value else {
+            errorMessage = String(localized: "ShotDex couldn’t draw the collage. Try a smaller Size.", comment: "Mac Collage: render failed")
+            return nil
+        }
+        return data
+    }
+
+    /// Share… from Collages: the collage as a JPEG in a temporary folder.
+    func renderTemporaryFile() async -> URL? {
+        guard let template else { return nil }
+        guard let data = await renderData(CollageExportOptions(), recipe: recipe, template: template) else { return nil }
+        let name = fileName(.jpeg)
+        return await Task.detached(priority: .userInitiated) { () -> URL? in
+            // One folder, emptied each time: shares never pile up in temp.
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexShare", isDirectory: true)
+            try? FileManager.default.removeItem(at: folder)
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let url = folder.appendingPathComponent(name)
+            return (try? data.write(to: url)) == nil ? nil : url
+        }.value
     }
 
     /// One photo at `side` px: a file decoded off the main actor, a Photos

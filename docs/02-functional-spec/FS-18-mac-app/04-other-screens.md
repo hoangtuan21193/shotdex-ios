@@ -175,6 +175,35 @@ Support là sheet trên cửa sổ Library (2026-11-07: ít cửa sổ); Setting
   có ngày); sheet hiện giữa cửa sổ (hệ thống) chứ không sát dưới toolbar; nút thêm nhóm chỉ qua ⌥ (không có nút riêng —
   board không vẽ); dựng nhóm trên iOS.
 
+### 1.5 Collages (board `MAC_Creations`) — đã dựng (row 45, 2026-11-17)
+
+- **Chỗ:** Utilities › **Collages** (đếm ở sidebar = số collage đã Export). Mỗi lần Export một collage (§4c) ghi một dòng
+  Creations với recipe; Export lại một collage mở từ đây cập nhật đúng dòng đó (không thêm dòng). Ảnh vào Photos: dòng giữ
+  asset của ảnh; ra file: không giữ đường dẫn file (lần Export mới nhất quyết định). Ảnh không còn khi mở lại: ô trống,
+  nhưng dòng vẫn giữ ảnh đó cho ô đó (ảnh quay lại là collage đủ lại); panel nói "N photo of this collage isn’t here".
+- **Trang:** "Collages" + "12 collages"; nhóm theo tháng ("October 2026" … "3 collages" bên phải); thẻ 220 rộng: chính
+  collage vẽ lại từ thumbnail các ảnh của nó (ngoài main actor, vẽ lại khi recipe đổi), ngày giờ ("Oct 3, 2026 at
+  11:20 AM" theo định dạng máy), "4 photos · 1:1".
+- **Toolbar:** **Last Edited ▾** (Last Edited · Date Created; nhớ qua lần mở; nhóm tháng theo ngày đang xếp) · **+** New
+  Collage (hỏi "Select the photos first" — chọn 2–9 ảnh rồi Image › Create › Collage…; nút Go to All Photos) · **Search
+  Collages** (khớp ngày, tỉ lệ, số ảnh, tên file ảnh; không khớp: màn tìm không thấy của hệ thống).
+- **Chọn:** bấm thẻ = viền accent 3 pt (chuột phải cũng chọn); Return mở; Delete hỏi Remove. Về từ Collage: đúng thẻ vừa
+  mở được chọn và cuộn tới. Đang mở/Share: vòng quay trên thẻ, mở thêm lần nữa thì chờ.
+- **Thẻ:** double-click hay chuột phải **Open in Collage** — mở trang Collage (§4c) với recipe đã lưu, subtitle "Exported"
+  tới khi sửa; ảnh không còn ở đây để ô trống; không ảnh nào còn: "This collage’s photos aren’t here". **Show in Library** —
+  All Photos chọn ảnh collage trong Photos (nếu đã Export vào Photos và còn), không thì các ảnh của nó; không còn gì: hỏi
+  "Nothing of this collage is in the library". **Export…** — mở Collage
+  và sheet Export ngay. **Share…** — vẽ 2048 px vào thư mục tạm `ShotDexShare` (xoá trước mỗi lần) rồi menu Share của hệ thống tại con trỏ;
+  không đọc được ảnh: "The collage couldn’t be shared". **Remove from
+  Collages…** — hỏi "Remove “‹ngày›” from Collages?" (ảnh đã Export giữ nguyên; mất đường quay lại collage, không undo được); xoá hỏng: báo, thẻ ở lại.
+  Không đọc được danh sách: "Collages Couldn’t Be Read" + Try Again (không bao giờ hiện "No Collages" khi lỗi). Đếm ở
+  sidebar cập nhật sau Export và Remove.
+- **Trống:** "No Collages" + cách làm một collage.
+- **Demo:** `-ShotDexSection collages` — 12 collage của ảnh demo, tháng 8–10/2026, các tỉ lệ của board; mở/Export dùng
+  ảnh demo dưới dạng file tạm.
+- **Chưa dựng:** đặt tên collage, album "ShotDex Collages" trong Photos, ảnh thu nhỏ dùng đúng ảnh đã Export (đang vẽ lại
+  từ ảnh nguồn), nhóm theo năm khi nhiều.
+
 ## 2. Statistics (D18)
 
 - Sidebar › Utilities › Statistics, Go ⌥⌘6. Tầng A. Toolbar: ◀ ▶ · "Statistics" + "54,027 photos · 1,204 videos" ·

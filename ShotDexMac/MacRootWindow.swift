@@ -59,6 +59,10 @@ struct MacRootWindow: View {
     @State private var isOpeningCombine = false
     /// Bumped by every move in the sidebar: a Panorama… still reading opens nowhere.
     @State private var combineToken = 0
+    /// Bumped when Collages changed (an export, a removal): the sidebar recounts.
+    @State private var collagesRevision = 0
+    /// The collage last opened from Collages: back there, its card is ringed.
+    @State private var collagesFocus: String?
     /// The editor (board `MAC_Edit`): opened from the viewer, Back returns there.
     @State private var editor: MacEditorModel?
     @State private var editorZoom = MacViewerZoom.fit
@@ -212,7 +216,11 @@ struct MacRootWindow: View {
                 MacResizePage(model: resize) { self.resize = nil }
                     .id(resize.id)
             } else if let collage {
-                MacCollagePage(model: collage) { self.collage = nil }
+                MacCollagePage(model: collage) {
+                    self.collage = nil
+                    // An export may have added or changed a collage.
+                    collagesRevision += 1
+                }
                     .id(collage.id)
             } else if let combine {
                 MacCombinePage(session: combine) { self.combine = nil }
@@ -269,6 +277,8 @@ struct MacRootWindow: View {
                         }
                     }
                 }
+            } else if selection == .collages {
+                collagesDetail
             } else if let selection, selection.isPendingScreen {
                 MacPendingPlace(item: selection)
             } else {
@@ -761,7 +771,7 @@ struct MacRootWindow: View {
     /// Recounted when the library, the index or the sources change (a
     /// source read: photos imported from a card join it) — not on every body. The grid's own count stands in for "a file was indexed".
     private var countsKey: String {
-        "\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)-\(sources.map(\.id))-\(dependencies.sourcesModel.readCount)"
+        "\(dependencies.photoLibrary.assetChangeToken)-\(library?.isIndexing == true)-\(sources.map(\.id))-\(dependencies.sourcesModel.readCount)-\(collagesRevision)"
     }
 
     /// What an empty place says (FS-18.01 §2).
@@ -876,6 +886,13 @@ struct MacRootWindow: View {
             if let filters = try? await place.filters(), let count = try? await queries.count(matchingAll: filters) {
                 counts[item] = count
             }
+        }
+        let creations = CreationStore(database: dependencies.database)
+        // Counted as the page lists them: only collages that can be read back.
+        if let collages = await Task.detached(priority: .utility, operation: {
+            try? creations.fetchOrdered(kind: .collage).filter { $0.collageRecipe != nil }.count
+        }).value {
+            counts[.collages] = collages
         }
         guard !Task.isCancelled else { return }
         placeCounts = counts
@@ -1434,7 +1451,8 @@ struct MacRootWindow: View {
                     let model = MacCollageModel(photos: found.photos.map(\.origin),
                                                 names: Dictionary(found.photos.map { ($0.origin.id, $0.name) }, uniquingKeysWith: { first, _ in first }),
                                                 placed: min(found.photos.count, 9),
-                                                photoLibrary: dependencies.photoLibrary, presetStore: CollagePresetStore())
+                                                photoLibrary: dependencies.photoLibrary, presetStore: CollagePresetStore(),
+                                              creationStore: CreationStore(database: dependencies.database))
                     var notes: [String] = []
                     if found.leftOut > 0 {
                         notes.append(MacInflect.string("^[\(found.leftOut) item](inflect: true) left out — videos, or photos whose original isn’t on this Mac.",
@@ -2168,6 +2186,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "albums" { selection = .albums }
         // `-ShotDexSection duplicates` (board `MAC_Duplicates`).
         if MacDemoLibrary.section == "duplicates" { selection = .duplicates }
+        if MacDemoLibrary.section == "collages" { selection = .collages }
         if MacDemoLibrary.section == "statistics" {
             // Board `MAC_StatisticsCamera`: a camera with 5-star photos for its Top Rated strip.
             selection = .statistics
@@ -2355,6 +2374,47 @@ struct MacServerFormRequest: Identifiable {
 
 extension MacRootWindow {
     /// The demo library's pictures; nil outside it.
+    /// Utilities › Collages (board `MAC_Creations`): Open goes into the Collage page.
+    private var collagesDetail: some View {
+        // Utilities › Collages (board `MAC_Creations`).
+        MacCollagesPage(dependencies: dependencies, open: { card, photos, names, exports in
+            let model = MacCollageModel(photos: photos, names: names, placed: photos.count,
+                                        photoLibrary: dependencies.photoLibrary, presetStore: CollagePresetStore(),
+                                        creationStore: CreationStore(database: dependencies.database), restoring: card.creation)
+            model.exportsOnOpen = exports
+            collagesFocus = card.id
+            collage = model
+        }, showInLibrary: { picture, photos in
+            selection = .allPhotos
+            Task { @MainActor in
+                // The grid of All Photos first: a selection made before it loads is dropped.
+                for _ in 0..<30 where library?.items.isEmpty != false {
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+                let here = Set(library?.items.map(\.id) ?? [])
+                // The exported picture, else the collage's photos, else say so.
+                let shown = Set(picture).intersection(here).isEmpty ? Set(photos).intersection(here) : Set(picture).intersection(here)
+                if shown.isEmpty {
+                    let alert = NSAlert()
+                    alert.messageText = String(localized: "Nothing of this collage is in the library", comment: "Mac Collages: Show in Library found nothing")
+                    alert.informativeText = String(localized: "Its exported picture and its photos were deleted, or aren’t indexed yet.",
+                                                   comment: "Mac Collages: Show in Library found nothing")
+                    alert.runModal()
+                    return
+                }
+                photoSelection?.set(shown)
+            }
+        }, newCollage: {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Select the photos first", comment: "Mac Collages: New Collage")
+            alert.informativeText = String(localized: "Select 2 to 9 photos in the library, then choose Image › Create › Collage….",
+                                           comment: "Mac Collages: how to start one")
+            alert.addButton(withTitle: String(localized: "Go to All Photos", comment: "Mac Collages: New Collage"))
+            alert.addButton(withTitle: String(localized: "Cancel", comment: "Mac Collages"))
+            if alert.runModal() == .alertFirstButtonReturn { selection = .allPhotos }
+        }, changed: { collagesRevision += 1 }, focus: collagesFocus)
+    }
+
     /// A defaults suite emptied first: the demo's saved presets start clean every launch.
     static func freshDemoDefaults(_ name: String) -> UserDefaults {
         let defaults = UserDefaults(suiteName: name) ?? .standard

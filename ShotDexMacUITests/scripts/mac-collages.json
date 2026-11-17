@@ -1,0 +1,368 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexDemoLibrary",
+    "-ShotDexSection",
+    "collages"
+   ]
+  },
+  {
+   "action": "waitFor",
+   "label": "collages.new",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "cs"
+  },
+  {
+   "action": "dump",
+   "name": "cs"
+  },
+  {
+   "action": "click",
+   "label": "collages.order"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Date Created",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "cs-created"
+  },
+  {
+   "action": "click",
+   "label": "collages.order"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "click",
+   "label": "Last Edited",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "click",
+   "x": 0.877,
+   "y": 0.033
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "typeText",
+   "text": "16:9"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "cs-search"
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-search"
+  },
+  {
+   "action": "key",
+   "text": "a",
+   "modifiers": "cmd"
+  },
+  {
+   "action": "key",
+   "text": "delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "cs-cleared"
+  },
+  {
+   "action": "click",
+   "label": "collages.new"
+  },
+  {
+   "action": "waitFor",
+   "label": "Select the photos first",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-new"
+  },
+  {
+   "action": "click",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "label": "collages.card.Oct 3, 2026 at 11:20"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-menu"
+  },
+  {
+   "action": "click",
+   "label": "Open in Collage",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.back",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-open"
+  },
+  {
+   "action": "dump",
+   "name": "cs-open"
+  },
+  {
+   "action": "click",
+   "label": "collage.back"
+  },
+  {
+   "action": "waitFor",
+   "label": "collages.new",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "rightClick",
+   "label": "collages.card.Oct 2, 2026 at 18:05"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Export…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.export.go",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-export"
+  },
+  {
+   "action": "click",
+   "label": "collage.export.go"
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.reveal",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "cs-exported"
+  },
+  {
+   "action": "click",
+   "label": "collage.back"
+  },
+  {
+   "action": "waitFor",
+   "label": "collages.new",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "cs-after-export"
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-after-export"
+  },
+  {
+   "action": "rightClick",
+   "label": "collages.card.Sep 29, 2026 at 16:40"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Share…",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-share"
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "rightClick",
+   "label": "collages.card.Sep 28, 2026 at 18:42"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Show in Library",
+   "type": "menuItem"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "cs-library"
+  },
+  {
+   "action": "menu",
+   "text": "Go > Collages"
+  },
+  {
+   "action": "waitFor",
+   "label": "collages.new",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "rightClick",
+   "label": "collages.card.Sep 24, 2026 at 8:15"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "click",
+   "label": "Remove from Collages…",
+   "type": "menuItem"
+  },
+  {
+   "action": "waitFor",
+   "label": "Remove",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "cs-remove"
+  },
+  {
+   "action": "click",
+   "label": "action-button-1"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "dump",
+   "name": "cs-removed"
+  },
+  {
+   "action": "doubleClick",
+   "label": "collages.card.Oct 1, 2026 at 19:48"
+  },
+  {
+   "action": "waitFor",
+   "label": "collage.back",
+   "seconds": 30
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "escape"
+  },
+  {
+   "action": "waitFor",
+   "label": "collages.new",
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "quit"
+  }
+ ]
+}

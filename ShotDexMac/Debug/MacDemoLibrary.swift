@@ -64,6 +64,7 @@ enum MacDemoLibrary {
         // `resize` (board `MAC_Compress`): the 8 newest photos from four sources.
         if section == "resize" { seedResize(dependencies) }
         if section == "duplicates" { seedDuplicates(dependencies) }
+        if section == "collages" { seedCollages(dependencies) }
         if section == "activity" { seedActivity(dependencies) }
         // `viewer` (board `MAC_Viewer`): every fourth photo edited in ShotDex.
         if section == "viewer" {
@@ -456,6 +457,32 @@ enum MacDemoLibrary {
     /// row, so it scrolls sideways). The demo's photos are no PHAssets, so
     /// the model keeps groups whose assets it cannot fetch and the tiles
     /// draw their empty fill.
+    /// `collages` (board `MAC_Creations`): twelve exported collages of demo
+    /// photos over August–October 2026, in the layouts and ratios the board shows.
+    private static func seedCollages(_ dependencies: MacDependencies) {
+        let store = CreationStore(database: dependencies.database)
+        let shapes: [(month: Int, day: Int, hour: Int, minute: Int, count: Int, aspect: CollageAspect)] = [
+            (10, 3, 11, 20, 4, .square), (10, 2, 18, 5, 3, .threeTwo), (10, 1, 19, 48, 4, .fourFive),
+            (9, 29, 16, 40, 2, .sixteenNine), (9, 28, 18, 42, 4, .fourFive), (9, 26, 21, 2, 6, .square),
+            (9, 24, 8, 15, 3, .square), (9, 21, 9, 15, 4, .square), (8, 30, 19, 10, 6, .fourFive),
+            (8, 22, 17, 31, 2, .nineSixteen), (8, 15, 12, 44, 3, .threeTwo), (8, 9, 18, 58, 4, .square),
+        ]
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        for (index, shape) in shapes.enumerated() {
+            let date = calendar.date(from: DateComponents(year: 2026, month: shape.month, day: shape.day, hour: shape.hour, minute: shape.minute))!
+            let stamp = Int(date.timeIntervalSince1970)
+            let ids = (0..<shape.count).map { "demo-\(index % 6)-\($0 * 2 + index)" }
+            let templates = CollageTemplateCatalog.templates(for: shape.count)
+            var recipe = CollageRecipe(templateID: templates[index % max(templates.count, 1)].id, cells: ids.map { CollageCell(assetID: $0) })
+            recipe.aspectPreset = shape.aspect
+            recipe.aspectRatio = shape.aspect.ratio
+            guard let creation = try? Creation.collage(recipe: recipe, assetId: nil, id: "demo-collage-\(index)", createdAt: stamp - 3600, now: stamp)
+            else { continue }
+            try? store.upsert(creation)
+        }
+    }
+
     private static func seedDuplicates(_ dependencies: MacDependencies) {
         DuplicatesModel.keepsGroupsWithoutAssets = true
         let sets: [[String]] = [

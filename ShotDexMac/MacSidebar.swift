@@ -149,7 +149,8 @@ struct MacSidebar: View {
                     if item == .backup {
                         backupRow
                     } else {
-                        row(item, count: nil)
+                        // Collages counts its exported collages (board `MAC_Creations`).
+                        row(item, count: item == .collages ? counts[item] : nil)
                     }
                 }
             }
@@ -384,7 +385,7 @@ enum MacSidebarItem: Hashable, Identifiable {
     /// under its name meanwhile.
     var isPendingScreen: Bool {
         switch self {
-        case .collages, .videoProjects: true
+        case .videoProjects: true
         default: false
         }
     }
