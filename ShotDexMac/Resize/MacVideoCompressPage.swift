@@ -13,11 +13,25 @@ struct MacVideoCompressPage: View {
     @State private var thumbnails: [String: NSImage] = [:]
     @State private var names: [String: String]
     @State private var asksStop = false
+    /// Compare Videos, shown in place of the list (FS-24 §10, `mac-few-windows`).
+    @State private var comparing: VideoCompareModel?
 
     init(batch: VideoCompressionBatch, names: [String: String] = [:], close: @escaping () -> Void) {
         self.batch = batch
         self.close = close
         _names = State(initialValue: names)
+    }
+
+    private func openCompare(at id: String) {
+        guard batch.comparePairs.contains(where: { $0.id == id }) else { return }
+        comparing = VideoCompareModel(batch: batch, startID: id, loader: Self.compareLoader(for: batch))
+    }
+
+    private static func compareLoader(for batch: VideoCompressionBatch) -> any VideoCompareLoading {
+        #if DEBUG
+        if batch.items.first?.id.hasPrefix("demo-vc:") == true { return DemoCompareLoader() }
+        #endif
+        return PhotoKitVideoCompareLoader()
     }
 
     static func makeBatch(ids: [String], photoLibrary: PhotoLibraryService) -> VideoCompressionBatch {
@@ -31,6 +45,17 @@ struct MacVideoCompressPage: View {
     }
 
     var body: some View {
+        if let comparing {
+            MacVideoComparePage(model: comparing) {
+                comparing.tearDown()
+                self.comparing = nil
+            }
+        } else {
+            list
+        }
+    }
+
+    private var list: some View {
         HStack(spacing: 0) {
             ScrollView {
                 LazyVStack(spacing: 8) {
@@ -54,8 +79,22 @@ struct MacVideoCompressPage: View {
         .toolbar { toolbar }
         .onExitCommand { if batch.phase != .running { close() } }
         .task {
+            // Not in `init`: a view's init runs inside its parent's update,
+            // and writing observed state there loops the graph.
+            batch.names.merge(names) { current, _ in current }
             if batch.items.allSatisfy({ $0.source == nil }) { await batch.load() }
             await loadThumbnails()
+            #if DEBUG
+            // `-ShotDexSection videoCompare` (board `MAC_VideoCompare`): once the
+            // quick demo run ends, Compare on the first file.
+            if MacDemoLibrary.section == "videoCompare" {
+                // The demo starts the run from the window, maybe after this.
+                while batch.phase != .finished, !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(200))
+                }
+                if let first = batch.comparePairs.first { openCompare(at: first.id) }
+            }
+            #endif
         }
         // Any way out of the page (window closed, sidebar jump) ends the run:
         // a batch nobody can see or stop must not keep encoding.
@@ -148,6 +187,10 @@ struct MacVideoCompressPage: View {
                     if let reason = batch.stopReason {
                         Text(reason).font(.system(size: 12)).foregroundStyle(.orange)
                     }
+                    if let first = batch.comparePairs.first {
+                        Button(VideoCompressionCopy.compareBeforeAfter) { openCompare(at: first.id) }
+                            .accessibilityIdentifier("videoCompress.compare")
+                    }
                     if batch.hasDeletedOriginals {
                         Text(VideoCompressionCopy.originalsDeleted)
                             .font(.system(size: 12))
@@ -159,6 +202,11 @@ struct MacVideoCompressPage: View {
                     }
                     if let error = batch.deleteError {
                         Text(error).font(.system(size: 12)).foregroundStyle(.orange)
+                    }
+                    if !batch.comparePairs.isEmpty {
+                        Text(VideoCompressionCopy.summaryHintMac)
+                            .font(.system(size: 11))
+                            .foregroundStyle(MacTheme.Editor.secondaryText)
                     }
                 }
             }
@@ -228,9 +276,14 @@ struct MacVideoCompressPage: View {
         }
         .padding(8)
         .background(MacTheme.Editor.control, in: RoundedRectangle(cornerRadius: 8))
+        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .onTapGesture(count: 2) { openCompare(at: item.id) }
     }
 
     private func detail(_ item: VideoCompressionBatch.Item) -> String {
+        if let pair = batch.comparePairs.first(where: { $0.id == item.id }) {
+            return VideoCompressionCopy.result(pair)
+        }
         if case .waiting = item.state, let source = item.source {
             return VideoCompressionCopy.bytes(source.byteCount)
         }
@@ -242,6 +295,7 @@ struct MacVideoCompressPage: View {
         for asset in assets {
             let resources = PHAssetResource.assetResources(for: asset)
             names[asset.localIdentifier] = resources.first { $0.type == .video || $0.type == .fullSizeVideo }?.originalFilename
+            batch.names[asset.localIdentifier] = names[asset.localIdentifier]
             let options = PHImageRequestOptions()
             options.deliveryMode = .opportunistic
             options.isNetworkAccessAllowed = true
@@ -257,7 +311,7 @@ struct MacVideoCompressPage: View {
 
 #if DEBUG
 extension MacVideoCompressPage {
-    static let demoFiles: [(id: String, name: String, bytes: Int64, seconds: Double)] = [
+    nonisolated static let demoFiles: [(id: String, name: String, bytes: Int64, seconds: Double)] = [
         ("demo-vc:1", "IMG_4021.MOV", 1_200_000_000, 161),
         ("demo-vc:2", "MVI_0388.MP4", 3_400_000_000, 365),
         ("demo-vc:3", "IMG_4033.MOV", 612_000_000, 72),
@@ -293,14 +347,18 @@ extension MacVideoCompressPage {
 
         func encode(_ source: URL, to output: URL, settings: VideoCompressionEncoder.Settings,
                     progress: @escaping @Sendable (Double) -> Void) async throws {
+            // Done / Compare boards only need the end: a quick run.
+            let fast = ["videoCompressDone", "videoCompare"].contains(MacDemoLibrary.section ?? "")
             for step in 1...60 {
-                try await Task.sleep(for: .milliseconds(500))
+                try await Task.sleep(for: .milliseconds(fast ? 15 : 500))
                 progress(Double(step) / 60)
             }
             let bytes = (try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int64) ?? 1
             FileManager.default.createFile(atPath: output.path, contents: nil)
             let handle = try FileHandle(forWritingTo: output)
-            try handle.truncate(atOffset: UInt64(Double(bytes) * 0.42))
+            // The third file comes out no smaller: "Already compact", as on the board.
+            let ratio = bytes == 612_000_000 ? 0.97 : 0.42
+            try handle.truncate(atOffset: UInt64(Double(bytes) * ratio))
             try handle.close()
         }
 

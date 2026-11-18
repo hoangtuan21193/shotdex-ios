@@ -1780,13 +1780,21 @@ struct MacRootWindow: View {
             Color.clear.task(id: library.items.count) {
                 // `videoCompressRun`: the same, already compressing (board `MAC_VideoCompressRun`).
                 let section = MacDemoLibrary.section
-                if section == "videoCompress" || section == "videoCompressRun", videoCompress == nil, !hasOpenedDemoViewer {
+                // `videoCompressDone` / `videoCompare`: a quick run to the summary
+                // (board `MAC_VideoCompressDone`), then Compare (`MAC_VideoCompare`).
+                let runs = ["videoCompressRun", "videoCompressDone", "videoCompare"]
+                if section == "videoCompress" || runs.contains(section ?? ""), videoCompress == nil, !hasOpenedDemoViewer {
                     hasOpenedDemoViewer = true
                     let batch = MacVideoCompressPage.demoBatch()
                     videoCompress = batch
-                    if section == "videoCompressRun" {
-                        await batch.load()
-                        batch.start()
+                    if runs.contains(section ?? "") {
+                        // Its own task: this one is cancelled whenever the
+                        // library count changes, which would leave the demo
+                        // half-loaded and never started.
+                        Task {
+                            await batch.load()
+                            batch.start()
+                        }
                     }
                 }
             }
