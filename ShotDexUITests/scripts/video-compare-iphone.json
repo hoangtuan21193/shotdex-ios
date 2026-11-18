@@ -1,0 +1,120 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexVideoCompressDemo"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Compress",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "wait",
+   "seconds": 60
+  },
+  {
+   "action": "screenshot",
+   "name": "1-finished"
+  },
+  {
+   "action": "dump",
+   "name": "finished"
+  },
+  {
+   "action": "tap",
+   "label": "Compare Before and After",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "2-compare"
+  },
+  {
+   "action": "dump",
+   "name": "compare"
+  },
+  {
+   "action": "doubleTap",
+   "x": 0.55,
+   "y": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "3-zoomed"
+  },
+  {
+   "action": "longPress",
+   "x": 0.5,
+   "y": 0.62,
+   "seconds": 15
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Next Video",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "4-next"
+  },
+  {
+   "action": "dump",
+   "name": "next"
+  }
+ ]
+}

@@ -32,6 +32,12 @@ struct VideoCompressionScreen: View {
     @State private var assets: [String: PHAsset] = [:]
     @State private var width: CGFloat = 0
     @State private var isStopConfirmationPresented = false
+    /// Compare Videos open on this file (FS-24 §10).
+    @State private var comparing: CompareStart?
+
+    struct CompareStart: Identifiable {
+        let id: String
+    }
 
     private var isWide: Bool { width >= WideLayout.minimumWidth }
 
@@ -79,8 +85,14 @@ struct VideoCompressionScreen: View {
                 leftOutPhotoCount: request.leftOutPhotoCount,
                 worker: worker
             )
+            newBatch.names = assets.mapValues { Self.filename($0) }
             batch = newBatch
             await newBatch.load()
+        }
+        .fullScreenCover(item: $comparing) { start in
+            if let batch {
+                VideoCompareScreen(batch: batch, startID: start.id)
+            }
         }
         .confirmationDialog(
             String(localized: "Stop compressing?", comment: "Compress Videos: confirm Stop"),
@@ -271,6 +283,17 @@ struct VideoCompressionScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
+            if let first = batch.comparePairs.first {
+                Button {
+                    comparing = CompareStart(id: first.id)
+                } label: {
+                    Label(VideoCompressionCopy.compareBeforeAfter, systemImage: "rectangle.split.2x1")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(CompressionChoiceStyle(selected: false))
+            }
             if batch.hasDeletedOriginals {
                 Label(VideoCompressionCopy.originalsDeleted, systemImage: "trash")
                     .font(.footnote)
@@ -293,12 +316,21 @@ struct VideoCompressionScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
+            if !batch.comparePairs.isEmpty {
+                Text(VideoCompressionCopy.summaryHint)
+                    .font(.caption)
+                    .foregroundStyle(EditorTheme.dimText)
+            }
         }
     }
 
     private func rows(_ batch: VideoCompressionBatch) -> some View {
         VStack(spacing: AppTheme.Spacing.sm) {
             ForEach(batch.items) { item in
+                let pair = batch.comparePairs.first { $0.id == item.id }
+                Button {
+                    if let pair { comparing = CompareStart(id: pair.id) }
+                } label: {
                 HStack(spacing: AppTheme.Spacing.md) {
                     thumbnail(item, side: 56)
                     VStack(alignment: .leading, spacing: 4) {
@@ -306,7 +338,7 @@ struct VideoCompressionScreen: View {
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        Text(Self.detail(item))
+                        Text(pair.map(VideoCompressionCopy.result) ?? Self.detail(item))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(Self.isProblem(item.state) ? .orange : EditorTheme.secondaryText)
                             .lineLimit(2)
@@ -316,10 +348,20 @@ struct VideoCompressionScreen: View {
                     }
                     Spacer(minLength: 0)
                     Self.badge(item.state)
+                    if pair != nil {
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(EditorTheme.dimText)
+                    }
                 }
                 .padding(AppTheme.Spacing.sm)
                 .background(EditorTheme.control, in: RoundedRectangle.app(AppTheme.Radius.md))
+                .contentShape(RoundedRectangle.app(AppTheme.Radius.md))
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(pair != nil)
                 .accessibilityElement(children: .combine)
+                .accessibilityHint(pair == nil ? "" : VideoCompressionCopy.compareBeforeAfter)
             }
         }
     }

@@ -366,6 +366,7 @@
 				Features/Editing/PhotoStackScreen.swift,
 				Features/Editing/PhotoStackSession.swift,
 				Features/Editing/UnsupportedRAWAlert.swift,
+				Features/Editing/VideoCompareScreen.swift,
 				Features/Editing/VideoCompressionScreen.swift,
 				Features/FileExport/FileExportModel.swift,
 				Features/FileExport/FileExportPresenter.swift,

@@ -244,7 +244,13 @@ struct LibraryScreen: View {
         .task(id: model?.items.count ?? 0) {
             guard ProcessInfo.processInfo.arguments.contains("-ShotDexVideoCompressDemo"),
                   !Self.hasOpenedVideoCompressDemo, let model else { return }
-            let videos = model.items.filter { $0.mediaType == PHAssetMediaType.video.rawValue }.suffix(5).map(\.assetId)
+            // The newest five originals: copies a previous run saved
+            // (`_compressed`) would only come back "Already compact".
+            let candidates = model.items.filter { $0.mediaType == PHAssetMediaType.video.rawValue }.map(\.assetId)
+            let originals = PhotoLibraryService.fetchAssets(ids: Array(candidates.suffix(40))).filter { asset in
+                !PHAssetResource.assetResources(for: asset).contains { $0.originalFilename.contains(VideoCompressionRules.filenameSuffix) }
+            }.map(\.localIdentifier)
+            let videos = candidates.filter(originals.contains).suffix(5)
             guard !videos.isEmpty else { return }
             Self.hasOpenedVideoCompressDemo = true
             videoCompressionRequest = VideoCompressionRequest(selection: Array(videos), imageIDs: [])
