@@ -1577,6 +1577,34 @@
       "w": 466,
       "h": 678,
       "title": "Duo màn ngoài · Compress Videos đang chạy"
+    },
+    "DI_VideoCompressDone.dc.html": {
+      "x": 78416,
+      "y": 560,
+      "w": 951,
+      "h": 669,
+      "title": "Duo inner · Compress Videos xong (FS-24 §1.8): Compare Before and After, Delete Originals, Done; chạm dòng đã nén để so sánh"
+    },
+    "DI_VideoCompare.dc.html": {
+      "x": 79447,
+      "y": 560,
+      "w": 951,
+      "h": 669,
+      "title": "Duo inner · Compare Videos (FS-24 §10): A gốc / B nén, một thanh tua cho cả hai, pinch zoom cả hai cùng chỗ 2.5×, Delete Original, Video 1 of 4"
+    },
+    "DC_VideoCompressDone.dc.html": {
+      "x": 37006,
+      "y": 1609,
+      "w": 466,
+      "h": 678,
+      "title": "Duo cover · Compress Videos xong (FS-24 §1.8): Compare Before and After, Delete Originals, Done; chạm dòng đã nén để so sánh"
+    },
+    "DC_VideoCompare.dc.html": {
+      "x": 37552,
+      "y": 1609,
+      "w": 466,
+      "h": 678,
+      "title": "Duo cover · Compare Videos (FS-24 §10): A gốc / B nén, một thanh tua cho cả hai, pinch zoom cả hai cùng chỗ 2.5×, Delete Original, Video 1 of 4"
     }
   },
   "createdOnFiles": {
@@ -1933,8 +1961,12 @@
     "DC_KeepOnIPhone.dc.html",
     "DI_VideoCompress.dc.html",
     "DI_VideoCompressRun.dc.html",
+    "DI_VideoCompressDone.dc.html",
+    "DI_VideoCompare.dc.html",
     "DC_VideoCompress.dc.html",
-    "DC_VideoCompressRun.dc.html"
+    "DC_VideoCompressRun.dc.html",
+    "DC_VideoCompressDone.dc.html",
+    "DC_VideoCompare.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

@@ -593,6 +593,22 @@
    "h": 900,
    "title": "Mac · Compress Videos đang chạy: 2 file một lúc, Stop",
    "radius": 16
+  },
+  "MAC_VideoCompressDone.dc.html": {
+   "x": 17980,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Compress Videos xong (FS-24 §1.8): Compare Before and After, Delete Originals, Done; chạm dòng đã nén để so sánh",
+   "radius": 16
+  },
+  "MAC_VideoCompare.dc.html": {
+   "x": 19500,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Compare Videos (FS-24 §10): A gốc / B nén, một thanh tua cho cả hai, pinch zoom cả hai cùng chỗ 2.5×, Delete Original, Video 1 of 4",
+   "radius": 16
   }
  },
  "order": [
@@ -668,7 +684,9 @@
   "MAC_Activity.dc.html",
   "MAC_CommonPhotosCompare.dc.html",
   "MAC_VideoCompress.dc.html",
-  "MAC_VideoCompressRun.dc.html"
+  "MAC_VideoCompressRun.dc.html",
+  "MAC_VideoCompressDone.dc.html",
+  "MAC_VideoCompare.dc.html"
  ],
  "notes": {
   "row_lib": {

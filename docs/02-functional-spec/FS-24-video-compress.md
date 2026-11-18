@@ -5,7 +5,7 @@
 | Intent | [`docs/_intents/2026-11-17-batch-video-compress.md`](../_intents/2026-11-17-batch-video-compress.md) (accepted 2026-11-17) |
 | Evidence | [`docs/_intents/2026-11-17-handbrake-convert-evidence.md`](../_intents/2026-11-17-handbrake-convert-evidence.md) |
 | Devices | iPhone · iPad · Duo inner + cover · Mac |
-| Progress | **in progress** (2026-11-17): code + boards (`PH_/IP_/DI_/DC_/MAC_VideoCompress[Run]`) on all 4 canvases; screenshot review ×2 |
+| Progress | **in progress**: §1–9 built 2026-11-17 (boards `*_VideoCompress[Run]`); §10 Compare Videos + summary spec and boards (`*_VideoCompressDone`, `*_VideoCompare`) 2026-11-18, **not coded** |
 
 ## 1. Behaviour
 
@@ -50,11 +50,40 @@
    original's with `_compressed` appended (`IMG_0042.MOV` → `IMG_0042_compressed.mp4`), so the two
    are told apart in Photos' Info, in Files and on a server; a name that already ends in
    `_compressed` keeps a single suffix.
-8. Summary: "Compressed N videos · saved X" plus a list of skipped/failed files with the reason.
-   Buttons `Delete Originals` (moves the originals of successful files to Recently Deleted
-   through PhotoKit's own confirmation) and `Done`.
+8. Summary (boards `*_VideoCompressDone`): "Compressed N videos · saved X"; each row says
+   `<before> → <after> · −NN%`, or why it was skipped/failed. Buttons `Compare Before and After`
+   (opens §10 on the first compressed file), `Delete Originals` (moves the originals of
+   successful files to Recently Deleted through PhotoKit's own confirmation) and `Done`. A
+   compressed row is itself a button (chevron) that opens §10 on that file; Mac: double-click.
 9. iCloud originals are downloaded first (network allowed), with that phase shown in the
    per-file progress.
+
+10. **Compare Videos** (boards `*_VideoCompare`; added 2026-11-18 at the user's request): the
+    original (A) and its compressed copy (B), modelled on the photo Compare (`PhotoCompareScreen`).
+    - **Panes**: stacked on a compact screen, side by side on a wide one (≥ 700pt, as photo
+      Compare); Mac: in the same window, the list page gives way to it and `‹` comes back
+      (`mac-few-windows`). Each pane is labelled `A Original · <size> · <codec>` and
+      `B Compressed · <size> · −NN%`.
+    - **One clock**: a single transport drives both — play/pause, a scrubber with time and
+      duration, previous/next frame. B follows A's time: seeking moves both to the same frame;
+      while playing, B is slaved to A's clock (drift corrected, never more than one frame apart
+      when paused). Sound comes from A (identical after §1.3's copy); a speaker button mutes it.
+      Opens paused on the first frame.
+    - **Zoom**: a pinch zooms both panes to the same spot (1×–8×), a drag pans both, a double-tap
+      toggles 1× ↔ 3× at the tapped point; a `N×` badge shows on each pane while zoomed. Works
+      while playing and paused. Mac: trackpad pinch or ⌘-scroll.
+    - **Hold** a pane (Mac: hold Option) = the other video's frame at the same zoom, as in photo
+      Compare, so the two can be flicked at one spot.
+    - **Header**: close · file name + "Saved X" · `Delete Original` (red; icon-only on a compact
+      screen). It deletes this file's original through PhotoKit's confirmation; the pair then leaves
+      the comparison and the next one shows; with none left the screen closes, and the summary
+      counts the deletion.
+    - **Stepping**: `‹ Video N of M ›` walks the files that were compressed (skipped and failed are
+      not in it).
+    - **Keys** (iPad with a keyboard, Mac): Space play/pause · ←/→ frame · ⌘←/⌘→ video ·
+      ⌘⌫ Delete Original · Esc close.
+    - iCloud originals: A streams with network allowed (as the Viewer); the compressed copy is
+      local, just written.
 
 ## 2. Acceptance criteria
 
@@ -74,3 +103,11 @@
 | AC-24.11 | Progress per file + overall; Stop works; a failing file does not stop the batch | screenshot + unit test of the queue |
 | AC-24.12 | Summary with space saved; Delete Originals goes to Recently Deleted | screenshot |
 | AC-24.13 | Screen present on iPhone, iPad, Duo inner, Duo cover, Mac, matching each device's board | screenshots of every device, 2 review rounds |
+| AC-24.15 | Summary has `Compare Before and After`; a compressed row opens Compare on that file; skipped/failed rows do not | screenshot + ui-drive iPhone |
+| AC-24.16 | Compare shows A = original and B = copy with size, codec and −NN% labels; stacked < 700pt, side by side ≥ 700pt | screenshots iPhone, iPad, Duo inner + cover, Mac vs `*_VideoCompare` |
+| AC-24.17 | One transport: seek puts both on the same frame (paused: same presentation time ±1 frame); play keeps them within one frame | unit test of the time-sync rule + sim |
+| AC-24.18 | Pinch/double-tap zoom and pan apply to both panes at the same spot, playing or paused; badge shows N× | ui-drive dump (both panes' zoom) + screenshot |
+| AC-24.19 | Holding a pane shows the other video's frame at the same zoom | screenshot |
+| AC-24.20 | `Delete Original` removes only this pair's original via PhotoKit confirmation, steps to the next pair, closes when none left; summary reflects it | sim, demo library |
+| AC-24.21 | `‹ Video N of M ›` steps only through compressed files | unit test of the list + screenshot |
+| AC-24.22 | Keys Space / ←→ / ⌘←⌘→ / ⌘⌫ / Esc work on iPad and Mac | ui-drive key steps / Mac run |

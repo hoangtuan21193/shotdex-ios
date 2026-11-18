@@ -1009,6 +1009,20 @@
    "w": 1376,
    "h": 1032,
    "title": "iPad · Compress Videos đang chạy: hàng có tiến độ, inspector hiện tổng + Stop"
+  },
+  "IP_VideoCompressDone.dc.html": {
+   "x": 104832,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Compress Videos xong (FS-24 §1.8): Compare Before and After, Delete Originals, Done; chạm dòng đã nén để so sánh"
+  },
+  "IP_VideoCompare.dc.html": {
+   "x": 106288,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Compare Videos (FS-24 §10): A gốc / B nén, một thanh tua cho cả hai, pinch zoom cả hai cùng chỗ 2.5×, Delete Original, Video 1 of 4"
   }
  },
  "order": [
@@ -1150,7 +1164,9 @@
   "IP_SettingsAI.dc.html",
   "IP_SettingsAIProvider.dc.html",
   "IP_VideoCompress.dc.html",
-  "IP_VideoCompressRun.dc.html"
+  "IP_VideoCompressRun.dc.html",
+  "IP_VideoCompressDone.dc.html",
+  "IP_VideoCompare.dc.html"
  ],
  "notes": {
   "sec_app": {

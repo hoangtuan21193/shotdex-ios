@@ -1084,6 +1084,20 @@
    "w": 402,
    "h": 874,
    "title": "iPhone · Compress Videos đang chạy: thanh tổng, 1 of 5 done, từng file có tiến độ, nút Stop"
+  },
+  "PH_VideoCompressDone.dc.html": {
+   "x": 39438,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Compress Videos xong (FS-24 §1.8): Compare Before and After, Delete Originals, Done; chạm dòng đã nén để so sánh"
+  },
+  "PH_VideoCompare.dc.html": {
+   "x": 39920,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Compare Videos (FS-24 §10): A gốc / B nén, một thanh tua cho cả hai, pinch zoom cả hai cùng chỗ 2.5×, Delete Original, Video 1 of 4"
   }
  },
  "createdOnFiles": {
@@ -1307,7 +1321,9 @@
   "PH_OnThisIPhone.dc.html",
   "PH41_EditHistory.dc.html",
   "PH_VideoCompress.dc.html",
-  "PH_VideoCompressRun.dc.html"
+  "PH_VideoCompressRun.dc.html",
+  "PH_VideoCompressDone.dc.html",
+  "PH_VideoCompare.dc.html"
  ],
  "pages": [],
  "title": "ShotDex · iPhone",
