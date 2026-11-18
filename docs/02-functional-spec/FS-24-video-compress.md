@@ -5,7 +5,7 @@
 | Intent | [`docs/_intents/2026-11-17-batch-video-compress.md`](../_intents/2026-11-17-batch-video-compress.md) (accepted 2026-11-17) |
 | Evidence | [`docs/_intents/2026-11-17-handbrake-convert-evidence.md`](../_intents/2026-11-17-handbrake-convert-evidence.md) |
 | Devices | iPhone · iPad · Duo inner + cover · Mac |
-| Progress | **in progress**: §1–9 built 2026-11-17 (boards `*_VideoCompress[Run]`); §10 Compare Videos + summary spec and boards (`*_VideoCompressDone`, `*_VideoCompare`) 2026-11-18, **not coded** |
+| Progress | **in progress**: §1–9 built 2026-11-17 (boards `*_VideoCompress[Run]`); §10 Compare Videos + summary spec and boards (`*_VideoCompressDone`, `*_VideoCompare`) 2026-11-18, coded the same day (`VideoCompareModel` shared, `VideoCompareScreen` iOS, `MacVideoComparePage`; tests `VideoCompareTests`) |
 
 ## 1. Behaviour
 
