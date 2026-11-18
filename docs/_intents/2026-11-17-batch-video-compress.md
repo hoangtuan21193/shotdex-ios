@@ -5,7 +5,7 @@
 | Author | Hoang Tuan (user) · drafted by Claude |
 | Date | 2026-11-17 |
 | Status | accepted (2026-11-17, user accepted the 4 default proposals) |
-| Progress | **not started** (2026-11-17), no spec yet |
+| Progress | **in progress** (2026-11-18) — FS-24 coded on all devices; Compare 3/8 AC green (AC-24.15/19/21), missing AC-24.16/17/18/20 (partial) and AC-24.22 (keys, no proof) |
 | Source | user idea, after the 105 GB-but-"not enough storage" camera import on a real iPhone (same day); HandBrake evidence |
 | Spec produced from this | (filled in at Design) |
 

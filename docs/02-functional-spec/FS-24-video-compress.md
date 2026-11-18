@@ -5,7 +5,7 @@
 | Intent | [`docs/_intents/2026-11-17-batch-video-compress.md`](../_intents/2026-11-17-batch-video-compress.md) (accepted 2026-11-17) |
 | Evidence | [`docs/_intents/2026-11-17-handbrake-convert-evidence.md`](../_intents/2026-11-17-handbrake-convert-evidence.md) |
 | Devices | iPhone · iPad · Duo inner + cover · Mac |
-| Progress | **in progress**: §1–9 built 2026-11-17 (boards `*_VideoCompress[Run]`); §10 Compare Videos + summary spec and boards (`*_VideoCompressDone`, `*_VideoCompare`) 2026-11-18, coded the same day (`VideoCompareModel` shared, `VideoCompareScreen` iOS, `MacVideoComparePage`; tests `VideoCompareTests`) |
+| Progress | **in progress**: §1–9 built 2026-11-17 (boards `*_VideoCompress[Run]`); §10 Compare Videos + summary spec and boards (`*_VideoCompressDone`, `*_VideoCompare`) 2026-11-18, coded the same day (`VideoCompareModel` shared, `VideoCompareScreen` iOS, `MacVideoComparePage`; tests `VideoCompareTests`). `/verify` 2026-11-18: 26/26 unit tests green; Compare AC-24.15/19/21 proven, AC-24.16/17/18/20 partial (Duo cover, play drift, Duo zoom, real delete tap), AC-24.22 unproven; AC-24.01–14 not re-run this pass |
 
 ## 1. Behaviour
 
@@ -103,11 +103,11 @@
 | AC-24.11 | Progress per file + overall; Stop works; a failing file does not stop the batch | screenshot + unit test of the queue |
 | AC-24.12 | Summary with space saved; Delete Originals goes to Recently Deleted | screenshot |
 | AC-24.13 | Screen present on iPhone, iPad, Duo inner, Duo cover, Mac, matching each device's board | screenshots of every device, 2 review rounds |
-| AC-24.15 | Summary has `Compare Before and After`; a compressed row opens Compare on that file; skipped/failed rows do not | screenshot + ui-drive iPhone |
-| AC-24.16 | Compare shows A = original and B = copy with size, codec and −NN% labels; stacked < 700pt, side by side ≥ 700pt | screenshots iPhone, iPad, Duo inner + cover, Mac vs `*_VideoCompare` |
-| AC-24.17 | One transport: seek puts both on the same frame (paused: same presentation time ±1 frame); play keeps them within one frame | unit test of the time-sync rule + sim |
-| AC-24.18 | Pinch/double-tap zoom and pan apply to both panes at the same spot, playing or paused; badge shows N× | ui-drive dump (both panes' zoom) + screenshot |
+| AC-24.15 | Summary has `Compare Before and After`; a compressed row opens Compare on that file; skipped/failed rows do not | ui-drive `video-compare-iphone.json` / `video-compare-wide.json` (iPhone, iPad, Duo inner) + Mac demo `videoCompressDone`; `VideoCompareTests.pairsAreTheSavedFilesOnly` |
+| AC-24.16 | Compare shows A = original and B = copy with size, codec and −NN% labels; stacked < 700pt, side by side ≥ 700pt | screenshots iPhone, iPad, Duo inner, Mac vs `*_VideoCompare`; `VideoCompareTests.labels` — ⚠️ Duo cover not shot |
+| AC-24.17 | One transport: seek puts both on the same frame (paused: same presentation time ±1 frame); play keeps them within one frame | `VideoCompareTests.resyncRule` — ⚠️ no measurement of drift while playing in the sim |
+| AC-24.18 | Pinch/double-tap zoom and pan apply to both panes at the same spot, playing or paused; badge shows N× | `VideoCompareTests.zoomKeepsThePointAndTheEdges` + screenshots 3× iPhone/iPad, 2.5× Mac — ⚠️ Duo zoom not shot (doubleTap by point misses there) |
 | AC-24.19 | Holding a pane shows the other video's frame at the same zoom | screenshot |
-| AC-24.20 | `Delete Original` removes only this pair's original via PhotoKit confirmation, steps to the next pair, closes when none left; summary reflects it | sim, demo library |
-| AC-24.21 | `‹ Video N of M ›` steps only through compressed files | unit test of the list + screenshot |
-| AC-24.22 | Keys Space / ←→ / ⌘←⌘→ / ⌘⌫ / Esc work on iPad and Mac | ui-drive key steps / Mac run |
+| AC-24.20 | `Delete Original` removes only this pair's original via PhotoKit confirmation, steps to the next pair, closes when none left; summary reflects it | `VideoCompareTests.deleteOriginalStepsThenEmpties`, `deleteOriginalsSkipsAlreadyDeleted` — ⚠️ real PhotoKit confirmation tap not run |
+| AC-24.21 | `‹ Video N of M ›` steps only through compressed files | `VideoCompareTests.steppingDoesNotWrap`, `unknownStartOpensTheFirstPair` + screenshot `4-next` |
+| AC-24.22 | Keys Space / ←→ / ⌘←⌘→ / ⌘⌫ / Esc work on iPad and Mac | ⚠️ none yet — needs ui-drive key steps on iPad + a Mac run |
