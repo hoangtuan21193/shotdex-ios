@@ -82,4 +82,57 @@ enum VideoCompressionCopy {
         case .stopped: String(localized: "Stopped", comment: "Compress Videos row state")
         }
     }
+
+    // MARK: Compare (FS-24 §10)
+
+    static let compareBeforeAfter = String(localized: "Compare Before and After", comment: "Compress Videos summary: open Compare Videos on the first compressed file")
+    static let deleteOriginal = String(localized: "Delete Original", comment: "Compare Videos: move this video's original to Recently Deleted")
+    static let compareHint = String(localized: "Pinch to zoom both · hold a video to see the other", comment: "Compare Videos: how to inspect the two videos")
+    static let compareHintMac = String(localized: "Pinch or ⌘-scroll to zoom both · hold Option to see the other · Space play · ← → frame", comment: "Mac Compare Videos: how to inspect the two videos")
+    static let compareKeys = String(localized: "Space play · ← → frame · ⌘← ⌘→ video", comment: "Compare Videos on iPad: keyboard shortcuts")
+    static let summaryHint = String(localized: "Tap a video to compare it. Originals go to Recently Deleted.", comment: "Compress Videos summary: under the buttons")
+    static let summaryHintMac = String(localized: "Double-click a video to compare it. Originals go to Recently Deleted.", comment: "Mac Compress Videos summary: under the buttons")
+    static let play = String(localized: "Play", comment: "Compare Videos transport")
+    static let pause = String(localized: "Pause", comment: "Compare Videos transport")
+    static let previousFrame = String(localized: "Previous Frame", comment: "Compare Videos transport")
+    static let nextFrame = String(localized: "Next Frame", comment: "Compare Videos transport")
+    static let previousVideo = String(localized: "Previous Video", comment: "Compare Videos: step to the previous compressed file")
+    static let nextVideo = String(localized: "Next Video", comment: "Compare Videos: step to the next compressed file")
+    static let soundOn = String(localized: "Sound On", comment: "Compare Videos: unmute")
+    static let soundOff = String(localized: "Sound Off", comment: "Compare Videos: mute")
+
+    /// "Original · 1.2 GB · H.264".
+    static func originalLabel(bytes value: Int64, codec: String?) -> String {
+        if let codec {
+            return String(localized: "Original · \(bytes(value)) · \(codec)", comment: "Compare Videos: pane A label, size and codec")
+        }
+        return String(localized: "Original · \(bytes(value))", comment: "Compare Videos: pane A label, size")
+    }
+
+    /// "Compressed · 498 MB · −58%".
+    static func copyLabel(_ pair: VideoCompareRules.Pair) -> String {
+        String(localized: "Compressed · \(bytes(pair.copyBytes)) · −\(percent(pair.reduction))", comment: "Compare Videos: pane B label, size and how much smaller")
+    }
+
+    /// "1.2 GB → 498 MB · −58%" — a summary row.
+    static func result(_ pair: VideoCompareRules.Pair) -> String {
+        String(localized: "\(bytes(pair.originalBytes)) → \(bytes(pair.copyBytes)) · −\(percent(pair.reduction))", comment: "Compress Videos summary row: size before, after, and how much smaller")
+    }
+
+    static func saved(_ value: Int64) -> String {
+        String(localized: "Saved \(bytes(value))", comment: "Compare Videos: subtitle, space this file saved")
+    }
+
+    /// "Video 1 of 4".
+    static func position(_ index: Int, of count: Int) -> String {
+        String(localized: "Video \(index + 1) of \(count)", comment: "Compare Videos: which compressed file is shown")
+    }
+
+    static func percent(_ fraction: Double) -> String {
+        fraction.formatted(.percent.precision(.fractionLength(0)))
+    }
+
+    static func time(_ seconds: Double) -> String {
+        Duration.seconds(max(0, seconds.isFinite ? seconds : 0)).formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
 }

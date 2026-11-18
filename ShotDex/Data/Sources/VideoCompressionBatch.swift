@@ -59,6 +59,13 @@ final class VideoCompressionBatch {
         let id: String
         var source: VideoCompressionSource?
         var state: ItemState = .waiting
+        /// The compressed copy in the library, once saved (FS-24 §10).
+        var copyID: String?
+        /// The original's real size and the copy's, once saved.
+        var originalBytes: Int64?
+        var copyBytes: Int64?
+        /// The original went to Recently Deleted (from the summary or Compare).
+        var isOriginalDeleted = false
     }
 
     private(set) var items: [Item]
@@ -70,6 +77,13 @@ final class VideoCompressionBatch {
     /// Set when the run stopped early for want of space.
     private(set) var stopReason: String?
     private(set) var hasDeletedOriginals = false
+    /// File names by video id, filled by the screen that reads them
+    /// (PhotoKit resources), for rows and Compare's title.
+    var names: [String: String] = [:]
+
+    func filename(of id: String) -> String {
+        names[id] ?? String(localized: "Video", comment: "Compress Videos: row name when the file name is unknown")
+    }
     private(set) var deleteError: String?
 
     private let worker: any VideoCompressionWorking
@@ -239,7 +253,10 @@ final class VideoCompressionBatch {
                 return
             }
             items[index].state = .saving
-            _ = try await worker.save(output, copying: id)
+            let copyID = try await worker.save(output, copying: id)
+            items[index].copyID = copyID
+            items[index].originalBytes = originalBytes
+            items[index].copyBytes = outputBytes
             items[index].state = .done(savedBytes: originalBytes - outputBytes)
         } catch is CancellationError {
             items[index].state = .stopped
@@ -261,19 +278,52 @@ final class VideoCompressionBatch {
 
     // MARK: Finish
 
+    /// The files Compare Videos walks through (FS-24 §10): saved, with
+    /// their original still in the library.
+    var comparePairs: [VideoCompareRules.Pair] {
+        items.compactMap { item in
+            guard case .done = item.state, !item.isOriginalDeleted, let copyID = item.copyID,
+                  let originalBytes = item.originalBytes, let copyBytes = item.copyBytes else { return nil }
+            return VideoCompareRules.Pair(id: item.id, copyID: copyID,
+                                          originalBytes: originalBytes, copyBytes: copyBytes)
+        }
+    }
+
     /// Moves the originals of every saved copy to Recently Deleted.
     func deleteOriginals() async {
         let ids = items.compactMap { item -> String? in
-            if case .done = item.state { return item.id }
+            if case .done = item.state, !item.isOriginalDeleted { return item.id }
             return nil
         }
         guard !ids.isEmpty else { return }
+        await delete(ids)
+    }
+
+    /// Moves one original to Recently Deleted — Compare's Delete Original.
+    /// False when PhotoKit refused (the user said Don't Allow, or it failed).
+    @discardableResult
+    func deleteOriginal(of id: String) async -> Bool {
+        guard let item = items.first(where: { $0.id == id }), case .done = item.state,
+              !item.isOriginalDeleted else { return false }
+        return await delete([id])
+    }
+
+    @discardableResult
+    private func delete(_ ids: [String]) async -> Bool {
         do {
             try await worker.deleteOriginals(ids)
-            hasDeletedOriginals = true
+            for index in items.indices where ids.contains(items[index].id) {
+                items[index].isOriginalDeleted = true
+            }
+            hasDeletedOriginals = !items.contains { item in
+                if case .done = item.state { return !item.isOriginalDeleted }
+                return false
+            }
             deleteError = nil
+            return true
         } catch {
             deleteError = error.localizedDescription
+            return false
         }
     }
 
