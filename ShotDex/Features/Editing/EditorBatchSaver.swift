@@ -261,6 +261,9 @@ struct EditorBatchSaveOverlay: View {
                 : String(localized: "Saving \(min(saver.completed + 1, saver.total)) of \(saver.total)",
                          comment: "Editor batch save progress card headline"),
             fraction: saver.progressFraction,
+            // The photos already written stay in the library, so this stops
+            // the batch rather than undoing it: "Stop", not "Cancel".
+            cancelTitle: String(localized: "Stop", comment: "Editor batch save progress card: stops after the photo in flight; photos already saved are kept"),
             cancelRole: .destructive,
             // The write in flight cannot be pulled back, so the scrim stays
             // until it lands rather than handing the editor back while the
