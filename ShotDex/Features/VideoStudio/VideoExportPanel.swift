@@ -116,20 +116,16 @@ struct VideoExportPanel: View {
                     .accessibilityLabel(Text(VideoStudioCopy.close))
                 }
             }
-            if let progress = exportFraction {
+            if model.isExportBusy {
                 // While it runs the export is the sheet (FS-12.10b §4): the
                 // choices cannot change mid-render, so they give way to the
-                // progress at the column's full width.
-                sheetExporting(progress)
+                // progress at the column's full width — and the write to
+                // Photos after it stays in the same place, a full bar.
+                sheetExporting(exportFraction)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    switch model.exportState {
-                    case .idle, .failed, .exporting:
-                        sheetChoices
-                    case .saving:
-                        saving
-                    }
+                    sheetChoices
                 }
                 .padding(.top, 16)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -154,44 +150,64 @@ struct VideoExportPanel: View {
     /// "Exporting 62%" in `.title3` semibold, a bar the column's full width
     /// (652), one footnote line — length · codec · time left once it can be
     /// told — and Cancel Export, 240×44 and centred, which asks first.
-    private func sheetExporting(_ progress: Double) -> some View {
-        let percent = Int((progress * 100).rounded(.down))
-        let timeLeft = JobProgressCard<EmptyView>.timeLeft(fraction: progress, since: exportStartedAt)
+    /// `progress` nil is the write to Photos that follows: "Saving to
+    /// Photos…" over a full bar, no time left and no Cancel (the file is
+    /// already made; the write is a moment).
+    private func sheetExporting(_ progress: Double?) -> some View {
+        let isSaving = progress == nil
+        let fraction = progress ?? 1
+        let percent = Int((fraction * 100).rounded(.down))
+        let timeLeft = isSaving ? nil : JobProgressCard<EmptyView>.timeLeft(fraction: fraction, since: exportStartedAt)
         let detail = [
             VideoStudioMetrics.shortDuration(model.totalDuration),
             model.exportSpec.codec.displayName,
             timeLeft,
         ].compactMap { $0 }.joined(separator: " · ")
-        return VStack(spacing: AppTheme.Spacing.md) {
+        let headline: String = if isSaving {
+            VideoStudioCopy.savingToPhotos
+        } else if model.isListeningForExport {
             // A bed that ducks waits for the voices first (FS-12.13 §6).
-            Text(model.isListeningForExport
-                 ? VideoStudioCopy.listeningForVoices
-                 : String(localized: "Exporting \(percent)%", comment: "Video Studio Export (iPad): headline while the video renders"))
+            VideoStudioCopy.listeningForVoices
+        } else {
+            String(localized: "Exporting \(percent)%", comment: "Video Studio Export (iPad): headline while the video renders")
+        }
+        return VStack(spacing: AppTheme.Spacing.md) {
+            Text(headline)
                 .font(.title3.weight(.semibold).monospacedDigit())
                 .foregroundStyle(.white)
-            ProgressView(value: progress)
+                // The bar says it with its value; "Listening for voices" has
+                // nothing on the bar, so that one stays readable.
+                .accessibilityHidden(!model.isListeningForExport || isSaving)
+            ProgressView(value: fraction)
                 .progressViewStyle(.linear)
                 .tint(EditorTheme.accent)
-                .accessibilityLabel(Text(VideoStudioCopy.exportingAccessibility(percent)))
+                .accessibilityLabel(Text(isSaving ? headline : VideoStudioCopy.exportingAccessibility(percent)))
             Text(verbatim: detail)
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(EditorTheme.secondaryText)
-            Button(role: .destructive) {
-                isConfirmingCancel = true
-            } label: {
-                Text(VideoStudioCopy.cancelExport)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(EditorTheme.timelineDestructive)
-                    .frame(width: Self.sheetCancelWidth, height: AppTheme.Size.minTouch)
-                    .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .fill(EditorTheme.timelineDestructive.opacity(0.18)))
-                    .contentShape(Rectangle())
+            if !isSaving {
+                sheetCancelButton
             }
-            .buttonStyle(.plain)
-            .padding(.top, AppTheme.Spacing.sm)
-            .accessibilityIdentifier("exportCancelButton")
         }
         .padding(.top, 48)
+    }
+
+    /// Cancel Export under the iPad's progress, 240×44; asks first.
+    private var sheetCancelButton: some View {
+        Button(role: .destructive) {
+            isConfirmingCancel = true
+        } label: {
+            Text(VideoStudioCopy.cancelExport)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(EditorTheme.timelineDestructive)
+                .frame(width: Self.sheetCancelWidth, height: AppTheme.Size.minTouch)
+                .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                    .fill(EditorTheme.timelineDestructive.opacity(0.18)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, AppTheme.Spacing.sm)
+        .accessibilityIdentifier("exportCancelButton")
     }
 
     /// Cancel Export under the iPad's progress.
