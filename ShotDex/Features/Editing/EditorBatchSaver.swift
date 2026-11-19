@@ -248,45 +248,28 @@ final class EditorBatchSaver {
 
 /// The full-screen progress shown while a run is being written.
 ///
-/// A centred modal over a scrim, per DESIGN.md §10.3: a batch that writes to the
-/// user's photo library must not be interruptible by a stray tap on the tools
-/// behind it.
+/// The shared `JobProgressCard` over a scrim, per DESIGN.md §10.3: a batch
+/// that writes to the user's photo library must not be interruptible by a
+/// stray tap on the tools behind it.
 struct EditorBatchSaveOverlay: View {
     let saver: EditorBatchSaver
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {}
-
-            VStack(spacing: AppTheme.Spacing.lg) {
-                ProgressView()
-                    .tint(.white)
-                Text(
-                    saver.isCancelling
-                        ? "Finishing this photo…"
-                        : "Saving \(min(saver.completed + 1, saver.total)) of \(saver.total)"
-                )
-                    .font(EditorTheme.panelTitle)
-                    .foregroundStyle(.white)
-                    .monospacedDigit()
-                ProgressView(value: saver.progressFraction)
-                    .tint(EditorTheme.accent)
-                    .frame(width: 220)
-                Button("Cancel", role: .destructive) {
-                    saver.cancel()
-                }
-                .foregroundStyle(.red)
-                // The write in flight cannot be pulled back, so the scrim
-                // stays until it lands rather than handing the editor back
-                // while the library is still being written to.
-                .disabled(saver.isCancelling)
-            }
-            .padding(AppTheme.Spacing.xxl)
-            .background(EditorTheme.panelSolid, in: RoundedRectangle.app(AppTheme.Radius.lg))
-        }
+        JobProgressCard(
+            title: saver.isCancelling
+                ? String(localized: "Finishing this photo…", comment: "Editor batch save: cancelling, the photo in flight is still being written")
+                : String(localized: "Saving \(min(saver.completed + 1, saver.total)) of \(saver.total)",
+                         comment: "Editor batch save progress card headline"),
+            fraction: saver.progressFraction,
+            cancelRole: .destructive,
+            // The write in flight cannot be pulled back, so the scrim stays
+            // until it lands rather than handing the editor back while the
+            // library is still being written to.
+            isCancelDisabled: saver.isCancelling,
+            style: .editor,
+            onCancel: { saver.cancel() }
+        )
+        .jobProgressScrim()
     }
 }
 
