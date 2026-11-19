@@ -497,83 +497,85 @@ struct CompressionScreen: View {
         .opacity(locked ? 0.4 : 1)
     }
 
-    /// Centered modal shown while the batch runs — spinner + determinate bar over
-    /// a dimming scrim that captures every touch, so the controls below can't be
-    /// tapped mid-export (DESIGN.md §11).
+    /// Centered modal shown while the batch runs — the shared
+    /// `JobProgressCard` (380 pt on regular width) over a scrim that
+    /// captures every touch, so the controls below can't be tapped mid-export
+    /// (DESIGN.md §11). The originals' download, then the resize, each fill
+    /// the same bar; a failure or "not enough space" takes the card's place
+    /// at the same width.
+    @ViewBuilder
     private func exportOverlay(_ controller: CompressionController) -> some View {
-        let total = controller.photos.count
-        let current = min(controller.processedCount + 1, total)
-        let title = controller.isDeletingOriginals ? "Deleting originals…" : "Resizing…"
-        let counter = "Processing \(current) of \(total)"
         let download = controller.isPreparing ? controller.preparation : nil
         let downloadState = download?.state
-        return ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {}
-
-            VStack(spacing: AppTheme.Spacing.md) {
-                switch downloadState?.phase {
-                case .failed?:
-                    if let download, let downloadState { downloadFailure(download, state: downloadState) }
-                case .notEnoughSpace(let needed, let free)?:
+        Group {
+            switch downloadState?.phase {
+            case .failed?:
+                if let download, let downloadState {
+                    VStack(spacing: AppTheme.Spacing.md) {
+                        downloadFailure(download, state: downloadState)
+                    }
+                    .jobCardChrome(.editor)
+                }
+            case .notEnoughSpace(let needed, let free)?:
+                VStack(spacing: AppTheme.Spacing.md) {
                     Text(OriginalPreparationState.notEnoughSpaceMessage(needed: needed, free: free))
                         .font(.headline)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                     Button("OK") { download?.choose(.cancel) }
                         .buttonStyle(.borderedProminent)
-                default:
-                    ProgressView()
-                        .controlSize(.large)
-                        .tint(accent)
+                }
+                .jobCardChrome(.editor)
+            default:
+                runningCard(controller, download: download)
+            }
+        }
+        .jobProgressScrim()
+    }
 
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-
-                    if let downloadState, downloadState.downloadCount > 0 {
-                        // Before any photo is processed, the originals come
-                        // down (FS-02.06 §9): the line, and its own bar.
-                        OriginalDownloadLine(state: downloadState, textColor: EditorTheme.secondaryText)
-                            .tint(accent)
-                        if download?.isStalled == true {
-                            Text(OriginalPreparationState.stallMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.orange)
-                                .multilineTextAlignment(.center)
-                        }
-                    } else if !controller.isDeletingOriginals {
-                        ProgressView(value: controller.progressFraction)
-                            .tint(accent)
-                        Text(counter)
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(EditorTheme.secondaryText)
-                    }
-
-                    Button("Cancel", role: .destructive) {
-                        // Nothing is made while the originals download, so
-                        // there is nothing to confirm removing (AC-10).
-                        if controller.isPreparing {
-                            controller.cancelExport()
-                        } else {
-                            isCancelConfirmationPresented = true
-                        }
-                    }
-                    .disabled(controller.isDeletingOriginals)
-                    .padding(.top, AppTheme.Spacing.xs)
+    private func runningCard(_ controller: CompressionController, download: OriginalPreparation?) -> some View {
+        let total = controller.photos.count
+        let current = min(controller.processedCount + 1, total)
+        let title: String
+        let fraction: Double?
+        var detail: String?
+        if controller.isDeletingOriginals {
+            title = String(localized: "Deleting Originals…", comment: "Resize progress card while the originals are deleted")
+            fraction = nil
+        } else if let state = download?.state, state.downloadCount > 0 {
+            // Before any photo is processed, the originals come down
+            // (FS-02.06 §5): the same bar, its own words.
+            title = state.downloadHeadline
+            fraction = state.fraction
+            detail = state.downloadDetail
+        } else {
+            title = String(localized: "Resizing \(current) of \(total)",
+                           comment: "Resize progress card headline: the photo being resized, of the batch")
+            fraction = controller.progressFraction
+        }
+        return JobProgressCard(
+            title: title,
+            fraction: fraction,
+            detail: detail,
+            cancelRole: .destructive,
+            isCancelDisabled: controller.isDeletingOriginals,
+            style: .editor,
+            onCancel: {
+                // Nothing is made while the originals download, so there is
+                // nothing to confirm removing (AC-10).
+                if controller.isPreparing {
+                    controller.cancelExport()
+                } else {
+                    isCancelConfirmationPresented = true
                 }
             }
-            .padding(AppTheme.Spacing.xl)
-            .frame(maxWidth: 300)
-            .background(EditorTheme.panelSolid, in: RoundedRectangle.app(AppTheme.Radius.lg))
-            .overlay(
-                RoundedRectangle.app(AppTheme.Radius.lg)
-                    .stroke(EditorTheme.panelTopHairline, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
-            .padding(AppTheme.Spacing.xl)
+        ) {
+            if download?.isStalled == true {
+                Text(OriginalPreparationState.stallMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
@@ -810,64 +812,29 @@ private struct CompressionGalleryPage: View {
 private struct CompressionSummary: View {
     @Bindable var controller: CompressionController
     let done: () -> Void
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    /// The reading width of the summary on an iPad or the Duo's inner
+    /// display: a grouped list stretched across 1376 pt is a line per screen.
+    private static let regularContentWidth: CGFloat = 760
+
+    private var isRegular: Bool { sizeClass == .regular }
 
     var body: some View {
         List {
-            Section {
-                if controller.wasCancelled {
-                    Label("Export cancelled", systemImage: "xmark.circle")
-                } else {
-                    Label(
-                        "\(controller.createdAssetIDs.count) saved to Photos",
-                        systemImage: "checkmark.circle.fill"
-                    )
-                    .foregroundStyle(.green)
-                }
-                if !controller.failures.isEmpty {
-                    Label(
-                        "\(controller.failures.count) failed",
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(.orange)
-                }
-                if controller.watermarkTally.alreadyStamped > 0 {
-                    Label(
-                        WatermarkCopy.alreadyHadWatermark(controller.watermarkTally.alreadyStamped),
-                        systemImage: "info.circle"
-                    )
-                }
-                if !controller.watermarkTally.nothingToStamp.isEmpty {
-                    Label(
-                        WatermarkCopy.savedWithoutWatermark(controller.watermarkTally.nothingToStamp.count),
-                        systemImage: "info.circle"
-                    )
-                }
-                if controller.fallbackToJPEGCount > 0 {
-                    Label(
-                        "\(controller.fallbackToJPEGCount) saved as JPEG because HEIC wasn't supported",
-                        systemImage: "info.circle"
-                    )
-                }
-                if controller.deletedOriginalCount > 0 {
-                    let noun = controller.deletedOriginalCount == 1 ? "original" : "originals"
-                    Label(
-                        "\(controller.deletedOriginalCount) \(noun) deleted",
-                        systemImage: "trash"
-                    )
-                }
-                if controller.deleteOriginalsErrorMessage != nil {
-                    Label(
-                        "Originals couldn't be deleted",
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(.orange)
-                }
-                if controller.rollbackErrorMessage != nil {
-                    Label(
-                        "Some exported copies may remain in Photos",
-                        systemImage: "exclamationmark.octagon.fill"
-                    )
-                    .foregroundStyle(.red)
+            if isRegular {
+                // Regular width: what happened is the headline, not the first
+                // row of a list (iPad progress review 2026-11-20).
+                Section { hero }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+            }
+            if !isRegular || hasNotes {
+                Section {
+                    if !isRegular {
+                        outcomeRows
+                    }
+                    noteRows
                 }
             }
 
@@ -913,13 +880,151 @@ private struct CompressionSummary: View {
                 }
             }
 
-            Section {
-                Button("Done", action: done)
-                    .frame(maxWidth: .infinity)
+            if !isRegular {
+                Section {
+                    Button("Done", action: done)
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
         .scrollContentBackground(.hidden)
+        .frame(maxWidth: isRegular ? Self.regularContentWidth : .infinity)
+        .frame(maxWidth: .infinity)
         .background(EditorTheme.background)
+    }
+
+    // MARK: Hero (regular width)
+
+    private var savedCount: Int { controller.createdAssetIDs.count }
+
+    private var heroTitle: String {
+        controller.wasCancelled
+            ? String(localized: "Resize Cancelled", comment: "Resize summary headline after the run was cancelled")
+            : String(localized: "\(savedCount) Saved to Photos", comment: "Resize summary headline: resized copies written to Photos")
+    }
+
+    /// "2 failed · 3 originals deleted" — the counts the phone shows as rows.
+    private var heroDetail: String? {
+        var parts: [String] = []
+        if controller.wasCancelled, savedCount > 0 {
+            parts.append(String(localized: "\(savedCount) saved to Photos", comment: "Resize summary detail: copies saved before cancelling"))
+        }
+        if !controller.failures.isEmpty {
+            parts.append(String(localized: "\(controller.failures.count) failed", comment: "Resize summary detail: photos that failed"))
+        }
+        if controller.deletedOriginalCount > 0 {
+            parts.append(String(localized: "\(controller.deletedOriginalCount) originals deleted", comment: "Resize summary detail: originals deleted after resizing"))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private var heroSymbol: (name: String, color: Color) {
+        if controller.wasCancelled { return ("xmark.circle", EditorTheme.secondaryText) }
+        if !controller.failures.isEmpty { return ("exclamationmark.triangle.fill", .orange) }
+        return ("checkmark.circle.fill", .green)
+    }
+
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            Image(systemName: heroSymbol.name)
+                .font(.largeTitle)
+                .foregroundStyle(heroSymbol.color)
+                .accessibilityHidden(true)
+            Text(heroTitle)
+                .font(.largeTitle.bold())
+                .foregroundStyle(.white)
+            if let heroDetail {
+                Text(heroDetail)
+                    .font(.body)
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+            Button(action: done) {
+                Text("Done")
+                    .font(.body.weight(.semibold))
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    .frame(minHeight: AppTheme.Size.minTouch)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(EditorTheme.accent)
+            .padding(.top, AppTheme.Spacing.sm)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, AppTheme.Spacing.xxl)
+        .padding(.horizontal, AppTheme.Spacing.lg)
+    }
+
+    // MARK: Rows
+
+    /// What happened, as rows — the phone's summary; regular width says it
+    /// in the hero instead.
+    @ViewBuilder private var outcomeRows: some View {
+        if controller.wasCancelled {
+            Label("Export cancelled", systemImage: "xmark.circle")
+        } else {
+            Label(
+                "\(controller.createdAssetIDs.count) saved to Photos",
+                systemImage: "checkmark.circle.fill"
+            )
+            .foregroundStyle(.green)
+        }
+        if !controller.failures.isEmpty {
+            Label(
+                "\(controller.failures.count) failed",
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            .foregroundStyle(.orange)
+        }
+        if controller.deletedOriginalCount > 0 {
+            let noun = controller.deletedOriginalCount == 1 ? "original" : "originals"
+            Label(
+                "\(controller.deletedOriginalCount) \(noun) deleted",
+                systemImage: "trash"
+            )
+        }
+    }
+
+    /// Notes both widths show as rows.
+    @ViewBuilder private var noteRows: some View {
+        if controller.watermarkTally.alreadyStamped > 0 {
+            Label(
+                WatermarkCopy.alreadyHadWatermark(controller.watermarkTally.alreadyStamped),
+                systemImage: "info.circle"
+            )
+        }
+        if !controller.watermarkTally.nothingToStamp.isEmpty {
+            Label(
+                WatermarkCopy.savedWithoutWatermark(controller.watermarkTally.nothingToStamp.count),
+                systemImage: "info.circle"
+            )
+        }
+        if controller.fallbackToJPEGCount > 0 {
+            Label(
+                "\(controller.fallbackToJPEGCount) saved as JPEG because HEIC wasn't supported",
+                systemImage: "info.circle"
+            )
+        }
+        if controller.deleteOriginalsErrorMessage != nil {
+            Label(
+                "Originals couldn't be deleted",
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            .foregroundStyle(.orange)
+        }
+        if controller.rollbackErrorMessage != nil {
+            Label(
+                "Some exported copies may remain in Photos",
+                systemImage: "exclamationmark.octagon.fill"
+            )
+            .foregroundStyle(.red)
+        }
+    }
+
+    private var hasNotes: Bool {
+        controller.watermarkTally.alreadyStamped > 0
+            || !controller.watermarkTally.nothingToStamp.isEmpty
+            || controller.fallbackToJPEGCount > 0
+            || controller.deleteOriginalsErrorMessage != nil
+            || controller.rollbackErrorMessage != nil
     }
 }
 
