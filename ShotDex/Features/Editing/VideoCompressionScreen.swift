@@ -74,10 +74,13 @@ struct VideoCompressionScreen: View {
                             Button(VideoCompressionCopy.stop) { isStopConfirmationPresented = true }
                                 .fontWeight(.regular)
                                 .tint(.white)
+                                // Esc on a keyboard: the toolbar corner is a long reach on 13".
+                                .keyboardShortcut(.cancelAction)
                         case .finished:
                             Button(VideoCompressionCopy.done) { dismiss() }
                                 .fontWeight(.semibold)
                                 .tint(accent)
+                                .keyboardShortcut(.defaultAction)
                         }
                     }
                 }
