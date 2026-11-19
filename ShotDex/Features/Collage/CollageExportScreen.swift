@@ -56,6 +56,23 @@ struct CollageExportScreen: View {
                 dependencies: dependencies
             )
         }
+        .onChange(of: model.sharingAssetID) { _, assetID in
+            // Share… (FS-11b §3): saved first, then the share sheet with the
+            // new photo at Settings' metadata level; closing it goes on as
+            // Save does.
+            guard let assetID else { return }
+            guard let asset = PhotoLibraryService.fetchAssets(ids: [assetID]).first else {
+                model.finishSharing()
+                return
+            }
+            Task {
+                await PhotoShareSheet.share(
+                    assets: [asset],
+                    downloads: dependencies.originalDownloads,
+                    onFinished: { model.finishSharing() }
+                )
+            }
+        }
         .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
             ServerExportSheet(model: exportModel) {
                 serverExportModel = nil
@@ -171,6 +188,9 @@ struct CollageExportScreen: View {
 
             Spacer()
 
+            if serverExport == nil {
+                wideShareButton
+            }
             wideSaveButton
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
@@ -199,8 +219,32 @@ struct CollageExportScreen: View {
             .background(EditorTheme.accent.opacity(model.isExporting ? 0.6 : 1), in: Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(model.isExporting)
+        .disabled(isBusy)
     }
+
+    /// Share… beside Save to Photos (board `IP_CollageExport`): a glass
+    /// capsule, the secondary of the pair. Not for server photos — their
+    /// Export… sheet already has Share (FS-17.06 §5b).
+    private var wideShareButton: some View {
+        Button {
+            Task { await model.export(options, thenShare: true) }
+        } label: {
+            Text(Self.shareTitle)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .frame(height: AppTheme.Size.minTouch)
+                .editorGlass(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+        .opacity(isBusy ? 0.5 : 1)
+    }
+
+    private static let shareTitle = String(localized: "Share…", comment: "Collage export: save the collage, then open the share sheet with it")
+
+    /// Saving, or saved and waiting on the share sheet.
+    private var isBusy: Bool { model.isExporting || model.sharingAssetID != nil }
 
     private var primaryActionTitle: String {
         serverExport == nil
@@ -395,6 +439,9 @@ struct CollageExportScreen: View {
                         .tint(EditorTheme.accent)
                 }
                 saveButton
+                if serverExport == nil {
+                    shareButton
+                }
             }
 
             Text(serverExport == nil
@@ -428,7 +475,25 @@ struct CollageExportScreen: View {
             .background(EditorTheme.accent, in: RoundedRectangle.app(AppTheme.Radius.md))
         }
         .buttonStyle(.plain)
-        .disabled(model.isExporting)
+        .disabled(isBusy)
+    }
+
+    /// The phone's secondary action under Save to Photos: 44pt, glass
+    /// (FS-11b §1, H1).
+    private var shareButton: some View {
+        Button {
+            Task { await model.export(options, thenShare: true) }
+        } label: {
+            Text(Self.shareTitle)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: AppTheme.Size.minTouch)
+                .editorGlass(cornerRadius: AppTheme.Radius.md)
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+        .opacity(isBusy ? 0.5 : 1)
     }
 
     /// A cell's original did not come down (FS-02.06 AC-12): nothing was

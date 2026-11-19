@@ -120,7 +120,8 @@ enum PhotoShareSheet {
         downloads: OriginalDownloadModel?,
         level: MetadataLevel = .sharingDefault(),
         unreadableRAW: Set<String> = [],
-        watermarkOverride: Bool? = nil
+        watermarkOverride: Bool? = nil,
+        onFinished: (@MainActor () -> Void)? = nil
     ) async {
         // A RAW iOS can't decode has no JPEG to offer (FS-03.04b AC-8).
         var sources = assets.map { asset in
@@ -141,7 +142,7 @@ enum PhotoShareSheet {
         // Skip leaves the RAW files out before the sheet opens, so it never
         // offers what will not come (a share of only RAW opens nothing).
         if level != .all, rawChoice == .skip { sources.removeAll { $0.kind == .raw } }
-        guard !sources.isEmpty else { return }
+        guard !sources.isEmpty else { onFinished?(); return }
         let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         var originals: [String: OriginalItem] = [:]
         for source in sources where source.kind != .video {
@@ -190,20 +191,24 @@ enum PhotoShareSheet {
                     await waitForDismissal()
                     await share(
                         assets: assets, downloads: downloads, level: level, unreadableRAW: unreadableRAW,
-                        watermarkOverride: row.stamps
+                        watermarkOverride: row.stamps, onFinished: onFinished
                     )
                 }
                 return
             }
             guard let chosen,
                   let again = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
-            else { return }
+            else {
+                // Shared or dismissed: the sheet is gone for good.
+                onFinished?()
+                return
+            }
             // A level row: the same share again at that level, still lazy.
             Task { @MainActor in
                 await waitForDismissal()
                 await share(
                     assets: assets, downloads: downloads, level: again, unreadableRAW: unreadableRAW,
-                    watermarkOverride: watermarkOverride
+                    watermarkOverride: watermarkOverride, onFinished: onFinished
                 )
             }
         }

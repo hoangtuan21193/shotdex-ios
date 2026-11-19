@@ -85,6 +85,10 @@ final class CollageEditorModel {
     private(set) var didSave = false
     /// The saved collage's asset id, so the screen can open its detail (§12).
     private(set) var didSaveAssetID: String?
+    /// Share… (FS-11b §3, H1): the collage is saved exactly as Save does,
+    /// then waits here while the share sheet is open; `finishSharing()`
+    /// hands it on as `didSaveAssetID` so the screen goes on like Save.
+    private(set) var sharingAssetID: String?
     var errorMessage: String?
 
     /// The last font/fill the user chose, seeded into the next new text layer.
@@ -666,7 +670,7 @@ final class CollageEditorModel {
     /// Sources are requested at cell size × zoom (PhotoKit downscales for us) and
     /// loaded sequentially so nine 48MP originals never coexist in memory;
     /// composition and encoding run detached.
-    func export(_ options: CollageExportOptions) async {
+    func export(_ options: CollageExportOptions, thenShare: Bool = false) async {
         guard !isExporting, let template else { return }
         isExporting = true
         defer { isExporting = false }
@@ -786,11 +790,23 @@ final class CollageEditorModel {
             await addToCollagesAlbum(assetID)
             photoLibrary.publishAppCreatedAsset()
             recordCreation(assetID: assetID)
-            didSaveAssetID = assetID
             didSave = true
+            if thenShare {
+                sharingAssetID = assetID
+            } else {
+                didSaveAssetID = assetID
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// The share sheet closed, shared or not: the saved collage goes on as
+    /// a Save would — the screen opens it or closes.
+    func finishSharing() {
+        guard let assetID = sharingAssetID else { return }
+        sharingAssetID = nil
+        didSaveAssetID = assetID
     }
 
     /// Puts the export failure away (its Cancel).

@@ -1,6 +1,6 @@
 # FS-11b — Collage: màn xuất
 
-`FS-11b` · phần tiếp của [FS-11](FS-11-collage.md) · `Features/Collage/CollageExportScreen.swift` · cập nhật 2026-10-02
+`FS-11b` · phần tiếp của [FS-11](FS-11-collage.md) · `Features/Collage/CollageExportScreen.swift` · cập nhật 2026-11-20 (Share… đã code)
 
 Nguồn intent: [2026-10-02-ui-review-1002](../_intents/2026-10-02-ui-review-1002.md) — Z1, H1, Z2.
 
@@ -53,10 +53,10 @@ Collage mẫu **C** = 4 ảnh HEIC 24MP trên thiết bị, mẫu 2×2, tỉ l�
 |---|---|---|---|---|
 | AC-1 | (Z1) iPad 13" ngang 1376×1032, collage C | mở Export | hai pane: xem trước trái, inspector phải rộng 360pt; Save to Photos ở mép phải toolbar | ⚠️ chưa có — `Tools/ui-drive` dump |
 | AC-2 | (Z1) Duo trong 951×669, collage C | mở Export | hai pane như AC-1; cả 5 hàng của inspector và Save to Photos thấy được không cần cuộn | ⚠️ chưa có — `Tools/sim-shot inner` |
-| AC-3 | (Z1) iPhone 402×874 và Duo ngoài 466×678, collage C | mở Export | một cột; mép dưới Share… ≤ 874 − 34 (iPhone), nằm trái rail 84pt (Duo ngoài) | ⚠️ chưa có |
-| AC-4 | (Z1) iPad 13" dọc 1032×1376; Split View 1/2 688pt | mở Export | dọc: hai pane như AC-1 (board `IPP22_CollageExport`); Split View 688pt: một cột | ⚠️ chưa có |
-| AC-5 | (H1, K26) collage C mở từ Library | chạm Share… | ảnh mới được lưu vào Photos và album `ShotDex Collages` **trước** khi share sheet mở; share sheet nhận đúng 1 ảnh 4:5 là asset đó | ⚠️ chưa có |
-| AC-6 | (H1) như AC-5, share sheet đang mở | đóng share sheet không chọn đích | ảnh mới vẫn trong thư viện và album; viewer mở ảnh mới | ⚠️ chưa có |
+| AC-3 | (Z1) iPhone 402×874 và Duo ngoài 466×678, collage C | mở Export | một cột; mép dưới Share… ≤ 874 − 34 (iPhone), nằm trái rail 84pt (Duo ngoài) | ✅ iPhone 17 26.5 (2026-11-20): Share… 758–801pt ≤ 840 · ⚠️ Duo ngoài chưa chụp |
+| AC-4 | (Z1) iPad 13" dọc 1032×1376; Split View 1/2 688pt | mở Export | dọc: hai pane như AC-1 (board `IPP22_CollageExport`); Split View 688pt: một cột | ✅ dọc (iPad 13 26.5, 2026-11-20: hai pane, Share… · Save to Photos ở mép phải toolbar) · ⚠️ Split View chưa |
+| AC-5 | (H1, K26) collage C mở từ Library | chạm Share… | ảnh mới được lưu vào Photos và album `ShotDex Collages` **trước** khi share sheet mở; share sheet nhận đúng 1 ảnh 4:5 là asset đó | ⚠️ một phần (iPad dọc 2026-11-20, mở từ Utilities › Collages): share sheet mở với đúng ảnh `collage-2048x2048` vừa lưu, có hàng mức metadata; album chưa kiểm |
+| AC-6 | (H1) như AC-5, share sheet đang mở | đóng share sheet không chọn đích | ảnh mới vẫn trong thư viện và album; viewer mở ảnh mới | ⚠️ một phần: mở từ Collages, đóng sheet → màn đóng như Save, collage có trong danh sách Collages; nhánh mở từ Library (viewer) chưa chạy |
 | AC-7 | (H1) collage C, 1 ô là ảnh chỉ trên iCloud, máy không mạng | chạm Share… | không có ảnh mới, không mở share sheet; hiện lỗi tải kèm Retry · Cancel | ⚠️ chưa có — script `icloud-collage.json` thêm bước Share… |
 | AC-8 | (H1) collage 3 ảnh từ NAS | mở Export | chỉ có nút `Export…`, không có Share… | ⚠️ chưa có |
 | AC-9 | (Z2) iPad 13" ngang, collage 4 ảnh, 1 preset đã lưu, tab Layout | chụp inspector | khung mẫu là lưới 4 cột, ô 66pt, khe 8pt, preset ở ô đầu; không có dải cuộn ngang | ⚠️ chưa có — `Tools/ui-drive` dump khung từng ô |
