@@ -47,18 +47,12 @@ struct ServerEditFetchSheet: View {
         default:
             Form {
                 Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Downloading \(model.progress.index + 1) of \(model.photos.count)", comment: "Server photo command: fetch progress headline")
-                            .font(.headline)
-                        ProgressView(value: model.progress.fraction)
-                            .accessibilityLabel(String(localized: "Download progress", comment: "Server photo command: progress bar, VoiceOver"))
-                            .accessibilityValue(Text(model.progress.fraction, format: .percent.precision(.fractionLength(0))))
-                        Text(byteLine)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                    .padding(.vertical, 6)
+                    JobProgressBlock(
+                        title: String(localized: "Downloading \(model.progress.index + 1) of \(model.photos.count)", comment: "Server photo command: fetch progress headline"),
+                        fraction: model.progress.fraction,
+                        detail: byteLine,
+                        barLabel: Text("Download progress", comment: "Server photo command: progress bar, VoiceOver")
+                    )
                     if !model.progress.filename.isEmpty {
                         Text(model.progress.filename)
                             .lineLimit(1)

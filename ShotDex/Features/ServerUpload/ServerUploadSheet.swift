@@ -261,19 +261,13 @@ struct ServerUploadSheet: View {
     private var progressView: some View {
         Form {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Uploading \(model.progress.fileIndex + 1) of \(model.progress.fileCount)",
-                         comment: "Upload to Server progress headline")
-                        .font(.headline)
-                    ProgressView(value: model.progress.fraction)
-                        .accessibilityLabel("Upload progress")
-                        .accessibilityValue(Text(model.progress.fraction, format: .percent.precision(.fractionLength(0))))
-                    Text(byteLine)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                .padding(.vertical, 6)
+                JobProgressBlock(
+                    title: String(localized: "Uploading \(model.progress.fileIndex + 1) of \(model.progress.fileCount)",
+                                  comment: "Upload to Server progress headline"),
+                    fraction: model.progress.fraction,
+                    detail: byteLine,
+                    barLabel: Text("Upload progress")
+                )
                 LabeledContent(model.progress.filename, value: phaseTitle(model.progress.phase))
                     .lineLimit(1)
                     .truncationMode(.middle)

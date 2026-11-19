@@ -190,18 +190,12 @@ struct ServerDownloadSheet: View {
     private var progressForm: some View {
         Form {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Saving \(model.progress.index + 1) of \(model.progress.count)", comment: "Save server originals to Photos: progress headline")
-                        .font(.headline)
-                    ProgressView(value: model.progress.fraction)
-                        .accessibilityLabel("Save progress")
-                        .accessibilityValue(Text(model.progress.fraction, format: .percent.precision(.fractionLength(0))))
-                    Text(byteLine)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                .padding(.vertical, 6)
+                JobProgressBlock(
+                    title: String(localized: "Saving \(model.progress.index + 1) of \(model.progress.count)", comment: "Save server originals to Photos: progress headline"),
+                    fraction: model.progress.fraction,
+                    detail: byteLine,
+                    barLabel: Text("Save progress")
+                )
                 LabeledContent(model.progress.filename, value: phaseTitle)
                     .lineLimit(1)
                     .truncationMode(.middle)

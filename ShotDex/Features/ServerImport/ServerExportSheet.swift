@@ -382,24 +382,14 @@ struct ServerExportSheet: View {
     private var progressForm: some View {
         Form {
             Section {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                    Text(model.progressHeadline.isEmpty
-                         ? String(localized: "Preparing…", comment: "Server export: before the first render")
-                         : model.progressHeadline)
-                        .font(.title3.weight(.semibold))
-                        .monospacedDigit()
-                    ProgressView(value: model.progressFraction)
-                        .accessibilityLabel(Text("Export progress", comment: "Server export: VoiceOver name of the progress bar"))
-                        .accessibilityValue(Text(model.progressFraction, format: .percent.precision(.fractionLength(0))))
-                    if let detail = progressDetailLine {
-                        Text(verbatim: detail)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .padding(.vertical, AppTheme.Spacing.sm)
-                .accessibilityElement(children: .combine)
+                JobProgressBlock(
+                    title: model.progressHeadline.isEmpty
+                        ? String(localized: "Preparing…", comment: "Server export: before the first render")
+                        : model.progressHeadline,
+                    fraction: model.progressFraction,
+                    detail: progressDetailLine,
+                    barLabel: Text("Export progress", comment: "Server export: VoiceOver name of the progress bar")
+                )
             } footer: {
                 Text("Keep ShotDex open until the export finishes.", comment: "Server export: progress footer")
             }
@@ -461,6 +451,38 @@ struct ServerExportSheet: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The progress section every server sheet shows while it runs — export,
+/// upload, download to Photos and the photo-command fetch: a `.title3`
+/// semibold headline, a bar the section's full width and one `.footnote`
+/// detail line. The Form-sheet sibling of `JobProgressCard`; the sheet keeps
+/// its own Cancel in the toolbar.
+struct JobProgressBlock: View {
+    let title: String
+    let fraction: Double
+    var detail: String?
+    let barLabel: Text
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            Text(verbatim: title)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+            ProgressView(value: min(1, max(0, fraction)))
+                .accessibilityLabel(barLabel)
+                .accessibilityValue(Text(fraction, format: .percent.precision(.fractionLength(0))))
+            if let detail {
+                Text(verbatim: detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, AppTheme.Spacing.sm)
         .accessibilityElement(children: .combine)
     }
 }
