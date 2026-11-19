@@ -59,6 +59,10 @@ không thành sheet. Board dọc vẽ trước `/plan`: Collage, Xuất collage,
   chạm mới mở), dòng "Photos stay where they are. ShotDex never edits file contents."
 - Hộp quyền Photos chỉ mở khi chạm Add Photos Library; dòng báo trước của FS-09 F1 nằm trong thẻ đó ("iPadOS asks
   you to allow access."). Trạng thái quyền và thông báo của từng trạng thái giữ FS-09 §3, áp cho nguồn Photos.
+- Quyền Photos vừa đổi từ chưa hỏi sang được cấp (Full hoặc Limited) = lần chạy đầu: thứ tự lưới về mặc định
+  Date Taken (Newest). Thứ tự cũ còn trong defaults (bản cài trước, hay trước một lần reset quyền) không được giữ —
+  nó từng mở thư viện với tiêu đề "File Size (Smallest)", và thứ tự theo số đo chỉ hiện được ảnh index đã đọc,
+  thay vì cả thư viện lấy thẳng từ PhotoKit.
 
 
 ## 4. Server trên iPad — `IP_ServerList`, `IP_ServerForm`, `IP_ServerBrowser`, `IP_ServerUpload`, `IP_UploadedToServer`

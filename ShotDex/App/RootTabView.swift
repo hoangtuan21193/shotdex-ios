@@ -145,17 +145,36 @@ struct RootTabView: View {
 
     @AppStorage(OnboardingScreen.hasContinuedKey) private var hasContinuedOnboarding = false
 
+    /// Granting Photos access from the welcome screen is a first run, so
+    /// the library opens the way the boards draw it: newest first. A sort
+    /// order left in the defaults by an earlier install (or from before a
+    /// privacy reset brought the welcome screen back) otherwise survived —
+    /// the user met a grid titled "File Size (Smallest)" that could only
+    /// show what the EXIF index had already read, instead of the whole
+    /// library straight from PhotoKit.
+    private func resetLibraryForFirstRun() {
+        UserDefaults.standard.removeObject(forKey: SettingsKeys.librarySort)
+        libraryModel?.sort = .default
+    }
+
     var body: some View {
         // Once only: Continue goes to the empty library and asks nothing
         // (FS-21 §3). A source added since keeps it away for good.
-        if photoLibrary.authorizationState == .notDetermined, !hasContinuedOnboarding {
-            OnboardingScreen()
-        } else if #available(iOS 26.0, *) {
-            withSceneRestoration(nativeTabView)
-                .resolvesDuoInner()
-        } else {
-            withSceneRestoration(legacyTabView)
-                .resolvesDuoInner()
+        Group {
+            if photoLibrary.authorizationState == .notDetermined, !hasContinuedOnboarding {
+                OnboardingScreen()
+            } else if #available(iOS 26.0, *) {
+                withSceneRestoration(nativeTabView)
+                    .resolvesDuoInner()
+            } else {
+                withSceneRestoration(legacyTabView)
+                    .resolvesDuoInner()
+            }
+        }
+        .onChange(of: photoLibrary.authorizationState) { oldState, newState in
+            if oldState == .notDetermined, newState.canReadLibrary {
+                resetLibraryForFirstRun()
+            }
         }
     }
 
