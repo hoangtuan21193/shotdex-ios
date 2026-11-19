@@ -21,6 +21,11 @@ struct CollageExportScreen: View {
 
     @State private var options = CollageExportOptions()
     @State private var preview: UIImage?
+    @State private var width: CGFloat = 0
+
+    /// The Duo's inner display and an iPad: preview leading, the options an
+    /// inspector beside it, the action on the toolbar (board `IP_CollageExport`).
+    private var isWide: Bool { width >= WideLayout.minimumWidth }
 
     private var pixelSize: CGSize { model.outputPixelSize(for: options.size) }
     private var dimensionsText: String { "\(Int(pixelSize.width)) × \(Int(pixelSize.height))" }
@@ -28,13 +33,18 @@ struct CollageExportScreen: View {
     var body: some View {
         ZStack {
             background
-            VStack(spacing: 0) {
-                topBar
-                previewArea
-                optionsCard
-                saveSection
+            if isWide {
+                wideLayout
+            } else {
+                VStack(spacing: 0) {
+                    topBar
+                    previewArea
+                    optionsCard
+                    saveSection
+                }
             }
         }
+        .measureWidth(into: $width)
         .preferredColorScheme(.dark)
         .task { preview = await model.renderPreview() }
         .onChange(of: model.composedFile) { _, file in
@@ -119,6 +129,175 @@ struct CollageExportScreen: View {
         .frame(height: 44 + EditorLayoutMetrics.editorFloatingCommandRowTopInset, alignment: .center)
     }
 
+    // MARK: Wide layout (regular width)
+
+    /// The inspector's width, the same as the other wide tier-D tools'.
+    private static let inspectorWidth: CGFloat = 360
+    /// The toolbar row's height; the preview and the inspector start under it.
+    private static let wideBarHeight: CGFloat = 44
+
+    private var wideLayout: some View {
+        HStack(spacing: 0) {
+            previewArea
+                .padding(.top, Self.wideBarHeight)
+                .overlay {
+                    if model.isExporting { exportHero }
+                }
+            wideInspector
+        }
+        .overlay(alignment: .top) { wideTopBar }
+    }
+
+    private var wideTopBar: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            Button(action: onClose) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
+                    .editorGlass(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Back"))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Export")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(dimensionsText)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+
+            Spacer()
+
+            wideSaveButton
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: Self.wideBarHeight)
+    }
+
+    /// The primary action on the toolbar's trailing edge (FS-21.02b §2).
+    /// While the collage is drawn and saved it reads "Saving…" rather than
+    /// greying out without a word.
+    private var wideSaveButton: some View {
+        Button {
+            Task { await model.export(options) }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                if model.isExporting {
+                    ProgressView().tint(.black).controlSize(.small)
+                    Text(String(localized: "Saving…", comment: "Collage export toolbar button while the collage is being saved"))
+                } else {
+                    Text(primaryActionTitle)
+                }
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 18)
+            .frame(height: AppTheme.Size.minTouch)
+            .background(EditorTheme.accent.opacity(model.isExporting ? 0.6 : 1), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isExporting)
+    }
+
+    private var primaryActionTitle: String {
+        serverExport == nil
+            ? String(localized: "Save to Photos")
+            : String(localized: "Export…", comment: "Collage of server photos: choose where the collage goes")
+    }
+
+    private var wideInspector: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                inspectorHeader(String(localized: "Size"))
+                CollageSegmentPicker(
+                    items: CollageExportSize.allCases,
+                    selection: $options.size,
+                    label: { $0.displayName },
+                    fillsWidth: true
+                )
+                inspectorDivider
+                qualityRow.frame(minHeight: AppTheme.Size.minTouch)
+                inspectorDivider
+                inspectorHeader(String(localized: "Format"))
+                CollageSegmentPicker(
+                    items: CollageExportFormat.allCases,
+                    selection: $options.format,
+                    label: { $0.displayName },
+                    fillsWidth: true
+                )
+                inspectorDivider
+                Toggle(isOn: $options.keepFirstPhotoEXIF) {
+                    Text("Keep EXIF of first photo")
+                        .font(rowLabelFont)
+                        .foregroundStyle(.white)
+                }
+                .tint(EditorTheme.accent)
+                .frame(minHeight: AppTheme.Size.minTouch)
+                inspectorDivider
+                estimateRow.frame(minHeight: AppTheme.Size.minTouch)
+                inspectorDivider
+                if serverExport == nil {
+                    Label("Added to your ShotDex Collages album", systemImage: "rectangle.stack.badge.plus")
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                }
+                Text(serverExport == nil
+                     ? String(localized: "Opens the new photo when done")
+                     : String(localized: "Choose the folder, Photos or Share next.", comment: "Collage of server photos: what Export… opens"))
+                    .font(.footnote)
+                    .foregroundStyle(EditorTheme.secondaryText)
+                if let preparation = model.exportPreparation, preparation.state.phase == .failed {
+                    exportFailure(preparation.state)
+                        .padding(.top, AppTheme.Spacing.lg)
+                }
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .padding(.top, Self.wideBarHeight + AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.lg)
+        }
+        .disabled(model.isExporting)
+        .frame(width: Self.inspectorWidth)
+        .background(EditorTheme.panelSolid.opacity(0.92).ignoresSafeArea())
+        .overlay(alignment: .leading) {
+            Rectangle().fill(EditorTheme.hairline).frame(width: 1).ignoresSafeArea()
+        }
+    }
+
+    /// The phone's card keeps its compact rows; the wide inspector reads at
+    /// arm's length on a 13" display (board `IP_CollageExport`: 17 / 15).
+    private var rowLabelFont: Font { isWide ? .body : EditorTheme.rowLabel }
+    private var rowValueFont: Font { isWide ? .subheadline.monospacedDigit() : EditorTheme.rowValue }
+
+    private func inspectorHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(EditorTheme.secondaryText)
+            .padding(.top, AppTheme.Spacing.sm)
+    }
+
+    private var inspectorDivider: some View {
+        Rectangle().fill(EditorTheme.hairline).frame(height: 1).padding(.vertical, AppTheme.Spacing.sm)
+    }
+
+    /// While the collage is drawn and saved, the progress is the thing on
+    /// screen: the shared job card centred over the preview. The originals'
+    /// download is the one part with a measurable fraction, so it gets the
+    /// bar (and the time left); the draw-and-encode step after it has no
+    /// fraction and spins.
+    private var exportHero: some View {
+        let title = serverExport == nil
+            ? String(localized: "Saving Collage…", comment: "Collage export in progress, headline")
+            : String(localized: "Preparing Collage…", comment: "Collage of server photos being drawn before the export sheet opens")
+        if let preparation = model.exportPreparation, preparation.isShown,
+           preparation.state.downloadCount > 0 {
+            return JobProgressCard(title: title, fraction: preparation.state.fraction, detail: preparation.state.progressLine)
+        }
+        return JobProgressCard(title: title, fraction: nil, detail: "\(dimensionsText) · \(options.format.displayName)")
+    }
+
     // MARK: Options card
 
     private var optionsCard: some View {
@@ -164,12 +343,12 @@ struct CollageExportScreen: View {
     private var qualityRow: some View {
         HStack(spacing: AppTheme.Spacing.md) {
             Text("Quality")
-                .font(EditorTheme.rowLabel)
+                .font(rowLabelFont)
                 .foregroundStyle(.white)
             Slider(value: $options.quality, in: 0...100)
                 .tint(EditorTheme.accent)
             Text("\(Int(options.quality))")
-                .font(EditorTheme.rowValue)
+                .font(rowValueFont)
                 .foregroundStyle(EditorTheme.secondaryText)
                 .frame(width: 30, alignment: .trailing)
         }
@@ -178,11 +357,11 @@ struct CollageExportScreen: View {
     private var estimateRow: some View {
         HStack {
             Text("Estimated size")
-                .font(EditorTheme.rowLabel)
+                .font(rowLabelFont)
                 .foregroundStyle(EditorTheme.secondaryText)
             Spacer()
             Text(estimateText)
-                .font(EditorTheme.rowValue)
+                .font(rowValueFont)
                 .foregroundStyle(.white)
         }
     }
@@ -297,6 +476,8 @@ struct CollageSegmentPicker<Item: Hashable>: View {
     let items: [Item]
     @Binding var selection: Item
     let label: (Item) -> String
+    /// The wide inspector's version: the segments share the column's width.
+    var fillsWidth = false
 
     var body: some View {
         HStack(spacing: 2) {
@@ -308,13 +489,15 @@ struct CollageSegmentPicker<Item: Hashable>: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, AppTheme.Spacing.md)
-                        .frame(height: 28)
+                        .frame(maxWidth: fillsWidth ? .infinity : nil)
+                        .frame(height: fillsWidth ? 32 : 28)
                         // Neutral, not the accent: Save to Photos is the one
                         // accent button on this screen (DESIGN.md §3.1).
                         .background(
                             selection == item ? Color.white.opacity(0.24) : Color.clear,
                             in: Capsule()
                         )
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }

@@ -16,13 +16,17 @@ Nút `Save to Photos` cao 50, chữ đen trên amber. Dưới nó là nút phụ
 
 ## 2. Bố cục (Z1)
 
-- **Hai pane khi cửa sổ rộng ≥ 700pt, cao ≥ 600pt và rộng hơn cao** (iPad ngang, Duo trong 951×669): bản xem
-  trước trái lấy phần còn lại; cột phải rộng 400pt chứa thẻ kính, Save to Photos và Share…, nút ghim đáy cột.
-  - Cùng ngưỡng và cùng bề rộng cột với Resize ([FS-03.07 §4](FS-03-photo-editor/07-resize-and-compression.md)).
-  - Save to Photos và Share… nằm trọn trên vùng an toàn đáy, không cần cuộn.
-  - Cửa sổ thấp (cao dưới 720pt, [NF-05 §4](../04-non-functional-design/NF-05-device-and-os-compatibility.md)) vẫn
-    giữ hai pane; bản xem trước không có chiều cao cố định, khối nút ghim đáy cột phải và thấy được ở 669pt.
-- **Mọi cửa sổ khác** (iPhone, iPad dọc, Split View, Duo ngoài): một cột như hiện tại; bản xem trước co lại trước,
+- **Hai pane khi màn rộng ≥ `WideLayout.minimumWidth` (860pt)** (iPad ngang và dọc, Duo trong 951×669 — boards
+  `IP_CollageExport`, `IPP22_CollageExport`, `DI_CollageExport`): bản xem trước trái lấy phần còn lại; inspector phải
+  rộng 360pt, nền `panelSolid`, chứa 5 hàng (Size và Format là segmented rộng cả cột) cùng dòng album, cuộn được khi
+  thấp (669pt). Hành động chính nằm ở **mép phải toolbar** (FS-21.02b §2): Save to Photos (`Export…` cho ảnh
+  server), capsule 44pt — không ghim đáy cột.
+  - Cùng ngưỡng và cùng bề rộng inspector với Resize ([FS-03.07 §4](FS-03-photo-editor/07-resize-and-compression.md)).
+  - **Đang lưu**: thẻ tiến độ chung (`JobProgressCard`, 380pt) ở giữa bản xem trước — "Saving Collage…"
+    `.title3` semibold; khi đang tải bản gốc từ iCloud thì thanh xác định + dòng "Downloading from iCloud · 2 of 4 ·
+    48%" (và thời gian còn lại), sau đó (vẽ + mã hoá, không có phân số) là spinner + "2048 × 2048 · JPEG". Nút toolbar
+    thành "Saving…" mờ có spinner, inspector bị khoá. Board: tweak `exporting` của `IP_CollageExport`/`DI_CollageExport`.
+- **Mọi cửa sổ khác** (iPhone, Split View, Duo ngoài): một cột như hiện tại; bản xem trước co lại trước,
   khối nút **ghim trên home indicator**, không bao giờ bị đẩy xuống dưới đáy.
 - Thanh trên (đóng · tiêu đề Export) giữ nguyên ở cả hai bố cục.
 
@@ -47,10 +51,10 @@ Collage mẫu **C** = 4 ảnh HEIC 24MP trên thiết bị, mẫu 2×2, tỉ l�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | (Z1) iPad 13" ngang 1376×1032, collage C | mở Export | hai pane: xem trước trái, cột phải rộng 400pt; mép dưới Share… ≤ mép trên vùng an toàn đáy | ⚠️ chưa có — `Tools/ui-drive` dump |
-| AC-2 | (Z1) Duo trong 951×669, collage C | mở Export | hai pane như AC-1; cả 5 hàng của thẻ, Save to Photos và Share… thấy được không cần cuộn | ⚠️ chưa có — `Tools/sim-shot inner` |
+| AC-1 | (Z1) iPad 13" ngang 1376×1032, collage C | mở Export | hai pane: xem trước trái, inspector phải rộng 360pt; Save to Photos ở mép phải toolbar | ⚠️ chưa có — `Tools/ui-drive` dump |
+| AC-2 | (Z1) Duo trong 951×669, collage C | mở Export | hai pane như AC-1; cả 5 hàng của inspector và Save to Photos thấy được không cần cuộn | ⚠️ chưa có — `Tools/sim-shot inner` |
 | AC-3 | (Z1) iPhone 402×874 và Duo ngoài 466×678, collage C | mở Export | một cột; mép dưới Share… ≤ 874 − 34 (iPhone), nằm trái rail 84pt (Duo ngoài) | ⚠️ chưa có |
-| AC-4 | (Z1) iPad 13" dọc 1032×1376 và Split View 1/2 688pt | mở Export | một cột, không phải hai pane | ⚠️ chưa có |
+| AC-4 | (Z1) iPad 13" dọc 1032×1376; Split View 1/2 688pt | mở Export | dọc: hai pane như AC-1 (board `IPP22_CollageExport`); Split View 688pt: một cột | ⚠️ chưa có |
 | AC-5 | (H1, K26) collage C mở từ Library | chạm Share… | ảnh mới được lưu vào Photos và album `ShotDex Collages` **trước** khi share sheet mở; share sheet nhận đúng 1 ảnh 4:5 là asset đó | ⚠️ chưa có |
 | AC-6 | (H1) như AC-5, share sheet đang mở | đóng share sheet không chọn đích | ảnh mới vẫn trong thư viện và album; viewer mở ảnh mới | ⚠️ chưa có |
 | AC-7 | (H1) collage C, 1 ô là ảnh chỉ trên iCloud, máy không mạng | chạm Share… | không có ảnh mới, không mở share sheet; hiện lỗi tải kèm Retry · Cancel | ⚠️ chưa có — script `icloud-collage.json` thêm bước Share… |
