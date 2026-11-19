@@ -11,6 +11,7 @@ struct LibraryScreen: View {
     @Environment(\.presentServerUpload) private var presentServerUpload
     /// The grid's shape mode, shared with every other grid in the app.
     @Environment(AppNavigation.self) private var navigation
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// Owned by RootTabView so the search sheet shares the same state.
     let model: LibraryModel?
@@ -544,12 +545,18 @@ struct LibraryScreen: View {
         }
         // Index-detail dropdown: opened from the toolbar token, drops into the
         // grid's top safe area (just below the nav bar, clear of the toolbar
-        // buttons). Full-width, single GlassPanel material.
+        // buttons). Full-width on compact, 420pt top-right on regular; single
+        // GlassPanel material.
         .overlay(alignment: .top) {
             if isIndexPanelExpanded,
                model.isIndexing || model.isIndexStreamingPaused || model.indexICloudRetryDate != nil,
                !isSelecting {
                 indexDetailPanel(model)
+                    // Regular width: a 420pt card under the token at the
+                    // top-right, not a strip across 1000+pt (UX review
+                    // 2026-11-20).
+                    .frame(maxWidth: isRegularWidth ? Self.indexCardWidth : .infinity)
+                    .frame(maxWidth: .infinity, alignment: isRegularWidth ? .trailing : .center)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -880,46 +887,64 @@ struct LibraryScreen: View {
                 }
             }
         } else if model.isIndexing {
-            VStack(spacing: 12) {
-                if let progress = model.indexProgress, progress.total > 0 {
-                    ProgressView(value: progress.fraction)
-                        .frame(maxWidth: 220)
-                    Text("Reading photo and video info · \(progress.percent)%")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else {
-                    ProgressView()
-                    Text("Reading photo and video info…")
-                        .foregroundStyle(.secondary)
-                }
-                if let throughput = model.indexThroughput {
-                    Text(throughput.summaryLine)
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                if let network = model.indexNetworkStatus {
-                    Text(network.displayLine)
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                if let diagnostics = model.indexDiagnostics {
-                    ForEach(diagnostics.advisories, id: \.self) { advisory in
-                        Label(advisory, systemImage: "exclamationmark.triangle")
+            // First run: the progress is the screen — a headline, a bar the
+            // width of the block, the counts and time left, Cancel (UX
+            // review 2026-11-20: a 220pt bar was lost on a 13" display).
+            VStack(spacing: AppTheme.Spacing.xxl) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                    Text("Reading your library", comment: "Library first run: headline over the index progress bar")
+                        .font(.title3.weight(.semibold))
+                    Group {
+                        if let progress = model.indexProgress, progress.total > 0 {
+                            ProgressView(value: progress.fraction)
+                        } else {
+                            ProgressView().progressViewStyle(.linear)
+                        }
+                    }
+                    .padding(.vertical, AppTheme.Spacing.xs)
+                    if let progress = model.indexProgress, progress.total > 0 {
+                        Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos · \(progress.percent)%",
+                             comment: "Library first run: index progress counts under the bar")
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Reading photo and video info…")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
                     }
+                    if let throughput = model.indexThroughput {
+                        Text(throughput.summaryLine)
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    if let network = model.indexNetworkStatus {
+                        Text(network.displayLine)
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let diagnostics = model.indexDiagnostics {
+                        ForEach(diagnostics.advisories, id: \.self) { advisory in
+                            Label(advisory, systemImage: "exclamationmark.triangle")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Button("Cancel") {
+                        model.cancelIndexing()
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.top, AppTheme.Spacing.xs)
                 }
+                .frame(maxWidth: Self.indexCardWidth, alignment: .leading)
                 Text("ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .frame(maxWidth: Self.indexCardWidth)
             }
+            .padding(.horizontal, 32)
         } else if model.isIndexStreamingPaused {
             VStack(spacing: 12) {
                 Image(systemName: "wifi.slash")
@@ -1030,17 +1055,17 @@ struct LibraryScreen: View {
         GlassPanel {
             VStack(alignment: .leading, spacing: 8) {
                 Label("iCloud not responding", systemImage: "icloud.slash")
-                    .font(.caption.weight(.medium))
+                    .font(indexCardTitleFont)
                 HStack(spacing: 4) {
                     Text("Retrying in")
                     Text(timerInterval: Date.now...max(Date.now, retryAt), countsDown: true)
                         .monospacedDigit()
                 }
-                .font(.caption2)
+                .font(indexCardDetailFont)
                 .foregroundStyle(.secondary)
                 if model.pendingICloudCount > 0 {
                     Text("\(model.pendingICloudCount) items still waiting for iCloud.")
-                        .font(.caption2)
+                        .font(indexCardDetailFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1048,14 +1073,14 @@ struct LibraryScreen: View {
                     Button("Retry Now") {
                         model.retryIncompleteAssets()
                     }
-                    .font(.caption.weight(.medium))
+                    .font(indexCardTitleFont)
                     Button("Use Cellular") {
                         model.resumeIndexingOverCellular()
                     }
-                    .font(.caption.weight(.medium))
+                    .font(indexCardTitleFont)
                 }
             }
-            .padding(12)
+            .padding(isRegularWidth ? AppTheme.Spacing.lg : 12)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -1071,19 +1096,19 @@ struct LibraryScreen: View {
                     "Indexing paused — waiting for Wi-Fi",
                     systemImage: "wifi.slash"
                 )
-                .font(.caption.weight(.medium))
+                .font(indexCardTitleFont)
                 if model.pendingICloudCount > 0 {
                     Text("\(model.pendingICloudCount) items in iCloud left to read.")
-                        .font(.caption2)
+                        .font(indexCardDetailFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Button("Use Cellular") {
                     model.resumeIndexingOverCellular()
                 }
-                .font(.caption.weight(.medium))
+                .font(indexCardTitleFont)
             }
-            .padding(12)
+            .padding(isRegularWidth ? AppTheme.Spacing.lg : 12)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -1106,31 +1131,31 @@ struct LibraryScreen: View {
                 HStack(spacing: 12) {
                     if let progress {
                         Text("Reading photo and video info · \(progress.percent)%")
-                            .font(.caption.weight(.medium).monospacedDigit())
+                            .font(indexCardTitleFont.monospacedDigit())
                     } else {
                         Text("Reading photo and video info…")
-                            .font(.caption.weight(.medium))
+                            .font(indexCardTitleFont)
                     }
                     Spacer()
                     Image(systemName: "chevron.up")
-                        .font(.caption2.weight(.semibold))
+                        .font(indexCardDetailFont.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
                 ProgressView(value: progress?.fraction ?? 0)
                 if let progress, progress.total > 0 {
                     Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos")
-                        .font(.caption2.monospacedDigit())
+                        .font(indexCardDetailFont.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
                 if let throughput = model.indexThroughput {
                     Text(throughput.summaryLine)
-                        .font(.caption2.monospacedDigit())
+                        .font(indexCardDetailFont.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let network = model.indexNetworkStatus {
                     Text(network.displayLine)
-                        .font(.caption2.monospacedDigit())
+                        .font(indexCardDetailFont.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1139,21 +1164,21 @@ struct LibraryScreen: View {
                 if let diagnostics = model.indexDiagnostics {
                     ForEach(diagnostics.advisories, id: \.self) { advisory in
                         Label(advisory, systemImage: "exclamationmark.triangle")
-                            .font(.caption2)
+                            .font(indexCardDetailFont)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Text("ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes.")
-                    .font(.caption2)
+                    .font(indexCardDetailFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("Cancel") {
                     model.cancelIndexing()
                 }
-                .font(.caption.weight(.medium))
+                .font(indexCardTitleFont)
             }
-            .padding(12)
+            .padding(isRegularWidth ? AppTheme.Spacing.lg : 12)
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
@@ -1164,6 +1189,22 @@ struct LibraryScreen: View {
                 ?? "Indexing"
         )
         .accessibilityHint("Double tap to collapse")
+    }
+
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
+    /// The index cards and the first-run progress block: never wider than
+    /// this on an iPad or the Duo's inner display.
+    static let indexCardWidth: CGFloat = 420
+
+    /// Caption sizes are a phone's dropdown; at 13" the card reads at
+    /// `.subheadline` / `.footnote`.
+    private var indexCardTitleFont: Font {
+        isRegularWidth ? .subheadline.weight(.semibold) : .caption.weight(.medium)
+    }
+
+    private var indexCardDetailFont: Font {
+        isRegularWidth ? .footnote : .caption2
     }
 
     private func setIndexPanelExpanded(_ expanded: Bool) {
