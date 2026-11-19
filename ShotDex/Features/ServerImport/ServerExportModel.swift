@@ -65,7 +65,15 @@ final class ServerExportModel {
     /// The name typed in the sheet, without the extension.
     var name: String
     private(set) var report = ServerExportReport()
-    private(set) var progressLine = ""
+    /// Where the run is (FS-17.06 §6): "Exporting 2 of 5", empty before the
+    /// first photo starts.
+    private(set) var progressHeadline = ""
+    /// What is happening to that photo: rendering it, or sending it where.
+    private(set) var progressDetail = ""
+    /// The bar: steps begun over every photo at every destination, 0…1.
+    private(set) var progressFraction: Double = 0
+    /// The destination the run is on, for the render events that do not say.
+    private var currentDestinationIndex = 0
 
     /// The rows of the sheet, before Other Folder has a folder.
     enum Choice: Hashable {
@@ -313,7 +321,10 @@ final class ServerExportModel {
         self.exporter = exporter
         lastJob = job
         stage = .exporting
-        progressLine = ""
+        progressHeadline = ""
+        progressDetail = ""
+        progressFraction = 0
+        currentDestinationIndex = 0
         task = Task { [weak self] in
             let report = await exporter.run(job)
             guard let self else { return }
@@ -325,12 +336,22 @@ final class ServerExportModel {
 
     private func handle(_ event: ServerEditExporter.Event) {
         let count = composed == nil ? photos.count : 1
+        let order = (lastJob?.destinations ?? []).sorted { $0.order < $1.order }
+        let steps = max(1, order.count * count)
+        let index: Int
         switch event {
-        case .rendering(let index):
-            progressLine = String(localized: "Rendering \(index + 1) of \(count)", comment: "Server export: rendering the edit of one photo")
-        case .sending(let destination, let index):
-            progressLine = String(localized: "\(title(of: destination)): \(index + 1) of \(count)", comment: "Server export: sending one photo to a destination")
+        case .rendering(let photoIndex):
+            index = photoIndex
+            progressDetail = String(localized: "Rendering the edit", comment: "Server export progress: the photo's edit is being rendered")
+        case .sending(let destination, let photoIndex):
+            index = photoIndex
+            currentDestinationIndex = order.firstIndex(of: destination) ?? currentDestinationIndex
+            progressDetail = String(localized: "To \(title(of: destination))", comment: "Server export progress: where the photo is being sent, e.g. To Original Folder")
         }
+        progressHeadline = count == 1
+            ? String(localized: "Exporting…", comment: "Server export progress headline, one file")
+            : String(localized: "Exporting \(index + 1) of \(count)", comment: "Server export progress headline, e.g. Exporting 2 of 5")
+        progressFraction = min(1, Double(currentDestinationIndex * count + index) / Double(steps))
     }
 
     func title(of destination: ServerExportDestination) -> String {

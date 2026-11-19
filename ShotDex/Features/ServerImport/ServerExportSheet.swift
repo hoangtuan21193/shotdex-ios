@@ -22,6 +22,10 @@ struct ServerExportSheet: View {
     @State private var isPickingFilesFolder = false
     /// The Watermark screen, pushed from its row (FS-05.04 §4).
     @State private var watermarkModel: WatermarkModel?
+    /// Cancel mid-run asks first: a file being written can be left half-sent.
+    @State private var isConfirmingStop = false
+    /// When the run began, for "About N min left".
+    @State private var exportStartedAt = Date()
 
     var body: some View {
         NavigationStack(path: $folderPath) {
@@ -41,6 +45,17 @@ struct ServerExportSheet: View {
         .interactiveDismissDisabled(model.stage == .exporting)
         .onChange(of: scenePhase) { _, phase in
             if phase == .background, model.stage == .exporting { model.cancel() }
+        }
+        .onChange(of: model.stage) { _, stage in
+            // A run that ends takes its confirmation with it.
+            if stage == .exporting { exportStartedAt = Date() } else { isConfirmingStop = false }
+        }
+        .alert(String(localized: "Stop Exporting?", comment: "Server export: confirm stopping a running export"), isPresented: $isConfirmingStop) {
+            Button(String(localized: "Stop", comment: "Server export: stop the running export"), role: .destructive) { model.cancel() }
+            Button(String(localized: "Keep Exporting", comment: "Server export: close the stop confirmation, the export continues"), role: .cancel) {}
+        } message: {
+            Text("Files already sent stay where they are. The file being sent now may be left incomplete.",
+                 comment: "Server export: what stopping a running export leaves behind")
         }
         .onChange(of: model.stage) { _, stage in
             guard stage == .done else { return }
@@ -123,7 +138,7 @@ struct ServerExportSheet: View {
             }
         case .exporting:
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { model.cancel() }
+                Button("Cancel") { isConfirmingStop = true }
             }
         case .finishedWithFailures, .done:
             ToolbarItem(placement: .confirmationAction) {
@@ -360,20 +375,43 @@ struct ServerExportSheet: View {
 
     // MARK: Progress
 
+    /// The running export as the sheet's one subject (`ServerUploadSheet`'s
+    /// pattern): a `.title3` headline, a bar the section's full width and
+    /// one footnote line — where the photo is going, then the time left
+    /// once the bar has moved enough to tell.
     private var progressForm: some View {
         Form {
             Section {
-                HStack(spacing: 12) {
-                    ProgressView()
-                    Text(model.progressLine.isEmpty
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                    Text(model.progressHeadline.isEmpty
                          ? String(localized: "Preparing…", comment: "Server export: before the first render")
-                         : model.progressLine)
+                         : model.progressHeadline)
+                        .font(.title3.weight(.semibold))
                         .monospacedDigit()
+                    ProgressView(value: model.progressFraction)
+                        .accessibilityLabel(Text("Export progress", comment: "Server export: VoiceOver name of the progress bar"))
+                        .accessibilityValue(Text(model.progressFraction, format: .percent.precision(.fractionLength(0))))
+                    if let detail = progressDetailLine {
+                        Text(verbatim: detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
                 }
+                .padding(.vertical, AppTheme.Spacing.sm)
+                .accessibilityElement(children: .combine)
             } footer: {
                 Text("Keep ShotDex open until the export finishes.", comment: "Server export: progress footer")
             }
         }
+    }
+
+    private var progressDetailLine: String? {
+        let parts = [
+            model.progressDetail.isEmpty ? nil : model.progressDetail,
+            JobProgressCard<EmptyView>.timeLeft(fraction: model.progressFraction, since: exportStartedAt),
+        ].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     // MARK: Result
