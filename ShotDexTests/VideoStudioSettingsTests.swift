@@ -130,6 +130,6 @@ extension VideoStudioSettingsTests {
         #expect(origin.x + sheet.width - sheet.inset - sheet.exportSize.width == 744)
         #expect(origin.y + sheet.readyHeight - sheet.footBottom - sheet.footHeight == 768)
         #expect(2 * sheet.cardSize.width + 12 == sheet.width - 2 * sheet.inset)
-        #expect(sheet.exportingHeight == 572 && sheet.cancelSize == CGSize(width: 180, height: 44) && sheet.progressWidth == 360)
+        #expect(sheet.exportingHeight == 300)
     }
 }

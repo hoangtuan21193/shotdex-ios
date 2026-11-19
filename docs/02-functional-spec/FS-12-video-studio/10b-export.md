@@ -46,7 +46,7 @@ chạm nhầm không được tốn vài phút encode.*
 | Trạng thái | Hiển thị |
 |---|---|
 | Sẵn sàng | danh sách preset của [16 §5](16-export-presets.md) + dòng LUT mất (§3) + nút xuất |
-| Đang xuất | "Exporting… 62%" + thanh tiến độ theo bề rộng nút xuất + **Cancel Export** chữ đỏ trên nền đỏ tối, cao 48, ở chỗ nút xuất; ✕ ẩn; Back · Undo · Redo, timeline, khung không nhận chạm. **iPad** (`IL5_Export`, `IP_Export`): sheet 700×572, lưới preset và chân sheet nhường chỗ cho tiến độ ở giữa phía trên: "Exporting 62%" `.title3` semibold, thanh rộng cả cột (652), một dòng `.footnote` "0:24 · H.264 · About 2 min left" (thời gian còn lại khi đã ước được — ≥5% và ≥3 s), **Cancel Export** 240×44 ở giữa, hỏi lại trước khi huỷ ("Cancel Export?" · Keep Exporting); pill Export ở toolbar về nền `fill`. Panel iPhone/Duo: Cancel Export cũng hỏi lại |
+| Đang xuất | "Exporting… 62%" + thanh tiến độ theo bề rộng nút xuất + **Cancel Export** chữ đỏ trên nền đỏ tối, cao 48, ở chỗ nút xuất; ✕ ẩn; Back · Undo · Redo, timeline, khung không nhận chạm. **iPad** (`IL5_Export`, `IP_Export`): sheet 700×300 (chỉ khối tiến độ, không còn khoảng trống bên dưới), lưới preset và chân sheet nhường chỗ cho tiến độ ở giữa phía trên: "Exporting 62%" `.title3` semibold, thanh rộng cả cột (652), một dòng `.footnote` "0:24 · H.264 · About 2 min left" (thời gian còn lại khi đã ước được — ≥5% và ≥3 s), **Cancel Export** 240×44 ở giữa, hỏi lại trước khi huỷ ("Cancel Export?" · Keep Exporting); pill Export ở toolbar về nền `fill`. Panel iPhone/Duo: Cancel Export cũng hỏi lại |
 | Đang lưu | "Saving to Photos…", không Cancel |
 | Xong | Video Studio đóng, viewer hiện video mới ([01 §2](01-render-and-export-pipeline.md)) |
 | Lỗi | chữ đỏ nói lỗi + nút xuất trở lại |

@@ -357,14 +357,14 @@ enum VideoStudioMetrics {
     static let videoSettingsPopoverSize = CGSize(width: 400, height: 548)
 
     /// The iPad's Export Video sheet (FS-12.10b §2, boards IL5_Export,
-    /// F8_IL_ExportPresets): 700 wide, 620 tall ready and 572 exporting,
-    /// radius 22, 24 in; Close 44 16 from the top and the edge; a foot 44
-    /// tall 14 from the bottom with Export 270×44 — or Cancel Export 180×44
-    /// and a 360×6 bar. A preset card is 320×72.
+    /// F8_IL_ExportPresets): 700 wide, 620 tall ready and 300 exporting —
+    /// just the progress block, no empty slab under it — radius 22, 24 in;
+    /// Close 44 16 from the top and the edge; a foot 44 tall 14 from the
+    /// bottom with Export 270×44. A preset card is 320×72.
     enum ExportSheet {
         static let width: CGFloat = 700
         static let readyHeight: CGFloat = 620
-        static let exportingHeight: CGFloat = 572
+        static let exportingHeight: CGFloat = 300
         static let cornerRadius: CGFloat = 22
         static let inset: CGFloat = 24
         static let titleTop: CGFloat = 20
@@ -375,8 +375,6 @@ enum VideoStudioMetrics {
         static let footHeight: CGFloat = 44
         static let footBottom: CGFloat = 14
         static let exportSize = CGSize(width: 270, height: 44)
-        static let cancelSize = CGSize(width: 180, height: 44)
-        static let progressWidth: CGFloat = 360
     }
 
     /// The iPad's Video Settings form (FS-12.10 §3, board
