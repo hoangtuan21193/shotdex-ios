@@ -289,8 +289,7 @@ struct ServerUploadSheet: View {
         guard let seconds = model.progress.secondsLeft else {
             return String(localized: "\(done) of \(total)", comment: "Upload to Server: bytes sent of total")
         }
-        let left = Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1))
-        return String(localized: "\(done) of \(total) · about \(left) left", comment: "Upload to Server: bytes sent of total, and time left")
+        return String(localized: "\(done) of \(total) · ", comment: "Upload to Server: bytes sent of total before the time left, e.g. 1.2 GB of 4 GB · About 3 min left") + TimeLeftFormat.string(seconds: seconds)
     }
 
     private func phaseTitle(_ phase: ServerUploadPhase) -> String {

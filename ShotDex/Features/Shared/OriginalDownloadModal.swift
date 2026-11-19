@@ -246,12 +246,7 @@ struct JobProgressCard<Accessory: View>: View {
         guard let fraction, fraction >= 0.05, fraction < 1 else { return nil }
         let elapsed = now.timeIntervalSince(start)
         guard elapsed >= 3 else { return nil }
-        let remaining = elapsed * (1 - fraction) / fraction
-        if remaining < 60 {
-            return String(localized: "Less than a minute left", comment: "Progress card: time estimate under one minute")
-        }
-        let minutes = Int((remaining / 60).rounded(.up))
-        return String(localized: "About \(minutes) min left", comment: "Progress card: estimated minutes remaining")
+        return TimeLeftFormat.string(seconds: elapsed * (1 - fraction) / fraction)
     }
 
     private var primaryText: Color { style == .editor ? .white : .primary }

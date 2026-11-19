@@ -64,8 +64,7 @@ struct MacBackgroundJobs: View {
                 var detail = String(localized: "\(progress.processed.formatted()) of \(progress.total.formatted()) photos",
                                     comment: "Mac Activity › Background: index progress")
                 if let left = library.indexThroughput?.remaining {
-                    let minutes = max(1, Int(left.components.seconds / 60))
-                    detail += " · " + String(localized: "about \(minutes) min left", comment: "Mac Activity › Background: time left")
+                    detail += " · " + TimeLeftFormat.string(left)
                 }
                 rows.append(Row(id: "index", symbol: "arrow.triangle.2.circlepath",
                                 title: String(localized: "Indexing the library", comment: "Mac Activity › Background: the index reads photos' metadata"),

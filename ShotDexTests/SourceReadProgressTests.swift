@@ -5,10 +5,10 @@ import Testing
 /// FS-19.01 §4: the banner's words while a folder is read.
 struct SourceReadProgressTests {
     @Test func timeLeftIsWholeMinutesNeverSeconds() {
-        #expect(SourceReadProgress.timeLeft(20) == "about 1 min left")
-        #expect(SourceReadProgress.timeLeft(130) == "about 2 min left")
-        #expect(SourceReadProgress.timeLeft(3600) == "about 1 h left")
-        #expect(SourceReadProgress.timeLeft(4800) == "about 1 h 20 min left")
+        #expect(SourceReadProgress.timeLeft(20) == "Less than a minute left")
+        #expect(SourceReadProgress.timeLeft(130) == "About 3 min left")
+        #expect(SourceReadProgress.timeLeft(3600) == "About 1 hr left")
+        #expect(SourceReadProgress.timeLeft(4800) == "About 1 hr 20 min left")
     }
 
     @Test func estimatingUntilTheFirst200Files() {

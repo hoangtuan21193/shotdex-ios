@@ -325,7 +325,7 @@ enum MacIngestActivityWords {
         min(1, model.liveProgress.fraction)
     }
 
-    /// `To T7 RAW Archive › RAW/2026 · 12.6 GB of 24.6 GB · 2 min left`.
+    /// `To T7 RAW Archive › RAW/2026 · 12.6 GB of 24.6 GB · About 2 min left`.
     static func line(_ model: IngestModel) -> String {
         var place = model.destination?.name ?? ""
         if let folder = model.files.folder, !folder.isEmpty { place += " › " + folder }
@@ -342,9 +342,7 @@ enum MacIngestActivityWords {
         } else if model.isPaused {
             parts.append(String(localized: "Pausing after this photo…", comment: "Mac Activity › card import: Pause pressed, the photo in hand finishes first"))
         } else if let seconds = model.secondsLeft {
-            parts.append(seconds < 60
-                         ? String(localized: "less than a minute left", comment: "Mac Activity › card import: time left")
-                         : String(localized: "\((seconds + 59) / 60) min left", comment: "Mac Activity › card import: time left in minutes"))
+            parts.append(TimeLeftFormat.string(seconds: TimeInterval(seconds)))
         }
         return parts.joined(separator: " · ")
     }

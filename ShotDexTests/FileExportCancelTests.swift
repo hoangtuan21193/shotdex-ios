@@ -105,7 +105,7 @@ extension FileExportRunnerTests {
 
     @Test func progressLines() {
         #expect(ExportCopy.exporting(212, of: 500) == "Exporting 212 of 500")
-        #expect(ExportCopy.timeLeft(240) == "about 4 min left")
-        #expect(ExportCopy.timeLeft(20) == "less than a minute left")
+        #expect(ExportCopy.timeLeft(240) == "About 4 min left")
+        #expect(ExportCopy.timeLeft(20) == "Less than a minute left")
     }
 }

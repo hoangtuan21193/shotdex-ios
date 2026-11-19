@@ -189,11 +189,7 @@ enum ExportCopy {
     }
 
     static func timeLeft(_ seconds: TimeInterval) -> String {
-        let minutes = Int((seconds / 60).rounded())
-        if minutes < 1 {
-            return String(localized: "less than a minute left", table: table, comment: "Export progress: time left under a minute")
-        }
-        return String(localized: "about \(minutes) min left", table: table, comment: "Export progress: time left in minutes")
+        TimeLeftFormat.string(seconds: seconds)
     }
 
     static func step(_ step: FileExportStep) -> String {

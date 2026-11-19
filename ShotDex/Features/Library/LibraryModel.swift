@@ -29,23 +29,10 @@ struct IndexThroughput: Equatable {
         "\(remainingText ?? String(localized: "Estimating time…")) · \(rateText)"
     }
 
-    /// e.g. "About 2 hours left", "About 1 hr 20 min left", "About 45 min left",
-    /// to the nearest minute. "About" is honest — the speed moves.
+    /// e.g. "About 2 hr left", "About 1 hr 20 min left", "About 45 min left"
+    /// — `TimeLeftFormat`. "About" is honest — the speed moves.
     static func format(_ duration: Duration) -> String {
-        let total = Int(duration.components.seconds)
-        if total < 60 { return String(localized: "Less than a minute left") }
-        let about = String(localized: "About")
-        let left = String(localized: "left")
-        let rounded = Int((Double(total) / 60).rounded())
-        let hours = rounded / 60
-        let minutes = rounded % 60
-        if hours >= 1 {
-            if minutes == 0 {
-                return "\(about) \(hours) hour\(hours == 1 ? "" : "s") \(left)"
-            }
-            return "\(about) \(hours) hr \(minutes) min \(left)"
-        }
-        return "\(about) \(minutes) min \(left)"
+        TimeLeftFormat.string(duration)
     }
 }
 

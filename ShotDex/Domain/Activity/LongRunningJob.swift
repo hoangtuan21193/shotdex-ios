@@ -225,10 +225,37 @@ enum CommonPhotosJob {
         }
     }
 
-    /// "about 4 min left".
+    /// "About 4 min left" — `TimeLeftFormat`, like every other progress line.
     static func timeLeft(_ seconds: Double) -> String {
-        let left = Duration.seconds(seconds.rounded())
-        let style: Duration.UnitsFormatStyle = .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1)
-        return String(localized: "about \(left.formatted(style)) left", comment: "Common photos: time left")
+        TimeLeftFormat.string(seconds: seconds)
+    }
+}
+
+/// The one way every progress line says how long is left — Activity rows,
+/// export, Compress Videos, card import, indexing, source reads, server
+/// transfers and the progress card all print this. Capitalised, since it
+/// always follows " · " in a footnote or starts a line:
+/// "Less than a minute left" under 60 s, "About N min left" (minutes rounded
+/// up) under an hour, "About N hr left" / "About N hr M min left" past it.
+/// The counts are `%lld` arguments, so the String Catalog can give each a
+/// plural variant; nothing here appends an "s" by hand.
+enum TimeLeftFormat {
+    static func string(seconds: TimeInterval) -> String {
+        guard seconds.isFinite, seconds >= 60 else {
+            return String(localized: "Less than a minute left", comment: "Progress: time left under one minute")
+        }
+        let minutes = Int((seconds / 60).rounded(.up))
+        guard minutes >= 60 else {
+            return String(localized: "About \(minutes) min left", comment: "Progress: time left in minutes, under an hour")
+        }
+        let hours = minutes / 60, rest = minutes % 60
+        return rest == 0
+            ? String(localized: "About \(hours) hr left", comment: "Progress: time left in whole hours")
+            : String(localized: "About \(hours) hr \(rest) min left", comment: "Progress: time left in hours and minutes")
+    }
+
+    static func string(_ duration: Duration) -> String {
+        let parts = duration.components
+        return string(seconds: Double(parts.seconds) + Double(parts.attoseconds) / 1e18)
     }
 }

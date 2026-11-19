@@ -330,8 +330,8 @@ struct IndexThroughputTests {
         }
         #expect(text(30) == "Less than a minute left")
         #expect(text(45 * 60) == "About 45 min left")
-        #expect(text(2 * 3600) == "About 2 hours left")
-        #expect(text(3600) == "About 1 hour left")
+        #expect(text(2 * 3600) == "About 2 hr left")
+        #expect(text(3600) == "About 1 hr left")
         #expect(text(2 * 3600 + 15 * 60) == "About 2 hr 15 min left")
     }
 

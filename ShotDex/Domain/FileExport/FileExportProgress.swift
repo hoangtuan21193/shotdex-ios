@@ -38,7 +38,7 @@ struct FileExportProgress: Sendable, Equatable {
         ExportCopy.exporting(current, of: total)
     }
 
-    /// `1.4 of 3.2 GB · about 4 min left`.
+    /// `1.4 of 3.2 GB · About 4 min left`.
     var detail: String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

@@ -23,7 +23,7 @@ import Testing
         let seconds = estimate.secondsLeft(remaining: total - 200)
         #expect(seconds.map { abs($0 - 180.6) < 0.01 } == true)
         #expect(IndexThroughput(photosPerMinute: 1_200, remaining: seconds.map { .seconds($0) }).remainingText
-            == "About 3 min left")
+            == "About 4 min left")
     }
 
     /// The speed is the last 200 items', so a run that slows down shows it.

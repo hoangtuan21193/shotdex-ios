@@ -34,7 +34,7 @@ struct SourceReadProgress: Equatable, Sendable, Codable {
             : String(localized: "Reading “\(sourceName)”", comment: "Source read banner: a source read again")
     }
 
-    /// "1,240 of 3,812 photos read · about 2 min left" — "Estimating time…"
+    /// "1,240 of 3,812 photos read · About 2 min left" — "Estimating time…"
     /// before the first 200 files, no time while paused.
     func detail(now: Date = Date()) -> String {
         let read = String(localized: "\(done) of \(total) photos read", comment: "Source read banner: files read so far (plural)")
@@ -59,16 +59,9 @@ struct SourceReadProgress: Equatable, Sendable, Codable {
         String(localized: "Indexing \(done) of \(total)", comment: "Mac sidebar foot: a source being read (plural)")
     }
 
-    /// Whole minutes, never seconds: "about 2 min left", "about 1 h 20 min left".
+    /// "About 2 min left", "About 1 hr 20 min left" — `TimeLeftFormat`.
     static func timeLeft(_ seconds: TimeInterval) -> String {
-        let minutes = max(1, Int((seconds / 60).rounded()))
-        guard minutes >= 60 else {
-            return String(localized: "about \(minutes) min left", comment: "Source read: time left in minutes")
-        }
-        let hours = minutes / 60, rest = minutes % 60
-        return rest == 0
-            ? String(localized: "about \(hours) h left", comment: "Source read: time left in whole hours")
-            : String(localized: "about \(hours) h \(rest) min left", comment: "Source read: time left in hours and minutes")
+        TimeLeftFormat.string(seconds: seconds)
     }
 }
 

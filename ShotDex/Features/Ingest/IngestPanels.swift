@@ -251,10 +251,7 @@ struct IngestProgressPanel: View {
             return bytes + " · " + String(localized: "Paused", table: IngestCopy.table, comment: "Card import progress: the run is paused")
         }
         guard let seconds = model.secondsLeft else { return bytes }
-        let left = Duration.seconds(max(60, seconds))
-            .formatted(.units(allowed: [.hours, .minutes], width: .abbreviated, maximumUnitCount: 2))
-        return bytes + " · " + String(localized: "About \(left) left", table: IngestCopy.table,
-                                      comment: "Card import progress: time left at this run's pace, e.g. About 4 min left")
+        return bytes + " · " + TimeLeftFormat.string(seconds: TimeInterval(seconds))
     }
 
     /// One stage as a compact column: name and percent over a thin bar.

@@ -48,10 +48,7 @@ enum VideoCompressionCopy {
     }
 
     static func timeLeft(_ seconds: TimeInterval) -> String {
-        let minutes = Int((seconds / 60).rounded(.up))
-        return minutes <= 1
-            ? String(localized: "About a minute left", comment: "Compress Videos: running detail, time left")
-            : String(localized: "About \(minutes) min left", comment: "Compress Videos: running detail, time left in minutes")
+        TimeLeftFormat.string(seconds: seconds)
     }
 
     /// The finished headline, the number the user came for.

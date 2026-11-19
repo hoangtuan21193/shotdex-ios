@@ -22,7 +22,7 @@ import Testing
         #expect(job.title == "Common photos · Tuấn + Vợ → Shared")
         #expect(job.actions == [.pause, .stop, .showLog])
         #expect(job.status.hasPrefix("Copying 121 of 280 · "))
-        #expect(job.status.hasSuffix("about 4 min left"))
+        #expect(job.status.hasSuffix(" · About 4 min left"))
         #expect(job.detail == "IMG_4188.HEIC · reading back SHA-256 in Shared")
         #expect(job.aside == "43%")
         #expect(job.rank == 0)
@@ -162,5 +162,24 @@ import Testing
         taken.skipped = 0
         taken.undone = 8
         #expect(CommonPhotosJob.job(taken).status == "Done — 8 copied · 0 skipped · 0 failed · 8 undone")
+    }
+}
+
+/// One time-left wording for every progress line (`TimeLeftFormat`).
+struct TimeLeftFormatTests {
+    static let cases: [(seconds: Double, expected: String)] = [
+        (30, "Less than a minute left"),
+        (61, "About 2 min left"),
+        (59 * 60, "About 59 min left"),
+        (60 * 60, "About 1 hr left"),
+        (80 * 60, "About 1 hr 20 min left"),
+        (120 * 60, "About 2 hr left"),
+    ]
+
+    @Test func wording() {
+        for (seconds, expected) in Self.cases {
+            #expect(TimeLeftFormat.string(seconds: seconds) == expected)
+            #expect(TimeLeftFormat.string(.seconds(seconds)) == expected)
+        }
     }
 }

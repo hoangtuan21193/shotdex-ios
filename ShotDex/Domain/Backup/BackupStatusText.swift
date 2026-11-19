@@ -56,8 +56,7 @@ struct BackupStatusText: Equatable, Sendable {
             if p.isFirstRun {
                 var parts = [String(localized: "\(p.done.formatted()) of \(p.total.formatted())", comment: "Backup card: files done of files to copy"), bytes]
                 if let rate = input.bytesPerSecond, rate > 0 {
-                    let minutes = max(1, Int((Double(p.bytesTotal - p.bytesDone) / rate / 60).rounded()))
-                    parts.append(String(localized: "about \(minutes) min left", comment: "Backup card: time left estimate"))
+                    parts.append(TimeLeftFormat.string(seconds: Double(p.bytesTotal - p.bytesDone) / rate))
                 }
                 return BackupStatusText(
                     title: String(localized: "Backing Up · \(Int((fraction * 100).rounded()))%", comment: "Backup card: first run, percent done"),
