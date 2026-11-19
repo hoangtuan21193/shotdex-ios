@@ -256,26 +256,16 @@ struct DuplicatesScreen: View {
 
     @ViewBuilder
     private func rescanButton(_ model: DuplicatesModel) -> some View {
-        // Wide screens have no status band with a Cancel: the button stops
-        // the check while one runs.
-        if isRegular, model.checkStep != nil {
-            Button {
-                model.cancelScan()
-            } label: {
-                Image(systemName: "xmark")
-            }
-            .tint(.primary)
-            .accessibilityLabel(String(localized: "Stop Checking", comment: "Duplicates toolbar on wide screens: stop the check in progress"))
-        } else {
-            Button {
-                model.startScan()
-            } label: {
-                Image(systemName: "arrow.clockwise")
-            }
-            .tint(.primary)
-            .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
-            .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates toolbar: scan the library again"))
+        // Stopping a check is the labelled button on the progress (band on
+        // compact, card on wide screens), not an icon up here.
+        Button {
+            model.startScan()
+        } label: {
+            Image(systemName: "arrow.clockwise")
         }
+        .tint(.primary)
+        .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
+        .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates toolbar: scan the library again"))
     }
 
     // MARK: Cards
@@ -283,11 +273,26 @@ struct DuplicatesScreen: View {
     @ViewBuilder
     private func cardList(_ model: DuplicatesModel) -> some View {
         if model.sortedGroups.isEmpty {
-            emptyState(model)
-                .frame(maxWidth: .infinity)
-                .padding(.top, AppTheme.Spacing.xxl)
+            if isRegular, let step = model.checkStep {
+                // First check on a wide screen: the progress is the screen.
+                DuplicatesCheckProgress(step: step, cancel: model.cancelScan, isCard: true)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, AppTheme.Spacing.xxl * 2)
+            } else {
+                emptyState(model)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, AppTheme.Spacing.xxl)
+            }
         } else if isRegular {
-            groupRows(model)
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                // Wide screens have no band under the bar: the check's
+                // progress is a card on top of the list (UX review
+                // 2026-11-20 — a toolbar spinner was all there was).
+                if let step = model.checkStep {
+                    DuplicatesCheckProgress(step: step, cancel: model.cancelScan, isCard: true)
+                }
+                groupRows(model)
+            }
         } else {
             cards(model)
         }
@@ -668,28 +673,13 @@ private struct DuplicatesHeaderBand: View {
     }
 
     /// Regular width (FS-06.06 §7.3, user 2026-11-16): the segmented filter
-    /// centered in the navigation bar, the status or the check's progress
-    /// right of it — no band under the bar.
+    /// centered in the navigation bar — no band under the bar. A running
+    /// check shows as a card on top of the list, not a spinner here.
+    @ViewBuilder
     var toolbarRow: some View {
-        // Filter centered, and only a small spinner right of it while a check
-        // runs — no "Checked …" text (user, 2026-11-16). The empty twin on the
-        // left keeps the filter centered.
-        HStack(spacing: AppTheme.Spacing.md) {
-            Color.clear.frame(width: 20, height: 1)
-            if !model.presentFilters.isEmpty {
-                filterPicker
-                    .frame(width: Self.toolbarFilterWidth)
-            }
-            Group {
-                if model.checkStep != nil {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel(String(localized: "Checking for duplicates", comment: "Duplicates wide toolbar: spinner while a check runs"))
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(width: 20, height: 20)
+        if !model.presentFilters.isEmpty {
+            filterPicker
+                .frame(width: Self.toolbarFilterWidth)
         }
     }
 

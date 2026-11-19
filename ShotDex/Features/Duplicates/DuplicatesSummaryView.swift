@@ -40,10 +40,56 @@ struct DuplicatesCheckProgress: View {
     /// The band's status slot: two lines, the 44pt Cancel row and the bar.
     static let height: CGFloat = 54
 
+    /// Regular width: the hero card — the step as a `.title3` headline,
+    /// a bar the width of the card, one detail line and a labelled Stop
+    /// Checking. Every step fills the same single-line slots, so a step
+    /// change never moves the list under it.
+    static let cardWidth: CGFloat = 420
+    static let cardHeight: CGFloat = 156
+
     let step: DuplicatesCheckStep
     let cancel: () -> Void
+    var isCard = false
 
     var body: some View {
+        if isCard { card } else { band }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Text(Self.title(step))
+                .font(.title3.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Group {
+                if let fraction = Self.fraction(step) {
+                    ProgressView(value: fraction)
+                } else {
+                    ProgressView().progressViewStyle(.linear)
+                }
+            }
+            .padding(.vertical, AppTheme.Spacing.xs)
+            Text(Self.detail(step))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            // Accent, not red (Q8). Stopping keeps what was read, so no
+            // confirm. Grouping cannot stop: the button stays, disabled,
+            // so the card keeps its shape.
+            Button(String(localized: "Stop Checking", comment: "Duplicates wide screens: stop the check in progress"), action: cancel)
+                .buttonStyle(.bordered)
+                .disabled(step == .grouping)
+        }
+        .padding(AppTheme.Spacing.lg)
+        .frame(maxWidth: Self.cardWidth, alignment: .leading)
+        .frame(minHeight: Self.cardHeight, alignment: .top)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
+        .accessibilityElement(children: .contain)
+    }
+
+    private var band: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
             HStack(spacing: AppTheme.Spacing.sm) {
                 VStack(alignment: .leading, spacing: 0) {
