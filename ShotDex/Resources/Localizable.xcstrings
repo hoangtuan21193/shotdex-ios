@@ -255,12 +255,34 @@
         }
       }
     },
+    "%@ → %@ · −%@" : {
+      "comment" : "Compress Videos summary row: size before, after, and how much smaller",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$@ · −%3$@"
+          }
+        }
+      }
+    },
     "%@ → %@, %@, %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ → %2$@, %3$@, %4$@"
+          }
+        }
+      }
+    },
+    "%@ → about %@ · saves about %@" : {
+      "comment" : "Compress Videos: estimate line, total before → estimated after and the space saved",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → about %2$@ · saves about %3$@"
           }
         }
       }
@@ -272,6 +294,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ + %2$@"
+          }
+        }
+      }
+    },
+    "%@ × %@" : {
+      "comment" : "What differs: pixel dimensions, width by height, e.g. 4032 × 3024",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ × %2$@"
           }
         }
       }
@@ -330,16 +363,8 @@
     "%@ copied" : {
       "comment" : "Activity: count"
     },
-    "%@ copies · %@" : {
-      "comment" : "Duplicates Quick clean band: copies to remove and their size",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ copies · %2$@"
-          }
-        }
-      }
+    "%@ copies" : {
+      "comment" : "Duplicates sort menu: identical copies Quick clean would mark"
     },
     "%@ copy" : {
       "comment" : "Duplicated smart album name, e.g. Night copy"
@@ -462,6 +487,9 @@
     },
     "%@ moved" : {
       "comment" : "Activity: count"
+    },
+    "%@ MP" : {
+      "comment" : "Duplicates wide card: photo resolution in megapixels"
     },
     "%@ not backed up yet" : {
       "comment" : "New Backup: items the job has still to copy"
@@ -630,7 +658,7 @@
 
     },
     "%@ photos" : {
-      "comment" : "Mac index status: indexed photos\nMac toolbar subtitle"
+      "comment" : "Duplicates sort menu: look-alike photos Suggested picks would mark\nMac index status: indexed photos\nMac toolbar subtitle"
     },
     "%@ photos and videos" : {
       "comment" : "Count phrase in the On This Day reminder body.",
@@ -784,7 +812,7 @@
       }
     },
     "%@, %lld photos" : {
-      "comment" : "VoiceOver label for a smart album tile: its name and how many photos match it\nVoiceOver label for an album tile in the widget's album picker\nVoiceOver label for an album tile: its name and how many photos it holds\nVoiceOver: a Duplicates card, which shows no title on screen\nVoiceOver: a keyword suggestion and how many photos carry it",
+      "comment" : "VoiceOver label for a smart album tile: its name and how many photos match it\nVoiceOver label for an album tile in the widget's album picker\nVoiceOver label for an album tile: its name and how many photos it holds\nVoiceOver: a Duplicates card, which shows no title on screen\nVoiceOver: a Duplicates group row on a wide screen\nVoiceOver: a keyword suggestion and how many photos carry it",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -804,6 +832,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, folder on %2$@"
+          }
+        }
+      }
+    },
+    "%@, frame %lld" : {
+      "comment" : "Compare Videos: scrubber value for VoiceOver, time and frame number",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, frame %2$lld"
           }
         }
       }
@@ -1218,6 +1257,9 @@
     "%lld kept photos couldn't take their copies' albums or favorite" : {
       "comment" : "Duplicates: banner, inheritance could not be written for several kept photos"
     },
+    "%lld kept photos couldn't take their copies' rating, caption or keywords" : {
+      "comment" : "Duplicates: banner, the inherited star rating, caption or keywords could not be written for several kept photos"
+    },
     "%lld kept: %@" : {
       "comment" : "Duplicates: how many photos a shortcut left unmarked, and why",
       "localizations" : {
@@ -1278,6 +1320,28 @@
         }
       }
     },
+    "%lld of %lld · delete" : {
+      "comment" : "Compare: What differs column header, the photo's place in the group and that it is marked for deletion",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld · delete"
+          }
+        }
+      }
+    },
+    "%lld of %lld · keep" : {
+      "comment" : "Compare: What differs column header, the photo's place in the group and that it is kept",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld · keep"
+          }
+        }
+      }
+    },
     "%lld of %lld clips · nothing leaves the device" : {
       "comment" : "Video Studio captions: under the progress bar — clips read so far, and the privacy promise",
       "localizations" : {
@@ -1289,12 +1353,34 @@
         }
       }
     },
+    "%lld of %lld done" : {
+      "comment" : "Compress Videos: batch counter",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld done"
+          }
+        }
+      }
+    },
     "%lld of %lld drawn" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld drawn"
+          }
+        }
+      }
+    },
+    "%lld of %lld fields differ" : {
+      "comment" : "Compare: how many of the listed fields differ between A and B",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld fields differ"
           }
         }
       }
@@ -1503,6 +1589,9 @@
     "%lld photos couldn't be downloaded. Check the connection and try again." : {
       "comment" : "Stack save failed: some full-resolution originals could not be downloaded (usually iCloud)."
     },
+    "%lld photos in the selection are left out" : {
+      "comment" : "Compress Videos: the selection also held photos, which this tool skips"
+    },
     "%lld photos moved to Recently Deleted" : {
       "comment" : "Duplicates: banner after deleting"
     },
@@ -1602,7 +1691,7 @@
       "comment" : "Export summary: Skip left these out"
     },
     "%lld stars" : {
-      "comment" : "VoiceOver: a photo's star rating (plural)"
+      "comment" : "VoiceOver: a photo's star rating (plural)\nWhat differs: star rating, e.g. 3 stars"
     },
     "%lld to Recently Deleted" : {
       "comment" : "Deletion confirmation: Photos items after another destination"
@@ -1766,9 +1855,6 @@
     "1 camera needs a sensor format" : {
       "comment" : "Settings root, Camera Database value with one unknown camera"
     },
-    "1 copy · %@" : {
-      "comment" : "Duplicates Quick clean band: copies to remove and their size"
-    },
     "1 design" : {
       "comment" : "Settings, Widgets value: one photo widget design"
     },
@@ -1787,11 +1873,17 @@
     "1 kept photo couldn't take its copies' albums or favorite" : {
       "comment" : "Duplicates: banner, inheritance could not be written for one kept photo"
     },
+    "1 kept photo couldn't take its copies' rating, caption or keywords" : {
+      "comment" : "Duplicates: banner, the inherited star rating, caption or keywords could not be written for one kept photo"
+    },
     "1 on %@ is deleted permanently." : {
       "comment" : "Deletion confirmation: one file on a volume with no Trash"
     },
     "1 photo" : {
       "comment" : "Mac index status: one indexed photo\nMac toolbar subtitle"
+    },
+    "1 photo in the selection is left out" : {
+      "comment" : "Compress Videos: the selection also held one photo, which this tool skips"
     },
     "1 photo matches" : {
       "comment" : "Smart album sheet count bar, one photo"
@@ -1834,6 +1926,9 @@
     "4 Bars" : {
       "comment" : "Video Studio Cut to Beat: cuts land every fourth bar"
     },
+    "4K" : {
+      "comment" : "Compress Videos size: cap at 4K"
+    },
     "4K needs 4K clips — %lld of your %lld clips are %@." : {
       "comment" : "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are",
       "localizations" : {
@@ -1874,6 +1969,12 @@
       "comment" : "Info panel row label"
     },
     "255" : {
+
+    },
+    "1080p" : {
+      "comment" : "Compress Videos size: cap at 1080p"
+    },
+    "A" : {
 
     },
     "A clip with its own look uses it instead of the video look. Use Video Look hands it back." : {
@@ -2110,6 +2211,9 @@
     "Add Provider…" : {
       "comment" : "Settings › AI: add an AI service"
     },
+    "Add Snapshot" : {
+
+    },
     "Add Text" : {
       "comment" : "Video Studio: adds a caption block at the playhead in the last-used font"
     },
@@ -2233,7 +2337,7 @@
 
     },
     "Albums" : {
-      "comment" : "Video Studio Media panel tab: the user's albums; also the back button from an album's grid"
+      "comment" : "Duplicates wide card: albums row\nVideo Studio Media panel tab: the user's albums; also the back button from an album's grid\nWhat differs: row label"
     },
     "Albums and smart albums are in Collections; charts and gear statistics are in Collections › Utilities › Statistics. Pinch the photo grid to change how many columns it shows." : {
       "comment" : "Settings root footer: where the things that are not settings live"
@@ -2277,6 +2381,9 @@
     "All Items" : {
 
     },
+    "All Keep" : {
+      "comment" : "Duplicates card: take every Trash mark off this group"
+    },
     "All metadata" : {
 
     },
@@ -2297,6 +2404,9 @@
     },
     "All Time" : {
 
+    },
+    "All Trash" : {
+      "comment" : "Duplicates card: mark every photo of this group for Trash"
     },
     "All Uploaded Photos" : {
 
@@ -2324,6 +2434,9 @@
     },
     "Allowed · ShotDex can find computers and NAS drives on this network" : {
       "comment" : "Local Network Access: on"
+    },
+    "Already compact" : {
+      "comment" : "Compress Videos: the compressed copy was not smaller, so it was not saved"
     },
     "Already on %@" : {
       "comment" : "Backup detail row: photos skipped because the same file is already at the destination, e.g. 'Already on NAS Home'\nScreen title: photos already at the destination, e.g. 'Already on NAS Home'"
@@ -2538,6 +2651,9 @@
     "Average" : {
       "comment" : "Stack Exposures picker: equal-weight average of every frame"
     },
+    "B" : {
+
+    },
     "B&W Mix" : {
 
     },
@@ -2620,6 +2736,9 @@
     },
     "Backward · Stop · Forward" : {
       "comment" : "Video Studio keyboard card row: J, K, L"
+    },
+    "Balanced" : {
+      "comment" : "Compress Videos quality level"
     },
     "Basic" : {
 
@@ -2848,7 +2967,7 @@
       "comment" : "Sync sheet group"
     },
     "Camera" : {
-      "comment" : "File name token chip\nMac filter bar chip key: camera body\nSearch suggestion kind: a camera model"
+      "comment" : "File name token chip\nMac filter bar chip key: camera body\nSearch suggestion kind: a camera model\nWhat differs: row label"
     },
     "Camera & Lens" : {
       "comment" : "Info panel section title"
@@ -3046,6 +3165,9 @@
         }
       }
     },
+    "Checking for duplicates" : {
+      "comment" : "Duplicates wide toolbar: spinner while a check runs"
+    },
     "checking it hasn't changed" : {
       "comment" : "Common photos: current step"
     },
@@ -3228,6 +3350,9 @@
     "Close color palette" : {
 
     },
+    "Close Compare" : {
+      "comment" : "Compare keyboard shortcut: close What differs, else the comparison"
+    },
     "Close slideshow" : {
 
     },
@@ -3313,6 +3438,49 @@
     },
     "Compare · %lld photos" : {
       "comment" : "Compare title: how many photos of the selection are compared"
+    },
+    "Compare Before and After" : {
+      "comment" : "Compress Videos summary: open Compare Videos on the first compressed file"
+    },
+    "Compress" : {
+      "comment" : "Compress Videos: primary button"
+    },
+    "Compress %lld Videos" : {
+      "comment" : "Compress Videos: title for several videos"
+    },
+    "Compress Video" : {
+      "comment" : "Compress Videos: title for one video"
+    },
+    "Compress Videos" : {
+      "comment" : "Selection menu command: compress the selected videos to HEVC"
+    },
+    "Compressed · %@ · −%@" : {
+      "comment" : "Compare Videos: pane B label, size and how much smaller",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Compressed · %1$@ · −%2$@"
+          }
+        }
+      }
+    },
+    "Compressed %lld videos · saved %@" : {
+      "comment" : "Compress Videos summary headline",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Compressed %1$lld videos · saved %2$@"
+          }
+        }
+      }
+    },
+    "Compressed 1 video · saved %@" : {
+      "comment" : "Compress Videos summary headline, one video"
+    },
+    "Compressing %lld%%" : {
+      "comment" : "Compress Videos row state"
     },
     "Computers and NAS drives sharing files on the same network as this device. Tap one to sign in." : {
 
@@ -3543,11 +3711,14 @@
     "Couldn't Open Photo" : {
       "comment" : "Editor load error title"
     },
+    "Couldn't prepare the sound of this video." : {
+      "comment" : "Compress Videos: writer refused the audio input"
+    },
     "Couldn't prepare the video composition." : {
 
     },
     "Couldn't prepare the video encoder." : {
-
+      "comment" : "Compress Videos: writer refused the video input"
     },
     "Couldn't read %@." : {
       "comment" : "Import from Card: the card's file list could not be read"
@@ -3555,8 +3726,11 @@
     "Couldn't read metadata for this item." : {
 
     },
+    "Couldn't read the sound of this video." : {
+      "comment" : "Compress Videos: reader refused the audio track"
+    },
     "Couldn't read the video frames." : {
-
+      "comment" : "Compress Videos: reader refused the video track"
     },
     "Couldn't read this file from the card." : {
       "comment" : "Card import summary: one file could not be read"
@@ -3595,10 +3769,10 @@
       "comment" : "Video Studio: banner and alert when the draft could not be written (disk full, database error)"
     },
     "Couldn't start reading." : {
-
+      "comment" : "Compress Videos: reader did not start"
     },
     "Couldn't start writing." : {
-
+      "comment" : "Compress Videos: writer did not start"
     },
     "Couldn’t Trim" : {
 
@@ -3741,7 +3915,7 @@
       "comment" : "Info panel row label"
     },
     "Date" : {
-      "comment" : "File name token chip\nImport folders token\nInfo panel section title"
+      "comment" : "Duplicates wide card: capture date row\nFile name token chip\nImport folders token\nInfo panel section title\nWhat differs: row label, capture date"
     },
     "Date & Time" : {
 
@@ -3845,7 +4019,7 @@
       "comment" : "AI provider form: delete alert title"
     },
     "Delete %lld" : {
-      "comment" : "Compare: delete the photos marked Delete\nConditions bar: delete the Rejected photos shown (count)\nDuplicates Selected sheet: delete the marked photos\nDuplicates: floating bar button, deletes the marked photos"
+      "comment" : "Compare: delete the photos marked Delete\nConditions bar: delete the Rejected photos shown (count)\nDuplicates Selected sheet: delete the marked photos\nDuplicates card: delete this group's photos marked Trash\nDuplicates: floating bar button, deletes the marked photos"
     },
     "Delete %lld from This Device" : {
 
@@ -3979,8 +4153,11 @@
     "Delete Node" : {
       "comment" : "Video Studio colour"
     },
+    "Delete Original" : {
+      "comment" : "Compare Videos: move this video's original to Recently Deleted"
+    },
     "Delete Originals" : {
-
+      "comment" : "Compress Videos summary: move the originals of compressed videos to Recently Deleted"
     },
     "Delete Permanently" : {
       "comment" : "Deletion: second confirmation button for a volume with no Trash"
@@ -4063,7 +4240,7 @@
 
     },
     "Dimensions" : {
-      "comment" : "Info panel row label"
+      "comment" : "Info panel row label\nWhat differs: row label, pixel width by height"
     },
     "Discard" : {
 
@@ -4098,11 +4275,8 @@
     "Don't keep" : {
       "comment" : "Frame picker: take the keep back"
     },
-    "Don't remove" : {
-      "comment" : "Duplicates tile menu: take the mark away\nVoiceOver action on a tile\nVoiceOver action: take the mark away\nVoiceOver: the ring on a marked tile"
-    },
     "Done" : {
-      "comment" : "Close the Selected sheet\nConnect to Server sheet from the empty library: close\nCulling summary: close the pass\nExport: close the summary\nFrame picker: close, keeping the picks as the group's marks\nVideo Studio Video Settings: closes the panel; every change is already applied\nVideo Studio quick strip: closes the slider and shows the chips again\nWatermark screen: close"
+      "comment" : "Close the Selected sheet\nCompress Videos: close the summary\nConnect to Server sheet from the empty library: close\nCulling summary: close the pass\nExport: close the summary\nFrame picker: close, keeping the picks as the group's marks\nVideo Studio Video Settings: closes the panel; every change is already applied\nVideo Studio quick strip: closes the slider and shows the chips again\nWatermark screen: close"
     },
     "Done — %@" : {
       "comment" : "Activity: a run that finished"
@@ -4118,6 +4292,9 @@
     },
     "Double tap to collapse" : {
 
+    },
+    "Double-click a video to compare it. Originals go to Recently Deleted." : {
+      "comment" : "Mac Compress Videos summary: under the buttons"
     },
     "Double-tap the Pencil to switch between trim and scrub." : {
       "comment" : "Video Studio iPad frame trim: what a double-tap on the Apple Pencil does"
@@ -4150,6 +4327,9 @@
           }
         }
       }
+    },
+    "Downloading %lld%%" : {
+      "comment" : "Compress Videos row state: iCloud download"
     },
     "downloading from %@" : {
       "comment" : "Common photos undo: current step"
@@ -4293,7 +4473,7 @@
       "comment" : "Photo command\nSmart album tile menu\nSmart album ⋯ menu\nVideo Studio colour: copies a node after itself\nVideo Studio: the command that copies the selected item right after it"
     },
     "Duplicates" : {
-
+      "comment" : "Duplicates screen title, beside Back on wide screens"
     },
     "Duplicates among the others are not found." : {
       "comment" : "Duplicates banner under limited access: what the limit means"
@@ -4380,7 +4560,7 @@
       "comment" : "Duplicates: why a photo was kept — it has an edit\nPhoto rule value: Photo is edited in Photos"
     },
     "Edited" : {
-      "comment" : "Duplicates: reason chip under the suggested keeper\nExport Version: with the edit made in Photos"
+      "comment" : "Duplicates: reason chip under the suggested keeper\nExport Version: with the edit made in Photos\nWhat differs: row label and value, the photo was edited"
     },
     "Edited · Saved" : {
       "comment" : "Editor toolbar: a file photo's recipe is saved as it changes"
@@ -4471,8 +4651,8 @@
     "Every camera is known" : {
       "comment" : "Settings root, Camera Database value with no unknown camera"
     },
-    "Every copy decided" : {
-      "comment" : "Duplicates Quick clean band: nothing left for it"
+    "Every copy is decided or protected." : {
+      "comment" : "Duplicates Quick clean sheet: why it is empty"
     },
     "Every cut moves to the nearest bar. One undo." : {
       "comment" : "Video Studio beats on the Duo cover: under Cut Clips to Beat — what it does, short"
@@ -4651,7 +4831,7 @@
 
     },
     "File" : {
-      "comment" : "Info panel section title"
+      "comment" : "Duplicates wide card: file name row\nInfo panel section title"
     },
     "File Already Exists" : {
 
@@ -4827,6 +5007,9 @@
     "Folder is what ShotDex indexes and where uploads start; each upload can pick another." : {
       "comment" : "Connection form: Folder footer when the connection is a source"
     },
+    "Folder not found on the server · %lld photos kept" : {
+      "comment" : "Sources: the connection's folder was renamed or moved on the server; its photos stay"
+    },
     "Folder or Drive" : {
       "comment" : "Add a Source: a folder in Files or a USB-C drive\nEmpty library: the folder card title"
     },
@@ -4861,7 +5044,7 @@
 
     },
     "Format" : {
-      "comment" : "Export sheet row: output format\nInfo panel row label\nServer export: output format"
+      "comment" : "Export sheet row: output format\nInfo panel row label\nServer export: output format\nWhat differs: row label, file format like HEIC or JPEG"
     },
     "Forward" : {
 
@@ -5024,6 +5207,9 @@
     "Groups stay inside one source. An identical copy in another source is the same photo (matched by content hash): it is counted once and never offered for deletion." : {
       "comment" : "Duplicates: under the Source popup"
     },
+    "Groups with a close call are left for you to decide." : {
+      "comment" : "Duplicates Suggested picks sheet: why it is empty"
+    },
     "h:mm a" : {
 
     },
@@ -5053,6 +5239,9 @@
     },
     "HDR" : {
       "comment" : "Combine Photos submenu row and screen title: merge a bracketed exposure series into one photo\nServer export: kind of the one file a tool made"
+    },
+    "HDR stays HDR. Originals are kept until you delete them." : {
+      "comment" : "Compress Videos: footnote under the choices"
     },
     "Headline" : {
       "comment" : "Info panel row label"
@@ -5146,6 +5335,9 @@
     "High" : {
       "comment" : "HDR Deghost level"
     },
+    "High Quality" : {
+      "comment" : "Compress Videos quality level"
+    },
     "Histogram" : {
       "comment" : "Video Studio scope: tonal distribution"
     },
@@ -5172,9 +5364,6 @@
     },
     "Hold to Compare" : {
       "comment" : "Video Studio compare: holding a finger on the frame shows the original"
-    },
-    "Hold to see original" : {
-
     },
     "Holds fine crossing detail — hair, bristles, fur." : {
       "comment" : "Focus Stack: when to use Weighted"
@@ -5250,9 +5439,6 @@
     "Icons" : {
 
     },
-    "Identical copies. Favorites, edits and album photos stay." : {
-      "comment" : "Duplicates Quick clean band: what it removes and what it never touches"
-    },
     "If a File Exists" : {
       "comment" : "Export sheet row: what to do on a name clash"
     },
@@ -5320,6 +5506,9 @@
     },
     "In" : {
       "comment" : "Video Studio clip panel: the fade-in slider under FADE\nVideo Studio clip panel: the fade-in slider under FADE; also the short title on the iPad text inspector's Animate In pop-up — In: Fade"
+    },
+    "In %lld albums" : {
+      "comment" : "Duplicates wide card: number of albums the photo is in"
     },
     "in album" : {
       "comment" : "Duplicates: why a photo was kept — it is in an album the user made"
@@ -5631,7 +5820,7 @@
       "comment" : "VoiceOver: compare filmstrip photo stays"
     },
     "Keep" : {
-      "comment" : "Duplicates compare: keep this photo\nFrame picker: keep this frame\nKeep sheet: section header over Viewing Copies / Originals"
+      "comment" : "Duplicates compare: keep this photo\nDuplicates tile menu: take the Trash mark away, keep the photo\nDuplicates: pill on a photo that stays; tap to mark it for deletion\nFrame picker: keep this frame\nKeep sheet: section header over Viewing Copies / Originals\nVoiceOver action on a tile marked Trash: keep it\nVoiceOver: state of a tile that stays"
     },
     "Keep %lld Items" : {
       "comment" : "Keep sheet button: start keeping this many photos and videos"
@@ -5653,6 +5842,12 @@
     "Keep all" : {
       "comment" : "Duplicates tile menu: keep every photo of the group"
     },
+    "Keep All" : {
+      "comment" : "Duplicates card: keep every photo of this group"
+    },
+    "Keep All in Group" : {
+      "comment" : "Duplicates keyboard shortcut: keep every photo of the selected group"
+    },
     "Keep Both" : {
       "comment" : "If a File Exists: number the new file\nOrganize: a clash keeps both files"
     },
@@ -5670,6 +5865,9 @@
     },
     "Keep Exporting" : {
       "comment" : "Export: do not stop the run"
+    },
+    "Keep Going" : {
+      "comment" : "Compress Videos: dismiss the Stop confirmation"
     },
     "Keep in Photos" : {
 
@@ -5691,6 +5889,9 @@
     },
     "Keep or delete this photo" : {
       "comment" : "VoiceOver: the compare pane's Keep | Delete choice"
+    },
+    "Keep Photo B" : {
+      "comment" : "Compare keyboard shortcut: keep the photo in pane B"
     },
     "Keep picks, remove the rest" : {
       "comment" : "Frame picker: the red button while no frame is kept"
@@ -5721,6 +5922,9 @@
     },
     "Keep ShotDex open. Files already exported stay in “%@” if you stop." : {
       "comment" : "Export progress footer"
+    },
+    "Keep the photo as it looks now under a name, and come back to it later — even after closing the editor." : {
+
     },
     "Keep Uploading" : {
 
@@ -5763,6 +5967,9 @@
     "Keeps the brightest light from every frame — star trails, traffic, fireworks." : {
       "comment" : "Stack Exposures: what Lighten is for"
     },
+    "Keeps the one marked %@" : {
+      "comment" : "Duplicates Suggested picks row: why the kept photo was chosen, e.g. Sharpest"
+    },
     "Keeps the sharpest part of every frame, for depth of field no single shot can reach." : {
       "comment" : "Focus Stack: what the screen does"
     },
@@ -5794,7 +6001,7 @@
       "comment" : "Chip: photos with this keyword"
     },
     "Keywords" : {
-      "comment" : "Import metadata section\nInfo panel row label"
+      "comment" : "Import metadata section\nInfo panel row label\nWhat differs: row label"
     },
     "Kind" : {
 
@@ -5807,6 +6014,9 @@
     },
     "Largest First" : {
       "comment" : "Mac Filter and Sort: sort direction for file size"
+    },
+    "Last 12 Months" : {
+
     },
     "Last Checked" : {
       "comment" : "Backup detail row"
@@ -5867,7 +6077,7 @@
 
     },
     "Lens" : {
-      "comment" : "File name token chip\nInfo panel row label\nMac filter bar chip key: lens\nSearch suggestion kind"
+      "comment" : "File name token chip\nInfo panel row label\nMac filter bar chip key: lens\nSearch suggestion kind\nWhat differs: row label"
     },
     "Lens Blur" : {
       "comment" : "Sync sheet group"
@@ -6001,7 +6211,7 @@
       "comment" : "Utilities row: browse NAS drives and computers on this network"
     },
     "Location" : {
-      "comment" : "Info panel section title"
+      "comment" : "Info panel section title\nWhat differs: row label"
     },
     "Location Access" : {
 
@@ -6041,6 +6251,9 @@
     },
     "Looking through your photos…" : {
 
+    },
+    "Looks like the original" : {
+      "comment" : "Compress Videos: High Quality description"
     },
     "Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another." : {
 
@@ -6095,6 +6308,9 @@
     },
     "Mark Out" : {
       "comment" : "Video Studio keyboard shortcut (O)"
+    },
+    "Mark Photo B for Deletion" : {
+      "comment" : "Compare keyboard shortcut: mark the photo in pane B; nothing is deleted yet"
     },
     "Marker at %@" : {
       "comment" : "Video Studio: a note pinned to a point on the timeline"
@@ -6167,6 +6383,9 @@
     },
     "Max" : {
 
+    },
+    "Maximum" : {
+      "comment" : "Compress Videos quality level"
     },
     "Measure" : {
 
@@ -6303,6 +6522,9 @@
     "More Fonts…" : {
       "comment" : "Video Studio iPad text panel: last row of the font pop-up, opens the font picker"
     },
+    "More photo info" : {
+      "comment" : "Duplicates: reason chip — the copies are the same size and the kept one carries more camera, lens and location details"
+    },
     "More Playhead Tools" : {
       "comment" : "Video Studio transport: the overflow menu on a phone"
     },
@@ -6360,11 +6582,17 @@
     "Move Later" : {
       "comment" : "Video Studio colour: runs this correction after the one on its right"
     },
+    "Move Others to Trash" : {
+      "comment" : "Duplicates keyboard shortcut: mark every photo of the selected group but the suggested one"
+    },
     "Move the playhead into this clip." : {
       "comment" : "Video Studio Trim: why the Start/End to Playhead chips are dimmed"
     },
     "Move the playhead over a clip" : {
       "comment" : "Video Studio scopes: nothing to measure yet"
+    },
+    "Move to Trash" : {
+      "comment" : "Duplicates tile menu: mark the photo for deletion\nVoiceOver action on a tile: mark it for deletion"
     },
     "Move Up" : {
 
@@ -6529,6 +6757,9 @@
     "New Smart Album" : {
 
     },
+    "New Snapshot" : {
+
+    },
     "New Source" : {
 
     },
@@ -6544,11 +6775,23 @@
     "Next" : {
 
     },
+    "Next Frame" : {
+      "comment" : "Compare Videos transport"
+    },
+    "Next Group" : {
+      "comment" : "Duplicates keyboard shortcut: move to the next group"
+    },
     "Next Marker" : {
       "comment" : "Video Studio transport"
     },
     "Next Photo" : {
       "comment" : "Keyboard shortcut in the culling pass"
+    },
+    "Next Photo in B" : {
+      "comment" : "Compare keyboard shortcut"
+    },
+    "Next Video" : {
+      "comment" : "Compare Videos: step to the next compressed file"
     },
     "Next: add your Photos Library, a folder or drive, or a server" : {
       "comment" : "Onboarding: under or above Continue"
@@ -6579,6 +6822,9 @@
     },
     "No Charts" : {
 
+    },
+    "No Clear Picks" : {
+      "comment" : "Duplicates Suggested picks sheet: no group has a clearly better photo"
     },
     "No Clip" : {
       "comment" : "Video Studio viewer header: the playhead is past the end of the project"
@@ -6722,7 +6968,7 @@
       "comment" : "Video Studio Look panel: a photo setting skipped on video"
     },
     "None" : {
-      "comment" : "Custom date: no separator\nExport sheet: no folder chosen yet\nImport folders: everything in the destination itself\nImport metadata: nothing set\nRating menu: clear the stars\nWatermark row value: no watermark preset saved yet"
+      "comment" : "Custom date: no separator\nDuplicates wide card: the photo is in no album\nExport sheet: no folder chosen yet\nImport folders: everything in the destination itself\nImport metadata: nothing set\nRating menu: clear the stars\nWatermark row value: no watermark preset saved yet\nWhat differs: the photo has no value for this row"
     },
     "None (Rec. 709)" : {
       "comment" : "Video Studio colour: the footage needs no de-log"
@@ -6759,6 +7005,9 @@
     },
     "Not edited" : {
       "comment" : "Duplicates: a copy lacks the keeper's edit"
+    },
+    "Not enough free space to compress more videos." : {
+      "comment" : "Compress Videos: the batch stopped because storage is low"
     },
     "Not enough space in “%@” — needs %@, %@ free." : {
       "comment" : "Export: not enough room before the first byte",
@@ -6919,11 +7168,17 @@
     "Nothing to add" : {
       "comment" : "Video Studio media pool: empty state title"
     },
+    "Nothing to Clean" : {
+      "comment" : "Duplicates Quick clean sheet: no copies left to mark"
+    },
     "Nothing to compare with one photo." : {
       "comment" : "Duplicates: empty list, one photo checked"
     },
     "nothing to delete" : {
       "comment" : "Duplicates folded row of a group kept whole"
+    },
+    "Nothing to Delete" : {
+      "comment" : "Duplicates: the marked photos are not Photos assets"
     },
     "Nothing was changed." : {
       "comment" : "Alert message when the bulk write failed"
@@ -7135,6 +7390,9 @@
     "Open" : {
 
     },
+    "Open Group" : {
+      "comment" : "Duplicates keyboard shortcut: open the selected group in Compare or Choose frames"
+    },
     "Open in Library" : {
 
     },
@@ -7219,7 +7477,21 @@
       "comment" : "Backup form row: how folders are laid out\nOrganize screen title"
     },
     "Original" : {
-      "comment" : "Editor toolbar: a file photo with no edits\nExport Color Space: keep the photo's own profile\nExport Version: as shot\nOrganize: keep the original file name\nRule field: whether the photo's original files are on this device or only in iCloud\nServer export: what happens to the original"
+      "comment" : "Compress Videos size: keep the resolution\nEditor toolbar: a file photo with no edits\nExport Color Space: keep the photo's own profile\nExport Version: as shot\nOrganize: keep the original file name\nRule field: whether the photo's original files are on this device or only in iCloud\nServer export: what happens to the original\nWhat differs: value, the photo was not edited"
+    },
+    "Original · %@" : {
+      "comment" : "Compare Videos: pane A label, size"
+    },
+    "Original · %@ · %@" : {
+      "comment" : "Compare Videos: pane A label, size and codec",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Original · %1$@ · %2$@"
+          }
+        }
+      }
     },
     "Original clip" : {
       "comment" : "Video Studio compare, iPad portrait: what the Before side shows"
@@ -7271,6 +7543,9 @@
     },
     "Originals in RAW stay — edits are saved as JPEG or HEIC." : {
       "comment" : "Server export: why Replace Original is off"
+    },
+    "Originals moved to Recently Deleted" : {
+      "comment" : "Compress Videos summary: after Delete Originals"
     },
     "Other Folder…" : {
       "comment" : "Server export destination"
@@ -7378,7 +7653,7 @@
 
     },
     "Pause" : {
-      "comment" : "Backup: pause the job\nCard import: wait after the file in hand\nVideo Studio transport"
+      "comment" : "Backup: pause the job\nCard import: wait after the file in hand\nCompare Videos transport\nVideo Studio transport"
     },
     "Pause Downloads" : {
       "comment" : "On This iPhone menu"
@@ -7562,6 +7837,9 @@
     "Photos didn't create the photo." : {
       "comment" : "Download from server: PhotoKit returned no asset"
     },
+    "Photos didn't save the video." : {
+      "comment" : "Compress Videos: PhotoKit returned no asset"
+    },
     "Photos doesn't allow changes to these photos — they may be in a shared library or a shared album." : {
       "comment" : "Alert message when every selected photo refuses property edits"
     },
@@ -7673,8 +7951,14 @@
     "Pin to Top" : {
 
     },
+    "Pinch or ⌘-scroll to zoom both · hold Option to see the other · Space play · ← → frame" : {
+      "comment" : "Mac Compare Videos: how to inspect the two videos"
+    },
     "Pinch the photo grid to change how many columns it shows." : {
 
+    },
+    "Pinch to zoom both · hold a video to see the other" : {
+      "comment" : "Compare Videos: how to inspect the two videos"
     },
     "Pinned" : {
 
@@ -7701,7 +7985,7 @@
 
     },
     "Play" : {
-      "comment" : "Play a video\nVideo Studio transport\nVideo Studio: starts preview playback"
+      "comment" : "Compare Videos transport\nPlay a video\nVideo Studio transport\nVideo Studio: starts preview playback"
     },
     "Play Backward" : {
       "comment" : "Video Studio keyboard shortcut (J)"
@@ -7723,6 +8007,9 @@
     },
     "Playback Speed" : {
 
+    },
+    "Playhead" : {
+      "comment" : "Compare Videos: VoiceOver label of the scrubber"
     },
     "Playhead at %@ of %@" : {
       "comment" : "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
@@ -7832,11 +8119,23 @@
     "Previous" : {
 
     },
+    "Previous Frame" : {
+      "comment" : "Compare Videos transport"
+    },
+    "Previous Group" : {
+      "comment" : "Duplicates keyboard shortcut: move to the previous group"
+    },
     "Previous Marker" : {
       "comment" : "Video Studio transport"
     },
     "Previous Photo" : {
       "comment" : "Keyboard shortcut in the culling pass"
+    },
+    "Previous Photo in B" : {
+      "comment" : "Compare keyboard shortcut"
+    },
+    "Previous Video" : {
+      "comment" : "Compare Videos: step to the previous compressed file"
     },
     "Primaries" : {
       "comment" : "Video Studio colour: the three grading wheels"
@@ -7866,7 +8165,7 @@
       "comment" : "Common photos undo: current step"
     },
     "Quality" : {
-      "comment" : "Export sheet row: compression quality"
+      "comment" : "Compress Videos: section label\nExport sheet row: compression quality"
     },
     "Quick" : {
       "comment" : "Common photos log, Check column: Same by three samples"
@@ -7875,7 +8174,10 @@
       "comment" : "Video Studio: shows or hides the quick slider strip under the frame"
     },
     "Quick clean" : {
-      "comment" : "Duplicates list: band over the cards\nDuplicates: Quick clean sheet title"
+      "comment" : "Duplicates list: band over the cards"
+    },
+    "Quick Clean…" : {
+      "comment" : "Duplicates sort menu: opens Quick clean"
     },
     "Quick Separators" : {
       "comment" : "Custom date: segmented picks for common separators"
@@ -7884,7 +8186,7 @@
       "comment" : "Focus Stack slider: size of the area sharpness is judged over"
     },
     "Rating" : {
-      "comment" : "Menu: the star-rating submenu"
+      "comment" : "Menu: the star-rating submenu\nWhat differs: row label, star rating"
     },
     "Rating and flag" : {
       "comment" : "VoiceOver: the culling pass's row of stars, Pick and Reject"
@@ -7930,6 +8232,9 @@
     },
     "Re-index Library" : {
 
+    },
+    "Read by %@" : {
+      "comment" : "Search: the AI Search model turned the words into conditions"
     },
     "Read the Log" : {
 
@@ -7989,7 +8294,10 @@
       "comment" : "Settings, Your library card status while indexing, before a percentage is known"
     },
     "Reading the video failed." : {
-
+      "comment" : "Compress Videos: reader failed"
+    },
+    "Reading videos…" : {
+      "comment" : "Compress Videos: loading sizes before the estimate"
     },
     "Reading… %lld items so far" : {
       "comment" : "Sources: a read in progress, total not known yet"
@@ -8078,7 +8386,7 @@
       }
     },
     "Remove" : {
-      "comment" : "Duplicates tile menu: mark for removal\nSettings › Sources: confirm Remove Source\nSettings › Sources: swipe to remove a source\nVoiceOver action on a tile\nVoiceOver action: remove this keyword from the photo\nVoiceOver: the ring on a tile"
+      "comment" : "Settings › Sources: confirm Remove Source\nSettings › Sources: swipe to remove a source\nVoiceOver action: remove this keyword from the photo"
     },
     "Remove “%@”?" : {
       "comment" : "Settings › Sources: Remove Source alert title"
@@ -8438,6 +8746,9 @@
     "Same Name, Different File" : {
       "comment" : "Organize row: what happens on a name clash"
     },
+    "Same photo info" : {
+      "comment" : "Compare: A and B differ in no listed field\nCompare: A and B differ in no listed field; opens the list"
+    },
     "Sample a color" : {
 
     },
@@ -8525,6 +8836,9 @@
     "Saved" : {
 
     },
+    "Saved %@" : {
+      "comment" : "Compare Videos: subtitle, space this file saved\nCompress Videos row state: finished, with space saved"
+    },
     "Saved %@ next to the original." : {
       "comment" : "Editor banner after Save as Copy on a file photo"
     },
@@ -8605,7 +8919,7 @@
 
     },
     "Saving…" : {
-      "comment" : "Stack screen status while the new photo is written"
+      "comment" : "Compress Videos row state\nStack screen status while the new photo is written"
     },
     "Scan Again" : {
 
@@ -8764,7 +9078,7 @@
       "comment" : "Alert button: apply the typed watermark size"
     },
     "Settings" : {
-      "comment" : "Duplicates permission banner: open the app's Settings page"
+      "comment" : "Duplicates permission banner: open the app's Settings page\nWhat differs: row label, aperture, shutter, ISO and focal length"
     },
     "several camera brands" : {
       "comment" : "A filter condition a smart album cannot save"
@@ -8937,8 +9251,8 @@
     "ShotDex couldn't check that these are still on %@." : {
       "comment" : "Delete: the server could not be asked"
     },
-    "ShotDex couldn't reach %@." : {
-      "comment" : "AI provider error: no connection, e.g. ShotDex couldn't reach Mac Studio."
+    "ShotDex couldn't reach %@. Check the address, and that the server is on and accepts connections from this network." : {
+      "comment" : "AI provider error: no connection, e.g. ShotDex couldn't reach Mac Studio. …"
     },
     "ShotDex couldn’t read “%@”: %@" : {
       "comment" : "Sources: adding a folder failed",
@@ -9014,6 +9328,9 @@
         }
       }
     },
+    "Show %lld more" : {
+      "comment" : "Compare: unfold the fields that differ beyond the first five"
+    },
     "Show All" : {
       "comment" : "Import from Card: switch to All"
     },
@@ -9044,6 +9361,9 @@
     "Show High and Low" : {
 
     },
+    "Show Highlight Clipping" : {
+
+    },
     "Show in A" : {
       "comment" : "VoiceOver: put this photo in compare pane A"
     },
@@ -9055,6 +9375,9 @@
     },
     "Show Inspector" : {
       "comment" : "Watermark screen on iPad: show the controls column again"
+    },
+    "Show less" : {
+      "comment" : "Compare: fold the list of fields that differ back to five"
     },
     "Show Mask Overlay" : {
 
@@ -9086,6 +9409,9 @@
           }
         }
       }
+    },
+    "Show Shadow Clipping" : {
+
     },
     "Show Time" : {
 
@@ -9196,7 +9522,7 @@
       "comment" : "Frame picker: one big frame"
     },
     "Size" : {
-      "comment" : "Backup detail row\nExport sheet row: Resize preset\nServer export: Resize preset\nServer photo browser sort: file size\nVideo Studio captions: the text height, as a share of the frame's short edge\nWatermark screen: height of the stamp"
+      "comment" : "Backup detail row\nCompress Videos: section label (resolution cap)\nDuplicates wide card: dimensions and file size row\nExport sheet row: Resize preset\nServer export: Resize preset\nServer photo browser sort: file size\nVideo Studio captions: the text height, as a share of the frame's short edge\nWatermark screen: height of the stamp\nWhat differs: row label, file size"
     },
     "Size in Pixels" : {
       "comment" : "Alert title: type the watermark's height in pixels"
@@ -9252,6 +9578,15 @@
     "Smaller copy" : {
       "comment" : "Duplicates: caption — this copy has fewer pixels than the kept photo"
     },
+    "Smaller, hard to tell apart" : {
+      "comment" : "Compress Videos: Balanced description"
+    },
+    "Smallest" : {
+      "comment" : "Compress Videos quality level"
+    },
+    "Smallest file, some softening" : {
+      "comment" : "Compress Videos: Smallest description"
+    },
     "Smallest First" : {
       "comment" : "Mac Filter and Sort: sort direction for file size"
     },
@@ -9288,6 +9623,15 @@
     "Snap to Edits" : {
       "comment" : "Video Studio transport: the playhead settles on a cut instead of near it"
     },
+    "Snapshot" : {
+
+    },
+    "Snapshots" : {
+
+    },
+    "SNAPSHOTS" : {
+
+    },
     "Soft" : {
       "comment" : "Duplicates: caption — this photo is noticeably less sharp than the sharpest"
     },
@@ -9308,6 +9652,9 @@
     },
     "Some Photos Didn't Save" : {
 
+    },
+    "Some Photos Weren't Deleted" : {
+      "comment" : "Duplicates: the server check kept some photos"
     },
     "Something Went Wrong" : {
       "comment" : "Sources: a step failed"
@@ -9338,8 +9685,14 @@
         }
       }
     },
+    "Sound Off" : {
+      "comment" : "Compare Videos: mute"
+    },
+    "Sound On" : {
+      "comment" : "Compare Videos: unmute"
+    },
     "Source" : {
-      "comment" : "Backup form section\nBackup: a source whose name is unknown\nRule field: the photo library, folder, drive or server a copy lives in"
+      "comment" : "Backup form section\nBackup: a source whose name is unknown\nRule field: the photo library, folder, drive or server a copy lives in\nWhat differs: row label, where the copy came from"
     },
     "Source Offline" : {
       "comment" : "Backup card: the drive or folder being backed up is not connected"
@@ -9349,6 +9702,9 @@
     },
     "Space" : {
       "comment" : "Custom date: a space separator\nVoiceOver: the Space bar"
+    },
+    "Space play · ← → frame · ⌘← ⌘→ video" : {
+      "comment" : "Compare Videos on iPad: keyboard shortcuts"
     },
     "Spacing" : {
       "comment" : "Video Studio iPad text inspector: section title over Tracking and Line spacing"
@@ -9454,7 +9810,13 @@
       "comment" : "Duplicates: a copy is not a Live Photo, unlike the keeper"
     },
     "Stop" : {
-      "comment" : "Card import: confirm Stop\nExport: stop the run\nVideo Studio colour: abandons a window track in progress\nVideo Studio keyboard shortcut (K)"
+      "comment" : "Card import: confirm Stop\nCompress Videos: stop the running batch\nExport: stop the run\nVideo Studio colour: abandons a window track in progress\nVideo Studio keyboard shortcut (K)"
+    },
+    "Stop Checking" : {
+      "comment" : "Duplicates toolbar on wide screens: stop the check in progress"
+    },
+    "Stop compressing?" : {
+      "comment" : "Compress Videos: confirm Stop"
     },
     "Stop exporting?" : {
       "comment" : "Export: confirm Cancel during a run"
@@ -9479,6 +9841,9 @@
     },
     "Stop Uploading?" : {
 
+    },
+    "Stopped" : {
+      "comment" : "Compress Videos row state"
     },
     "Stopped — %@" : {
       "comment" : "Activity: a run the user stopped"
@@ -9511,7 +9876,13 @@
       "comment" : "Info panel row label"
     },
     "Suggested" : {
-      "comment" : "Burst frame picker: label on a frame Photos suggested"
+      "comment" : "Burst frame picker: label on a frame Photos suggested\nDuplicates: chip on the photo the app suggests keeping"
+    },
+    "Suggested picks" : {
+      "comment" : "Duplicates list: band over the Similar cards; marks the copies of groups with a clearly better photo"
+    },
+    "Suggested Picks…" : {
+      "comment" : "Duplicates sort menu: opens Suggested picks"
     },
     "Suggested to keep" : {
       "comment" : "VoiceOver: the photo the Duplicates card suggests keeping"
@@ -9591,6 +9962,9 @@
     "Tap a section to show or hide it, and Edit to drag them into the order you want. A section with nothing in it stays hidden whatever you choose here." : {
 
     },
+    "Tap a video to compare it. Originals go to Recently Deleted." : {
+      "comment" : "Compress Videos summary: under the buttons"
+    },
     "Tap adds at %@ · hold to drag" : {
       "comment" : "Video Studio Media panel: under its name — a tap inserts at the playhead time shown; holding drags onto the timeline"
     },
@@ -9666,6 +10040,12 @@
     "The capture date in the original file is left unchanged, the same as in Photos." : {
 
     },
+    "The compressed copy didn't match the original." : {
+      "comment" : "Compress Videos: output check failed (missing track or wrong length)"
+    },
+    "The compressed copy is empty." : {
+      "comment" : "Compress Videos: the encoder wrote nothing"
+    },
     "The connection to the server was lost." : {
       "comment" : "File server error"
     },
@@ -9719,6 +10099,9 @@
     },
     "The Look" : {
       "comment" : "Sync sheet: the column of groups that travel by default"
+    },
+    "The marked photos aren't in your Photos library any more, so nothing was deleted." : {
+      "comment" : "Duplicates: the marked photos are not Photos assets"
     },
     "The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today. Nothing is read until you allow it here." : {
 
@@ -9906,6 +10289,9 @@
     "This deletes the smart album. The album “%@” stays in Photos." : {
       "comment" : "Delete smart album that is kept in Photos"
     },
+    "This device can't encode HEVC at this size." : {
+      "comment" : "Compress Videos: the HEVC encoder refused the settings"
+    },
     "This device can't write HEIC, so the photo is saved as JPEG." : {
 
     },
@@ -9914,6 +10300,9 @@
     },
     "this device reads every photo itself" : {
       "comment" : "Settings, Share Index Across Devices value line when off"
+    },
+    "This file has no video." : {
+      "comment" : "Compress Videos: the source has no video track"
     },
     "This file of the photo is no longer available." : {
       "comment" : "Upload to Server: resource vanished mid-batch"
@@ -10108,6 +10497,9 @@
     },
     "Transition" : {
       "comment" : "Video Studio: title of the sheet that edits one cut"
+    },
+    "Trash" : {
+      "comment" : "Duplicates: pill on a photo marked for deletion; tap to keep it\nVoiceOver: state of a tile marked for deletion"
     },
     "Trim" : {
       "comment" : "Video Studio: the command that cuts a clip's start or end"
@@ -10497,13 +10889,13 @@
       "comment" : "Photo rule value: the item is a video\nVideo Studio session footer: the kind of a selected clip, after its length — 6.2s · video"
     },
     "Video" : {
-      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nServer export: kind of the one file a tool made\nVideo Studio timeline lane: the video and photo clip track"
+      "comment" : "Compare Videos: codec label when the format is not one we name\nCompress Videos: row name when the file name is unknown\nInfo panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nServer export: kind of the one file a tool made\nVideo Studio timeline lane: the video and photo clip track"
     },
     "Video · clip %lld" : {
       "comment" : "Video Studio In Video row: a video clip and its place on the track"
     },
     "Video %lld of %lld" : {
-      "comment" : "VoiceOver: the culling pass's current video",
+      "comment" : "Compare Videos: which compressed file is shown\nVoiceOver: the culling pass's current video",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10562,6 +10954,9 @@
     "Videos" : {
       "comment" : "Organize row: where videos go"
     },
+    "Videos already compressed stay saved." : {
+      "comment" : "Compress Videos: Stop confirmation message"
+    },
     "Videos and RAW files keep their metadata" : {
 
     },
@@ -10610,6 +11005,9 @@
     "Vignette Style" : {
 
     },
+    "Visually identical, larger file" : {
+      "comment" : "Compress Videos: Maximum description"
+    },
     "Voice" : {
       "comment" : "Video Studio ducking: label on the video lane where a clip has someone speaking"
     },
@@ -10643,7 +11041,7 @@
       "comment" : "Sources: drop while reading"
     },
     "Waiting" : {
-      "comment" : "Common photos log: a photo not reached yet"
+      "comment" : "Common photos log: a photo not reached yet\nCompress Videos row state"
     },
     "Waiting for iCloud" : {
       "comment" : "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded"
@@ -10707,6 +11105,12 @@
     },
     "Welcome to ShotDex" : {
       "comment" : "Empty library: title"
+    },
+    "What differs" : {
+      "comment" : "Compare: title of the list of fields that differ between A and B"
+    },
+    "What differs · %lld" : {
+      "comment" : "Compare: opens the list of fields that differ between A and B, with how many"
     },
     "What goes with a photo when it leaves ShotDex: Share, Save Copy, Paste Edits, Resize and dragging it into another app. Each of them can choose differently for one time. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip." : {
 
@@ -10792,9 +11196,6 @@
     "Width" : {
 
     },
-    "will be removed" : {
-      "comment" : "VoiceOver: a tile marked for removal"
-    },
     "Will save at %@ × %@" : {
       "comment" : "Shown when a panorama is too wide for the JPEG format and has to come down",
       "localizations" : {
@@ -10830,9 +11231,6 @@
     "Without Watermark" : {
       "comment" : "Resize summary section: photos that went without the watermark"
     },
-    "won't be removed" : {
-      "comment" : "VoiceOver: a tile not marked"
-    },
     "Word by Word" : {
       "comment" : "Video Studio caption style: each word appears as it is said"
     },
@@ -10858,7 +11256,7 @@
       "comment" : "Activity: a run finishing"
     },
     "Writing the video failed." : {
-
+      "comment" : "Compress Videos: writer failed"
     },
     "Written to a .xmp sidecar next to each copy; the photos themselves are copied byte for byte." : {
       "comment" : "Import metadata footer"
@@ -10894,7 +11292,7 @@
       "comment" : "Video Studio iPad text inspector: the yellow caption colour"
     },
     "Yes" : {
-      "comment" : "Smart album Also on Server condition: the photo has a copy there"
+      "comment" : "Smart album Also on Server condition: the photo has a copy there\nWhat differs: the photo has a location but no place name"
     },
     "Yesterday" : {
 

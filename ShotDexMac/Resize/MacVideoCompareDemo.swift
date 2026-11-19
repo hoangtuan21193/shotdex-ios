@@ -2,6 +2,7 @@
 import AVFoundation
 import AppKit
 import CoreGraphics
+import os
 
 extension MacVideoCompressPage {
     /// `-ShotDexSection videoCompare`: the demo batch's files are not in
@@ -12,6 +13,52 @@ extension MacVideoCompressPage {
             guard let url = await DemoClip.url() else { return nil }
             return AVPlayerItem(url: url)
         }
+    }
+
+    /// `-ShotDexCompareKeys`: AC-24.22 without Accessibility permission —
+    /// the keys are posted through `NSApp.sendEvent` into the window, the
+    /// path a real keyboard's events take, and the model's state is logged
+    /// after each (`log show --predicate 'category == "compareKeys"'`).
+    @MainActor
+    static func replayKeys(model: VideoCompareModel) async {
+        let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "compareKeys")
+        func state(_ step: String) {
+            let seconds = model.original.currentTime().seconds
+            let frame = seconds.isFinite ? Int((seconds * model.frameRate).rounded()) : -1
+            let position = model.currentIndex.map { VideoCompressionCopy.position($0, of: model.pairs.count) } ?? "-"
+            log.notice("\(step, privacy: .public): playing=\(model.isPlaying) frame=\(frame) \(position, privacy: .public) pairs=\(model.pairs.count)")
+        }
+        func press(_ characters: String, code: UInt16, command: Bool = false) async {
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible) else { return }
+            for type in [NSEvent.EventType.keyDown, .keyUp] {
+                guard let event = NSEvent.keyEvent(
+                    with: type, location: .zero, modifierFlags: command ? .command : [],
+                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                    context: nil, characters: characters, charactersIgnoringModifiers: characters,
+                    isARepeat: false, keyCode: code
+                ) else { continue }
+                NSApp.sendEvent(event)
+            }
+            try? await Task.sleep(for: .milliseconds(900))
+        }
+        let left = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
+        let right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+        try? await Task.sleep(for: .seconds(3))
+        // Focused scene values only reach the menu from the key window.
+        NSApp.activate()
+        NSApp.windows.first(where: \.isVisible)?.makeKeyAndOrderFront(nil)
+        try? await Task.sleep(for: .seconds(1))
+        log.notice("key window: \(NSApp.keyWindow?.title ?? "none", privacy: .public) active=\(NSApp.isActive)")
+        state("start")
+        await press(" ", code: 49); state("space")
+        await press(" ", code: 49); state("space")
+        await press(right, code: 124); await press(right, code: 124); state("right x2")
+        await press(left, code: 123); state("left")
+        await press(right, code: 124, command: true); try? await Task.sleep(for: .seconds(2)); state("cmd-right")
+        await press(left, code: 123, command: true); try? await Task.sleep(for: .seconds(2)); state("cmd-left")
+        await press("\u{7F}", code: 51, command: true); try? await Task.sleep(for: .seconds(2)); state("cmd-delete")
+        log.notice("escape: sending")
+        await press("\u{1B}", code: 53)
     }
 
     /// Written once per launch into the temporary folder.

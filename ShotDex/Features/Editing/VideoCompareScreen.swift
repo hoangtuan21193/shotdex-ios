@@ -107,7 +107,6 @@ struct VideoCompareScreen: View {
         .buttonStyle(.plain)
         .disabled(model.isDeleting || model.currentPair == nil)
         .accessibilityLabel(VideoCompressionCopy.deleteOriginal)
-        .keyboardShortcut(.delete, modifiers: .command)
     }
 
     // MARK: Panes
@@ -221,6 +220,8 @@ struct VideoCompareScreen: View {
                     }
                 )
                 .tint(.white)
+                .accessibilityLabel(String(localized: "Playhead", comment: "Compare Videos: VoiceOver label of the scrubber"))
+                .accessibilityValue(VideoCompressionCopy.scrubberValue(seconds: scrubTime ?? model.currentTime, frameRate: model.frameRate))
                 Text(VideoCompressionCopy.time(model.duration))
             }
             .font(.caption.monospacedDigit())
@@ -310,24 +311,86 @@ struct VideoCompareScreen: View {
 
     // MARK: Keyboard (FS-24 §10)
 
+    /// Unmodified arrows and Esc never reach a SwiftUI `.keyboardShortcut`
+    /// on iPad — the focus system and the panes' scroll views take them
+    /// first (measured by `video-compare-keys.json`: ←/→ left the frame
+    /// where it was, Esc left the screen open). A first responder whose
+    /// key commands ask for priority gets them, as in the Video Studio.
     private var keys: some View {
-        Group {
-            Button(VideoCompressionCopy.play) { model.togglePlay() }
-                .keyboardShortcut(.space, modifiers: [])
-            Button(VideoCompressionCopy.previousFrame) { model.stepFrame(-1) }
-                .keyboardShortcut(.leftArrow, modifiers: [])
-            Button(VideoCompressionCopy.nextFrame) { model.stepFrame(1) }
-                .keyboardShortcut(.rightArrow, modifiers: [])
-            Button(VideoCompressionCopy.previousVideo) { model.stepVideo(-1) }
-                .keyboardShortcut(.leftArrow, modifiers: .command)
-            Button(VideoCompressionCopy.nextVideo) { model.stepVideo(1) }
-                .keyboardShortcut(.rightArrow, modifiers: .command)
-            Button(String(localized: "Close")) { dismiss() }
-                .keyboardShortcut(.escape, modifiers: [])
+        CompareKeyResponder { command in
+            switch command {
+            case .togglePlay: model.togglePlay()
+            case .frame(let step): model.stepFrame(step)
+            case .video(let step): model.stepVideo(step)
+            case .close: dismiss()
+            case .deleteOriginal:
+                guard model.currentPair != nil, !model.isDeleting else { return }
+                Task { await model.deleteCurrentOriginal() }
+            }
         }
-        .opacity(0)
+        .frame(width: 0, height: 0)
         .accessibilityHidden(true)
         .allowsHitTesting(false)
+    }
+}
+
+/// Space · ←/→ · ⌘←/⌘→ · ⌘⌫ · Esc for Compare Videos (FS-24 §10). ⌘⌫ on
+/// the Delete Original button itself never fired inside the full-screen cover.
+struct CompareKeyResponder: UIViewRepresentable {
+    enum Command { case togglePlay, frame(Int), video(Int), deleteOriginal, close }
+    let perform: (Command) -> Void
+
+    func makeUIView(context: Context) -> KeyView {
+        let view = KeyView()
+        view.perform = perform
+        return view
+    }
+
+    func updateUIView(_ view: KeyView, context: Context) {
+        view.perform = perform
+    }
+
+    final class KeyView: UIView {
+        var perform: ((Command) -> Void)?
+
+        override var canBecomeFirstResponder: Bool { true }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil, !self.isFirstResponder else { return }
+                self.becomeFirstResponder()
+            }
+        }
+
+        override var keyCommands: [UIKeyCommand]? {
+            [
+                command(" ", [], VideoCompressionCopy.play, #selector(play)),
+                command(UIKeyCommand.inputLeftArrow, [], VideoCompressionCopy.previousFrame, #selector(previousFrame)),
+                command(UIKeyCommand.inputRightArrow, [], VideoCompressionCopy.nextFrame, #selector(nextFrame)),
+                command(UIKeyCommand.inputLeftArrow, .command, VideoCompressionCopy.previousVideo, #selector(previousVideo)),
+                command(UIKeyCommand.inputRightArrow, .command, VideoCompressionCopy.nextVideo, #selector(nextVideo)),
+                command("\u{8}", .command, VideoCompressionCopy.deleteOriginal, #selector(deleteOriginal)),
+                command(UIKeyCommand.inputEscape, [], String(localized: "Close"), #selector(close)),
+            ]
+        }
+
+        private func command(_ input: String, _ flags: UIKeyModifierFlags, _ title: String, _ action: Selector) -> UIKeyCommand {
+            let command = UIKeyCommand(title: title, action: action, input: input, modifierFlags: flags)
+            command.wantsPriorityOverSystemBehavior = true
+            return command
+        }
+
+        @objc private func play() { perform?(.togglePlay) }
+        @objc private func previousFrame() { perform?(.frame(-1)) }
+        @objc private func nextFrame() { perform?(.frame(1)) }
+        @objc private func previousVideo() { perform?(.video(-1)) }
+        @objc private func nextVideo() { perform?(.video(1)) }
+        @objc private func deleteOriginal() { perform?(.deleteOriginal) }
+
+        @objc private func close() { perform?(.close) }
+
     }
 }
 

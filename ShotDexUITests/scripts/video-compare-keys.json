@@ -1,0 +1,135 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexVideoCompressDemo"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Compress",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Compare Before and After",
+   "type": "button",
+   "seconds": 900
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "dump",
+   "name": "k0-start",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "dump",
+   "name": "k1-space-playing",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "k2-space-paused",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "key",
+   "text": "right"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "dump",
+   "name": "k3-right-x2",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "left"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.7
+  },
+  {
+   "action": "dump",
+   "name": "k4-left",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "right",
+   "direction": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "k5-cmd-right",
+   "text": "snapshot"
+  },
+  {
+   "action": "key",
+   "text": "left",
+   "direction": "cmd"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "k6-cmd-left",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Delete Original",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "k7-delete-confirm"
+  }
+ ]
+}

@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 import SwiftUI
+import os
 
 /// FS-24 §10 Compare Videos on the Mac (board `MAC_VideoCompare`): in the
 /// Compress Videos window, in place of its list (`mac-few-windows`) — `‹`
@@ -41,7 +42,6 @@ struct MacVideoComparePage: View {
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         .background { keys }
-        .onExitCommand(perform: close)
         .task {
             model.loadCurrent()
             #if DEBUG
@@ -55,10 +55,16 @@ struct MacVideoComparePage: View {
                 scale = zoomed.scale
                 offset = zoomed.offset
             }
+            if arguments.contains("-ShotDexCompareKeys") {
+                await MacVideoCompressPage.replayKeys(model: model)
+            }
             #endif
         }
         .onAppear(perform: startMonitors)
         .onDisappear {
+            #if DEBUG
+            Logger(subsystem: "com.hoangtuan.shotdex", category: "compareKeys").notice("compare closed")
+            #endif
             monitors.forEach(NSEvent.removeMonitor)
             monitors = []
             model.pause()
@@ -96,7 +102,7 @@ struct MacVideoComparePage: View {
                     .foregroundStyle(.red)
             }
             .disabled(model.isDeleting || model.currentPair == nil)
-            .keyboardShortcut(.delete, modifiers: .command)
+            .help("\(VideoCompressionCopy.deleteOriginal) (⌘⌫)")
             .accessibilityIdentifier("videoCompare.deleteOriginal")
         }
     }
@@ -261,6 +267,11 @@ struct MacVideoComparePage: View {
                 .keyboardShortcut(.leftArrow, modifiers: .command)
             Button(VideoCompressionCopy.nextVideo) { model.stepVideo(1) }
                 .keyboardShortcut(.rightArrow, modifiers: .command)
+            // Esc lives here: `onExitCommand` needs a focused view the panes
+            // do not give (AC-24.22, `-ShotDexCompareKeys`). ⌘⌫ is the key
+            // monitor in `startMonitors`.
+            Button(String(localized: "Back", comment: "Mac toolbar"), action: close)
+                .keyboardShortcut(.escape, modifiers: [])
         }
         .opacity(0)
         .accessibilityHidden(true)
@@ -273,6 +284,15 @@ struct MacVideoComparePage: View {
             isOptionHeld = event.modifierFlags.contains(.option)
             return event
         }) { monitors.append(flags) }
+        // ⌘⌫ is Delete Original here. The menu's Move to Trash claims ⌘⌫
+        // app-wide, and a monitor runs before any key equivalent (AC-24.22).
+        if let delete = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { event in
+            guard event.keyCode == 51,
+                  event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                  model.currentPair != nil, !model.isDeleting else { return event }
+            Task { await model.deleteCurrentOriginal() }
+            return nil
+        }) { monitors.append(delete) }
         if let wheel = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel, handler: { event in
             guard event.modifierFlags.contains(.command), paneSize.width > 0 else { return event }
             let factor = 1 + event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 0.01 : 0.1)

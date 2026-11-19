@@ -128,6 +128,14 @@ enum VideoCompressionCopy {
         String(localized: "Video \(index + 1) of \(count)", comment: "Compare Videos: which compressed file is shown")
     }
 
+    /// The scrubber's VoiceOver value: "0:01, frame 42" — the frame is what
+    /// ←/→ and the frame buttons move, and the seconds alone do not show it.
+    static func scrubberValue(seconds: Double, frameRate: Double) -> String {
+        let value = max(0, seconds) * frameRate
+        let frame = value.isFinite ? Int(value.rounded()) : 0
+        return String(localized: "\(time(seconds)), frame \(frame)", comment: "Compare Videos: scrubber value for VoiceOver, time and frame number")
+    }
+
     static func percent(_ fraction: Double) -> String {
         fraction.formatted(.percent.precision(.fractionLength(0)))
     }
