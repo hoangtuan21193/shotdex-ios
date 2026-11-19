@@ -552,6 +552,9 @@ struct CompressionScreen: View {
             title = String(localized: "Resizing \(current) of \(total)",
                            comment: "Resize progress card headline: the photo being resized, of the batch")
             fraction = controller.progressFraction
+            // The card's footnote line: the percent, which the card itself
+            // follows with the time left once it can estimate one.
+            detail = controller.progressFraction.formatted(.percent.precision(.fractionLength(0)))
         }
         return JobProgressCard(
             title: title,
