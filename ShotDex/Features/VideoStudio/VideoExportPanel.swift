@@ -20,6 +20,10 @@ struct VideoExportPanel: View {
     /// the Duo's cover (both are four columns edge to edge).
     @Environment(\.videoStudioWindowClass) private var windowClass
     @State private var serverExportModel: ServerExportModel?
+    /// Cancel Export asks first: what has been rendered is thrown away.
+    @State private var isConfirmingCancel = false
+    /// When this export began, for "About N min left".
+    @State private var exportStartedAt = Date()
 
     private var inset: CGFloat { isDuo ? 14 : 20 }
 
@@ -44,6 +48,20 @@ struct VideoExportPanel: View {
                 dependencies: dependencies
             )
         }
+        .onChange(of: exportFraction == nil) { _, isIdle in
+            // A finished export takes its confirmation with it.
+            if isIdle { isConfirmingCancel = false } else { exportStartedAt = Date() }
+        }
+        .confirmationDialog(
+            String(localized: "Cancel Export?", comment: "Video Studio Export: title of the confirmation before stopping a running export"),
+            isPresented: $isConfirmingCancel,
+            titleVisibility: .visible
+        ) {
+            Button(VideoStudioCopy.cancelExport, role: .destructive) { model.cancelExport() }
+            Button(String(localized: "Keep Exporting", comment: "Video Studio Export: closes the cancel confirmation, export continues"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "The video rendered so far is discarded.", comment: "Video Studio Export: what cancelling a running export loses"))
+        }
         .silencesVideoStudioKeys(model, while: serverExportModel != nil)
         .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
             ServerExportSheet(model: exportModel) {
@@ -60,8 +78,8 @@ struct VideoExportPanel: View {
     /// 700 wide, 620 tall while ready and 572 while exporting, 24 in: the
     /// title over the project's summary with Close at the right; the
     /// choices; then a foot under a rule — what the file will be on the
-    /// left and the one way on at the right: Export (270×44), or while it
-    /// runs the progress (360×6) and Cancel Export (180×44).
+    /// left and the one way on at the right: Export (270×44). While it
+    /// runs, the choices and the foot give way to the progress.
     private var sheetBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
@@ -98,26 +116,86 @@ struct VideoExportPanel: View {
                     .accessibilityLabel(Text(VideoStudioCopy.close))
                 }
             }
-            VStack(alignment: .leading, spacing: 0) {
-                switch model.exportState {
-                case .idle, .failed, .exporting:
-                    sheetChoices
-                case .saving:
-                    saving
+            if let progress = exportFraction {
+                // While it runs the export is the sheet (FS-12.10b §4): the
+                // choices cannot change mid-render, so they give way to the
+                // progress at the column's full width.
+                sheetExporting(progress)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    switch model.exportState {
+                    case .idle, .failed, .exporting:
+                        sheetChoices
+                    case .saving:
+                        saving
+                    }
                 }
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                if model.missingLUTLookCount > 0 {
+                    VideoMissingLUTBanner(count: model.missingLUTLookCount)
+                        .padding(.bottom, 10)
+                }
+                sheetFoot
             }
-            .padding(.top, 16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            if model.missingLUTLookCount > 0 {
-                VideoMissingLUTBanner(count: model.missingLUTLookCount)
-                    .padding(.bottom, 10)
-            }
-            sheetFoot
         }
         .padding(.horizontal, Sheet.inset)
         .frame(width: Sheet.width, height: model.isExportBusy ? Sheet.exportingHeight : Sheet.readyHeight)
         .background(EditorTheme.sheet)
     }
+
+    /// The export's fraction while it renders; nil in every other state.
+    private var exportFraction: Double? {
+        if case .exporting(let progress) = model.exportState { min(max(progress, 0), 1) } else { nil }
+    }
+
+    /// The running export on the iPad (board IL5_Export, exporting state):
+    /// "Exporting 62%" in `.title3` semibold, a bar the column's full width
+    /// (652), one footnote line — length · codec · time left once it can be
+    /// told — and Cancel Export, 240×44 and centred, which asks first.
+    private func sheetExporting(_ progress: Double) -> some View {
+        let percent = Int((progress * 100).rounded(.down))
+        let timeLeft = JobProgressCard<EmptyView>.timeLeft(fraction: progress, since: exportStartedAt)
+        let detail = [
+            VideoStudioMetrics.shortDuration(model.totalDuration),
+            model.exportSpec.codec.displayName,
+            timeLeft,
+        ].compactMap { $0 }.joined(separator: " · ")
+        return VStack(spacing: AppTheme.Spacing.md) {
+            // A bed that ducks waits for the voices first (FS-12.13 §6).
+            Text(model.isListeningForExport
+                 ? VideoStudioCopy.listeningForVoices
+                 : String(localized: "Exporting \(percent)%", comment: "Video Studio Export (iPad): headline while the video renders"))
+                .font(.title3.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.white)
+            ProgressView(value: progress)
+                .progressViewStyle(.linear)
+                .tint(EditorTheme.accent)
+                .accessibilityLabel(Text(VideoStudioCopy.exportingAccessibility(percent)))
+            Text(verbatim: detail)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(EditorTheme.secondaryText)
+            Button(role: .destructive) {
+                isConfirmingCancel = true
+            } label: {
+                Text(VideoStudioCopy.cancelExport)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(EditorTheme.timelineDestructive)
+                    .frame(width: Self.sheetCancelWidth, height: AppTheme.Size.minTouch)
+                    .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .fill(EditorTheme.timelineDestructive.opacity(0.18)))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, AppTheme.Spacing.sm)
+            .accessibilityIdentifier("exportCancelButton")
+        }
+        .padding(.top, 48)
+    }
+
+    /// Cancel Export under the iPad's progress.
+    private static let sheetCancelWidth: CGFloat = 240
 
     /// The choices (FS-12.16 §5, F8_IL / F8_IP): Where Is It Going — the
     /// five presets and Custom as 320×72 cards in two columns — then Your
@@ -297,58 +375,27 @@ struct VideoExportPanel: View {
 
     private var sheetFoot: some View {
         HStack(alignment: .center, spacing: 16) {
-            if case .exporting(let progress) = model.exportState {
-                let percent = Int((progress * 100).rounded(.down))
-                VStack(alignment: .leading, spacing: 8) {
-                    // A bed that ducks waits for the voices first (FS-12.13 §6).
-                    Text(model.isListeningForExport ? VideoStudioCopy.listeningForVoices : VideoStudioCopy.exportingPercent(percent))
-                        .font(.system(size: 17, weight: .medium).monospacedDigit())
-                        .foregroundStyle(.white)
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.12))
-                        Capsule().fill(Color.white).frame(width: Sheet.progressWidth * CGFloat(min(max(progress, 0), 1)))
-                    }
-                    .frame(width: Sheet.progressWidth, height: 6)
-                    .accessibilityElement()
-                    .accessibilityLabel(Text(VideoStudioCopy.exportingAccessibility(percent)))
-                }
-                Spacer(minLength: 0)
-                Button(role: .destructive) {
-                    model.cancelExport()
-                } label: {
-                    Text(VideoStudioCopy.cancelExport)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(EditorTheme.timelineDestructive)
-                        .frame(width: Sheet.cancelSize.width, height: Sheet.cancelSize.height)
-                        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                            .fill(EditorTheme.timelineDestructive.opacity(0.18)))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("exportCancelButton")
-            } else {
-                Text(verbatim: exportFootSummary)
-                    .font(.system(size: 15, design: .monospaced))
-                    .foregroundStyle(EditorTheme.secondaryText)
+            Text(verbatim: exportFootSummary)
+                .font(.system(size: 15, design: .monospaced))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Button {
+                model.export()
+            } label: {
+                Text(server != nil ? Self.exportTitle(isServerRun: true) : model.exportButtonTitle)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.black)
                     .lineLimit(1)
-                Spacer(minLength: 0)
-                Button {
-                    model.export()
-                } label: {
-                    Text(server != nil ? Self.exportTitle(isServerRun: true) : model.exportButtonTitle)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.black)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 8)
-                        .frame(width: Sheet.exportSize.width, height: Sheet.exportSize.height)
-                        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(EditorTheme.accent))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isExportBusy)
-                .accessibilityIdentifier("exportStartButton")
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 8)
+                    .frame(width: Sheet.exportSize.width, height: Sheet.exportSize.height)
+                    .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(EditorTheme.accent))
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .disabled(model.isExportBusy)
+            .accessibilityIdentifier("exportStartButton")
         }
         .frame(height: Sheet.footHeight)
         .padding(.bottom, Sheet.footBottom)
@@ -544,7 +591,7 @@ struct VideoExportPanel: View {
             .accessibilityLabel(Text(VideoStudioCopy.exportingAccessibility(Int((progress * 100).rounded(.down)))))
             Spacer(minLength: 12)
             Button(role: .destructive) {
-                model.cancelExport()
+                isConfirmingCancel = true
             } label: {
                 Text(VideoStudioCopy.cancelExport)
                     .font(.system(size: 15, weight: .semibold))
