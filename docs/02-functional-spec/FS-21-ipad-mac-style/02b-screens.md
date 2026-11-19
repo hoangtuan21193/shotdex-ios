@@ -63,6 +63,8 @@ không thành sheet. Board dọc vẽ trước `/plan`: Collage, Xuất collage,
   Date Taken (Newest). Thứ tự cũ còn trong defaults (bản cài trước, hay trước một lần reset quyền) không được giữ —
   nó từng mở thư viện với tiêu đề "File Size (Smallest)", và thứ tự theo số đo chỉ hiện được ảnh index đã đọc,
   thay vì cả thư viện lấy thẳng từ PhotoKit.
+- Quyền **Limited** + lưới đọc từ index (bộ lọc, tìm, thứ tự theo số đo): chỉ hiện ảnh PhotoKit chia sẻ cho app và
+  ảnh có bản ở thư mục, ổ, server. Hàng index cũ của ảnh không được chia sẻ bị bỏ — không vẽ thành ô trống.
 
 
 ## 4. Server trên iPad — `IP_ServerList`, `IP_ServerForm`, `IP_ServerBrowser`, `IP_ServerUpload`, `IP_UploadedToServer`

@@ -441,9 +441,9 @@ final class LibraryModel {
                     } else if !criteria.isEmpty {
                         filters.append(.criteria(criteria))
                     }
-                    let rows = try await libraryQueries.gridItems(
+                    let rows = try await Self.droppingUnsharedPhotos(libraryQueries.gridItems(
                         matchingAll: filters, restrictedTo: try await place.assetIds(queries: libraryQueries), sort: place.fixedSort ?? sort
-                    )
+                    ), libraryQueries: libraryQueries)
                     guard let self, !Task.isCancelled else { return }
                     self.cloudPlaceholderCount = 0
                     self.applyLoadedRows(rows)
@@ -454,17 +454,23 @@ final class LibraryModel {
                     } else if !criteria.isEmpty {
                         filters.append(.criteria(criteria))
                     }
-                    let rows = try await libraryQueries.gridItems(matchingAll: filters, sort: sort)
+                    let rows = try await Self.droppingUnsharedPhotos(
+                        libraryQueries.gridItems(matchingAll: filters, sort: sort), libraryQueries: libraryQueries
+                    )
                     guard let self, !Task.isCancelled else { return }
                     self.cloudPlaceholderCount = 0
                     self.applyLoadedRows(rows)
                 } else if let advancedQuery, !advancedQuery.isEmpty {
-                    let rows = try await libraryQueries.gridItems(matching: advancedQuery, sort: sort)
+                    let rows = try await Self.droppingUnsharedPhotos(
+                        libraryQueries.gridItems(matching: advancedQuery, sort: sort), libraryQueries: libraryQueries
+                    )
                     guard let self, !Task.isCancelled else { return }
                     self.cloudPlaceholderCount = 0
                     self.applyLoadedRows(rows)
                 } else {
-                    var rows = try await libraryQueries.gridItems(matching: criteria, sort: sort)
+                    var rows = try await Self.droppingUnsharedPhotos(
+                        libraryQueries.gridItems(matching: criteria, sort: sort), libraryQueries: libraryQueries
+                    )
                     // Files only in the cloud show in the whole library, never
                     // in a filtered grid: they have no EXIF to match on.
                     let cloud = criteria.isEmpty ? try await libraryQueries.cloudPlaceholderItems() : []
@@ -485,6 +491,40 @@ final class LibraryModel {
                 self.isLoading = false
             }
         }
+    }
+
+    /// Index rows the current Photos grant can actually draw.
+    ///
+    /// Under `.limited` the index still holds every photo it read while
+    /// access was Full (or before the user narrowed the selection), and the
+    /// indexer only prunes them on its next pass. A grid read from the index
+    /// — a filter, a search, a metric sort — then laid those rows out as
+    /// tiles PhotoKit refuses to resolve: blank cells among the real ones.
+    /// A row stays when PhotoKit hands its asset to the app, or when it has a
+    /// folder, drive or server copy, which a Photos grant does not govern.
+    nonisolated static func droppingUnsharedPhotos(
+        _ rows: [LibraryGridItem],
+        libraryQueries: LibraryQueries
+    ) async throws -> [LibraryGridItem] {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited, !rows.isEmpty else { return rows }
+        let outsidePhotos = try await libraryQueries.assetIdsWithCopiesOutsidePhotos()
+        // A limited selection is small, so enumerating it is cheap.
+        let shared = await Task.detached(priority: .userInitiated) {
+            let fetch = PHAsset.fetchAssets(with: Self.browsableFetchOptions(sort: .default))
+            var ids = Set<String>(minimumCapacity: fetch.count)
+            fetch.enumerateObjects { asset, _, _ in ids.insert(asset.localIdentifier) }
+            return ids
+        }.value
+        return visibleRows(rows, sharedPhotoIds: shared, idsOutsidePhotos: outsidePhotos)
+    }
+
+    /// The pure half of `droppingUnsharedPhotos`, kept apart for tests.
+    nonisolated static func visibleRows(
+        _ rows: [LibraryGridItem],
+        sharedPhotoIds: Set<String>,
+        idsOutsidePhotos: Set<String>
+    ) -> [LibraryGridItem] {
+        rows.filter { sharedPhotoIds.contains($0.assetId) || idsOutsidePhotos.contains($0.assetId) }
     }
 
     /// Cloud placeholders placed among indexed rows by the file's date under

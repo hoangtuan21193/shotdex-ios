@@ -50,4 +50,15 @@ struct LibraryModelSortTests {
         let byDate = LibraryModel.merging(cloud, into: rows, sort: .dateTakenNewest).map(\.assetId)
         #expect(byDate.first == "Pnew")
     }
+
+    // FS-21.02b §3 — under `.limited`, an index read keeps the rows PhotoKit
+    // shares and the rows with a folder, drive or server copy, in order; a
+    // photo the grant hides is dropped instead of drawn as a blank cell.
+    @Test func limitedAccessDropsUnsharedPhotos() {
+        let rows = ["shared1", "hidden", "file", "shared2", "hidden2"].map { item($0, size: 1, creation: 1) }
+        let ids = LibraryModel.visibleRows(
+            rows, sharedPhotoIds: ["shared1", "shared2"], idsOutsidePhotos: ["file"]
+        ).map(\.assetId)
+        #expect(ids == ["shared1", "file", "shared2"])
+    }
 }

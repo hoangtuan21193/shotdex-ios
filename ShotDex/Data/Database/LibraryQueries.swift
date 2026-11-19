@@ -141,6 +141,15 @@ struct LibraryQueries: Sendable {
         }
     }
 
+    /// Every photo with a live folder, drive or server copy — the rows a
+    /// `.limited` Photos grant cannot hide, because they do not come from
+    /// Photos.
+    func assetIdsWithCopiesOutsidePhotos() async throws -> Set<String> {
+        try await database.reader.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT DISTINCT photoId FROM photo_copies WHERE kind != 'photos' AND missingSince IS NULL"))
+        }
+    }
+
     /// True once any photo has a copy that is not a Photos asset — the grid
     /// can no longer be drawn from PhotoKit alone.
     func hasPhotosOutsidePhotos() throws -> Bool {
