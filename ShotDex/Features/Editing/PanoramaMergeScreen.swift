@@ -392,31 +392,16 @@ struct PanoramaMergeScreen: View {
     /// can run for a minute on a big panorama, and everything on the screen
     /// behind it would change what is being written.
     private func savingOverlay(_ model: PanoramaMergeModel) -> some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {}
-            VStack(spacing: AppTheme.Spacing.md) {
-                ProgressView().controlSize(.large).tint(.white)
-                Text("Saving Panorama")
-                    .font(EditorTheme.sidebarTitle)
-                    .foregroundStyle(.white)
-                ProgressView(value: model.saveProgress ?? 0)
-                    .tint(EditorTheme.accent)
-                Text("\(Int((model.saveProgress ?? 0) * 100))%")
-                    .font(EditorTheme.rowLabel.monospacedDigit())
-                    .foregroundStyle(EditorTheme.secondaryText)
-                Button("Cancel", role: .destructive) { model.cancelSave() }
-                    .padding(.top, AppTheme.Spacing.sm)
-            }
-            .padding(AppTheme.Spacing.lg)
-            .frame(maxWidth: 300)
-            .background(EditorTheme.panelSolid, in: RoundedRectangle.app(AppTheme.Radius.lg))
-            .overlay {
-                RoundedRectangle.app(AppTheme.Radius.lg).stroke(EditorTheme.hairline, lineWidth: 1)
-            }
-        }
+        let fraction = model.saveProgress ?? 0
+        return JobProgressCard(
+            title: String(localized: "Saving Panorama", comment: "Panorama progress card headline while the stitch is written"),
+            fraction: fraction,
+            detail: String(localized: "\(Int(fraction * 100))%", comment: "Panorama progress card detail: percent written"),
+            cancelRole: .destructive,
+            style: .editor,
+            onCancel: { model.cancelSave() }
+        )
+        .jobProgressScrim()
     }
 }
 
