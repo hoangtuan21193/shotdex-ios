@@ -897,10 +897,17 @@ private struct CompressionSummary: View {
 
     private var savedCount: Int { controller.createdAssetIDs.count }
 
+    /// Sentence case, as the phone's rows say the same thing.
     private var heroTitle: String {
-        controller.wasCancelled
-            ? String(localized: "Resize Cancelled", comment: "Resize summary headline after the run was cancelled")
-            : String(localized: "\(savedCount) Saved to Photos", comment: "Resize summary headline: resized copies written to Photos")
+        if controller.wasCancelled {
+            return String(localized: "Resize cancelled", comment: "Resize summary headline after the run was cancelled")
+        }
+        if savedCount == 0, !controller.failures.isEmpty {
+            // "0 saved to Photos" under a warning reads like a count, not an
+            // outcome; the failures are counted on the line below.
+            return String(localized: "Nothing saved", comment: "Resize summary headline: every photo failed, no copy was written")
+        }
+        return String(localized: "\(savedCount) saved to Photos", comment: "Resize summary headline: resized copies written to Photos")
     }
 
     /// "2 failed · 3 originals deleted" — the counts the phone shows as rows.
@@ -918,9 +925,16 @@ private struct CompressionSummary: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    /// The worst thing that happened, so a green check never sits next to an
+    /// error section below: copies left behind by a cancel first (the phone's
+    /// red octagon row), then the cancel itself, then originals that could
+    /// not be deleted or photos that failed.
     private var heroSymbol: (name: String, color: Color) {
+        if controller.rollbackErrorMessage != nil { return ("exclamationmark.octagon.fill", .red) }
         if controller.wasCancelled { return ("xmark.circle", EditorTheme.secondaryText) }
-        if !controller.failures.isEmpty { return ("exclamationmark.triangle.fill", .orange) }
+        if controller.deleteOriginalsErrorMessage != nil || !controller.failures.isEmpty {
+            return ("exclamationmark.triangle.fill", .orange)
+        }
         return ("checkmark.circle.fill", .green)
     }
 
