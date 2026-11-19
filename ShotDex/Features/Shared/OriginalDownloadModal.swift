@@ -187,6 +187,9 @@ struct JobProgressCard<Accessory: View>: View {
                 .foregroundStyle(primaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
+                // The bar or spinner below carries the title as its label (with
+                // the value on the bar), so VoiceOver reads it once.
+                .accessibilityHidden(true)
             if let fraction {
                 ProgressView(value: min(1, max(0, fraction)))
                     .progressViewStyle(.linear)
@@ -213,6 +216,7 @@ struct JobProgressCard<Accessory: View>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
+                .keyboardShortcut(.cancelAction)
                 .foregroundStyle(cancelRole == .destructive ? Color.red : tint)
                 .disabled(isCancelDisabled)
                 .opacity(isCancelDisabled ? 0.4 : 1)
