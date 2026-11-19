@@ -62,6 +62,25 @@ struct VideoCompressionScreen: View {
                         Button("Cancel") { dismiss() }
                     }
                 }
+                // Wide, once the job runs: Stop and Done sit on the
+                // toolbar's trailing edge (FS-21.02b §2) and the screen
+                // below is the job itself.
+                ToolbarItem(placement: .confirmationAction) {
+                    if isWide, let batch {
+                        switch batch.phase {
+                        case .setup:
+                            EmptyView()
+                        case .running:
+                            Button(VideoCompressionCopy.stop) { isStopConfirmationPresented = true }
+                                .fontWeight(.regular)
+                                .tint(.white)
+                        case .finished:
+                            Button(VideoCompressionCopy.done) { dismiss() }
+                                .fontWeight(.semibold)
+                                .tint(accent)
+                        }
+                    }
+                }
             }
             .toolbarBackground(EditorTheme.panelSolid, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -110,7 +129,33 @@ struct VideoCompressionScreen: View {
 
     @ViewBuilder
     private func content(_ batch: VideoCompressionBatch) -> some View {
-        if isWide {
+        if isWide, batch.phase != .setup {
+            // Wide, running or finished: the job owns the screen — one
+            // centred column, progress (then the result) at its top, the
+            // files under it. The setup inspector beside a 1000pt list left
+            // the progress as a small bar in a corner and half the screen
+            // empty (boards `IP_VideoCompressRun`, `DI_VideoCompressRun`).
+            ScrollView {
+                VStack(spacing: AppTheme.Spacing.sm) {
+                    Group {
+                        if batch.phase == .running {
+                            runningHero(batch)
+                        } else {
+                            finishedHero(batch)
+                        }
+                    }
+                    .padding(AppTheme.Spacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(EditorTheme.control, in: RoundedRectangle.app(AppTheme.Radius.lg))
+                    .padding(.bottom, AppTheme.Spacing.md)
+                    rows(batch)
+                }
+                .padding(.horizontal, AppTheme.Spacing.xl)
+                .padding(.vertical, AppTheme.Spacing.xl)
+                .frame(maxWidth: Self.jobColumnWidth)
+                .frame(maxWidth: .infinity)
+            }
+        } else if isWide {
             // Wide (iPad, the Duo's inner display): the list of videos fills
             // the leading side and the choices are an inspector beside it,
             // the button pinned under them — the same frame as Resize
@@ -165,6 +210,9 @@ struct VideoCompressionScreen: View {
     }
 
     private static let inspectorWidth: CGFloat = 340
+    /// The running and finished column on a wide screen: rows stay readable
+    /// as one unit and the hero sits where the eye lands.
+    private static let jobColumnWidth: CGFloat = 760 + 2 * AppTheme.Spacing.xl
     private static let maximumFormWidth: CGFloat = 700
 
     @ViewBuilder
@@ -270,6 +318,95 @@ struct VideoCompressionScreen: View {
             Text(VideoCompressionCopy.note)
                 .font(.caption)
                 .foregroundStyle(EditorTheme.dimText)
+        }
+    }
+
+    // MARK: Wide job heroes
+
+    private func runningHero(_ batch: VideoCompressionBatch) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(VideoCompressionCopy.running(batch.completedCount, of: batch.items.count))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer(minLength: AppTheme.Spacing.md)
+                Text(VideoCompressionCopy.percent(batch.overallProgress))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+            ProgressView(value: batch.overallProgress)
+                .tint(accent)
+                .scaleEffect(x: 1, y: 1.5, anchor: .center)
+            let detail = [
+                batch.savedBytes > 0 ? VideoCompressionCopy.savedSoFar(batch.savedBytes) : nil,
+                batch.secondsLeft().map(VideoCompressionCopy.timeLeft),
+            ].compactMap { $0 }
+            if !detail.isEmpty {
+                Text(detail.joined(separator: " · "))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+            Text(VideoCompressionCopy.note)
+                .font(.caption)
+                .foregroundStyle(EditorTheme.dimText)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func finishedHero(_ batch: VideoCompressionBatch) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(VideoCompressionCopy.savedHeadline(batch.savedBytes))
+                    .font(.largeTitle.weight(.bold).monospacedDigit())
+                    .foregroundStyle(.white)
+                Text(VideoCompressionCopy.doneDetail(done: batch.doneCount, skipped: batch.skippedCount))
+                    .font(.footnote)
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
+            if let reason = batch.stopReason {
+                Label(reason, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            HStack(spacing: AppTheme.Spacing.md) {
+                if let first = batch.comparePairs.first {
+                    Button {
+                        comparing = CompareStart(id: first.id)
+                    } label: {
+                        Label(VideoCompressionCopy.compareBeforeAfter, systemImage: "rectangle.split.2x1")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(CompressionChoiceStyle(selected: false))
+                }
+                if batch.hasDeletedOriginals {
+                    Label(VideoCompressionCopy.originalsDeleted, systemImage: "trash")
+                        .font(.footnote)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                } else if batch.doneCount > 0 {
+                    Button(role: .destructive) {
+                        Task { await batch.deleteOriginals() }
+                    } label: {
+                        Label(VideoCompressionCopy.deleteOriginals, systemImage: "trash")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(CompressionChoiceStyle(selected: false))
+                }
+            }
+            if let error = batch.deleteError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            if !batch.comparePairs.isEmpty {
+                Text(VideoCompressionCopy.summaryHint)
+                    .font(.caption)
+                    .foregroundStyle(EditorTheme.dimText)
+            }
         }
     }
 

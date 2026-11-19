@@ -6,6 +6,14 @@ import Testing
 
 /// FS-24 AC-24.03, 04, 05, 08, 09: the pure rules of batch video compression.
 struct VideoCompressionRulesTests {
+    /// The running time-left line waits for a pace, then extrapolates it.
+    @Test func timeLeftFromPace() {
+        #expect(VideoCompressionRules.secondsLeft(elapsed: 3, progress: 0.5) == nil)
+        #expect(VideoCompressionRules.secondsLeft(elapsed: 60, progress: 0.01) == nil)
+        #expect(VideoCompressionRules.secondsLeft(elapsed: 60, progress: 1) == nil)
+        #expect(VideoCompressionRules.secondsLeft(elapsed: 120, progress: 0.25) == 360)
+    }
+
     /// AC-24.03: High follows HandBrake's VideoToolbox 1080p preset (0.60).
     @Test func qualityLevelsMapToEncoderQuality() {
         #expect(VideoCompressionQuality.maximum.encoderQuality == 0.70)

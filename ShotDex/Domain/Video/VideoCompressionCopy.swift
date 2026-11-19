@@ -36,6 +36,37 @@ enum VideoCompressionCopy {
             : String(localized: "Compressed \(done) videos · saved \(bytes(saved))", comment: "Compress Videos summary headline")
     }
 
+    /// The running headline: the file being worked on, counted from 1.
+    static func running(_ completed: Int, of total: Int) -> String {
+        total == 1
+            ? String(localized: "Compressing", comment: "Compress Videos: running headline, one video")
+            : String(localized: "Compressing \(min(completed + 1, total)) of \(total)", comment: "Compress Videos: running headline, the file being compressed and the total")
+    }
+
+    static func savedSoFar(_ value: Int64) -> String {
+        String(localized: "Saved \(bytes(value)) so far", comment: "Compress Videos: running detail, space saved by the files already done")
+    }
+
+    static func timeLeft(_ seconds: TimeInterval) -> String {
+        let minutes = Int((seconds / 60).rounded(.up))
+        return minutes <= 1
+            ? String(localized: "About a minute left", comment: "Compress Videos: running detail, time left")
+            : String(localized: "About \(minutes) min left", comment: "Compress Videos: running detail, time left in minutes")
+    }
+
+    /// The finished headline, the number the user came for.
+    static func savedHeadline(_ value: Int64) -> String {
+        String(localized: "Saved \(bytes(value))", comment: "Compress Videos summary: headline, total space saved")
+    }
+
+    static func doneDetail(done: Int, skipped: Int) -> String {
+        let compressed = done == 1
+            ? String(localized: "Compressed 1 video", comment: "Compress Videos summary detail, one video")
+            : String(localized: "Compressed \(done) videos", comment: "Compress Videos summary detail")
+        guard skipped > 0 else { return compressed }
+        return compressed + " · " + String(localized: "\(skipped) already compact", comment: "Compress Videos summary detail: files left as they were")
+    }
+
     static func progress(_ completed: Int, of total: Int) -> String {
         String(localized: "\(completed) of \(total) done", comment: "Compress Videos: batch counter")
     }

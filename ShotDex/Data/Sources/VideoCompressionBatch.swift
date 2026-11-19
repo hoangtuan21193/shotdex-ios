@@ -157,9 +157,25 @@ final class VideoCompressionBatch {
         items.filter { if case .done = $0.state { true } else { false } }.count
     }
 
+    /// Files left as they were because the copy would not have been small
+    /// enough ("Already compact").
+    var skippedCount: Int {
+        items.filter { if case .skipped = $0.state { true } else { false } }.count
+    }
+
+    /// When Compress was pressed — the pace behind the time-left line.
+    private(set) var startedAt: Date?
+
+    /// The rest of the run at the pace so far (`VideoCompressionRules.secondsLeft`).
+    func secondsLeft(now: Date = .now) -> TimeInterval? {
+        guard phase == .running, let startedAt else { return nil }
+        return VideoCompressionRules.secondsLeft(elapsed: now.timeIntervalSince(startedAt), progress: overallProgress)
+    }
+
     func start() {
         guard phase == .setup, !items.isEmpty else { return }
         phase = .running
+        startedAt = .now
         stopReason = nil
         let settings = VideoCompressionEncoder.Settings(quality: quality, size: size)
         runTask = Task { [weak self] in

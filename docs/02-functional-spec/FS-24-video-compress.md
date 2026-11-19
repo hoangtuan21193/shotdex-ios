@@ -55,6 +55,14 @@
    (opens §10 on the first compressed file), `Delete Originals` (moves the originals of
    successful files to Recently Deleted through PhotoKit's own confirmation) and `Done`. A
    compressed row is itself a button (chevron) that opens §10 on that file; Mac: double-click.
+   **Wide screens (iPad, Duo inner; changed 2026-11-20 at the user's request):** once Compress is
+   pressed the setup inspector goes away and the job owns the screen — one column ≤ 760pt, centred,
+   with a hero card at its top and the file rows under it. Running hero: "Compressing 2 of 5",
+   overall %, the batch bar, "Saved X so far · About N min left" (time left from the pace so far,
+   shown once ≥ 5 s and ≥ 3% have passed), the HDR/originals note. Finished hero: "Saved X" as the
+   headline, "Compressed N videos · M already compact", `Compare Before and After` and
+   `Delete Originals` side by side. `Stop` and `Done` move to the toolbar's trailing edge
+   (FS-21.02b §2). The phone and the Duo cover keep the stacked layout with the button at the foot.
 9. iCloud originals are downloaded first (network allowed), with that phase shown in the
    per-file progress.
 

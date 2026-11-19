@@ -159,4 +159,13 @@ enum VideoCompressionRules {
         let needed = sourceBytes * 2 + reserveBytes
         return freeBytes >= needed
     }
+
+    /// Seconds the rest of the batch should take at the pace so far, or nil
+    /// while that pace says nothing yet — the first few seconds and the first
+    /// few percent are a download or a decoder warming up, and a "2 hours
+    /// left" that drops to "4 min" a moment later is worse than no estimate.
+    static func secondsLeft(elapsed: TimeInterval, progress: Double) -> TimeInterval? {
+        guard elapsed >= 5, progress >= 0.03, progress < 1 else { return nil }
+        return elapsed * (1 - progress) / progress
+    }
 }
