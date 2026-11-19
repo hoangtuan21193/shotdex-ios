@@ -172,7 +172,11 @@ struct IngestScreen: View {
     @ViewBuilder
     private func panel(isWide: Bool) -> some View {
         if model.isRunning {
-            IngestProgressPanel(model: model, isConfirmingStop: $isConfirmingStop)
+            // iPad portrait and the Duo inner display: the panel sits under
+            // the grid, so it is a short hero capped at 560pt, not the
+            // phone's stack stretched across 1000pt (UX review 2026-11-20).
+            IngestProgressPanel(model: model, isConfirmingStop: $isConfirmingStop,
+                                isHero: !isWide && sizeClass == .regular)
         } else {
             IngestOptionsPanel(model: model, isWide: isWide)
         }

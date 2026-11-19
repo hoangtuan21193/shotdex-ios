@@ -126,8 +126,19 @@ struct IngestOptionsPanel: View {
 struct IngestProgressPanel: View {
     @Bindable var model: IngestModel
     @Binding var isConfirmingStop: Bool
+    /// Regular width under the grid (iPad portrait, Duo inner): one hero
+    /// line and bar, Copy · Verify · Backup side by side, capped at 560pt
+    /// and short enough for the Duo's 669pt.
+    var isHero = false
+
+    /// The hero block's width on a wide screen.
+    static let heroWidth: CGFloat = 560
 
     var body: some View {
+        if isHero { hero } else { stacked }
+    }
+
+    private var stacked: some View {
         VStack(spacing: AppTheme.Spacing.md) {
             VStack(spacing: AppTheme.Spacing.xs) {
                 Text("Importing from \(model.card.name)", tableName: IngestCopy.table, comment: "Card import progress title")
@@ -174,6 +185,94 @@ struct IngestProgressPanel: View {
         }
         .padding()
         .background(Color(.systemGroupedBackground))
+    }
+
+    private var hero: some View {
+        let live = model.liveProgress
+        return VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Text("Importing \(live.done.formatted()) of \(live.total.formatted())", tableName: IngestCopy.table,
+                 comment: "Card import progress headline on a wide screen: photos done of the batch")
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+            ProgressView(value: min(1, max(0, live.fraction)))
+                .padding(.vertical, AppTheme.Spacing.xs)
+            Text(heroDetail(live))
+                .font(.footnote).monospacedDigit().foregroundStyle(.secondary)
+                .lineLimit(1)
+            HStack(spacing: AppTheme.Spacing.lg) {
+                stage(String(localized: "Copy", table: IngestCopy.table, comment: "Card import progress row"), live.fraction)
+                stage(String(localized: "Verify", table: IngestCopy.table, comment: "Card import progress row"),
+                      model.progress.total > 0 ? Double(model.verifiedCount) / Double(model.progress.total) : 0)
+                if model.settings.backsUp {
+                    stage(String(localized: "Backup", table: IngestCopy.table, comment: "Card import progress row"),
+                          model.progress.total > 0 ? Double(model.backedUpCount) / Double(model.progress.total) : 0)
+                }
+            }
+            .padding(.top, AppTheme.Spacing.xs)
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button {
+                    model.isPaused ? model.resume() : model.pause()
+                } label: {
+                    Text(model.isPaused
+                         ? String(localized: "Resume", table: IngestCopy.table, comment: "Card import: carry on after Pause")
+                         : String(localized: "Pause", table: IngestCopy.table, comment: "Card import: wait after the file in hand"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(.primary)
+                Button(role: .destructive) {
+                    isConfirmingStop = true
+                } label: {
+                    Text("Stop Import…", tableName: IngestCopy.table, comment: "Card import: stop the run")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(.red)
+            }
+            .padding(.top, AppTheme.Spacing.sm)
+        }
+        .frame(maxWidth: Self.heroWidth, alignment: .leading)
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    /// "48.2 GB of 61.0 GB · About 4 min left" — the time only once the
+    /// run's own pace says something.
+    private func heroDetail(_ live: IngestProgress) -> String {
+        let bytes = String(localized: "\(IngestCopy.bytes(live.bytesDone)) of \(IngestCopy.bytes(live.bytesTotal))", table: IngestCopy.table,
+                           comment: "Card import progress on a wide screen: bytes done of the batch")
+        if model.isPaused {
+            return bytes + " · " + String(localized: "Paused", table: IngestCopy.table, comment: "Card import progress: the run is paused")
+        }
+        guard let seconds = model.secondsLeft else { return bytes }
+        let left = Duration.seconds(max(60, seconds))
+            .formatted(.units(allowed: [.hours, .minutes], width: .abbreviated, maximumUnitCount: 2))
+        return bytes + " · " + String(localized: "About \(left) left", table: IngestCopy.table,
+                                      comment: "Card import progress: time left at this run's pace, e.g. About 4 min left")
+    }
+
+    /// One stage as a compact column: name and percent over a thin bar.
+    private func stage(_ title: String, _ fraction: Double) -> some View {
+        let clamped = min(1, max(0, fraction))
+        return VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            HStack {
+                Text(title)
+                Spacer(minLength: AppTheme.Spacing.xs)
+                Text(clamped.formatted(.percent.precision(.fractionLength(0))))
+                    .monospacedDigit().foregroundStyle(.secondary)
+            }
+            .font(.footnote)
+            ProgressView(value: clamped)
+                .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private func bar(_ title: String, _ fraction: Double) -> some View {
