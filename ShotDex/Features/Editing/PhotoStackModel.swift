@@ -55,8 +55,22 @@ final class PhotoStackModel {
     /// The HDR series behind the screen; nil for the other purposes.
     private(set) var hdr: HDRMergeSession?
     private(set) var preview: UIImage?
-    private(set) var isWorking = false
-    private(set) var statusText: String?
+    private(set) var isWorking = false {
+        didSet { if !isWorking { progressFraction = nil } }
+    }
+    private(set) var statusText: String? {
+        // A new phase starts without a bar until it reports one.
+        didSet { if statusText != oldValue { progressFraction = nil } }
+    }
+    /// How far the step in `statusText` has got, 0…1, when it can say —
+    /// loading frame k of n, the full-resolution stack or merge. Nil for a
+    /// step with no measure (a preview render, the write to Photos): the
+    /// progress card shows a spinner then.
+    private(set) var progressFraction: Double?
+    /// Open while a full-resolution stack or merge reports progress; a
+    /// report that arrives after it closed (hopping to the main actor behind
+    /// "Saving…") is dropped instead of putting the old step back.
+    @ObservationIgnored private var acceptsProgress = false
     var failure: Failure?
     /// Frames the last combine left out because they would not line up
     /// (focus stack only), as indices into `loadedPhotos`.
@@ -148,7 +162,8 @@ final class PhotoStackModel {
             // (FS-01.11 §4); the HDR session keeps the frames.
             loaded = await hdr.load(photos)
         } else {
-            for photo in photos {
+            for (index, photo) in photos.enumerated() {
+                progressFraction = Double(index) / Double(max(1, photos.count))
                 guard let image = await Self.previewImage(for: photo, photoLibrary: photoLibrary),
                       let ciImage = CIImage(image: image) else { continue }
                 frames.append(ciImage)
@@ -374,6 +389,7 @@ final class PhotoStackModel {
                 for (index, photo) in photos.enumerated() {
                     try Task.checkCancellation()
                     statusText = String(localized: "Loading \(index + 1) of \(photos.count)…", comment: "Stack screen status while originals load, one by one")
+                    progressFraction = Double(index) / Double(max(1, photos.count))
                     guard let url = try await Self.originalFile(for: photo, index: index, session: session),
                           let image = CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
                     else { missing += 1; continue }
@@ -400,6 +416,8 @@ final class PhotoStackModel {
                     // photo at full resolution.
                     frames = []
                     let files = urls
+                    acceptsProgress = true
+                    defer { acceptsProgress = false }
                     let stacked = try await renderer.streamedFocusStack(
                         frameCount: files.count,
                         frame: { CIImage(contentsOf: files[$0], options: [.applyOrientationProperty: true]) },
@@ -407,12 +425,14 @@ final class PhotoStackModel {
                         strokes: retouchStrokes,
                         progress: { done, total in
                             Task { @MainActor in
-                                // A percentage, not "frame N of M": Weighted
-                                // reads every frame twice.
+                                // A bar and a percentage, not "frame N of M":
+                                // Weighted reads every frame twice.
+                                guard self.acceptsProgress else { return }
                                 self.statusText = String(
-                                    localized: "Stacking… \(done * 100 / max(1, total))%",
-                                    comment: "Focus Stack status while saving: how far the full-resolution stack has got, as a percentage"
+                                    localized: "Stacking at full resolution…",
+                                    comment: "Focus Stack status while saving the full-resolution stack; the percentage is on the bar"
                                 )
+                                self.progressFraction = Double(done) / Double(max(1, total))
                             }
                         }
                     )
@@ -516,14 +536,19 @@ extension PhotoStackModel {
             do {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let url = folder.appendingPathComponent("hdr.\(written.fileExtension)")
+                acceptsProgress = true
+                defer { acceptsProgress = false }
                 try await hdr.save(options: options, type: type, to: url) { fraction in
                     Task { @MainActor in
+                        guard self.acceptsProgress else { return }
                         self.statusText = String(
-                            localized: "Merging… \(Int(fraction * 100))%",
-                            comment: "HDR status while saving: how far the full-resolution merge has got, as a percentage"
+                            localized: "Merging at full resolution…",
+                            comment: "HDR screen status while the full-resolution merge is saved"
                         )
+                        self.progressFraction = fraction
                     }
                 }
+                acceptsProgress = false
                 try Task.checkCancellation()
                 statusText = String(localized: "Saving…", comment: "Stack screen status while the new photo is written")
                 if let serverWorkDirectory {

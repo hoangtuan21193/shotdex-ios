@@ -208,14 +208,20 @@ struct PhotoStackScreen: View {
                 }
             }
             if model.isWorking {
-                VStack(spacing: AppTheme.Spacing.md) {
-                    ProgressView().tint(.white)
-                    if let statusText = model.statusText {
-                        Text(statusText)
-                            .font(EditorTheme.rowLabel)
-                            .foregroundStyle(EditorTheme.secondaryText)
-                    }
-                }
+                // The preview dims and the step is the shared progress card
+                // (380 pt on regular width): a headline, a bar where the step
+                // can measure itself, and the percentage — not a spinner and
+                // a 12 pt caption in the middle of a 13" display.
+                Color.black.opacity(0.5)
+                JobProgressCard(
+                    title: model.statusText
+                        ?? String(localized: "Working…", comment: "Stack screen progress card headline when no step is named"),
+                    fraction: model.progressFraction,
+                    detail: model.progressFraction.map {
+                        String(localized: "\(Int($0 * 100))%", comment: "Stack screen progress card detail: percent done")
+                    },
+                    style: .editor
+                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
