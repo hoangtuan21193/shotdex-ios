@@ -289,7 +289,10 @@ struct DuplicatesScreen: View {
                 // progress is a card on top of the list (UX review
                 // 2026-11-20 — a toolbar spinner was all there was).
                 if let step = model.checkStep {
+                    // Centred like the first-check card, so it does not
+                    // jump sideways when the first group lands.
                     DuplicatesCheckProgress(step: step, cancel: model.cancelScan, isCard: true)
+                        .frame(maxWidth: .infinity)
                 }
                 groupRows(model)
             }

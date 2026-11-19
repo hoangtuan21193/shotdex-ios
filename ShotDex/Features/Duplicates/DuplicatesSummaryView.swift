@@ -59,8 +59,7 @@ struct DuplicatesCheckProgress: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             Text(Self.title(step))
                 .font(.title3.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
             Group {
                 if let fraction = Self.fraction(step) {
                     ProgressView(value: fraction)
@@ -73,13 +72,17 @@ struct DuplicatesCheckProgress: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             // Accent, not red (Q8). Stopping keeps what was read, so no
             // confirm. Grouping cannot stop: the button stays, disabled,
             // so the card keeps its shape.
-            Button(String(localized: "Stop Checking", comment: "Duplicates wide screens: stop the check in progress"), action: cancel)
+            Button(action: cancel) {
+                Text(String(localized: "Stop Checking", comment: "Duplicates wide screens: stop the check in progress"))
+                    .frame(minHeight: AppTheme.Size.minTouch - 14)
+            }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
                 .disabled(step == .grouping)
         }
         .padding(AppTheme.Spacing.lg)
