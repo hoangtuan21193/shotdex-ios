@@ -38,7 +38,7 @@ struct EditorRenderQualityTests {
         #expect(grain.adjustments[.sharpness] == PhotoAdjustments.zero[.sharpness])
     }
 
-    @Test func draftNeverTouchesTheSavedRecipe() {
+    @Test @MainActor func draftNeverTouchesTheSavedRecipe() {
         let recipe = Self.heavyRecipe()
         _ = recipe.interactiveDraft(editing: .exposure)
         #expect(recipe == Self.heavyRecipe())
