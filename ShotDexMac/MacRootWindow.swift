@@ -1433,6 +1433,7 @@ struct MacRootWindow: View {
         // Duplicates, Collages, a tool page… a selection kept from the grid must
         // not be trashed, hidden or shared by a menu key (review row 46).
         let showsPhotos = editor == nil && resize == nil && combine == nil && collage == nil
+            && videoCompress == nil && burstFrames == nil && commonPhotosRunId == nil
             && (viewerId != nil || (self.selection.map(isGridPlace) ?? false))
         let duplicates = dependencies.duplicates
         return MacLibraryTarget(
