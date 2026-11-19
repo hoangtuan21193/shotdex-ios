@@ -58,6 +58,12 @@ final class PhotoStackModel {
     private(set) var isWorking = false {
         didSet { if !isWorking { progressFraction = nil } }
     }
+    /// The long steps that lock the screen behind the progress card: frames
+    /// loading (and the first line-up), and the full-resolution save or merge.
+    /// Nil while only the preview re-renders — a slider nudge must not flash
+    /// a modal card over the stage.
+    enum BlockingStep: Equatable { case loading, saving }
+    private(set) var blockingStep: BlockingStep?
     private(set) var statusText: String? {
         // A new phase starts without a bar until it reports one.
         didSet { if statusText != oldValue { progressFraction = nil } }
@@ -152,8 +158,9 @@ final class PhotoStackModel {
     func loadFrames() async {
         renderTask?.cancel()
         isWorking = true
+        blockingStep = .loading
         statusText = String(localized: "Loading \(photos.count) photos…", comment: "Stack screen status while the preview frames load")
-        defer { isWorking = false }
+        defer { isWorking = false; blockingStep = nil }
 
         var frames: [CIImage] = []
         var loaded: [PhotoEditOrigin] = []
@@ -376,8 +383,9 @@ final class PhotoStackModel {
         let photos = loadedPhotos
         renderTask = Task {
             isWorking = true
+            blockingStep = .saving
             statusText = String(localized: "Loading full-resolution frames…", comment: "Stack screen status while originals load for saving")
-            defer { isWorking = false }
+            defer { isWorking = false; blockingStep = nil }
             var session: PhotoStackSession?
             defer { session?.remove() }
             do {
@@ -527,8 +535,9 @@ extension PhotoStackModel {
         let options = hdrOptions
         renderTask = Task {
             isWorking = true
+            blockingStep = .saving
             statusText = String(localized: "Merging at full resolution…", comment: "HDR screen status while the full-resolution merge is saved")
-            defer { isWorking = false }
+            defer { isWorking = false; blockingStep = nil }
             let type: UTType = written == .heic ? .heic : .jpeg
             let folder = FileManager.default.temporaryDirectory
                 .appendingPathComponent("HDR-\(UUID().uuidString)", isDirectory: true)

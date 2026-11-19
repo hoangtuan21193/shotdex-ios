@@ -207,11 +207,11 @@ struct PhotoStackScreen: View {
                     retouchCanvas(model, imageSize: preview.size)
                 }
             }
-            if model.isWorking {
-                // The preview dims and the step is the shared progress card
-                // (380 pt on regular width): a headline, a bar where the step
-                // can measure itself, and the percentage — not a spinner and
-                // a 12 pt caption in the middle of a 13" display.
+            if let step = model.blockingStep {
+                // Loading and the full-resolution save lock the screen behind
+                // the shared progress card (380 pt on regular width): a
+                // headline, a bar where the step can measure itself, and the
+                // percentage. A preview re-render does not — see below.
                 Color.black.opacity(0.5)
                 JobProgressCard(
                     title: model.statusText
@@ -220,8 +220,19 @@ struct PhotoStackScreen: View {
                     detail: model.progressFraction.map {
                         String(localized: "\(Int($0 * 100))%", comment: "Stack screen progress card detail: percent done")
                     },
-                    style: .editor
+                    style: .editor,
+                    // Nothing is written until the very end, so stopping
+                    // discards the merge: "Cancel", not "Stop".
+                    onCancel: step == .saving ? { model.cancel() } : nil
                 )
+            } else if model.isWorking {
+                // A preview re-render (a slider, a mode, a retouch stroke):
+                // the old preview stays, and only a render that runs past
+                // 0.6 s shows a small spinner in the corner.
+                PreviewRenderSpinner()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(AppTheme.Spacing.md)
+                    .allowsHitTesting(false)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -582,5 +593,24 @@ extension View {
         fullScreenCover(item: presentation) { presentation in
             PhotoStackScreen(presentation: presentation, onSaved: onSaved)
         }
+    }
+}
+
+/// The stage's corner spinner for a preview re-render. It waits 0.6 s before
+/// it shows, so a quick render does not blink anything at all.
+private struct PreviewRenderSpinner: View {
+    @State private var isVisible = false
+
+    var body: some View {
+        ProgressView()
+            .tint(.white)
+            .padding(AppTheme.Spacing.sm)
+            .background(.black.opacity(0.5), in: Circle())
+            .opacity(isVisible ? 1 : 0)
+            .accessibilityLabel(String(localized: "Updating preview", comment: "Stack screen: VoiceOver label of the small spinner shown while the preview re-renders"))
+            .task {
+                try? await Task.sleep(for: .milliseconds(600))
+                withAnimation(.easeIn(duration: 0.15)) { isVisible = true }
+            }
     }
 }
