@@ -44,6 +44,10 @@ struct UtilitiesScreen: View {
     @State private var panoramaPresentation: PanoramaMergePresentation?
     /// The tool the user picked too few photos for, to say so.
     @State private var combineTooFew: CombinePurpose?
+    /// Resize or Compress Videos, while its picker is up.
+    @State private var spacePicking: SpaceTool?
+    @State private var compressionPresentation: CompressionPresentation?
+    @State private var videoCompressionRequest: VideoCompressionRequest?
 
     init(model: AlbumsModel? = nil, isLibraryIndexing: Bool = false) {
         self.injectedModel = model
@@ -112,6 +116,18 @@ struct UtilitiesScreen: View {
         .task(id: dependencies.sources.readCount) { await refreshHiddenCount() }
         .task(id: photoLibrary.assetChangeToken) { await loadOverview() }
         .collectionsDestinations(model: model, isLibraryIndexing: isLibraryIndexing)
+        .sheet(item: $spacePicking) { tool in
+            VideoMediaPicker(filter: tool == .resize ? .images : .videos) { picks in
+                startSpaceTool(tool, with: picks.map(\.assetID))
+            }
+            .ignoresSafeArea()
+        }
+        .fullScreenCover(item: $compressionPresentation) { presentation in
+            CompressionScreen(assets: presentation.assets, sourceAlbum: nil)
+        }
+        .fullScreenCover(item: $videoCompressionRequest) { request in
+            VideoCompressionScreen(request: request)
+        }
         .sheet(item: $combinePicking) { purpose in
             VideoMediaPicker(filter: .images) { picks in
                 startCombine(purpose, with: picks.map(\.assetID))
@@ -155,6 +171,24 @@ struct UtilitiesScreen: View {
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
             panoramaPresentation = PanoramaMergePresentation(assets: assets)
+        }
+    }
+
+    /// Opens Resize or Compress Videos on the picked items, in pick order —
+    /// the same screens the selection menu opens, reached without selecting
+    /// first (FS-24 §2, FS-03.07).
+    private func startSpaceTool(_ tool: SpaceTool, with ids: [String]) {
+        spacePicking = nil
+        guard !ids.isEmpty else { return }
+        switch tool {
+        case .resize:
+            let fetched = PhotoLibraryService.fetchAssets(ids: ids)
+            let byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+            let assets: [PHAsset] = ids.compactMap { byID[$0] }
+            guard !assets.isEmpty else { return }
+            compressionPresentation = CompressionPresentation(assets: assets, sourceAlbum: nil)
+        case .compressVideos:
+            videoCompressionRequest = VideoCompressionRequest(selection: ids, imageIDs: [])
         }
     }
 
@@ -202,7 +236,10 @@ struct UtilitiesScreen: View {
     private func items(in group: UtilityGroup) -> [UtilityItem] {
         switch group {
         case .library:
+            // The space savers sit together: Duplicates, then Resize and
+            // Compress Videos, which open a picker and then the tool.
             var items: [UtilityItem] = [.tool(.backup), .tool(.onThisIPhone), .tool(.duplicates)]
+                + SpaceTool.allCases.map(UtilityItem.space)
             if hiddenCount > 0 { items.append(.hidden) }
             items += model.utilityAlbums.map(UtilityItem.album)
             return items
@@ -218,6 +255,13 @@ struct UtilitiesScreen: View {
         switch item {
         case .tool(let tool):
             row(tool)
+        case .space(let tool):
+            Button {
+                spacePicking = tool
+            } label: {
+                UtilityRowLabel(title: tool.title, systemImage: tool.systemImage, spokenDetail: tool.spokenDetail)
+            }
+            .buttonStyle(.plain)
         case .combine(let purpose):
             Button {
                 combinePicking = purpose
@@ -362,6 +406,8 @@ private enum UtilityItem: Identifiable {
     /// Opens a photo picker, then the tool — these make a photo rather than
     /// keep a list, so there is no screen to push first.
     case combine(CombinePurpose)
+    /// Resize or Compress Videos: a picker, then the tool.
+    case space(SpaceTool)
     case hidden
     case album(AlbumItem)
 
@@ -369,6 +415,7 @@ private enum UtilityItem: Identifiable {
         switch self {
         case .tool(let tool): "tool.\(tool)"
         case .combine(let purpose): "combine.\(purpose)"
+        case .space(let tool): "space.\(tool)"
         case .hidden: "hidden"
         case .album(let album): "album.\(album.id)"
         }
@@ -427,5 +474,34 @@ private struct UtilityRowLabel: View {
 
     private var accessibilityText: String {
         spokenDetail.map { "\(title), \($0)" } ?? title
+    }
+}
+
+/// The tools that free space on the selected items, reachable from Utilities
+/// without selecting first. Named and drawn as in the selection menu.
+private enum SpaceTool: String, CaseIterable, Identifiable {
+    case resize, compressVideos
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .resize: PhotoCommand.resize.title
+        case .compressVideos: VideoCompressionCopy.command
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .resize: PhotoCommand.resize.systemImage
+        case .compressVideos: "film.stack"
+        }
+    }
+
+    var spokenDetail: String {
+        switch self {
+        case .resize: String(localized: "Choose photos to make smaller", comment: "VoiceOver detail on the Utilities Resize row")
+        case .compressVideos: String(localized: "Choose videos to compress to HEVC", comment: "VoiceOver detail on the Utilities Compress Videos row")
+        }
     }
 }

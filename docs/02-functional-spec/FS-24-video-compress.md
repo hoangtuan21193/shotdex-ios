@@ -14,6 +14,8 @@
    selection holds at least one video. Resize (photos, FS-03 §7) is unchanged. Mixed photos and
    videos → Compress Videos works on the videos alone, and the screen says how many photos were
    left out.
+   Also from the **Utilities** tab, Library group, under Duplicates and Resize (2026-11-20, FS-06.01 §5b): the row
+   opens the system picker limited to videos, then this screen on the picked videos; a cancelled picker opens nothing.
 2. Compress Videos screen:
    - **Quality**: `Maximum` · `High Quality` (default) · `Balanced` · `Smallest`, each with a one-line
      description. No raw RF/bitrate number.

@@ -11,6 +11,9 @@ Nguồn intent: [2026-10-02-ui-review-1002](../../_intents/2026-10-02-ui-review-
 - **Tên hiển thị là "Resize", không phải "Compress"** ở mọi chỗ: nav title, nút bulk, alert lỗi, dòng
   trạng thái, và cả **Settings → Export → Resize Presets**. Lối vào ở hai menu đã tên là Resize; một màn
   tự đổi tên trên đường vào đọc như công cụ khác.
+- **Lối vào**: menu chọn ảnh (Library, album, smart album, On This Day), viewer, và từ 2026-11-20 dòng **Resize**
+  ở tab Utilities, nhóm Library ([FS-06.01 §5b](../FS-06-collections/01-tabs-tokens-and-album-management.md)):
+  chạm → bộ chọn của hệ thống chỉ ảnh → màn Resize trên các ảnh đã chọn, không có album nguồn.
 - **Màn không nhớ lựa chọn phiên trước.**
   Ngoại lệ: watermark (cấu hình và bật/tắt) được nhớ, chung với mọi lối xuất ([FS-05.04 §5](../FS-05-markup/04-watermark-on-export.md)).
 - **Không có ô nhập dung lượng đích** — chỉ chất lượng và kích thước pixel.

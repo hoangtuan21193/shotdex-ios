@@ -121,7 +121,10 @@ hở một ô). Tiêu đề nhóm chữ hoa nhỏ `.footnote` đậm vừa màu 
 mỗi nhóm theo thứ tự vào cột đang ít hàng nhất — iPad 13" dọc 3 cột, màn trong Duo 2 cột):
 
 - **Library**: Backup · **On This iPhone** (ảnh/video giữ trên máy để xem offline, board `PH_OnThisIPhone`) ·
-  Duplicates · Hidden (chỉ khi ShotDex đang ẩn ≥ 1 ảnh) · các smart album nhóm tiện ích (Unable to Upload).
+  Duplicates · **Resize** · **Compress Videos** (2026-11-20: ba dòng giải phóng dung lượng đứng liền nhau; chạm →
+  bộ chọn của hệ thống, chỉ ảnh cho Resize, chỉ video cho Compress Videos → mở đúng màn mà menu chọn ảnh mở,
+  [FS-03.07](../FS-03-photo-editor/07-resize-and-compression.md), [FS-24](../FS-24-video-compress.md); huỷ bộ chọn
+  thì không mở gì; tên và glyph giống menu) · Hidden (chỉ khi ShotDex đang ẩn ≥ 1 ảnh) · các smart album nhóm tiện ích (Unable to Upload).
 - **Create**: Collages · Video Projects · Focus Stack · Panorama · HDR · Stack Exposures (2026-10-24). Bốn dòng sau
   là các công cụ Combine Photos ([FS-01.09](../FS-01-library/09-photo-stacking.md) §2), cùng thứ tự với menu: chạm →
   bộ chọn ảnh của hệ thống (chỉ ảnh) → đủ ≥ 2 ảnh thì mở đúng màn của công cụ, ít hơn thì alert *Choose at least 2
