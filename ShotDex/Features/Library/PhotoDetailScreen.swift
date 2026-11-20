@@ -847,6 +847,11 @@ struct PhotoDetailScreen: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, AppTheme.Size.floatingChromeMargin)
         .padding(.bottom, AppTheme.Spacing.md)
+        // The Duo's inner display reserves a trailing 84pt for iOS's vertical
+        // status bar, which only fills the top of that strip. Down here the
+        // strip is empty, so the row takes it back and Delete sits as far
+        // from the right edge as Share does from the left.
+        .ignoresSafeArea(.container, edges: isDuoInner ? .trailing : [])
     }
 
     /// Everything that does not earn a button of its own, in the order Photos
